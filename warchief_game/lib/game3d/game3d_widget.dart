@@ -188,6 +188,7 @@ class _Game3DState extends State<Game3D> {
     }
 
     // Player movement controls
+    // W = Forward
     if (inputManager!.isActionPressed(GameAction.moveForward)) {
       // Move forward in player's facing direction
       final forward = Vector3(
@@ -198,6 +199,7 @@ class _Game3DState extends State<Game3D> {
       playerTransform!.position += forward * playerSpeed * dt;
     }
 
+    // S = Backward
     if (inputManager!.isActionPressed(GameAction.moveBackward)) {
       // Move backward
       final forward = Vector3(
@@ -208,17 +210,8 @@ class _Game3DState extends State<Game3D> {
       playerTransform!.position -= forward * playerSpeed * dt;
     }
 
+    // A = Strafe Left
     if (inputManager!.isActionPressed(GameAction.rotateLeft)) {
-      playerRotation -= 180 * dt; // A key - rotate left
-      playerTransform!.rotation.y = playerRotation;
-    }
-
-    if (inputManager!.isActionPressed(GameAction.rotateRight)) {
-      playerRotation += 180 * dt; // D key - rotate right
-      playerTransform!.rotation.y = playerRotation;
-    }
-
-    if (inputManager!.isActionPressed(GameAction.strafeLeft)) {
       // Strafe left (perpendicular to facing direction)
       final right = Vector3(
         Math.cos(radians(playerRotation)),
@@ -228,7 +221,8 @@ class _Game3DState extends State<Game3D> {
       playerTransform!.position -= right * playerSpeed * dt;
     }
 
-    if (inputManager!.isActionPressed(GameAction.strafeRight)) {
+    // D = Strafe Right
+    if (inputManager!.isActionPressed(GameAction.rotateRight)) {
       // Strafe right
       final right = Vector3(
         Math.cos(radians(playerRotation)),
@@ -236,6 +230,18 @@ class _Game3DState extends State<Game3D> {
         -Math.sin(radians(playerRotation)),
       );
       playerTransform!.position += right * playerSpeed * dt;
+    }
+
+    // Q = Rotate Left
+    if (inputManager!.isActionPressed(GameAction.strafeLeft)) {
+      playerRotation -= 180 * dt; // Q key - rotate left
+      playerTransform!.rotation.y = playerRotation;
+    }
+
+    // E = Rotate Right
+    if (inputManager!.isActionPressed(GameAction.strafeRight)) {
+      playerRotation += 180 * dt; // E key - rotate right
+      playerTransform!.rotation.y = playerRotation;
     }
 
     // Update camera to follow player
@@ -301,7 +307,7 @@ class _Game3DState extends State<Game3D> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Movement: W/S=Forward/Back | A/D=Rotate | Q/E=Strafe',
+                    'Movement: W/S=Forward/Back | A/D=Strafe | Q/E=Rotate',
                     style: TextStyle(color: Colors.white, fontSize: 12),
                   ),
                   SizedBox(height: 4),

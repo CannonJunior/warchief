@@ -64,6 +64,7 @@ class Mesh {
   /// Create a plane mesh (quad made of 2 triangles)
   ///
   /// Useful for terrain tiles, floors, walls, etc.
+  /// Creates a double-sided plane so it's visible from both above and below.
   factory Mesh.plane({
     double width = 1.0,
     double height = 1.0,
@@ -72,35 +73,65 @@ class Mesh {
     final halfW = width / 2;
     final halfH = height / 2;
 
+    // Double-sided plane: 8 vertices (4 for top face, 4 for bottom face)
     final vertices = Float32List.fromList([
+      // Top face (normals pointing up)
       -halfW, 0, -halfH,  // 0: bottom-left
        halfW, 0, -halfH,  // 1: bottom-right
        halfW, 0,  halfH,  // 2: top-right
       -halfW, 0,  halfH,  // 3: top-left
+      // Bottom face (same positions, but normals will point down)
+      -halfW, 0, -halfH,  // 4: bottom-left
+       halfW, 0, -halfH,  // 5: bottom-right
+       halfW, 0,  halfH,  // 6: top-right
+      -halfW, 0,  halfH,  // 7: top-left
     ]);
 
+    // Indices for both faces (bottom face has reversed winding order)
     final indices = Uint16List.fromList([
+      // Top face (counter-clockwise when viewed from above)
       0, 1, 2,  // First triangle
       0, 2, 3,  // Second triangle
+      // Bottom face (counter-clockwise when viewed from below)
+      4, 6, 5,  // First triangle (reversed)
+      4, 7, 6,  // Second triangle (reversed)
     ]);
 
     final normals = Float32List.fromList([
-      0, 1, 0,  // All normals point up (Y+)
+      // Top face normals (pointing up)
       0, 1, 0,
       0, 1, 0,
       0, 1, 0,
+      0, 1, 0,
+      // Bottom face normals (pointing down)
+      0, -1, 0,
+      0, -1, 0,
+      0, -1, 0,
+      0, -1, 0,
     ]);
 
     final texCoords = Float32List.fromList([
-      0, 0,  // bottom-left
-      1, 0,  // bottom-right
-      1, 1,  // top-right
-      0, 1,  // top-left
+      // Top face
+      0, 0,
+      1, 0,
+      1, 1,
+      0, 1,
+      // Bottom face
+      0, 0,
+      1, 0,
+      1, 1,
+      0, 1,
     ]);
 
     Float32List? colors;
     if (color != null) {
       colors = Float32List.fromList([
+        // Top face
+        color.x, color.y, color.z, 1.0,
+        color.x, color.y, color.z, 1.0,
+        color.x, color.y, color.z, 1.0,
+        color.x, color.y, color.z, 1.0,
+        // Bottom face
         color.x, color.y, color.z, 1.0,
         color.x, color.y, color.z, 1.0,
         color.x, color.y, color.z, 1.0,
