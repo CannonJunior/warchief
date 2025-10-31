@@ -1,0 +1,76 @@
+{
+  "ui_version": "1.0.0",
+  "components": {
+    "action_bar": {
+      "type": "ActionBar",
+      "position": {
+        "x": "center",
+        "y": "bottom",
+        "offset_x": 0,
+        "offset_y": 20
+      },
+      "slots": 12,
+      "assets": {
+        "frame": "ui/action_bars/action_bar_frame.svg",
+        "slot_empty": "ui/action_bars/action_slot_empty.svg",
+        "slot_filled": "ui/action_bars/action_slot_filled.svg",
+        "cooldown_overlay": "ui/action_bars/action_slot_cooldown.svg"
+      },
+      "dimensions": {
+        "width": 600,
+        "height": 60
+      },
+      "slot_size": 48,
+      "slot_spacing": 4,
+      "enabled": false
+    },
+    "player_health_bar": {
+      "type": "ResourceBar",
+      "position": {
+        "x": "left",
+        "y": "top",
+        "offset_x": 20,
+        "offset_y": 20
+      },
+      "assets": {
+        "frame": "ui/health_bars/health_frame.svg",
+        "fill": "ui/health_bars/health_fill_red.png"
+      },
+      "dimensions": {
+        "width": 200,
+        "height": 30
+      },
+      "animate_changes": true,
+      "show_text": true,
+      "enabled": false
+    },
+    "pet_frame": {
+      "type": "PetFrame",
+      "position": {
+        "x": "left",
+        "y": "top",
+        "offset_x": 20,
+        "offset_y": 80
+      },
+      "assets": {
+        "portrait_frame": "ui/pet_frames/pet_portrait_frame.svg",
+        "action_bar": "ui/pet_frames/pet_action_bar.svg",
+        "stance_passive": "ui/pet_frames/stance_passive.svg",
+        "stance_defensive": "ui/pet_frames/stance_defensive.svg",
+        "stance_aggressive": "ui/pet_frames/stance_aggressive.svg"
+      },
+      "show_health": true,
+      "show_stance": true,
+      "show_abilities": true,
+      "enabled": false
+    }
+  },
+  "themes": {
+    "default": "dark_fantasy",
+    "available": [
+      "dark_fantasy",
+      "minimalist",
+      "pixel_art"
+    ]
+  }
+}

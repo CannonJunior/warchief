@@ -1,0 +1,30 @@
+{
+  "server": {
+    "port": 8008,
+    "enable_hot_reload": true
+  },
+  "ollama": {
+    "base_url": "http://localhost:11434",
+    "default_model": "llama3.1:8b-instruct-q8_0",
+    "request_timeout_ms": 5000,
+    "max_concurrent_requests": 3,
+    "enabled": false
+  },
+  "game": {
+    "max_npcs": 5,
+    "npc_decision_interval_ms": 1000,
+    "enable_ai_control": false,
+    "default_npc_stance": "defensive"
+  },
+  "graphics": {
+    "target_fps": 60,
+    "enable_vsync": true,
+    "tile_size": 64,
+    "camera_zoom_min": 0.5,
+    "camera_zoom_max": 2.0
+  },
+  "controls": {
+    "mouse_sensitivity": 1.0,
+    "keyboard_repeat_delay_ms": 100
+  }
+}

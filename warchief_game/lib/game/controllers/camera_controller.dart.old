@@ -1,0 +1,221 @@
+import 'package:flame/components.dart';
+import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
+/// Camera controller for the game
+///
+/// Manages camera position, zoom, rotation, and smooth following of targets.
+/// Implements WoW-style camera controls with mouse interaction.
+/// Supports dual-axis rotation: yaw (camera) and pitch (world).
+class CameraController {
+  /// The camera component from Flame
+  final CameraComponent camera;
+
+  /// The world component for applying pitch rotation
+  final World? world;
+
+  /// Target to follow (usually the player)
+  PositionComponent? target;
+
+  /// Camera offset from target
+  Vector2 offset = Vector2.zero();
+
+  /// Current zoom level
+  double zoom = 1.0;
+
+  /// Min/max zoom levels
+  final double minZoom = 0.5;
+  final double maxZoom = 2.0;
+
+  /// Camera rotation angle (in radians) - yaw
+  double rotationAngle = 0.0;
+
+  /// Camera pitch angle (in radians) - vertical viewing angle
+  /// 0 = looking at horizon, negative = looking down, positive = looking up
+  double pitchAngle = -0.7; // Default isometric-like angle (about -40 degrees)
+
+  /// Min/max pitch angles (in radians)
+  final double minPitch = -math.pi / 2; // -90 degrees (looking straight down)
+  final double maxPitch = math.pi / 4;   // 45 degrees (looking up)
+
+  /// Is the right mouse button currently pressed?
+  bool isRotating = false;
+
+  /// Last mouse position (for calculating drag delta)
+  Vector2? lastMousePosition;
+
+  /// Camera smoothing factor (0 = instant, 1 = very smooth)
+  final double smoothness = 0.1;
+
+  /// Mouse sensitivity for rotation
+  final double mouseSensitivity = 0.005;
+
+  CameraController({
+    required this.camera,
+    this.world,
+    this.target,
+  });
+
+  /// Set the target for the camera to follow
+  void setTarget(PositionComponent newTarget) {
+    target = newTarget;
+  }
+
+  /// Update camera position (call every frame)
+  void update(double dt) {
+    if (target == null) return;
+
+    // Calculate desired camera position (target + offset)
+    final targetPosition = target!.position + offset;
+
+    // Smooth camera movement (lerp towards target)
+    final currentPosition = camera.viewfinder.position;
+    final newPosition = currentPosition + (targetPosition - currentPosition) * smoothness;
+    camera.viewfinder.position = newPosition;
+
+    // Apply yaw rotation (J/L keys - rotates camera around Z-axis)
+    // This is the standard "spinning" rotation in the 2D plane
+    camera.viewfinder.angle = rotationAngle;
+
+    // Apply pitch rotation (N/M keys - rotates world around a different axis)
+    // By rotating the world instead of the camera, we achieve rotation in a separate plane
+    // This creates a visual "tilting" effect distinct from the camera's yaw rotation
+    if (world != null) {
+      world!.angle = pitchAngle;
+    }
+
+    // Apply zoom
+    camera.viewfinder.zoom = zoom;
+  }
+
+  /// Handle mouse scroll for zooming
+  void handleScroll(double scrollDelta) {
+    // Zoom in/out based on scroll direction
+    final zoomDelta = scrollDelta > 0 ? 0.1 : -0.1;
+    zoom = (zoom + zoomDelta).clamp(minZoom, maxZoom);
+    debugPrint('Camera zoom: ${zoom.toStringAsFixed(2)}');
+  }
+
+  /// Handle right mouse button press (start rotation)
+  void startRotation(Vector2 mousePosition) {
+    isRotating = true;
+    lastMousePosition = mousePosition;
+  }
+
+  /// Handle mouse movement while rotating
+  void updateRotation(Vector2 mousePosition) {
+    if (!isRotating || lastMousePosition == null) return;
+
+    // Calculate mouse movement delta
+    final delta = mousePosition - lastMousePosition!;
+
+    // Rotate camera based on horizontal mouse movement
+    rotationAngle += delta.x * mouseSensitivity;
+
+    // Keep angle in reasonable range
+    rotationAngle = rotationAngle % (2 * math.pi);
+
+    lastMousePosition = mousePosition;
+  }
+
+  /// Handle right mouse button release (stop rotation)
+  void stopRotation() {
+    isRotating = false;
+    lastMousePosition = null;
+  }
+
+  /// Set camera offset from target
+  void setOffset(Vector2 newOffset) {
+    offset = newOffset;
+  }
+
+  /// Set zoom level directly
+  void setZoom(double newZoom) {
+    zoom = newZoom.clamp(minZoom, maxZoom);
+  }
+
+  /// Reset camera to default state
+  void reset() {
+    zoom = 1.0;
+    rotationAngle = 0.0;
+    pitchAngle = -0.7; // Reset to default isometric-like angle
+    offset = Vector2.zero();
+    isRotating = false;
+    lastMousePosition = null;
+  }
+
+  /// Rotate camera left (keyboard control)
+  void rotateLeft(double dt) {
+    rotationAngle -= 2.0 * dt; // Rotate left at 2 radians per second
+    rotationAngle = rotationAngle % (2 * math.pi);
+  }
+
+  /// Rotate camera right (keyboard control)
+  void rotateRight(double dt) {
+    rotationAngle += 2.0 * dt; // Rotate right at 2 radians per second
+    rotationAngle = rotationAngle % (2 * math.pi);
+  }
+
+  /// Zoom camera in (keyboard control)
+  void zoomIn(double dt) {
+    final zoomDelta = 1.0 * dt; // Zoom in at 1.0 units per second
+    zoom = (zoom + zoomDelta).clamp(minZoom, maxZoom);
+  }
+
+  /// Zoom camera out (keyboard control)
+  void zoomOut(double dt) {
+    final zoomDelta = -1.0 * dt; // Zoom out at 1.0 units per second
+    zoom = (zoom + zoomDelta).clamp(minZoom, maxZoom);
+  }
+
+  /// Pan camera left (keyboard control)
+  void panLeft(double dt) {
+    final panSpeed = 100.0; // pixels per second
+    offset.x -= panSpeed * dt;
+  }
+
+  /// Pan camera right (keyboard control)
+  void panRight(double dt) {
+    final panSpeed = 100.0; // pixels per second
+    offset.x += panSpeed * dt;
+  }
+
+  /// Pan camera up (keyboard control)
+  void panUp(double dt) {
+    final panSpeed = 100.0; // pixels per second
+    offset.y -= panSpeed * dt;
+  }
+
+  /// Pan camera down (keyboard control)
+  void panDown(double dt) {
+    final panSpeed = 100.0; // pixels per second
+    offset.y += panSpeed * dt;
+  }
+
+  /// Reset camera pan (return to centered on target)
+  void resetPan() {
+    offset = Vector2.zero();
+  }
+
+  /// Pitch camera up (keyboard control)
+  /// Increases pitch angle (looking more upward toward horizon/sky)
+  void pitchUp(double dt) {
+    final pitchSpeed = 1.0; // radians per second
+    pitchAngle = (pitchAngle + pitchSpeed * dt).clamp(minPitch, maxPitch);
+    debugPrint('Camera pitch: ${(pitchAngle * 180 / math.pi).toStringAsFixed(1)}°');
+  }
+
+  /// Pitch camera down (keyboard control)
+  /// Decreases pitch angle (looking more downward toward ground)
+  void pitchDown(double dt) {
+    final pitchSpeed = 1.0; // radians per second
+    pitchAngle = (pitchAngle - pitchSpeed * dt).clamp(minPitch, maxPitch);
+    debugPrint('Camera pitch: ${(pitchAngle * 180 / math.pi).toStringAsFixed(1)}°');
+  }
+
+  /// Shake the camera (for impact effects)
+  void shake({double intensity = 5.0, double duration = 0.2}) {
+    // TODO: Implement camera shake
+    debugPrint('Camera shake requested (not yet implemented)');
+  }
+}
