@@ -57,6 +57,14 @@ class _Game3DState extends State<Game3D> {
   DateTime? lastFrameTime;
   int frameCount = 0;
 
+  // Jump state
+  bool isJumping = false;
+  double verticalVelocity = 0.0;
+  bool isGrounded = true;
+  final double jumpForce = 8.0;
+  final double gravity = 20.0;
+  final double groundLevel = 0.5; // Player's Y position when on ground
+
   @override
   void initState() {
     super.initState();
@@ -210,8 +218,20 @@ class _Game3DState extends State<Game3D> {
       playerTransform!.position -= forward * playerSpeed * dt;
     }
 
-    // A = Strafe Left
+    // A = Rotate Left
     if (inputManager!.isActionPressed(GameAction.rotateLeft)) {
+      playerRotation -= 180 * dt; // A key - rotate left
+      playerTransform!.rotation.y = playerRotation;
+    }
+
+    // D = Rotate Right
+    if (inputManager!.isActionPressed(GameAction.rotateRight)) {
+      playerRotation += 180 * dt; // D key - rotate right
+      playerTransform!.rotation.y = playerRotation;
+    }
+
+    // Q = Strafe Left
+    if (inputManager!.isActionPressed(GameAction.strafeLeft)) {
       // Strafe left (perpendicular to facing direction)
       final right = Vector3(
         Math.cos(radians(playerRotation)),
@@ -221,8 +241,8 @@ class _Game3DState extends State<Game3D> {
       playerTransform!.position -= right * playerSpeed * dt;
     }
 
-    // D = Strafe Right
-    if (inputManager!.isActionPressed(GameAction.rotateRight)) {
+    // E = Strafe Right
+    if (inputManager!.isActionPressed(GameAction.strafeRight)) {
       // Strafe right
       final right = Vector3(
         Math.cos(radians(playerRotation)),
@@ -232,20 +252,36 @@ class _Game3DState extends State<Game3D> {
       playerTransform!.position += right * playerSpeed * dt;
     }
 
-    // Q = Rotate Left
-    if (inputManager!.isActionPressed(GameAction.strafeLeft)) {
-      playerRotation -= 180 * dt; // Q key - rotate left
-      playerTransform!.rotation.y = playerRotation;
+    // Spacebar = Jump
+    if (inputManager!.isActionPressed(GameAction.jump) && isGrounded) {
+      verticalVelocity = jumpForce;
+      isJumping = true;
+      isGrounded = false;
     }
 
-    // E = Rotate Right
-    if (inputManager!.isActionPressed(GameAction.strafeRight)) {
-      playerRotation += 180 * dt; // E key - rotate right
-      playerTransform!.rotation.y = playerRotation;
+    // Apply gravity and vertical movement
+    verticalVelocity -= gravity * dt;
+    playerTransform!.position.y += verticalVelocity * dt;
+
+    // Ground collision detection
+    if (playerTransform!.position.y <= groundLevel) {
+      playerTransform!.position.y = groundLevel;
+      verticalVelocity = 0.0;
+      isJumping = false;
+      isGrounded = true;
     }
 
-    // Update camera to follow player
-    camera!.setTarget(playerTransform!.position);
+    // Update camera to follow player (with smoothing to avoid "terrain moving" effect)
+    // Only update camera target if player moves significantly from center
+    final currentTarget = camera!.getTarget();
+    final distanceFromTarget = (playerTransform!.position - currentTarget).length;
+
+    // Update camera target smoothly when player moves away from center
+    if (distanceFromTarget > 0.1) {
+      // Smoothly interpolate camera target toward player position
+      final newTarget = currentTarget + (playerTransform!.position - currentTarget) * 0.05;
+      camera!.setTarget(newTarget);
+    }
   }
 
   void _render() {
@@ -307,7 +343,12 @@ class _Game3DState extends State<Game3D> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Movement: W/S=Forward/Back | A/D=Strafe | Q/E=Rotate',
+                    'Movement: W/S=Forward/Back | A/D=Rotate | Q/E=Strafe',
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Jump: Spacebar',
                     style: TextStyle(color: Colors.white, fontSize: 12),
                   ),
                   SizedBox(height: 4),

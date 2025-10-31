@@ -102,6 +102,11 @@ class Camera3D {
     updatePositionFromTarget();
   }
 
+  /// Get the current target position
+  Vector3 getTarget() {
+    return _target ?? Vector3.zero();
+  }
+
   /// Clear target (switch to free-look mode)
   void clearTarget() {
     _target = null;
