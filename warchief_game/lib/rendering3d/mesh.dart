@@ -267,6 +267,71 @@ class Mesh {
     );
   }
 
+  /// Create a triangle mesh (double-sided triangle pointing forward)
+  ///
+  /// Useful for direction indicators, arrows, etc.
+  /// The triangle points in the +Z direction by default.
+  /// Double-sided so it's visible from all camera angles.
+  factory Mesh.triangle({
+    double size = 1.0,
+    Vector3? color,
+  }) {
+    final halfSize = size / 2;
+
+    // Triangle vertices: tip points forward (+Z), base is back
+    // Double-sided: 6 vertices (3 for top face, 3 for bottom face)
+    final vertices = Float32List.fromList([
+      // Top face (visible from above)
+      0, 0, halfSize,           // 0: tip (forward)
+      -halfSize, 0, -halfSize,  // 1: left back corner
+      halfSize, 0, -halfSize,   // 2: right back corner
+      // Bottom face (visible from below)
+      0, 0, halfSize,           // 3: tip (forward)
+      -halfSize, 0, -halfSize,  // 4: left back corner
+      halfSize, 0, -halfSize,   // 5: right back corner
+    ]);
+
+    final indices = Uint16List.fromList([
+      // Top face (counter-clockwise from above)
+      0, 1, 2,
+      // Bottom face (counter-clockwise from below, reversed winding)
+      3, 5, 4,
+    ]);
+
+    // Normals (up for top face, down for bottom face)
+    final normals = Float32List.fromList([
+      // Top face normals
+      0, 1, 0,
+      0, 1, 0,
+      0, 1, 0,
+      // Bottom face normals
+      0, -1, 0,
+      0, -1, 0,
+      0, -1, 0,
+    ]);
+
+    Float32List? colors;
+    if (color != null) {
+      colors = Float32List.fromList([
+        // Top face
+        color.x, color.y, color.z, 1.0,
+        color.x, color.y, color.z, 1.0,
+        color.x, color.y, color.z, 1.0,
+        // Bottom face
+        color.x, color.y, color.z, 1.0,
+        color.x, color.y, color.z, 1.0,
+        color.x, color.y, color.z, 1.0,
+      ]);
+    }
+
+    return Mesh(
+      vertices: vertices,
+      indices: indices,
+      normals: normals,
+      colors: colors,
+    );
+  }
+
   @override
   String toString() {
     return 'Mesh(vertices: $vertexCount, triangles: $triangleCount)';
