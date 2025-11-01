@@ -14,6 +14,7 @@ import '../rendering3d/terrain_generator.dart';
 import '../rendering3d/player_mesh.dart';
 import '../game/controllers/input_manager.dart';
 import '../models/game_action.dart';
+import '../ai/ollama_client.dart';
 
 /// Projectile - Represents a moving projectile (like fireball)
 class Projectile {
@@ -77,6 +78,19 @@ class Ally {
   }) : projectiles = [];
 }
 
+/// AIChatMessage - Represents an AI chat message (input or output)
+class AIChatMessage {
+  final String text;
+  final bool isInput; // true = input to AI, false = output from AI
+  final DateTime timestamp;
+
+  AIChatMessage({
+    required this.text,
+    required this.isInput,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+}
+
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
 /// This replaces the Flame-based WarchiefGame with true 3D rendering.
@@ -106,6 +120,7 @@ class _Game3DState extends State<Game3D> {
   WebGLRenderer? renderer;
   Camera3D? camera;
   InputManager? inputManager;
+  OllamaClient? ollamaClient;
 
   // Game objects
   List<TerrainTile>? terrainTiles;
@@ -141,6 +156,9 @@ class _Game3DState extends State<Game3D> {
 
   // Ally state
   List<Ally> allies = []; // Start with zero allies
+
+  // AI Chat messages for Monster
+  List<AIChatMessage> monsterAIChat = [];
 
   // Game state
   double playerRotation = 0.0;
@@ -192,6 +210,9 @@ class _Game3DState extends State<Game3D> {
 
     // Initialize input manager
     inputManager = InputManager();
+
+    // Initialize Ollama client for AI
+    ollamaClient = OllamaClient();
 
     // Create canvas element immediately
     _initializeGame();
@@ -476,6 +497,11 @@ class _Game3DState extends State<Game3D> {
     if (monsterAbility2Cooldown > 0) monsterAbility2Cooldown -= dt;
     if (monsterAbility3Cooldown > 0) monsterAbility3Cooldown -= dt;
 
+    // Update ally cooldowns
+    for (final ally in allies) {
+      if (ally.abilityCooldown > 0) ally.abilityCooldown -= dt;
+    }
+
     // ===== MONSTER AI SYSTEM =====
     if (!monsterPaused && monsterHealth > 0 && monsterTransform != null && playerTransform != null) {
       monsterAiTimer += dt;
@@ -487,31 +513,98 @@ class _Game3DState extends State<Game3D> {
         // Calculate distance to player
         final distanceToPlayer = (monsterTransform!.position - playerTransform!.position).length;
 
+        // Log AI input (game state)
+        _logMonsterAI('Health: ${monsterHealth.toStringAsFixed(0)} | Dist: ${distanceToPlayer.toStringAsFixed(1)}', isInput: true);
+
         // Always face the player
         final toPlayer = playerTransform!.position - monsterTransform!.position;
         monsterRotation = math.atan2(-toPlayer.x, -toPlayer.z) * (180 / math.pi);
         monsterDirectionIndicatorTransform?.rotation.y = monsterRotation;
 
         // Decision making
+        String decision = '';
         if (distanceToPlayer > 8.0) {
           // Move toward player if too far
           final moveDirection = toPlayer.normalized();
           monsterTransform!.position += moveDirection * 0.5;
+          decision = 'MOVE_FORWARD';
         } else if (distanceToPlayer < 3.0) {
           // Move away if too close
           final moveDirection = toPlayer.normalized();
           monsterTransform!.position -= moveDirection * 0.3;
+          decision = 'RETREAT';
+        } else {
+          decision = 'HOLD';
         }
 
         // Use abilities based on distance and cooldown
         if (distanceToPlayer < 5.0 && monsterAbility1Cooldown <= 0) {
           _activateMonsterAbility1(); // Dark strike
+          decision += ' + DARK_STRIKE';
         } else if (distanceToPlayer > 4.0 && distanceToPlayer < 12.0 && monsterAbility2Cooldown <= 0) {
           _activateMonsterAbility2(); // Shadow bolt
+          decision += ' + SHADOW_BOLT';
         } else if (monsterHealth < 50 && monsterAbility3Cooldown <= 0) {
           _activateMonsterAbility3(); // Healing
+          decision += ' + HEAL';
+        }
+
+        // Log AI output (decision)
+        _logMonsterAI(decision, isInput: false);
+      }
+    }
+
+    // ===== ALLY AI SYSTEM =====
+    for (final ally in allies) {
+      if (ally.health <= 0) continue; // Skip dead allies
+
+      ally.aiTimer += dt;
+
+      // AI thinks every 3 seconds
+      if (ally.aiTimer >= ally.aiInterval) {
+        ally.aiTimer = 0.0;
+
+        if (playerTransform != null && monsterTransform != null) {
+          // Calculate distances
+          final distanceToPlayer = (ally.transform.position - playerTransform!.position).length;
+          final distanceToMonster = (ally.transform.position - monsterTransform!.position).length;
+
+          // Fallback rule-based AI (when Ollama unavailable)
+          String decision = _makeAllyDecision(ally, distanceToPlayer, distanceToMonster);
+
+          // Execute decision
+          _executeAllyDecision(ally, decision);
         }
       }
+
+      // Update ally's direction indicator to face monster
+      if (ally.directionIndicatorTransform != null && monsterTransform != null) {
+        final toMonster = monsterTransform!.position - ally.transform.position;
+        ally.rotation = math.atan2(-toMonster.x, -toMonster.z) * (180 / math.pi);
+        ally.directionIndicatorTransform!.rotation.y = ally.rotation;
+      }
+
+      // Update ally's projectiles
+      ally.projectiles.removeWhere((projectile) {
+        projectile.transform.position += projectile.velocity * dt;
+        projectile.lifetime -= dt;
+
+        // Check collision with monster using generalized function
+        if (monsterTransform != null) {
+          final hitRegistered = _checkAndHandleCollision(
+            attackerPosition: projectile.transform.position,
+            targetPosition: monsterTransform!.position,
+            collisionThreshold: 1.0,
+            damage: 15.0, // Ally fireball does 15 damage
+            attackType: 'Ally fireball',
+            impactColor: Vector3(1.0, 0.4, 0.0), // Orange impact
+            impactSize: 0.6,
+          );
+          if (hitRegistered) return true;
+        }
+
+        return projectile.lifetime <= 0;
+      });
     }
 
     // Update monster projectiles
@@ -922,7 +1015,182 @@ class _Game3DState extends State<Game3D> {
     print('Monster heals itself! Health: $monsterHealth/$monsterMaxHealth');
   }
 
+  // ===== AI CHAT LOGGING =====
+
+  /// Add a message to the Monster AI chat log
+  void _logMonsterAI(String text, {required bool isInput}) {
+    setState(() {
+      monsterAIChat.add(AIChatMessage(
+        text: text,
+        isInput: isInput,
+      ));
+
+      // Keep only last 50 messages to avoid memory issues
+      if (monsterAIChat.length > 50) {
+        monsterAIChat.removeAt(0);
+      }
+    });
+  }
+
+  // ===== COLLISION DETECTION HELPER =====
+
+  /// Generalized collision detection with damage and impact effects
+  ///
+  /// Returns true if collision occurred
+  bool _checkAndHandleCollision({
+    required Vector3 attackerPosition,
+    required Vector3 targetPosition,
+    required double collisionThreshold,
+    required double damage,
+    required String attackType,
+    required Vector3 impactColor,
+    double impactSize = 0.6,
+  }) {
+    final distance = (attackerPosition - targetPosition).length;
+
+    if (distance < collisionThreshold && monsterHealth > 0) {
+      // Create impact effect
+      final impactMesh = Mesh.cube(
+        size: impactSize,
+        color: impactColor,
+      );
+      final impactTransform = Transform3d(
+        position: targetPosition.clone(),
+        scale: Vector3(1, 1, 1),
+      );
+
+      setState(() {
+        impactEffects.add(ImpactEffect(
+          mesh: impactMesh,
+          transform: impactTransform,
+        ));
+
+        // Deal damage to monster
+        monsterHealth = (monsterHealth - damage).clamp(0.0, monsterMaxHealth);
+      });
+
+      print('$attackType hit monster for $damage damage! Monster health: ${monsterHealth.toStringAsFixed(1)}');
+      return true;
+    }
+
+    return false;
+  }
+
+  // ===== ALLY AI HELPER METHODS =====
+
+  /// Make AI decision for an ally (fallback rule-based AI)
+  String _makeAllyDecision(Ally ally, double distanceToPlayer, double distanceToMonster) {
+    // Too far from player - move to player
+    if (distanceToPlayer > 8.0) {
+      return 'MOVE_TO_PLAYER';
+    }
+
+    // Too close to monster - retreat
+    if (distanceToMonster < 3.0) {
+      return 'RETREAT';
+    }
+
+    // Use ability if ready and monster in range
+    if (ally.abilityCooldown <= 0 && distanceToMonster < 10.0) {
+      return 'USE_ABILITY';
+    }
+
+    // Move toward monster if in good position
+    if (distanceToMonster > 6.0) {
+      return 'MOVE_TO_MONSTER';
+    }
+
+    return 'HOLD_POSITION';
+  }
+
+  /// Execute ally's AI decision
+  void _executeAllyDecision(Ally ally, String decision) {
+    if (decision == 'MOVE_TO_PLAYER' && playerTransform != null) {
+      // Move toward player
+      final direction = (playerTransform!.position - ally.transform.position).normalized();
+      ally.transform.position += direction * 0.5;
+    } else if (decision == 'MOVE_TO_MONSTER' && monsterTransform != null) {
+      // Move toward monster
+      final direction = (monsterTransform!.position - ally.transform.position).normalized();
+      ally.transform.position += direction * 0.5;
+    } else if (decision == 'RETREAT' && monsterTransform != null) {
+      // Move away from monster
+      final direction = (monsterTransform!.position - ally.transform.position).normalized();
+      ally.transform.position -= direction * 0.3;
+    } else if (decision == 'USE_ABILITY') {
+      // Use ally's ability based on their abilityIndex
+      if (ally.abilityIndex == 0 && monsterTransform != null) {
+        // Ability 0: Sword (melee attack with collision detection)
+        final hitRegistered = _checkAndHandleCollision(
+          attackerPosition: ally.transform.position,
+          targetPosition: monsterTransform!.position,
+          collisionThreshold: 2.0, // Melee range: 2 units
+          damage: 10.0, // Sword does 10 damage
+          attackType: 'Ally sword',
+          impactColor: Vector3(0.7, 0.7, 0.8), // Gray-blue impact
+          impactSize: 0.5,
+        );
+
+        // Always set cooldown, whether hit lands or not
+        setState(() {
+          ally.abilityCooldown = ally.abilityCooldownMax;
+        });
+
+        if (hitRegistered) {
+          print('Ally sword hit!');
+        } else {
+          print('Ally sword missed - out of range!');
+        }
+      } else if (ally.abilityIndex == 1 && monsterTransform != null) {
+        // Ability 1: Fireball (ranged projectile)
+        final direction = (monsterTransform!.position - ally.transform.position).normalized();
+        final fireballMesh = Mesh.cube(
+          size: 0.3,
+          color: Vector3(1.0, 0.4, 0.0), // Orange fireball
+        );
+        final startPos = ally.transform.position.clone() + Vector3(0, 0.4, 0);
+        final fireballTransform = Transform3d(
+          position: startPos,
+          scale: Vector3(1, 1, 1),
+        );
+
+        setState(() {
+          ally.projectiles.add(Projectile(
+            mesh: fireballMesh,
+            transform: fireballTransform,
+            velocity: direction * 10.0,
+            lifetime: 5.0,
+          ));
+          ally.abilityCooldown = ally.abilityCooldownMax;
+        });
+        print('Ally casts Fireball!');
+      } else if (ally.abilityIndex == 2) {
+        // Ability 2: Heal (restore ally's own health)
+        setState(() {
+          ally.health = math.min(ally.maxHealth, ally.health + 15);
+          ally.abilityCooldown = ally.abilityCooldownMax;
+        });
+        print('Ally heals itself! Health: ${ally.health}/${ally.maxHealth}');
+      }
+    }
+    // HOLD_POSITION - do nothing
+  }
+
   // ===== ALLY MANAGEMENT METHODS =====
+
+  /// Manually activate an ally's ability (called from UI button)
+  void _activateAllyAbility(Ally ally) {
+    if (ally.abilityCooldown > 0 || ally.health <= 0) {
+      print('Ally ability on cooldown or ally is dead');
+      return;
+    }
+
+    setState(() {
+      // Force the ally to use their ability
+      _executeAllyDecision(ally, 'USE_ABILITY');
+      print('Manually activated ally ability ${ally.abilityIndex}');
+    });
+  }
 
   /// Add a new ally with a random ability
   void _addAlly() {
@@ -1093,10 +1361,10 @@ class _Game3DState extends State<Game3D> {
             ),
           ),
 
-          // HUD - Monster Information (Bottom-left corner)
+          // HUD - Monster Information (Top-left, below camera controls)
           Positioned(
-            bottom: 20,
-            left: 20,
+            top: 360,
+            left: 10,
             child: Container(
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -1209,6 +1477,80 @@ class _Game3DState extends State<Game3D> {
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // HUD - AI Chat Interface (Below Monster)
+          Positioned(
+            top: 640,
+            left: 10,
+            child: Container(
+              width: 300,
+              height: 200,
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.cyan, width: 2),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'MONSTER AI CHAT',
+                    style: TextStyle(
+                      color: Colors.cyan,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade900.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: ListView.builder(
+                        reverse: true, // Latest messages at bottom
+                        itemCount: monsterAIChat.length,
+                        itemBuilder: (context, index) {
+                          final reversedIndex = monsterAIChat.length - 1 - index;
+                          final message = monsterAIChat[reversedIndex];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  message.isInput ? '→ ' : '← ',
+                                  style: TextStyle(
+                                    color: message.isInput ? Colors.yellow : Colors.green,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    message.text,
+                                    style: TextStyle(
+                                      color: message.isInput ? Colors.yellow.shade200 : Colors.green.shade200,
+                                      fontSize: 8,
+                                    ),
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -1378,25 +1720,31 @@ class _Game3DState extends State<Game3D> {
                               ),
                             ),
                             SizedBox(width: 6),
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: ally.abilityCooldown > 0
-                                    ? Colors.grey.shade700
-                                    : abilityColors[ally.abilityIndex],
-                                border: Border.all(color: Colors.white30, width: 2),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${ally.abilityIndex + 1}',
-                                  style: TextStyle(
-                                    color: ally.abilityCooldown > 0
-                                        ? Colors.white38
-                                        : Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
+                            InkWell(
+                              onTap: ally.abilityCooldown > 0 || ally.health <= 0
+                                  ? null
+                                  : () => _activateAllyAbility(ally),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: ally.abilityCooldown > 0
+                                      ? Colors.grey.shade700
+                                      : abilityColors[ally.abilityIndex],
+                                  border: Border.all(color: Colors.white30, width: 2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${ally.abilityIndex + 1}',
+                                    style: TextStyle(
+                                      color: ally.abilityCooldown > 0
+                                          ? Colors.white38
+                                          : Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
