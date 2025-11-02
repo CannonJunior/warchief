@@ -15,77 +15,10 @@ import '../rendering3d/player_mesh.dart';
 import '../game/controllers/input_manager.dart';
 import '../models/game_action.dart';
 import '../ai/ollama_client.dart';
-
-/// Projectile - Represents a moving projectile (like fireball)
-class Projectile {
-  Mesh mesh;
-  Transform3d transform;
-  Vector3 velocity;
-  double lifetime;
-
-  Projectile({
-    required this.mesh,
-    required this.transform,
-    required this.velocity,
-    this.lifetime = 5.0, // 5 seconds max lifetime
-  });
-}
-
-/// ImpactEffect - Visual effect for projectile impacts
-class ImpactEffect {
-  Mesh mesh;
-  Transform3d transform;
-  double lifetime;
-  double maxLifetime;
-
-  ImpactEffect({
-    required this.mesh,
-    required this.transform,
-    this.lifetime = 0.5, // 0.5 seconds impact animation
-  }) : maxLifetime = lifetime;
-
-  double get progress => 1.0 - (lifetime / maxLifetime);
-}
-
-/// Ally - Represents an allied NPC character
-class Ally {
-  Mesh mesh;
-  Transform3d transform;
-  double rotation;
-  double health;
-  double maxHealth;
-  int abilityIndex; // 0, 1, or 2 (which player ability they have)
-  double abilityCooldown;
-  double abilityCooldownMax;
-  double aiTimer;
-  final double aiInterval = 3.0; // Think every 3 seconds
-  List<Projectile> projectiles;
-
-  Ally({
-    required this.mesh,
-    required this.transform,
-    this.rotation = 0.0,
-    this.health = 50.0,
-    this.maxHealth = 50.0,
-    required this.abilityIndex,
-    this.abilityCooldown = 0.0,
-    this.abilityCooldownMax = 5.0,
-    this.aiTimer = 0.0,
-  }) : projectiles = [];
-}
-
-/// AIChatMessage - Represents an AI chat message (input or output)
-class AIChatMessage {
-  final String text;
-  final bool isInput; // true = input to AI, false = output from AI
-  final DateTime timestamp;
-
-  AIChatMessage({
-    required this.text,
-    required this.isInput,
-    DateTime? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now();
-}
+import '../models/projectile.dart';
+import '../models/impact_effect.dart';
+import '../models/ally.dart';
+import '../models/ai_chat_message.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
