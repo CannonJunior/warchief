@@ -21,6 +21,7 @@ import '../models/ally.dart';
 import '../models/ai_chat_message.dart';
 import 'state/game_config.dart';
 import 'state/game_state.dart';
+import 'systems/physics_system.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -315,29 +316,12 @@ class _Game3DState extends State<Game3D> {
       gameState.playerTransform!.position += right * gameState.playerSpeed * dt;
     }
 
-    // Spacebar = Jump (allows double jump)
-    // Only trigger jump on new key press, not when held
+    // Handle jump input
     final jumpKeyIsPressed = inputManager!.isActionPressed(GameAction.jump);
-    if (jumpKeyIsPressed && !gameState.jumpKeyWasPressed && gameState.jumpsRemaining > 0) {
-      gameState.verticalVelocity = gameState.jumpForce;
-      gameState.isJumping = true;
-      gameState.isGrounded = false;
-      gameState.jumpsRemaining--;
-    }
-    gameState.jumpKeyWasPressed = jumpKeyIsPressed;
+    PhysicsSystem.handleJumpInput(jumpKeyIsPressed, gameState);
 
-    // Apply gravity and vertical movement
-    gameState.verticalVelocity -= gameState.gravity * dt;
-    gameState.playerTransform!.position.y += gameState.verticalVelocity * dt;
-
-    // Ground collision detection
-    if (gameState.playerTransform!.position.y <= gameState.groundLevel) {
-      gameState.playerTransform!.position.y = gameState.groundLevel;
-      gameState.verticalVelocity = 0.0;
-      gameState.isJumping = false;
-      gameState.isGrounded = true;
-      gameState.jumpsRemaining = gameState.maxJumps; // Reset jumps when landing
-    }
+    // Update physics (gravity, vertical movement, ground collision)
+    PhysicsSystem.update(dt, gameState);
 
     // ===== ABILITY SYSTEM =====
     // Update cooldowns
@@ -639,7 +623,7 @@ class _Game3DState extends State<Game3D> {
       final lightDirZ = 0.3; // Light from front
 
       // Calculate shadow offset based on player height (higher = further from player)
-      final playerHeight = gameState.playerTransform!.position.y - gameState.groundLevel;
+      final playerHeight = PhysicsSystem.getPlayerHeight(gameState);
       final shadowOffsetX = playerHeight * lightDirX;
       final shadowOffsetZ = playerHeight * lightDirZ;
 
