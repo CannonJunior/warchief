@@ -32,6 +32,10 @@ class GameState {
   double playerRotation = GameConfig.playerStartRotation;
   double playerSpeed = GameConfig.playerSpeed;
 
+  // Player health
+  double playerHealth = 100.0;
+  final double playerMaxHealth = 100.0;
+
   // ==================== MONSTER STATE ====================
 
   Mesh? monsterMesh;

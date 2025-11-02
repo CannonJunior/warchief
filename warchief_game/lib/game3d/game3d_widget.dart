@@ -991,13 +991,13 @@ class _Game3DState extends State<Game3D> {
         }
 
         // Check collision with player (if not already hit something)
-        if (!hitRegistered && gameState.playerTransform != null && playerHealth > 0) {
+        if (!hitRegistered && gameState.playerTransform != null && gameState.playerHealth > 0) {
           final distance = (ally.transform.position - gameState.playerTransform!.position).length;
           if (distance <= 2.0) {
             final distanceBefore = (ally.transform.position - gameState.playerTransform!.position).length;
             if (distanceBefore <= 2.0) {
               setState(() {
-                playerHealth = math.max(0, playerHealth - 10.0);
+                gameState.playerHealth = math.max(0, gameState.playerHealth - 10.0);
 
                 // Create impact effect
                 gameState.impactEffects.add(ImpactEffect(
@@ -1013,7 +1013,7 @@ class _Game3DState extends State<Game3D> {
                 ));
               });
               hitRegistered = true;
-              print('Ally sword hit player! Player health: $playerHealth');
+              print('Ally sword hit player! Player health: ${gameState.playerHealth}');
             }
           }
         }

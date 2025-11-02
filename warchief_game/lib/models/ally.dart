@@ -6,6 +6,7 @@ import 'projectile.dart';
 class Ally {
   Mesh mesh;
   Transform3d transform;
+  Transform3d? directionIndicatorTransform;
   double rotation;
   double health;
   double maxHealth;
@@ -19,6 +20,7 @@ class Ally {
   Ally({
     required this.mesh,
     required this.transform,
+    this.directionIndicatorTransform,
     this.rotation = 0.0,
     this.health = 50.0,
     this.maxHealth = 50.0,
