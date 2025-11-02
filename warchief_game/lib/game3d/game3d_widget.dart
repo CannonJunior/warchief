@@ -24,6 +24,7 @@ import 'state/game_state.dart';
 import 'systems/physics_system.dart';
 import 'systems/ability_system.dart';
 import 'systems/ai_system.dart';
+import 'systems/input_system.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -239,84 +240,8 @@ class _Game3DState extends State<Game3D> {
   void _update(double dt) {
     if (inputManager == null || camera == null || gameState.playerTransform == null) return;
 
-    inputManager!.update(dt);
-
-    // Camera controls
-    if (inputManager!.isActionPressed(GameAction.cameraRotateLeft)) {
-      camera!.yawBy(-90 * dt); // J key - yaw left
-    }
-    if (inputManager!.isActionPressed(GameAction.cameraRotateRight)) {
-      camera!.yawBy(90 * dt); // L key - yaw right
-    }
-    if (inputManager!.isActionPressed(GameAction.cameraPitchUp)) {
-      camera!.pitchBy(45 * dt); // N key - pitch up
-    }
-    if (inputManager!.isActionPressed(GameAction.cameraPitchDown)) {
-      camera!.pitchBy(-45 * dt); // M key - pitch down
-    }
-    if (inputManager!.isActionPressed(GameAction.cameraZoomIn)) {
-      camera!.zoom(-5 * dt); // I key - zoom in
-    }
-    if (inputManager!.isActionPressed(GameAction.cameraZoomOut)) {
-      camera!.zoom(5 * dt); // K key - zoom out
-    }
-
-    // Player movement controls
-    // W = Forward
-    if (inputManager!.isActionPressed(GameAction.moveForward)) {
-      // Move forward in player's facing direction
-      final forward = Vector3(
-        -Math.sin(radians(gameState.playerRotation)),
-        0,
-        -Math.cos(radians(gameState.playerRotation)),
-      );
-      gameState.playerTransform!.position += forward * gameState.playerSpeed * dt;
-    }
-
-    // S = Backward
-    if (inputManager!.isActionPressed(GameAction.moveBackward)) {
-      // Move backward
-      final forward = Vector3(
-        -Math.sin(radians(gameState.playerRotation)),
-        0,
-        -Math.cos(radians(gameState.playerRotation)),
-      );
-      gameState.playerTransform!.position -= forward * gameState.playerSpeed * dt;
-    }
-
-    // A = Rotate Right
-    if (inputManager!.isActionPressed(GameAction.rotateLeft)) {
-      gameState.playerRotation += 180 * dt; // A key - rotate right
-      gameState.playerTransform!.rotation.y = gameState.playerRotation;
-    }
-
-    // D = Rotate Left
-    if (inputManager!.isActionPressed(GameAction.rotateRight)) {
-      gameState.playerRotation -= 180 * dt; // D key - rotate left
-      gameState.playerTransform!.rotation.y = gameState.playerRotation;
-    }
-
-    // Q = Strafe Left
-    if (inputManager!.isActionPressed(GameAction.strafeLeft)) {
-      // Strafe left (perpendicular to facing direction)
-      final right = Vector3(
-        Math.cos(radians(gameState.playerRotation)),
-        0,
-        -Math.sin(radians(gameState.playerRotation)),
-      );
-      gameState.playerTransform!.position -= right * gameState.playerSpeed * dt;
-    }
-
-    // E = Strafe Right
-    if (inputManager!.isActionPressed(GameAction.strafeRight)) {
-      // Strafe right
-      final right = Vector3(
-        Math.cos(radians(gameState.playerRotation)),
-        0,
-        -Math.sin(radians(gameState.playerRotation)),
-      );
-      gameState.playerTransform!.position += right * gameState.playerSpeed * dt;
-    }
+    // Process player and camera input
+    InputSystem.update(dt, inputManager!, camera!, gameState);
 
     // Handle jump input
     final jumpKeyIsPressed = inputManager!.isActionPressed(GameAction.jump);
