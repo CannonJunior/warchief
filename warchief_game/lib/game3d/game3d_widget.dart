@@ -22,6 +22,7 @@ import '../models/ai_chat_message.dart';
 import 'state/game_config.dart';
 import 'state/game_state.dart';
 import 'systems/physics_system.dart';
+import 'systems/ability_system.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -324,10 +325,8 @@ class _Game3DState extends State<Game3D> {
     PhysicsSystem.update(dt, gameState);
 
     // ===== ABILITY SYSTEM =====
-    // Update cooldowns
-    if (gameState.ability1Cooldown > 0) gameState.ability1Cooldown -= dt;
-    if (gameState.ability2Cooldown > 0) gameState.ability2Cooldown -= dt;
-    if (gameState.ability3Cooldown > 0) gameState.ability3Cooldown -= dt;
+    // Update player ability cooldowns and effects
+    AbilitySystem.update(dt, gameState);
 
     // Update monster ability cooldowns
     if (gameState.monsterAbility1Cooldown > 0) gameState.monsterAbility1Cooldown -= dt;
@@ -474,138 +473,10 @@ class _Game3DState extends State<Game3D> {
       return projectile.lifetime <= 0;
     });
 
-    // Ability 1: Sword Attack (Key 1)
-    if (inputManager!.isActionPressed(GameAction.actionBar1) && gameState.ability1Cooldown <= 0 && !gameState.ability1Active) {
-      gameState.ability1Active = true;
-      gameState.ability1ActiveTime = 0.0;
-      gameState.ability1Cooldown = gameState.ability1CooldownMax;
-      print('Sword attack activated!');
-    }
-
-    // Update sword attack
-    if (gameState.ability1Active) {
-      gameState.ability1ActiveTime += dt;
-      if (gameState.ability1ActiveTime >= gameState.ability1Duration) {
-        gameState.ability1Active = false;
-      } else if (gameState.swordTransform != null && gameState.playerTransform != null) {
-        // Position sword in front of player, rotating during swing
-        final forward = Vector3(
-          -Math.sin(radians(gameState.playerRotation)),
-          0,
-          -Math.cos(radians(gameState.playerRotation)),
-        );
-        final swingProgress = gameState.ability1ActiveTime / gameState.ability1Duration;
-        final swingAngle = swingProgress * 180; // 0 to 180 degrees
-
-        gameState.swordTransform!.position = gameState.playerTransform!.position + forward * 0.8;
-        gameState.swordTransform!.position.y = gameState.playerTransform!.position.y;
-        gameState.swordTransform!.rotation.y = gameState.playerRotation + swingAngle - 90;
-      }
-    }
-
-    // Ability 2: Fireball (Key 2)
-    if (inputManager!.isActionPressed(GameAction.actionBar2) && gameState.ability2Cooldown <= 0) {
-      // Create fireball projectile
-      final forward = Vector3(
-        -Math.sin(radians(gameState.playerRotation)),
-        0,
-        -Math.cos(radians(gameState.playerRotation)),
-      );
-
-      final fireballMesh = Mesh.cube(
-        size: 0.4,
-        color: Vector3(1.0, 0.4, 0.0), // Orange/red fireball
-      );
-
-      final startPos = gameState.playerTransform!.position.clone() + forward * 1.0;
-      startPos.y = gameState.playerTransform!.position.y;
-
-      final fireballTransform = Transform3d(
-        position: startPos,
-        scale: Vector3(1, 1, 1),
-      );
-
-      gameState.fireballs.add(Projectile(
-        mesh: fireballMesh,
-        transform: fireballTransform,
-        velocity: forward * 10.0, // Speed of 10 units/sec
-      ));
-
-      gameState.ability2Cooldown = gameState.ability2CooldownMax;
-      print('Fireball launched!');
-    }
-
-    // Update fireballs and check for collisions
-    gameState.fireballs.removeWhere((fireball) {
-      // Move fireball
-      fireball.transform.position += fireball.velocity * dt;
-      fireball.lifetime -= dt;
-
-      // Check collision with monster
-      if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
-        final distance = (fireball.transform.position - gameState.monsterTransform!.position).length;
-        final collisionThreshold = 1.0; // Collision distance
-
-        if (distance < collisionThreshold) {
-          // Create impact effect at collision point
-          final impactMesh = Mesh.cube(
-            size: 0.8,
-            color: Vector3(1.0, 0.5, 0.0), // Orange impact flash
-          );
-          final impactTransform = Transform3d(
-            position: fireball.transform.position.clone(),
-            scale: Vector3(1, 1, 1),
-          );
-          gameState.impactEffects.add(ImpactEffect(
-            mesh: impactMesh,
-            transform: impactTransform,
-          ));
-
-          // Deal damage to monster
-          final damage = 20.0;
-          gameState.monsterHealth = (gameState.monsterHealth - damage).clamp(0.0, gameState.monsterMaxHealth);
-          print('Fireball hit monster for $damage damage! Monster health: ${gameState.monsterHealth.toStringAsFixed(1)}');
-
-          // Remove fireball
-          return true;
-        }
-      }
-
-      // Remove if lifetime expired
-      return fireball.lifetime <= 0;
-    });
-
-    // Update impact effects
-    gameState.impactEffects.removeWhere((impact) {
-      impact.lifetime -= dt;
-
-      // Scale effect (expand and fade)
-      final scale = 1.0 + (impact.progress * 1.5); // Grows to 2.5x size
-      impact.transform.scale = Vector3(scale, scale, scale);
-
-      return impact.lifetime <= 0;
-    });
-
-    // Ability 3: Heal (Key 3)
-    if (inputManager!.isActionPressed(GameAction.actionBar3) && gameState.ability3Cooldown <= 0 && !gameState.ability3Active) {
-      gameState.ability3Active = true;
-      gameState.ability3ActiveTime = 0.0;
-      gameState.ability3Cooldown = gameState.ability3CooldownMax;
-      print('Heal activated!');
-    }
-
-    // Update heal effect
-    if (gameState.ability3Active) {
-      gameState.ability3ActiveTime += dt;
-      if (gameState.ability3ActiveTime >= gameState.ability3Duration) {
-        gameState.ability3Active = false;
-      } else if (gameState.healEffectTransform != null && gameState.playerTransform != null) {
-        // Position heal effect around player with pulsing animation
-        gameState.healEffectTransform!.position = gameState.playerTransform!.position.clone();
-        final pulseScale = 1.0 + (Math.sin(gameState.ability3ActiveTime * 10) * 0.2);
-        gameState.healEffectTransform!.scale = Vector3(pulseScale, pulseScale, pulseScale);
-      }
-    }
+    // Handle player ability input
+    AbilitySystem.handleAbility1Input(inputManager!.isActionPressed(GameAction.actionBar1), gameState);
+    AbilitySystem.handleAbility2Input(inputManager!.isActionPressed(GameAction.actionBar2), gameState);
+    AbilitySystem.handleAbility3Input(inputManager!.isActionPressed(GameAction.actionBar3), gameState);
     // ===== END ABILITY SYSTEM =====
 
     // Update direction indicator position and rotation to match player
@@ -739,60 +610,21 @@ class _Game3DState extends State<Game3D> {
 
   // Ability activation methods (for clickable buttons)
   void _activateAbility1() {
-    if (gameState.ability1Cooldown <= 0 && !gameState.ability1Active) {
-      setState(() {
-        gameState.ability1Active = true;
-        gameState.ability1ActiveTime = 0.0;
-        gameState.ability1Cooldown = gameState.ability1CooldownMax;
-      });
-      print('Sword attack activated! (clicked)');
-    }
+    setState(() {
+      AbilitySystem.handleAbility1Input(true, gameState);
+    });
   }
 
   void _activateAbility2() {
-    if (gameState.ability2Cooldown <= 0 && gameState.playerTransform != null) {
-      setState(() {
-        // Create fireball projectile
-        final forward = Vector3(
-          -Math.sin(radians(gameState.playerRotation)),
-          0,
-          -Math.cos(radians(gameState.playerRotation)),
-        );
-
-        final fireballMesh = Mesh.cube(
-          size: 0.4,
-          color: Vector3(1.0, 0.4, 0.0), // Orange/red fireball
-        );
-
-        final startPos = gameState.playerTransform!.position.clone() + forward * 1.0;
-        startPos.y = gameState.playerTransform!.position.y;
-
-        final fireballTransform = Transform3d(
-          position: startPos,
-          scale: Vector3(1, 1, 1),
-        );
-
-        gameState.fireballs.add(Projectile(
-          mesh: fireballMesh,
-          transform: fireballTransform,
-          velocity: forward * 10.0, // Speed of 10 units/sec
-        ));
-
-        gameState.ability2Cooldown = gameState.ability2CooldownMax;
-      });
-      print('Fireball launched! (clicked)');
-    }
+    setState(() {
+      AbilitySystem.handleAbility2Input(true, gameState);
+    });
   }
 
   void _activateAbility3() {
-    if (gameState.ability3Cooldown <= 0 && !gameState.ability3Active) {
-      setState(() {
-        gameState.ability3Active = true;
-        gameState.ability3ActiveTime = 0.0;
-        gameState.ability3Cooldown = gameState.ability3CooldownMax;
-      });
-      print('Heal activated! (clicked)');
-    }
+    setState(() {
+      AbilitySystem.handleAbility3Input(true, gameState);
+    });
   }
 
   // ===== MONSTER ABILITY METHODS =====
