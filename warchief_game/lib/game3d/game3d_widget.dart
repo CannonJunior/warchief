@@ -50,9 +50,7 @@ class ImpactEffect {
 /// Ally - Represents an allied NPC character
 class Ally {
   Mesh mesh;
-  Mesh directionIndicatorMesh;
   Transform3d transform;
-  Transform3d? directionIndicatorTransform;
   double rotation;
   double health;
   double maxHealth;
@@ -65,9 +63,7 @@ class Ally {
 
   Ally({
     required this.mesh,
-    required this.directionIndicatorMesh,
     required this.transform,
-    this.directionIndicatorTransform,
     this.rotation = 0.0,
     this.health = 50.0,
     this.maxHealth = 50.0,
@@ -861,11 +857,6 @@ class _Game3DState extends State<Game3D> {
       // Render ally mesh
       renderer!.render(ally.mesh, ally.transform, camera!);
 
-      // Render ally direction indicator
-      if (ally.directionIndicatorTransform != null) {
-        renderer!.render(ally.directionIndicatorMesh, ally.directionIndicatorTransform!, camera!);
-      }
-
       // Render ally projectiles
       for (final projectile in ally.projectiles) {
         renderer!.render(projectile.mesh, projectile.transform, camera!);
@@ -1119,26 +1110,94 @@ class _Game3DState extends State<Game3D> {
       ally.transform.position -= direction * 0.3;
     } else if (decision == 'USE_ABILITY') {
       // Use ally's ability based on their abilityIndex
-      if (ally.abilityIndex == 0 && monsterTransform != null) {
-        // Ability 0: Sword (melee attack with collision detection)
-        final hitRegistered = _checkAndHandleCollision(
-          attackerPosition: ally.transform.position,
-          targetPosition: monsterTransform!.position,
-          collisionThreshold: 2.0, // Melee range: 2 units
-          damage: 10.0, // Sword does 10 damage
-          attackType: 'Ally sword',
-          impactColor: Vector3(0.7, 0.7, 0.8), // Gray-blue impact
-          impactSize: 0.5,
-        );
+      if (ally.abilityIndex == 0) {
+        // Ability 0: Sword (melee attack with collision detection against all entities)
+        bool hitRegistered = false;
+
+        // Check collision with monster
+        if (monsterTransform != null && monsterHealth > 0) {
+          final distance = (ally.transform.position - monsterTransform!.position).length;
+          if (distance <= 2.0) {
+            hitRegistered = _checkAndHandleCollision(
+              attackerPosition: ally.transform.position,
+              targetPosition: monsterTransform!.position,
+              collisionThreshold: 2.0,
+              damage: 10.0,
+              attackType: 'Ally sword',
+              impactColor: Vector3(0.7, 0.7, 0.8),
+              impactSize: 0.5,
+            );
+            if (hitRegistered) {
+              print('Ally sword hit monster!');
+            }
+          }
+        }
+
+        // Check collision with player (if not already hit something)
+        if (!hitRegistered && playerTransform != null && playerHealth > 0) {
+          final distance = (ally.transform.position - playerTransform!.position).length;
+          if (distance <= 2.0) {
+            final distanceBefore = (ally.transform.position - playerTransform!.position).length;
+            if (distanceBefore <= 2.0) {
+              setState(() {
+                playerHealth = math.max(0, playerHealth - 10.0);
+
+                // Create impact effect
+                impactEffects.add(ImpactEffect(
+                  mesh: Mesh.cube(
+                    size: 0.5,
+                    color: Vector3(0.7, 0.7, 0.8),
+                  ),
+                  transform: Transform3d(
+                    position: playerTransform!.position.clone() + Vector3(0, 0.5, 0),
+                    scale: Vector3(1, 1, 1),
+                  ),
+                  lifetime: 0.3,
+                ));
+              });
+              hitRegistered = true;
+              print('Ally sword hit player! Player health: $playerHealth');
+            }
+          }
+        }
+
+        // Check collision with other allies (if not already hit something)
+        if (!hitRegistered) {
+          for (final otherAlly in allies) {
+            // Skip the attacker and dead allies
+            if (otherAlly == ally || otherAlly.health <= 0) continue;
+
+            final distance = (ally.transform.position - otherAlly.transform.position).length;
+            if (distance <= 2.0) {
+              setState(() {
+                otherAlly.health = math.max(0, otherAlly.health - 10.0);
+
+                // Create impact effect
+                impactEffects.add(ImpactEffect(
+                  mesh: Mesh.cube(
+                    size: 0.5,
+                    color: Vector3(0.7, 0.7, 0.8),
+                  ),
+                  transform: Transform3d(
+                    position: otherAlly.transform.position.clone() + Vector3(0, 0.5, 0),
+                    scale: Vector3(1, 1, 1),
+                  ),
+                  lifetime: 0.3,
+                ));
+              });
+              hitRegistered = true;
+              print('Ally sword hit another ally! Ally health: ${otherAlly.health}');
+              break; // Only hit one target
+            }
+          }
+        }
 
         // Always set cooldown, whether hit lands or not
         setState(() {
           ally.abilityCooldown = ally.abilityCooldownMax;
         });
 
-        if (hitRegistered) {
-          print('Ally sword hit!');
-        } else {
+        if (!hitRegistered) {
           print('Ally sword missed - out of range!');
         }
       } else if (ally.abilityIndex == 1 && monsterTransform != null) {
@@ -1205,12 +1264,6 @@ class _Game3DState extends State<Game3D> {
         color: Vector3(0.4, 0.7, 1.0), // Brighter blue than player (0.3, 0.5, 0.8)
       );
 
-      // Create direction indicator (cyan triangle on top)
-      final allyDirectionIndicator = Mesh.triangle(
-        size: 0.4, // Smaller than player's 0.5
-        color: Vector3(0.0, 1.0, 1.0), // Cyan color
-      );
-
       // Position ally near player (offset to avoid overlap)
       final allyCount = allies.length;
       final angle = (allyCount * 60.0) * (math.pi / 180.0); // Space out in circle
@@ -1230,18 +1283,10 @@ class _Game3DState extends State<Game3D> {
         scale: Vector3(1, 1, 1),
       );
 
-      final allyDirectionTransform = Transform3d(
-        position: Vector3(allyPosition.x, allyPosition.y + 0.4, allyPosition.z),
-        rotation: Vector3(0, 180, 0),
-        scale: Vector3(1, 1, 1),
-      );
-
       // Create ally object
       final ally = Ally(
         mesh: allyMesh,
-        directionIndicatorMesh: allyDirectionIndicator,
         transform: allyTransform,
-        directionIndicatorTransform: allyDirectionTransform,
         rotation: 0.0,
         abilityIndex: randomAbility,
         health: 50.0,
@@ -1729,23 +1774,42 @@ class _Game3DState extends State<Game3D> {
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                  color: ally.abilityCooldown > 0
-                                      ? Colors.grey.shade700
-                                      : abilityColors[ally.abilityIndex],
                                   border: Border.all(color: Colors.white30, width: 2),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: Center(
-                                  child: Text(
-                                    '${ally.abilityIndex + 1}',
-                                    style: TextStyle(
-                                      color: ally.abilityCooldown > 0
-                                          ? Colors.white38
-                                          : Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
+                                child: Stack(
+                                  children: [
+                                    // Base color
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: ally.abilityCooldown > 0
+                                            ? Colors.grey.shade700
+                                            : abilityColors[ally.abilityIndex],
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
                                     ),
-                                  ),
+                                    // Cooldown clock animation
+                                    if (ally.abilityCooldown > 0)
+                                      CustomPaint(
+                                        size: Size(40, 40),
+                                        painter: CooldownClockPainter(
+                                          progress: 1.0 - (ally.abilityCooldown / ally.abilityCooldownMax),
+                                        ),
+                                      ),
+                                    // Ability number label
+                                    Center(
+                                      child: Text(
+                                        '${ally.abilityIndex + 1}',
+                                        style: TextStyle(
+                                          color: ally.abilityCooldown > 0
+                                              ? Colors.white38
+                                              : Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
