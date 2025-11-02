@@ -20,6 +20,7 @@ import '../models/impact_effect.dart';
 import '../models/ally.dart';
 import '../models/ai_chat_message.dart';
 import 'state/game_config.dart';
+import 'state/game_state.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -52,86 +53,8 @@ class _Game3DState extends State<Game3D> {
   InputManager? inputManager;
   OllamaClient? ollamaClient;
 
-  // Game objects
-  List<TerrainTile>? terrainTiles;
-  Mesh? playerMesh;
-  Transform3d? playerTransform;
-  Mesh? directionIndicator;
-  Transform3d? directionIndicatorTransform;
-  Mesh? shadowMesh;
-  Transform3d? shadowTransform;
-
-  // Monster (enemy)
-  Mesh? monsterMesh;
-  Transform3d? monsterTransform;
-  Mesh? monsterDirectionIndicator;
-  Transform3d? monsterDirectionIndicatorTransform;
-  double monsterRotation = 180.0; // Face toward player initially
-
-  // Monster health and abilities
-  double monsterHealth = GameConfig.monsterMaxHealth;
-  final double monsterMaxHealth = GameConfig.monsterMaxHealth;
-  double monsterAbility1Cooldown = 0.0;
-  final double monsterAbility1CooldownMax = GameConfig.monsterAbility1CooldownMax;
-  double monsterAbility2Cooldown = 0.0;
-  final double monsterAbility2CooldownMax = GameConfig.monsterAbility2CooldownMax;
-  double monsterAbility3Cooldown = 0.0;
-  final double monsterAbility3CooldownMax = GameConfig.monsterAbility3CooldownMax;
-
-  // Monster AI state
-  bool monsterPaused = false;
-  double monsterAiTimer = 0.0;
-  final double monsterAiInterval = GameConfig.monsterAiInterval;
-  List<Projectile> monsterProjectiles = [];
-
-  // Ally state
-  List<Ally> allies = []; // Start with zero allies
-
-  // AI Chat messages for Monster
-  List<AIChatMessage> monsterAIChat = [];
-
-  // Game state
-  double playerRotation = GameConfig.playerStartRotation;
-  double playerSpeed = GameConfig.playerSpeed;
-  int? animationFrameId;
-  DateTime? lastFrameTime;
-  int frameCount = 0;
-
-  // Jump state
-  bool isJumping = false;
-  double verticalVelocity = 0.0;
-  bool isGrounded = true;
-  int jumpsRemaining = 2; // Allow 2 jumps total (ground jump + air jump)
-  final int maxJumps = 2;
-  final double jumpForce = GameConfig.jumpVelocity;
-  final double gravity = GameConfig.gravity;
-  final double groundLevel = GameConfig.groundLevel;
-  bool jumpKeyWasPressed = false; // Track previous jump key state
-
-  // Ability system
-  // Ability 1: Sword Attack (melee)
-  double ability1Cooldown = 0.0;
-  final double ability1CooldownMax = GameConfig.ability1CooldownMax;
-  bool ability1Active = false;
-  double ability1ActiveTime = 0.0;
-  final double ability1Duration = GameConfig.ability1Duration;
-  Mesh? swordMesh;
-  Transform3d? swordTransform;
-
-  // Ability 2: Fireball (projectile)
-  double ability2Cooldown = 0.0;
-  final double ability2CooldownMax = GameConfig.ability2CooldownMax;
-  List<Projectile> fireballs = []; // List of active fireballs
-  List<ImpactEffect> impactEffects = []; // List of active impact effects
-
-  // Ability 3: Heal
-  double ability3Cooldown = 0.0;
-  final double ability3CooldownMax = GameConfig.ability3CooldownMax;
-  bool ability3Active = false;
-  double ability3ActiveTime = 0.0;
-  final double ability3Duration = 1.0; // Heal effect duration
-  Mesh? healEffectMesh;
-  Transform3d? healEffectTransform;
+  // Game state - centralized state management
+  final GameState gameState = GameState();
 
   @override
   void initState() {
@@ -188,80 +111,80 @@ class _Game3DState extends State<Game3D> {
       camera!.setTargetDistance(15);
 
       // Initialize terrain
-      terrainTiles = TerrainGenerator.createTileGrid(
+      gameState.terrainTiles = TerrainGenerator.createTileGrid(
         width: GameConfig.terrainGridSize,
         height: GameConfig.terrainGridSize,
         tileSize: GameConfig.terrainTileSize,
       );
 
       // Initialize player
-      playerMesh = PlayerMesh.createSimpleCharacter();
-      playerTransform = Transform3d(
+      gameState.playerMesh = PlayerMesh.createSimpleCharacter();
+      gameState.playerTransform = Transform3d(
         position: GameConfig.playerStartPosition,
         scale: Vector3(1, 1, 1),
       );
 
       // Initialize direction indicator (red triangle on top of player)
-      directionIndicator = Mesh.triangle(
+      gameState.directionIndicator = Mesh.triangle(
         size: GameConfig.playerDirectionIndicatorSize,
         color: Vector3(1.0, 0.0, 0.0), // Red color
       );
-      directionIndicatorTransform = Transform3d(
+      gameState.directionIndicatorTransform = Transform3d(
         position: Vector3(0, 1.2, 0), // On top of player cube
         scale: Vector3(1, 1, 1),
       );
 
       // Initialize shadow (dark semi-transparent plane under player)
-      shadowMesh = Mesh.plane(
+      gameState.shadowMesh = Mesh.plane(
         width: 1.0,
         height: 1.0,
         color: Vector3(0.0, 0.0, 0.0), // Black shadow
       );
-      shadowTransform = Transform3d(
+      gameState.shadowTransform = Transform3d(
         position: Vector3(0, 0.01, 0), // Slightly above ground to avoid z-fighting
         scale: Vector3(1, 1, 1),
       );
 
       // Initialize sword mesh (gray metallic plane for sword swing)
-      swordMesh = Mesh.plane(
+      gameState.swordMesh = Mesh.plane(
         width: 0.3,
         height: 1.5,
         color: Vector3(0.7, 0.7, 0.8), // Gray metallic color
       );
-      swordTransform = Transform3d(
+      gameState.swordTransform = Transform3d(
         position: Vector3(0, 0, 0), // Will be positioned in front of player when active
         scale: Vector3(1, 1, 1),
       );
 
       // Initialize heal effect mesh (green/yellow glow around player)
-      healEffectMesh = Mesh.cube(
+      gameState.healEffectMesh = Mesh.cube(
         size: 1.5,
         color: Vector3(0.5, 1.0, 0.3), // Green/yellow healing color
       );
-      healEffectTransform = Transform3d(
+      gameState.healEffectTransform = Transform3d(
         position: Vector3(0, 0, 0), // Will match player position when active
         scale: Vector3(1, 1, 1),
       );
 
       // Initialize monster (purple enemy at opposite end of terrain)
-      monsterMesh = Mesh.cube(
+      gameState.monsterMesh = Mesh.cube(
         size: GameConfig.monsterSize,
         color: Vector3(0.6, 0.2, 0.8), // Purple color
       );
-      monsterTransform = Transform3d(
+      gameState.monsterTransform = Transform3d(
         position: GameConfig.monsterStartPosition,
-        rotation: Vector3(0, monsterRotation, 0),
+        rotation: Vector3(0, gameState.monsterRotation, 0),
         scale: Vector3(1, 1, 1),
       );
 
       // Initialize monster direction indicator (green triangle on top of monster)
-      monsterDirectionIndicator = Mesh.triangle(
+      gameState.monsterDirectionIndicator = Mesh.triangle(
         size: GameConfig.monsterDirectionIndicatorSize,
         color: Vector3(0.0, 1.0, 0.0), // Green color
       );
-      monsterDirectionIndicatorTransform = Transform3d(
+      gameState.monsterDirectionIndicatorTransform = Transform3d(
         position: Vector3(GameConfig.monsterStartPosition.x, GameConfig.monsterStartPosition.y + 0.7, GameConfig.monsterStartPosition.z),
-        rotation: Vector3(0, monsterRotation + 180, 0),
+        rotation: Vector3(0, gameState.monsterRotation + 180, 0),
         scale: Vector3(1, 1, 1),
       );
 
@@ -276,42 +199,42 @@ class _Game3DState extends State<Game3D> {
   }
 
   void _startGameLoop() {
-    lastFrameTime = DateTime.now();
+    gameState.lastFrameTime = DateTime.now();
     print('Starting game loop...');
 
     void gameLoop(num timestamp) {
       if (!mounted) return;
 
       final now = DateTime.now();
-      final dt = lastFrameTime != null
-          ? (now.millisecondsSinceEpoch - lastFrameTime!.millisecondsSinceEpoch) / 1000.0
+      final dt = gameState.lastFrameTime != null
+          ? (now.millisecondsSinceEpoch - gameState.lastFrameTime!.millisecondsSinceEpoch) / 1000.0
           : 0.016; // Default to ~60fps
-      lastFrameTime = now;
+      gameState.lastFrameTime = now;
 
-      frameCount++;
+      gameState.frameCount++;
 
       // Log every 60 frames (~1 second at 60fps)
-      if (frameCount % 60 == 0) {
-        print('Frame $frameCount - dt: ${dt.toStringAsFixed(4)}s - Terrain: ${terrainTiles?.length ?? 0} tiles');
+      if (gameState.frameCount % 60 == 0) {
+        print('Frame ${gameState.frameCount} - dt: ${dt.toStringAsFixed(4)}s - Terrain: ${gameState.terrainTiles?.length ?? 0} tiles');
       }
 
       _update(dt);
       _render();
 
       // Update UI every 10 frames to show camera changes
-      if (frameCount % 10 == 0 && mounted) {
+      if (gameState.frameCount % 10 == 0 && mounted) {
         setState(() {});
       }
 
-      animationFrameId = html.window.requestAnimationFrame(gameLoop);
+      gameState.animationFrameId = html.window.requestAnimationFrame(gameLoop);
     }
 
-    animationFrameId = html.window.requestAnimationFrame(gameLoop);
-    print('Game loop started - animationFrameId: $animationFrameId');
+    gameState.animationFrameId = html.window.requestAnimationFrame(gameLoop);
+    print('Game loop started - animationFrameId: ${gameState.animationFrameId}');
   }
 
   void _update(double dt) {
-    if (inputManager == null || camera == null || playerTransform == null) return;
+    if (inputManager == null || camera == null || gameState.playerTransform == null) return;
 
     inputManager!.update(dt);
 
@@ -340,141 +263,141 @@ class _Game3DState extends State<Game3D> {
     if (inputManager!.isActionPressed(GameAction.moveForward)) {
       // Move forward in player's facing direction
       final forward = Vector3(
-        -Math.sin(radians(playerRotation)),
+        -Math.sin(radians(gameState.playerRotation)),
         0,
-        -Math.cos(radians(playerRotation)),
+        -Math.cos(radians(gameState.playerRotation)),
       );
-      playerTransform!.position += forward * playerSpeed * dt;
+      gameState.playerTransform!.position += forward * gameState.playerSpeed * dt;
     }
 
     // S = Backward
     if (inputManager!.isActionPressed(GameAction.moveBackward)) {
       // Move backward
       final forward = Vector3(
-        -Math.sin(radians(playerRotation)),
+        -Math.sin(radians(gameState.playerRotation)),
         0,
-        -Math.cos(radians(playerRotation)),
+        -Math.cos(radians(gameState.playerRotation)),
       );
-      playerTransform!.position -= forward * playerSpeed * dt;
+      gameState.playerTransform!.position -= forward * gameState.playerSpeed * dt;
     }
 
     // A = Rotate Right
     if (inputManager!.isActionPressed(GameAction.rotateLeft)) {
-      playerRotation += 180 * dt; // A key - rotate right
-      playerTransform!.rotation.y = playerRotation;
+      gameState.playerRotation += 180 * dt; // A key - rotate right
+      gameState.playerTransform!.rotation.y = gameState.playerRotation;
     }
 
     // D = Rotate Left
     if (inputManager!.isActionPressed(GameAction.rotateRight)) {
-      playerRotation -= 180 * dt; // D key - rotate left
-      playerTransform!.rotation.y = playerRotation;
+      gameState.playerRotation -= 180 * dt; // D key - rotate left
+      gameState.playerTransform!.rotation.y = gameState.playerRotation;
     }
 
     // Q = Strafe Left
     if (inputManager!.isActionPressed(GameAction.strafeLeft)) {
       // Strafe left (perpendicular to facing direction)
       final right = Vector3(
-        Math.cos(radians(playerRotation)),
+        Math.cos(radians(gameState.playerRotation)),
         0,
-        -Math.sin(radians(playerRotation)),
+        -Math.sin(radians(gameState.playerRotation)),
       );
-      playerTransform!.position -= right * playerSpeed * dt;
+      gameState.playerTransform!.position -= right * gameState.playerSpeed * dt;
     }
 
     // E = Strafe Right
     if (inputManager!.isActionPressed(GameAction.strafeRight)) {
       // Strafe right
       final right = Vector3(
-        Math.cos(radians(playerRotation)),
+        Math.cos(radians(gameState.playerRotation)),
         0,
-        -Math.sin(radians(playerRotation)),
+        -Math.sin(radians(gameState.playerRotation)),
       );
-      playerTransform!.position += right * playerSpeed * dt;
+      gameState.playerTransform!.position += right * gameState.playerSpeed * dt;
     }
 
     // Spacebar = Jump (allows double jump)
     // Only trigger jump on new key press, not when held
     final jumpKeyIsPressed = inputManager!.isActionPressed(GameAction.jump);
-    if (jumpKeyIsPressed && !jumpKeyWasPressed && jumpsRemaining > 0) {
-      verticalVelocity = jumpForce;
-      isJumping = true;
-      isGrounded = false;
-      jumpsRemaining--;
+    if (jumpKeyIsPressed && !gameState.jumpKeyWasPressed && gameState.jumpsRemaining > 0) {
+      gameState.verticalVelocity = gameState.jumpForce;
+      gameState.isJumping = true;
+      gameState.isGrounded = false;
+      gameState.jumpsRemaining--;
     }
-    jumpKeyWasPressed = jumpKeyIsPressed;
+    gameState.jumpKeyWasPressed = jumpKeyIsPressed;
 
     // Apply gravity and vertical movement
-    verticalVelocity -= gravity * dt;
-    playerTransform!.position.y += verticalVelocity * dt;
+    gameState.verticalVelocity -= gameState.gravity * dt;
+    gameState.playerTransform!.position.y += gameState.verticalVelocity * dt;
 
     // Ground collision detection
-    if (playerTransform!.position.y <= groundLevel) {
-      playerTransform!.position.y = groundLevel;
-      verticalVelocity = 0.0;
-      isJumping = false;
-      isGrounded = true;
-      jumpsRemaining = maxJumps; // Reset jumps when landing
+    if (gameState.playerTransform!.position.y <= gameState.groundLevel) {
+      gameState.playerTransform!.position.y = gameState.groundLevel;
+      gameState.verticalVelocity = 0.0;
+      gameState.isJumping = false;
+      gameState.isGrounded = true;
+      gameState.jumpsRemaining = gameState.maxJumps; // Reset jumps when landing
     }
 
     // ===== ABILITY SYSTEM =====
     // Update cooldowns
-    if (ability1Cooldown > 0) ability1Cooldown -= dt;
-    if (ability2Cooldown > 0) ability2Cooldown -= dt;
-    if (ability3Cooldown > 0) ability3Cooldown -= dt;
+    if (gameState.ability1Cooldown > 0) gameState.ability1Cooldown -= dt;
+    if (gameState.ability2Cooldown > 0) gameState.ability2Cooldown -= dt;
+    if (gameState.ability3Cooldown > 0) gameState.ability3Cooldown -= dt;
 
     // Update monster ability cooldowns
-    if (monsterAbility1Cooldown > 0) monsterAbility1Cooldown -= dt;
-    if (monsterAbility2Cooldown > 0) monsterAbility2Cooldown -= dt;
-    if (monsterAbility3Cooldown > 0) monsterAbility3Cooldown -= dt;
+    if (gameState.monsterAbility1Cooldown > 0) gameState.monsterAbility1Cooldown -= dt;
+    if (gameState.monsterAbility2Cooldown > 0) gameState.monsterAbility2Cooldown -= dt;
+    if (gameState.monsterAbility3Cooldown > 0) gameState.monsterAbility3Cooldown -= dt;
 
     // Update ally cooldowns
-    for (final ally in allies) {
+    for (final ally in gameState.allies) {
       if (ally.abilityCooldown > 0) ally.abilityCooldown -= dt;
     }
 
     // ===== MONSTER AI SYSTEM =====
-    if (!monsterPaused && monsterHealth > 0 && monsterTransform != null && playerTransform != null) {
-      monsterAiTimer += dt;
+    if (!gameState.monsterPaused && gameState.monsterHealth > 0 && gameState.monsterTransform != null && gameState.playerTransform != null) {
+      gameState.monsterAiTimer += dt;
 
       // AI thinks every 2 seconds
-      if (monsterAiTimer >= monsterAiInterval) {
-        monsterAiTimer = 0.0;
+      if (gameState.monsterAiTimer >= gameState.monsterAiInterval) {
+        gameState.monsterAiTimer = 0.0;
 
         // Calculate distance to player
-        final distanceToPlayer = (monsterTransform!.position - playerTransform!.position).length;
+        final distanceToPlayer = (gameState.monsterTransform!.position - gameState.playerTransform!.position).length;
 
         // Log AI input (game state)
-        _logMonsterAI('Health: ${monsterHealth.toStringAsFixed(0)} | Dist: ${distanceToPlayer.toStringAsFixed(1)}', isInput: true);
+        _logMonsterAI('Health: ${gameState.monsterHealth.toStringAsFixed(0)} | Dist: ${distanceToPlayer.toStringAsFixed(1)}', isInput: true);
 
         // Always face the player
-        final toPlayer = playerTransform!.position - monsterTransform!.position;
-        monsterRotation = math.atan2(-toPlayer.x, -toPlayer.z) * (180 / math.pi);
-        monsterDirectionIndicatorTransform?.rotation.y = monsterRotation;
+        final toPlayer = gameState.playerTransform!.position - gameState.monsterTransform!.position;
+        gameState.monsterRotation = math.atan2(-toPlayer.x, -toPlayer.z) * (180 / math.pi);
+        gameState.monsterDirectionIndicatorTransform?.rotation.y = gameState.monsterRotation;
 
         // Decision making
         String decision = '';
         if (distanceToPlayer > 8.0) {
           // Move toward player if too far
           final moveDirection = toPlayer.normalized();
-          monsterTransform!.position += moveDirection * 0.5;
+          gameState.monsterTransform!.position += moveDirection * 0.5;
           decision = 'MOVE_FORWARD';
         } else if (distanceToPlayer < 3.0) {
           // Move away if too close
           final moveDirection = toPlayer.normalized();
-          monsterTransform!.position -= moveDirection * 0.3;
+          gameState.monsterTransform!.position -= moveDirection * 0.3;
           decision = 'RETREAT';
         } else {
           decision = 'HOLD';
         }
 
         // Use abilities based on distance and cooldown
-        if (distanceToPlayer < 5.0 && monsterAbility1Cooldown <= 0) {
+        if (distanceToPlayer < 5.0 && gameState.monsterAbility1Cooldown <= 0) {
           _activateMonsterAbility1(); // Dark strike
           decision += ' + DARK_STRIKE';
-        } else if (distanceToPlayer > 4.0 && distanceToPlayer < 12.0 && monsterAbility2Cooldown <= 0) {
+        } else if (distanceToPlayer > 4.0 && distanceToPlayer < 12.0 && gameState.monsterAbility2Cooldown <= 0) {
           _activateMonsterAbility2(); // Shadow bolt
           decision += ' + SHADOW_BOLT';
-        } else if (monsterHealth < 50 && monsterAbility3Cooldown <= 0) {
+        } else if (gameState.monsterHealth < 50 && gameState.monsterAbility3Cooldown <= 0) {
           _activateMonsterAbility3(); // Healing
           decision += ' + HEAL';
         }
@@ -485,7 +408,7 @@ class _Game3DState extends State<Game3D> {
     }
 
     // ===== ALLY AI SYSTEM =====
-    for (final ally in allies) {
+    for (final ally in gameState.allies) {
       if (ally.health <= 0) continue; // Skip dead allies
 
       ally.aiTimer += dt;
@@ -494,10 +417,10 @@ class _Game3DState extends State<Game3D> {
       if (ally.aiTimer >= ally.aiInterval) {
         ally.aiTimer = 0.0;
 
-        if (playerTransform != null && monsterTransform != null) {
+        if (gameState.playerTransform != null && gameState.monsterTransform != null) {
           // Calculate distances
-          final distanceToPlayer = (ally.transform.position - playerTransform!.position).length;
-          final distanceToMonster = (ally.transform.position - monsterTransform!.position).length;
+          final distanceToPlayer = (ally.transform.position - gameState.playerTransform!.position).length;
+          final distanceToMonster = (ally.transform.position - gameState.monsterTransform!.position).length;
 
           // Fallback rule-based AI (when Ollama unavailable)
           String decision = _makeAllyDecision(ally, distanceToPlayer, distanceToMonster);
@@ -508,8 +431,8 @@ class _Game3DState extends State<Game3D> {
       }
 
       // Update ally's direction indicator to face monster
-      if (ally.directionIndicatorTransform != null && monsterTransform != null) {
-        final toMonster = monsterTransform!.position - ally.transform.position;
+      if (ally.directionIndicatorTransform != null && gameState.monsterTransform != null) {
+        final toMonster = gameState.monsterTransform!.position - ally.transform.position;
         ally.rotation = math.atan2(-toMonster.x, -toMonster.z) * (180 / math.pi);
         ally.directionIndicatorTransform!.rotation.y = ally.rotation;
       }
@@ -520,10 +443,10 @@ class _Game3DState extends State<Game3D> {
         projectile.lifetime -= dt;
 
         // Check collision with monster using generalized function
-        if (monsterTransform != null) {
+        if (gameState.monsterTransform != null) {
           final hitRegistered = _checkAndHandleCollision(
             attackerPosition: projectile.transform.position,
-            targetPosition: monsterTransform!.position,
+            targetPosition: gameState.monsterTransform!.position,
             collisionThreshold: 1.0,
             damage: 15.0, // Ally fireball does 15 damage
             attackType: 'Ally fireball',
@@ -538,13 +461,13 @@ class _Game3DState extends State<Game3D> {
     }
 
     // Update monster projectiles
-    monsterProjectiles.removeWhere((projectile) {
+    gameState.monsterProjectiles.removeWhere((projectile) {
       projectile.transform.position += projectile.velocity * dt;
       projectile.lifetime -= dt;
 
       // Check collision with player
-      if (playerTransform != null) {
-        final distance = (projectile.transform.position - playerTransform!.position).length;
+      if (gameState.playerTransform != null) {
+        final distance = (projectile.transform.position - gameState.playerTransform!.position).length;
         if (distance < 1.0) {
           // Hit player - create impact
           final impactMesh = Mesh.cube(
@@ -555,7 +478,7 @@ class _Game3DState extends State<Game3D> {
             position: projectile.transform.position.clone(),
             scale: Vector3(1, 1, 1),
           );
-          impactEffects.add(ImpactEffect(
+          gameState.impactEffects.add(ImpactEffect(
             mesh: impactMesh,
             transform: impactTransform,
           ));
@@ -568,41 +491,41 @@ class _Game3DState extends State<Game3D> {
     });
 
     // Ability 1: Sword Attack (Key 1)
-    if (inputManager!.isActionPressed(GameAction.actionBar1) && ability1Cooldown <= 0 && !ability1Active) {
-      ability1Active = true;
-      ability1ActiveTime = 0.0;
-      ability1Cooldown = ability1CooldownMax;
+    if (inputManager!.isActionPressed(GameAction.actionBar1) && gameState.ability1Cooldown <= 0 && !gameState.ability1Active) {
+      gameState.ability1Active = true;
+      gameState.ability1ActiveTime = 0.0;
+      gameState.ability1Cooldown = gameState.ability1CooldownMax;
       print('Sword attack activated!');
     }
 
     // Update sword attack
-    if (ability1Active) {
-      ability1ActiveTime += dt;
-      if (ability1ActiveTime >= ability1Duration) {
-        ability1Active = false;
-      } else if (swordTransform != null && playerTransform != null) {
+    if (gameState.ability1Active) {
+      gameState.ability1ActiveTime += dt;
+      if (gameState.ability1ActiveTime >= gameState.ability1Duration) {
+        gameState.ability1Active = false;
+      } else if (gameState.swordTransform != null && gameState.playerTransform != null) {
         // Position sword in front of player, rotating during swing
         final forward = Vector3(
-          -Math.sin(radians(playerRotation)),
+          -Math.sin(radians(gameState.playerRotation)),
           0,
-          -Math.cos(radians(playerRotation)),
+          -Math.cos(radians(gameState.playerRotation)),
         );
-        final swingProgress = ability1ActiveTime / ability1Duration;
+        final swingProgress = gameState.ability1ActiveTime / gameState.ability1Duration;
         final swingAngle = swingProgress * 180; // 0 to 180 degrees
 
-        swordTransform!.position = playerTransform!.position + forward * 0.8;
-        swordTransform!.position.y = playerTransform!.position.y;
-        swordTransform!.rotation.y = playerRotation + swingAngle - 90;
+        gameState.swordTransform!.position = gameState.playerTransform!.position + forward * 0.8;
+        gameState.swordTransform!.position.y = gameState.playerTransform!.position.y;
+        gameState.swordTransform!.rotation.y = gameState.playerRotation + swingAngle - 90;
       }
     }
 
     // Ability 2: Fireball (Key 2)
-    if (inputManager!.isActionPressed(GameAction.actionBar2) && ability2Cooldown <= 0) {
+    if (inputManager!.isActionPressed(GameAction.actionBar2) && gameState.ability2Cooldown <= 0) {
       // Create fireball projectile
       final forward = Vector3(
-        -Math.sin(radians(playerRotation)),
+        -Math.sin(radians(gameState.playerRotation)),
         0,
-        -Math.cos(radians(playerRotation)),
+        -Math.cos(radians(gameState.playerRotation)),
       );
 
       final fireballMesh = Mesh.cube(
@@ -610,33 +533,33 @@ class _Game3DState extends State<Game3D> {
         color: Vector3(1.0, 0.4, 0.0), // Orange/red fireball
       );
 
-      final startPos = playerTransform!.position.clone() + forward * 1.0;
-      startPos.y = playerTransform!.position.y;
+      final startPos = gameState.playerTransform!.position.clone() + forward * 1.0;
+      startPos.y = gameState.playerTransform!.position.y;
 
       final fireballTransform = Transform3d(
         position: startPos,
         scale: Vector3(1, 1, 1),
       );
 
-      fireballs.add(Projectile(
+      gameState.fireballs.add(Projectile(
         mesh: fireballMesh,
         transform: fireballTransform,
         velocity: forward * 10.0, // Speed of 10 units/sec
       ));
 
-      ability2Cooldown = ability2CooldownMax;
+      gameState.ability2Cooldown = gameState.ability2CooldownMax;
       print('Fireball launched!');
     }
 
     // Update fireballs and check for collisions
-    fireballs.removeWhere((fireball) {
+    gameState.fireballs.removeWhere((fireball) {
       // Move fireball
       fireball.transform.position += fireball.velocity * dt;
       fireball.lifetime -= dt;
 
       // Check collision with monster
-      if (monsterTransform != null && monsterHealth > 0) {
-        final distance = (fireball.transform.position - monsterTransform!.position).length;
+      if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
+        final distance = (fireball.transform.position - gameState.monsterTransform!.position).length;
         final collisionThreshold = 1.0; // Collision distance
 
         if (distance < collisionThreshold) {
@@ -649,15 +572,15 @@ class _Game3DState extends State<Game3D> {
             position: fireball.transform.position.clone(),
             scale: Vector3(1, 1, 1),
           );
-          impactEffects.add(ImpactEffect(
+          gameState.impactEffects.add(ImpactEffect(
             mesh: impactMesh,
             transform: impactTransform,
           ));
 
           // Deal damage to monster
           final damage = 20.0;
-          monsterHealth = (monsterHealth - damage).clamp(0.0, monsterMaxHealth);
-          print('Fireball hit monster for $damage damage! Monster health: ${monsterHealth.toStringAsFixed(1)}');
+          gameState.monsterHealth = (gameState.monsterHealth - damage).clamp(0.0, gameState.monsterMaxHealth);
+          print('Fireball hit monster for $damage damage! Monster health: ${gameState.monsterHealth.toStringAsFixed(1)}');
 
           // Remove fireball
           return true;
@@ -669,7 +592,7 @@ class _Game3DState extends State<Game3D> {
     });
 
     // Update impact effects
-    impactEffects.removeWhere((impact) {
+    gameState.impactEffects.removeWhere((impact) {
       impact.lifetime -= dt;
 
       // Scale effect (expand and fade)
@@ -680,67 +603,67 @@ class _Game3DState extends State<Game3D> {
     });
 
     // Ability 3: Heal (Key 3)
-    if (inputManager!.isActionPressed(GameAction.actionBar3) && ability3Cooldown <= 0 && !ability3Active) {
-      ability3Active = true;
-      ability3ActiveTime = 0.0;
-      ability3Cooldown = ability3CooldownMax;
+    if (inputManager!.isActionPressed(GameAction.actionBar3) && gameState.ability3Cooldown <= 0 && !gameState.ability3Active) {
+      gameState.ability3Active = true;
+      gameState.ability3ActiveTime = 0.0;
+      gameState.ability3Cooldown = gameState.ability3CooldownMax;
       print('Heal activated!');
     }
 
     // Update heal effect
-    if (ability3Active) {
-      ability3ActiveTime += dt;
-      if (ability3ActiveTime >= ability3Duration) {
-        ability3Active = false;
-      } else if (healEffectTransform != null && playerTransform != null) {
+    if (gameState.ability3Active) {
+      gameState.ability3ActiveTime += dt;
+      if (gameState.ability3ActiveTime >= gameState.ability3Duration) {
+        gameState.ability3Active = false;
+      } else if (gameState.healEffectTransform != null && gameState.playerTransform != null) {
         // Position heal effect around player with pulsing animation
-        healEffectTransform!.position = playerTransform!.position.clone();
-        final pulseScale = 1.0 + (Math.sin(ability3ActiveTime * 10) * 0.2);
-        healEffectTransform!.scale = Vector3(pulseScale, pulseScale, pulseScale);
+        gameState.healEffectTransform!.position = gameState.playerTransform!.position.clone();
+        final pulseScale = 1.0 + (Math.sin(gameState.ability3ActiveTime * 10) * 0.2);
+        gameState.healEffectTransform!.scale = Vector3(pulseScale, pulseScale, pulseScale);
       }
     }
     // ===== END ABILITY SYSTEM =====
 
     // Update direction indicator position and rotation to match player
-    if (directionIndicatorTransform != null && playerTransform != null) {
-      directionIndicatorTransform!.position.x = playerTransform!.position.x;
-      directionIndicatorTransform!.position.y = playerTransform!.position.y + 0.5; // Flush with top of cube
-      directionIndicatorTransform!.position.z = playerTransform!.position.z;
-      directionIndicatorTransform!.rotation.y = playerRotation + 180; // Rotate 180 degrees
+    if (gameState.directionIndicatorTransform != null && gameState.playerTransform != null) {
+      gameState.directionIndicatorTransform!.position.x = gameState.playerTransform!.position.x;
+      gameState.directionIndicatorTransform!.position.y = gameState.playerTransform!.position.y + 0.5; // Flush with top of cube
+      gameState.directionIndicatorTransform!.position.z = gameState.playerTransform!.position.z;
+      gameState.directionIndicatorTransform!.rotation.y = gameState.playerRotation + 180; // Rotate 180 degrees
     }
 
     // Update shadow position, rotation, and scale based on player height and light direction
-    if (shadowTransform != null && playerTransform != null) {
+    if (gameState.shadowTransform != null && gameState.playerTransform != null) {
       // Light direction (from upper-right-front) - normalized direction from where light is coming
       final lightDirX = 0.5; // Light from right
       final lightDirZ = 0.3; // Light from front
 
       // Calculate shadow offset based on player height (higher = further from player)
-      final playerHeight = playerTransform!.position.y - groundLevel;
+      final playerHeight = gameState.playerTransform!.position.y - gameState.groundLevel;
       final shadowOffsetX = playerHeight * lightDirX;
       final shadowOffsetZ = playerHeight * lightDirZ;
 
       // Position shadow with offset from player
-      shadowTransform!.position.x = playerTransform!.position.x + shadowOffsetX;
-      shadowTransform!.position.z = playerTransform!.position.z + shadowOffsetZ;
+      gameState.shadowTransform!.position.x = gameState.playerTransform!.position.x + shadowOffsetX;
+      gameState.shadowTransform!.position.z = gameState.playerTransform!.position.z + shadowOffsetZ;
 
       // Rotate shadow to match player rotation
-      shadowTransform!.rotation.y = playerRotation;
+      gameState.shadowTransform!.rotation.y = gameState.playerRotation;
 
       // Shadow gets larger the higher the player is (scale factor includes base size adjustment)
       final scaleFactor = 1.0 + playerHeight * 0.15;
-      shadowTransform!.scale = Vector3(scaleFactor, 1, scaleFactor);
+      gameState.shadowTransform!.scale = Vector3(scaleFactor, 1, scaleFactor);
     }
 
     // Update camera to follow player (with smoothing to avoid "terrain moving" effect)
     // Only update camera target if player moves significantly from center
     final currentTarget = camera!.getTarget();
-    final distanceFromTarget = (playerTransform!.position - currentTarget).length;
+    final distanceFromTarget = (gameState.playerTransform!.position - currentTarget).length;
 
     // Update camera target smoothly when player moves away from center
     if (distanceFromTarget > 0.1) {
       // Smoothly interpolate camera target toward player position
-      final newTarget = currentTarget + (playerTransform!.position - currentTarget) * 0.05;
+      final newTarget = currentTarget + (gameState.playerTransform!.position - currentTarget) * 0.05;
       camera!.setTarget(newTarget);
     }
   }
@@ -755,39 +678,39 @@ class _Game3DState extends State<Game3D> {
     renderer!.clear();
 
     // Render terrain tiles
-    if (terrainTiles != null) {
-      for (final tile in terrainTiles!) {
+    if (gameState.terrainTiles != null) {
+      for (final tile in gameState.terrainTiles!) {
         renderer!.render(tile.mesh, tile.transform, camera!);
       }
     }
 
     // Render shadow (before player so it appears underneath)
-    if (shadowMesh != null && shadowTransform != null) {
-      renderer!.render(shadowMesh!, shadowTransform!, camera!);
+    if (gameState.shadowMesh != null && gameState.shadowTransform != null) {
+      renderer!.render(gameState.shadowMesh!, gameState.shadowTransform!, camera!);
     }
 
     // Render player
-    if (playerMesh != null && playerTransform != null) {
-      renderer!.render(playerMesh!, playerTransform!, camera!);
+    if (gameState.playerMesh != null && gameState.playerTransform != null) {
+      renderer!.render(gameState.playerMesh!, gameState.playerTransform!, camera!);
     }
 
     // Render direction indicator
-    if (directionIndicator != null && directionIndicatorTransform != null) {
-      renderer!.render(directionIndicator!, directionIndicatorTransform!, camera!);
+    if (gameState.directionIndicator != null && gameState.directionIndicatorTransform != null) {
+      renderer!.render(gameState.directionIndicator!, gameState.directionIndicatorTransform!, camera!);
     }
 
     // Render monster
-    if (monsterMesh != null && monsterTransform != null) {
-      renderer!.render(monsterMesh!, monsterTransform!, camera!);
+    if (gameState.monsterMesh != null && gameState.monsterTransform != null) {
+      renderer!.render(gameState.monsterMesh!, gameState.monsterTransform!, camera!);
     }
 
     // Render monster direction indicator
-    if (monsterDirectionIndicator != null && monsterDirectionIndicatorTransform != null) {
-      renderer!.render(monsterDirectionIndicator!, monsterDirectionIndicatorTransform!, camera!);
+    if (gameState.monsterDirectionIndicator != null && gameState.monsterDirectionIndicatorTransform != null) {
+      renderer!.render(gameState.monsterDirectionIndicator!, gameState.monsterDirectionIndicatorTransform!, camera!);
     }
 
     // Render allies
-    for (final ally in allies) {
+    for (final ally in gameState.allies) {
       // Render ally mesh
       renderer!.render(ally.mesh, ally.transform, camera!);
 
@@ -799,28 +722,28 @@ class _Game3DState extends State<Game3D> {
 
     // Render ability effects
     // Render sword attack
-    if (ability1Active && swordMesh != null && swordTransform != null) {
-      renderer!.render(swordMesh!, swordTransform!, camera!);
+    if (gameState.ability1Active && gameState.swordMesh != null && gameState.swordTransform != null) {
+      renderer!.render(gameState.swordMesh!, gameState.swordTransform!, camera!);
     }
 
     // Render fireballs
-    for (final fireball in fireballs) {
+    for (final fireball in gameState.fireballs) {
       renderer!.render(fireball.mesh, fireball.transform, camera!);
     }
 
     // Render monster projectiles
-    for (final projectile in monsterProjectiles) {
+    for (final projectile in gameState.monsterProjectiles) {
       renderer!.render(projectile.mesh, projectile.transform, camera!);
     }
 
     // Render impact effects
-    for (final impact in impactEffects) {
+    for (final impact in gameState.impactEffects) {
       renderer!.render(impact.mesh, impact.transform, camera!);
     }
 
     // Render heal effect
-    if (ability3Active && healEffectMesh != null && healEffectTransform != null) {
-      renderer!.render(healEffectMesh!, healEffectTransform!, camera!);
+    if (gameState.ability3Active && gameState.healEffectMesh != null && gameState.healEffectTransform != null) {
+      renderer!.render(gameState.healEffectMesh!, gameState.healEffectTransform!, camera!);
     }
   }
 
@@ -832,24 +755,24 @@ class _Game3DState extends State<Game3D> {
 
   // Ability activation methods (for clickable buttons)
   void _activateAbility1() {
-    if (ability1Cooldown <= 0 && !ability1Active) {
+    if (gameState.ability1Cooldown <= 0 && !gameState.ability1Active) {
       setState(() {
-        ability1Active = true;
-        ability1ActiveTime = 0.0;
-        ability1Cooldown = ability1CooldownMax;
+        gameState.ability1Active = true;
+        gameState.ability1ActiveTime = 0.0;
+        gameState.ability1Cooldown = gameState.ability1CooldownMax;
       });
       print('Sword attack activated! (clicked)');
     }
   }
 
   void _activateAbility2() {
-    if (ability2Cooldown <= 0 && playerTransform != null) {
+    if (gameState.ability2Cooldown <= 0 && gameState.playerTransform != null) {
       setState(() {
         // Create fireball projectile
         final forward = Vector3(
-          -Math.sin(radians(playerRotation)),
+          -Math.sin(radians(gameState.playerRotation)),
           0,
-          -Math.cos(radians(playerRotation)),
+          -Math.cos(radians(gameState.playerRotation)),
         );
 
         final fireballMesh = Mesh.cube(
@@ -857,32 +780,32 @@ class _Game3DState extends State<Game3D> {
           color: Vector3(1.0, 0.4, 0.0), // Orange/red fireball
         );
 
-        final startPos = playerTransform!.position.clone() + forward * 1.0;
-        startPos.y = playerTransform!.position.y;
+        final startPos = gameState.playerTransform!.position.clone() + forward * 1.0;
+        startPos.y = gameState.playerTransform!.position.y;
 
         final fireballTransform = Transform3d(
           position: startPos,
           scale: Vector3(1, 1, 1),
         );
 
-        fireballs.add(Projectile(
+        gameState.fireballs.add(Projectile(
           mesh: fireballMesh,
           transform: fireballTransform,
           velocity: forward * 10.0, // Speed of 10 units/sec
         ));
 
-        ability2Cooldown = ability2CooldownMax;
+        gameState.ability2Cooldown = gameState.ability2CooldownMax;
       });
       print('Fireball launched! (clicked)');
     }
   }
 
   void _activateAbility3() {
-    if (ability3Cooldown <= 0 && !ability3Active) {
+    if (gameState.ability3Cooldown <= 0 && !gameState.ability3Active) {
       setState(() {
-        ability3Active = true;
-        ability3ActiveTime = 0.0;
-        ability3Cooldown = ability3CooldownMax;
+        gameState.ability3Active = true;
+        gameState.ability3ActiveTime = 0.0;
+        gameState.ability3Cooldown = gameState.ability3CooldownMax;
       });
       print('Heal activated! (clicked)');
     }
@@ -892,52 +815,52 @@ class _Game3DState extends State<Game3D> {
 
   /// Activate Monster Ability 1: Dark Strike (melee attack)
   void _activateMonsterAbility1() {
-    if (monsterAbility1Cooldown > 0 || monsterHealth <= 0) return;
+    if (gameState.monsterAbility1Cooldown > 0 || gameState.monsterHealth <= 0) return;
 
     setState(() {
-      monsterAbility1Cooldown = monsterAbility1CooldownMax;
+      gameState.monsterAbility1Cooldown = gameState.monsterAbility1CooldownMax;
     });
     print('Monster uses Dark Strike! (melee attack)');
   }
 
   /// Activate Monster Ability 2: Shadow Bolt (ranged projectile)
   void _activateMonsterAbility2() {
-    if (monsterAbility2Cooldown > 0 || monsterHealth <= 0) return;
-    if (monsterTransform == null || playerTransform == null) return;
+    if (gameState.monsterAbility2Cooldown > 0 || gameState.monsterHealth <= 0) return;
+    if (gameState.monsterTransform == null || gameState.playerTransform == null) return;
 
     // Create shadow bolt projectile aimed at player
-    final direction = (playerTransform!.position - monsterTransform!.position).normalized();
+    final direction = (gameState.playerTransform!.position - gameState.monsterTransform!.position).normalized();
     final projectileMesh = Mesh.cube(
       size: 0.5,
       color: Vector3(0.5, 0.0, 0.5), // Purple
     );
     final projectileTransform = Transform3d(
-      position: monsterTransform!.position.clone() + Vector3(0, 1, 0),
+      position: gameState.monsterTransform!.position.clone() + Vector3(0, 1, 0),
       scale: Vector3(1, 1, 1),
     );
 
     setState(() {
-      monsterProjectiles.add(Projectile(
+      gameState.monsterProjectiles.add(Projectile(
         mesh: projectileMesh,
         transform: projectileTransform,
         velocity: direction * 8.0,
         lifetime: 5.0,
       ));
-      monsterAbility2Cooldown = monsterAbility2CooldownMax;
+      gameState.monsterAbility2Cooldown = gameState.monsterAbility2CooldownMax;
     });
     print('Monster casts Shadow Bolt! (projectile)');
   }
 
   /// Activate Monster Ability 3: Dark Healing (restore health)
   void _activateMonsterAbility3() {
-    if (monsterAbility3Cooldown > 0 || monsterHealth <= 0) return;
+    if (gameState.monsterAbility3Cooldown > 0 || gameState.monsterHealth <= 0) return;
 
     setState(() {
       // Heal for 20-30 HP
-      monsterHealth = math.min(monsterMaxHealth.toDouble(), monsterHealth + 25);
-      monsterAbility3Cooldown = monsterAbility3CooldownMax;
+      gameState.monsterHealth = math.min(gameState.monsterMaxHealth.toDouble(), gameState.monsterHealth + 25);
+      gameState.monsterAbility3Cooldown = gameState.monsterAbility3CooldownMax;
     });
-    print('Monster heals itself! Health: $monsterHealth/$monsterMaxHealth');
+    print('Monster heals itself! Health: ${gameState.monsterHealth}/${gameState.monsterMaxHealth}');
   }
 
   // ===== AI CHAT LOGGING =====
@@ -945,14 +868,14 @@ class _Game3DState extends State<Game3D> {
   /// Add a message to the Monster AI chat log
   void _logMonsterAI(String text, {required bool isInput}) {
     setState(() {
-      monsterAIChat.add(AIChatMessage(
+      gameState.monsterAIChat.add(AIChatMessage(
         text: text,
         isInput: isInput,
       ));
 
       // Keep only last 50 messages to avoid memory issues
-      if (monsterAIChat.length > 50) {
-        monsterAIChat.removeAt(0);
+      if (gameState.monsterAIChat.length > 50) {
+        gameState.monsterAIChat.removeAt(0);
       }
     });
   }
@@ -973,7 +896,7 @@ class _Game3DState extends State<Game3D> {
   }) {
     final distance = (attackerPosition - targetPosition).length;
 
-    if (distance < collisionThreshold && monsterHealth > 0) {
+    if (distance < collisionThreshold && gameState.monsterHealth > 0) {
       // Create impact effect
       final impactMesh = Mesh.cube(
         size: impactSize,
@@ -985,16 +908,16 @@ class _Game3DState extends State<Game3D> {
       );
 
       setState(() {
-        impactEffects.add(ImpactEffect(
+        gameState.impactEffects.add(ImpactEffect(
           mesh: impactMesh,
           transform: impactTransform,
         ));
 
         // Deal damage to monster
-        monsterHealth = (monsterHealth - damage).clamp(0.0, monsterMaxHealth);
+        gameState.monsterHealth = (gameState.monsterHealth - damage).clamp(0.0, gameState.monsterMaxHealth);
       });
 
-      print('$attackType hit monster for $damage damage! Monster health: ${monsterHealth.toStringAsFixed(1)}');
+      print('$attackType hit monster for $damage damage! Monster health: ${gameState.monsterHealth.toStringAsFixed(1)}');
       return true;
     }
 
@@ -1030,17 +953,17 @@ class _Game3DState extends State<Game3D> {
 
   /// Execute ally's AI decision
   void _executeAllyDecision(Ally ally, String decision) {
-    if (decision == 'MOVE_TO_PLAYER' && playerTransform != null) {
+    if (decision == 'MOVE_TO_PLAYER' && gameState.playerTransform != null) {
       // Move toward player
-      final direction = (playerTransform!.position - ally.transform.position).normalized();
+      final direction = (gameState.playerTransform!.position - ally.transform.position).normalized();
       ally.transform.position += direction * 0.5;
-    } else if (decision == 'MOVE_TO_MONSTER' && monsterTransform != null) {
+    } else if (decision == 'MOVE_TO_MONSTER' && gameState.monsterTransform != null) {
       // Move toward monster
-      final direction = (monsterTransform!.position - ally.transform.position).normalized();
+      final direction = (gameState.monsterTransform!.position - ally.transform.position).normalized();
       ally.transform.position += direction * 0.5;
-    } else if (decision == 'RETREAT' && monsterTransform != null) {
+    } else if (decision == 'RETREAT' && gameState.monsterTransform != null) {
       // Move away from monster
-      final direction = (monsterTransform!.position - ally.transform.position).normalized();
+      final direction = (gameState.monsterTransform!.position - ally.transform.position).normalized();
       ally.transform.position -= direction * 0.3;
     } else if (decision == 'USE_ABILITY') {
       // Use ally's ability based on their abilityIndex
@@ -1049,12 +972,12 @@ class _Game3DState extends State<Game3D> {
         bool hitRegistered = false;
 
         // Check collision with monster
-        if (monsterTransform != null && monsterHealth > 0) {
-          final distance = (ally.transform.position - monsterTransform!.position).length;
+        if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
+          final distance = (ally.transform.position - gameState.monsterTransform!.position).length;
           if (distance <= 2.0) {
             hitRegistered = _checkAndHandleCollision(
               attackerPosition: ally.transform.position,
-              targetPosition: monsterTransform!.position,
+              targetPosition: gameState.monsterTransform!.position,
               collisionThreshold: 2.0,
               damage: 10.0,
               attackType: 'Ally sword',
@@ -1068,22 +991,22 @@ class _Game3DState extends State<Game3D> {
         }
 
         // Check collision with player (if not already hit something)
-        if (!hitRegistered && playerTransform != null && playerHealth > 0) {
-          final distance = (ally.transform.position - playerTransform!.position).length;
+        if (!hitRegistered && gameState.playerTransform != null && playerHealth > 0) {
+          final distance = (ally.transform.position - gameState.playerTransform!.position).length;
           if (distance <= 2.0) {
-            final distanceBefore = (ally.transform.position - playerTransform!.position).length;
+            final distanceBefore = (ally.transform.position - gameState.playerTransform!.position).length;
             if (distanceBefore <= 2.0) {
               setState(() {
                 playerHealth = math.max(0, playerHealth - 10.0);
 
                 // Create impact effect
-                impactEffects.add(ImpactEffect(
+                gameState.impactEffects.add(ImpactEffect(
                   mesh: Mesh.cube(
                     size: 0.5,
                     color: Vector3(0.7, 0.7, 0.8),
                   ),
                   transform: Transform3d(
-                    position: playerTransform!.position.clone() + Vector3(0, 0.5, 0),
+                    position: gameState.playerTransform!.position.clone() + Vector3(0, 0.5, 0),
                     scale: Vector3(1, 1, 1),
                   ),
                   lifetime: 0.3,
@@ -1097,7 +1020,7 @@ class _Game3DState extends State<Game3D> {
 
         // Check collision with other allies (if not already hit something)
         if (!hitRegistered) {
-          for (final otherAlly in allies) {
+          for (final otherAlly in gameState.allies) {
             // Skip the attacker and dead allies
             if (otherAlly == ally || otherAlly.health <= 0) continue;
 
@@ -1107,7 +1030,7 @@ class _Game3DState extends State<Game3D> {
                 otherAlly.health = math.max(0, otherAlly.health - 10.0);
 
                 // Create impact effect
-                impactEffects.add(ImpactEffect(
+                gameState.impactEffects.add(ImpactEffect(
                   mesh: Mesh.cube(
                     size: 0.5,
                     color: Vector3(0.7, 0.7, 0.8),
@@ -1134,9 +1057,9 @@ class _Game3DState extends State<Game3D> {
         if (!hitRegistered) {
           print('Ally sword missed - out of range!');
         }
-      } else if (ally.abilityIndex == 1 && monsterTransform != null) {
+      } else if (ally.abilityIndex == 1 && gameState.monsterTransform != null) {
         // Ability 1: Fireball (ranged projectile)
-        final direction = (monsterTransform!.position - ally.transform.position).normalized();
+        final direction = (gameState.monsterTransform!.position - ally.transform.position).normalized();
         final fireballMesh = Mesh.cube(
           size: 0.3,
           color: Vector3(1.0, 0.4, 0.0), // Orange fireball
@@ -1199,16 +1122,16 @@ class _Game3DState extends State<Game3D> {
       );
 
       // Position ally near player (offset to avoid overlap)
-      final allyCount = allies.length;
+      final allyCount = gameState.allies.length;
       final angle = (allyCount * 60.0) * (math.pi / 180.0); // Space out in circle
       final offsetX = math.cos(angle) * 2.0;
       final offsetZ = math.sin(angle) * 2.0;
 
-      final allyPosition = playerTransform != null
+      final allyPosition = gameState.playerTransform != null
           ? Vector3(
-              playerTransform!.position.x + offsetX,
+              gameState.playerTransform!.position.x + offsetX,
               0.4, // Slightly lower than player (0.5)
-              playerTransform!.position.z + offsetZ,
+              gameState.playerTransform!.position.z + offsetZ,
             )
           : Vector3(2, 0.4, 2); // Default position if no player
 
@@ -1230,23 +1153,23 @@ class _Game3DState extends State<Game3D> {
         aiTimer: 0.0,
       );
 
-      allies.add(ally);
+      gameState.allies.add(ally);
 
       final abilityNames = ['Sword', 'Fireball', 'Heal'];
-      print('Ally added! Ability: ${abilityNames[randomAbility]} (Total: ${allies.length})');
+      print('Ally added! Ability: ${abilityNames[randomAbility]} (Total: ${gameState.allies.length})');
     });
   }
 
   /// Remove the most recently added ally
   void _removeAlly() {
-    if (allies.isEmpty) {
+    if (gameState.allies.isEmpty) {
       print('No allies to remove!');
       return;
     }
 
     setState(() {
-      allies.removeLast();
-      print('Ally removed! Remaining: ${allies.length}');
+      gameState.allies.removeLast();
+      print('Ally removed! Remaining: ${gameState.allies.length}');
     });
   }
 
@@ -1296,23 +1219,23 @@ class _Game3DState extends State<Game3D> {
                   ),
                   SizedBox(height: 2),
                   Text(
-                    '1: Sword ${ability1Cooldown > 0 ? "(${ability1Cooldown.toStringAsFixed(1)}s)" : "READY"}',
+                    '1: Sword ${gameState.ability1Cooldown > 0 ? "(${gameState.ability1Cooldown.toStringAsFixed(1)}s)" : "READY"}',
                     style: TextStyle(
-                      color: ability1Cooldown > 0 ? Colors.red : Colors.green,
+                      color: gameState.ability1Cooldown > 0 ? Colors.red : Colors.green,
                       fontSize: 10,
                     ),
                   ),
                   Text(
-                    '2: Fireball ${ability2Cooldown > 0 ? "(${ability2Cooldown.toStringAsFixed(1)}s)" : "READY"}',
+                    '2: Fireball ${gameState.ability2Cooldown > 0 ? "(${gameState.ability2Cooldown.toStringAsFixed(1)}s)" : "READY"}',
                     style: TextStyle(
-                      color: ability2Cooldown > 0 ? Colors.red : Colors.green,
+                      color: gameState.ability2Cooldown > 0 ? Colors.red : Colors.green,
                       fontSize: 10,
                     ),
                   ),
                   Text(
-                    '3: Heal ${ability3Cooldown > 0 ? "(${ability3Cooldown.toStringAsFixed(1)}s)" : "READY"}',
+                    '3: Heal ${gameState.ability3Cooldown > 0 ? "(${gameState.ability3Cooldown.toStringAsFixed(1)}s)" : "READY"}',
                     style: TextStyle(
-                      color: ability3Cooldown > 0 ? Colors.red : Colors.green,
+                      color: gameState.ability3Cooldown > 0 ? Colors.red : Colors.green,
                       fontSize: 10,
                     ),
                   ),
@@ -1378,11 +1301,11 @@ class _Game3DState extends State<Game3D> {
                       children: [
                         // Health fill
                         FractionallySizedBox(
-                          widthFactor: (monsterHealth / monsterMaxHealth).clamp(0.0, 1.0),
+                          widthFactor: (gameState.monsterHealth / gameState.monsterMaxHealth).clamp(0.0, 1.0),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: monsterHealth > 50 ? Colors.green :
-                                     monsterHealth > 25 ? Colors.orange : Colors.red,
+                              color: gameState.monsterHealth > 50 ? Colors.green :
+                                     gameState.monsterHealth > 25 ? Colors.orange : Colors.red,
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -1390,7 +1313,7 @@ class _Game3DState extends State<Game3D> {
                         // Health text
                         Center(
                           child: Text(
-                            '${monsterHealth.toStringAsFixed(0)} / ${monsterMaxHealth.toStringAsFixed(0)}',
+                            '${gameState.monsterHealth.toStringAsFixed(0)} / ${gameState.monsterMaxHealth.toStringAsFixed(0)}',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 11,
@@ -1415,24 +1338,24 @@ class _Game3DState extends State<Game3D> {
                       _buildAbilityButton(
                         label: 'M1',
                         color: Color(0xFF9B59B6), // Purple
-                        cooldown: monsterAbility1Cooldown,
-                        maxCooldown: monsterAbility1CooldownMax,
+                        cooldown: gameState.monsterAbility1Cooldown,
+                        maxCooldown: gameState.monsterAbility1CooldownMax,
                         onPressed: _activateMonsterAbility1,
                       ),
                       SizedBox(width: 8),
                       _buildAbilityButton(
                         label: 'M2',
                         color: Color(0xFF8E44AD), // Darker purple
-                        cooldown: monsterAbility2Cooldown,
-                        maxCooldown: monsterAbility2CooldownMax,
+                        cooldown: gameState.monsterAbility2Cooldown,
+                        maxCooldown: gameState.monsterAbility2CooldownMax,
                         onPressed: _activateMonsterAbility2,
                       ),
                       SizedBox(width: 8),
                       _buildAbilityButton(
                         label: 'M3',
                         color: Color(0xFF6C3483), // Even darker purple
-                        cooldown: monsterAbility3Cooldown,
-                        maxCooldown: monsterAbility3CooldownMax,
+                        cooldown: gameState.monsterAbility3Cooldown,
+                        maxCooldown: gameState.monsterAbility3CooldownMax,
                         onPressed: _activateMonsterAbility3,
                       ),
                     ],
@@ -1442,16 +1365,16 @@ class _Game3DState extends State<Game3D> {
                   ElevatedButton(
                     onPressed: () {
                       setState(() {
-                        monsterPaused = !monsterPaused;
+                        gameState.monsterPaused = !gameState.monsterPaused;
                       });
-                      print('Monster AI ${monsterPaused ? 'paused' : 'resumed'}');
+                      print('Monster AI ${gameState.monsterPaused ? 'paused' : 'resumed'}');
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: monsterPaused ? Colors.green : Colors.red,
+                      backgroundColor: gameState.monsterPaused ? Colors.green : Colors.red,
                       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     ),
                     child: Text(
-                      monsterPaused ? 'Resume Monster' : 'Pause Monster',
+                      gameState.monsterPaused ? 'Resume Monster' : 'Pause Monster',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -1498,10 +1421,10 @@ class _Game3DState extends State<Game3D> {
                       ),
                       child: ListView.builder(
                         reverse: true, // Latest messages at bottom
-                        itemCount: monsterAIChat.length,
+                        itemCount: gameState.monsterAIChat.length,
                         itemBuilder: (context, index) {
-                          final reversedIndex = monsterAIChat.length - 1 - index;
-                          final message = monsterAIChat[reversedIndex];
+                          final reversedIndex = gameState.monsterAIChat.length - 1 - index;
+                          final message = gameState.monsterAIChat[reversedIndex];
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             child: Row(
@@ -1591,24 +1514,24 @@ class _Game3DState extends State<Game3D> {
                           _buildAbilityButton(
                             label: '1',
                             color: Color(0xFFB3B3CC), // Gray (sword)
-                            cooldown: ability1Cooldown,
-                            maxCooldown: ability1CooldownMax,
+                            cooldown: gameState.ability1Cooldown,
+                            maxCooldown: gameState.ability1CooldownMax,
                             onPressed: _activateAbility1,
                           ),
                           SizedBox(width: 10),
                           _buildAbilityButton(
                             label: '2',
                             color: Color(0xFFFF6600), // Orange (fireball)
-                            cooldown: ability2Cooldown,
-                            maxCooldown: ability2CooldownMax,
+                            cooldown: gameState.ability2Cooldown,
+                            maxCooldown: gameState.ability2CooldownMax,
                             onPressed: _activateAbility2,
                           ),
                           SizedBox(width: 10),
                           _buildAbilityButton(
                             label: '3',
                             color: Color(0xFF80FF4D), // Green (heal)
-                            cooldown: ability3Cooldown,
-                            maxCooldown: ability3CooldownMax,
+                            cooldown: gameState.ability3Cooldown,
+                            maxCooldown: gameState.ability3CooldownMax,
                             onPressed: _activateAbility3,
                           ),
                         ],
@@ -1618,7 +1541,7 @@ class _Game3DState extends State<Game3D> {
                 ),
 
                 // Allies Display
-                ...allies.asMap().entries.map((entry) {
+                ...gameState.allies.asMap().entries.map((entry) {
                   final index = entry.key;
                   final ally = entry.value;
                   final abilityNames = ['Sword', 'Fireball', 'Heal'];
@@ -1772,7 +1695,7 @@ class _Game3DState extends State<Game3D> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    'ALLIES (${allies.length})',
+                    'ALLIES (${gameState.allies.length})',
                     style: TextStyle(
                       color: Colors.cyan,
                       fontSize: 10,
@@ -1802,7 +1725,7 @@ class _Game3DState extends State<Game3D> {
                       SizedBox(width: 8),
                       // Remove Ally button
                       ElevatedButton(
-                        onPressed: allies.isEmpty ? null : _removeAlly,
+                        onPressed: gameState.allies.isEmpty ? null : _removeAlly,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                           disabledBackgroundColor: Colors.grey.shade700,
@@ -1812,7 +1735,7 @@ class _Game3DState extends State<Game3D> {
                         child: Text(
                           '- Ally',
                           style: TextStyle(
-                            color: allies.isEmpty ? Colors.white38 : Colors.white,
+                            color: gameState.allies.isEmpty ? Colors.white38 : Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1901,8 +1824,8 @@ class _Game3DState extends State<Game3D> {
   @override
   void dispose() {
     // Stop game loop
-    if (animationFrameId != null) {
-      html.window.cancelAnimationFrame(animationFrameId!);
+    if (gameState.animationFrameId != null) {
+      html.window.cancelAnimationFrame(gameState.animationFrameId!);
     }
 
     // Cleanup renderer
