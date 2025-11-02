@@ -1,0 +1,418 @@
+import 'package:vector_math/vector_math.dart';
+import 'dart:math' as math;
+
+import '../state/game_state.dart';
+import '../state/game_config.dart';
+import '../../models/ally.dart';
+import '../../models/ai_chat_message.dart';
+import '../../models/impact_effect.dart';
+import '../../rendering3d/mesh.dart';
+import '../../rendering3d/math/transform3d.dart';
+import '../../models/projectile.dart';
+
+/// AI System - Handles all NPC AI logic
+///
+/// Manages AI for both enemies and allies including:
+/// - Monster AI (decision making, movement, ability usage)
+/// - Ally AI (decision making, execution)
+/// - Projectile updates (monster and ally projectiles)
+/// - AI cooldown management
+class AISystem {
+  AISystem._(); // Private constructor to prevent instantiation
+
+  /// Updates all AI systems
+  ///
+  /// This is the main entry point for the AI system. It updates cooldowns,
+  /// monster AI, ally AI, and projectile movements.
+  ///
+  /// Parameters:
+  /// - dt: Time elapsed since last frame (in seconds)
+  /// - gameState: Current game state to update
+  /// - logMonsterAI: Callback function to log monster AI decisions
+  /// - activateMonsterAbility1: Callback to activate monster ability 1
+  /// - activateMonsterAbility2: Callback to activate monster ability 2
+  /// - activateMonsterAbility3: Callback to activate monster ability 3
+  /// - checkAndHandleCollision: Callback for collision detection and handling
+  static void update(
+    double dt,
+    GameState gameState, {
+    required void Function(String, {required bool isInput}) logMonsterAI,
+    required void Function() activateMonsterAbility1,
+    required void Function() activateMonsterAbility2,
+    required void Function() activateMonsterAbility3,
+    required bool Function({
+      required Vector3 attackerPosition,
+      required Vector3 targetPosition,
+      required double collisionThreshold,
+      required double damage,
+      required String attackType,
+      required Vector3 impactColor,
+      required double impactSize,
+    }) checkAndHandleCollision,
+  }) {
+    updateCooldowns(dt, gameState);
+    updateMonsterAI(dt, gameState, logMonsterAI, activateMonsterAbility1, activateMonsterAbility2, activateMonsterAbility3);
+    updateAllyAI(dt, gameState);
+    updateMonsterProjectiles(dt, gameState);
+    updateAllyProjectiles(dt, gameState, checkAndHandleCollision);
+  }
+
+  /// Updates all ability cooldowns for monster and allies
+  ///
+  /// Parameters:
+  /// - dt: Time elapsed since last frame (in seconds)
+  /// - gameState: Current game state to update
+  static void updateCooldowns(double dt, GameState gameState) {
+    // Update monster ability cooldowns
+    if (gameState.monsterAbility1Cooldown > 0) gameState.monsterAbility1Cooldown -= dt;
+    if (gameState.monsterAbility2Cooldown > 0) gameState.monsterAbility2Cooldown -= dt;
+    if (gameState.monsterAbility3Cooldown > 0) gameState.monsterAbility3Cooldown -= dt;
+
+    // Update ally cooldowns
+    for (final ally in gameState.allies) {
+      if (ally.abilityCooldown > 0) ally.abilityCooldown -= dt;
+    }
+  }
+
+  // ==================== MONSTER AI ====================
+
+  /// Updates monster AI (decision making, movement, ability usage)
+  ///
+  /// Parameters:
+  /// - dt: Time elapsed since last frame (in seconds)
+  /// - gameState: Current game state to update
+  /// - logMonsterAI: Callback function to log monster AI decisions
+  /// - activateMonsterAbility1: Callback to activate monster ability 1
+  /// - activateMonsterAbility2: Callback to activate monster ability 2
+  /// - activateMonsterAbility3: Callback to activate monster ability 3
+  static void updateMonsterAI(
+    double dt,
+    GameState gameState,
+    void Function(String, {required bool isInput}) logMonsterAI,
+    void Function() activateMonsterAbility1,
+    void Function() activateMonsterAbility2,
+    void Function() activateMonsterAbility3,
+  ) {
+    if (!gameState.monsterPaused &&
+        gameState.monsterHealth > 0 &&
+        gameState.monsterTransform != null &&
+        gameState.playerTransform != null) {
+      gameState.monsterAiTimer += dt;
+
+      // AI thinks every 2 seconds
+      if (gameState.monsterAiTimer >= gameState.monsterAiInterval) {
+        gameState.monsterAiTimer = 0.0;
+
+        // Calculate distance to player
+        final distanceToPlayer = (gameState.monsterTransform!.position - gameState.playerTransform!.position).length;
+
+        // Log AI input (game state)
+        logMonsterAI('Health: ${gameState.monsterHealth.toStringAsFixed(0)} | Dist: ${distanceToPlayer.toStringAsFixed(1)}', isInput: true);
+
+        // Always face the player
+        final toPlayer = gameState.playerTransform!.position - gameState.monsterTransform!.position;
+        gameState.monsterRotation = math.atan2(-toPlayer.x, -toPlayer.z) * (180 / math.pi);
+        gameState.monsterDirectionIndicatorTransform?.rotation.y = gameState.monsterRotation;
+
+        // Decision making
+        String decision = _makeMonsterMovementDecision(distanceToPlayer, toPlayer, gameState);
+
+        // Use abilities based on distance and cooldown
+        decision = _makeMonsterAbilityDecision(
+          distanceToPlayer,
+          decision,
+          gameState,
+          activateMonsterAbility1,
+          activateMonsterAbility2,
+          activateMonsterAbility3,
+        );
+
+        // Log AI output (decision)
+        logMonsterAI(decision, isInput: false);
+      }
+    }
+  }
+
+  /// Makes monster movement decision based on distance to player
+  ///
+  /// Parameters:
+  /// - distanceToPlayer: Distance from monster to player
+  /// - toPlayer: Vector from monster to player
+  /// - gameState: Current game state
+  ///
+  /// Returns:
+  /// - Decision string describing the movement action
+  static String _makeMonsterMovementDecision(double distanceToPlayer, Vector3 toPlayer, GameState gameState) {
+    String decision = '';
+    if (distanceToPlayer > GameConfig.monsterMoveThresholdMax) {
+      // Move toward player if too far
+      final moveDirection = toPlayer.normalized();
+      gameState.monsterTransform!.position += moveDirection * 0.5;
+      decision = 'MOVE_FORWARD';
+    } else if (distanceToPlayer < GameConfig.monsterMoveThresholdMin) {
+      // Move away if too close
+      final moveDirection = toPlayer.normalized();
+      gameState.monsterTransform!.position -= moveDirection * 0.3;
+      decision = 'RETREAT';
+    } else {
+      decision = 'HOLD';
+    }
+    return decision;
+  }
+
+  /// Makes monster ability decision and activates abilities
+  ///
+  /// Parameters:
+  /// - distanceToPlayer: Distance from monster to player
+  /// - decision: Current decision string
+  /// - gameState: Current game state
+  /// - activateMonsterAbility1: Callback to activate ability 1
+  /// - activateMonsterAbility2: Callback to activate ability 2
+  /// - activateMonsterAbility3: Callback to activate ability 3
+  ///
+  /// Returns:
+  /// - Updated decision string with ability actions
+  static String _makeMonsterAbilityDecision(
+    double distanceToPlayer,
+    String decision,
+    GameState gameState,
+    void Function() activateMonsterAbility1,
+    void Function() activateMonsterAbility2,
+    void Function() activateMonsterAbility3,
+  ) {
+    // Use abilities based on distance and cooldown
+    if (distanceToPlayer < 5.0 && gameState.monsterAbility1Cooldown <= 0) {
+      activateMonsterAbility1(); // Dark strike
+      decision += ' + DARK_STRIKE';
+    } else if (distanceToPlayer > 4.0 && distanceToPlayer < 12.0 && gameState.monsterAbility2Cooldown <= 0) {
+      activateMonsterAbility2(); // Shadow bolt
+      decision += ' + SHADOW_BOLT';
+    } else if (gameState.monsterHealth < GameConfig.monsterHealThreshold && gameState.monsterAbility3Cooldown <= 0) {
+      activateMonsterAbility3(); // Healing
+      decision += ' + HEAL';
+    }
+    return decision;
+  }
+
+  // ==================== ALLY AI ====================
+
+  /// Updates ally AI (decision making and execution)
+  ///
+  /// Parameters:
+  /// - dt: Time elapsed since last frame (in seconds)
+  /// - gameState: Current game state to update
+  static void updateAllyAI(double dt, GameState gameState) {
+    for (final ally in gameState.allies) {
+      if (ally.health <= 0) continue; // Skip dead allies
+
+      ally.aiTimer += dt;
+
+      // AI thinks every 3 seconds
+      if (ally.aiTimer >= ally.aiInterval) {
+        ally.aiTimer = 0.0;
+
+        if (gameState.playerTransform != null && gameState.monsterTransform != null) {
+          // Calculate distances
+          final distanceToPlayer = (ally.transform.position - gameState.playerTransform!.position).length;
+          final distanceToMonster = (ally.transform.position - gameState.monsterTransform!.position).length;
+
+          // Fallback rule-based AI (when Ollama unavailable)
+          String decision = makeAllyDecision(ally, distanceToPlayer, distanceToMonster, gameState);
+
+          // Execute decision
+          executeAllyDecision(ally, decision, gameState);
+        }
+      }
+
+      // Update ally's direction indicator to face monster
+      if (ally.directionIndicatorTransform != null && gameState.monsterTransform != null) {
+        final toMonster = gameState.monsterTransform!.position - ally.transform.position;
+        ally.rotation = math.atan2(-toMonster.x, -toMonster.z) * (180 / math.pi);
+        ally.directionIndicatorTransform!.rotation.y = ally.rotation;
+      }
+    }
+  }
+
+  /// Makes AI decision for an ally (fallback rule-based AI)
+  ///
+  /// Parameters:
+  /// - ally: The ally to make a decision for
+  /// - distanceToPlayer: Distance from ally to player
+  /// - distanceToMonster: Distance from ally to monster
+  /// - gameState: Current game state
+  ///
+  /// Returns:
+  /// - Decision string (e.g., "ATTACK", "MOVE_TO_MONSTER", "HEAL")
+  static String makeAllyDecision(Ally ally, double distanceToPlayer, double distanceToMonster, GameState gameState) {
+    // Simple rule-based AI
+    if (ally.health < 20 && ally.abilityIndex == 2) {
+      return 'HEAL'; // Heal if low health and has heal ability
+    } else if (distanceToMonster > GameConfig.allyMoveThreshold) {
+      return 'MOVE_TO_MONSTER'; // Move closer to monster
+    } else if (ally.abilityCooldown <= 0) {
+      return 'ATTACK'; // Attack if close enough and ability ready
+    } else {
+      return 'HOLD'; // Wait for cooldown
+    }
+  }
+
+  /// Executes ally's AI decision
+  ///
+  /// Parameters:
+  /// - ally: The ally executing the decision
+  /// - decision: The decision to execute
+  /// - gameState: Current game state
+  static void executeAllyDecision(Ally ally, String decision, GameState gameState) {
+    if (decision == 'MOVE_TO_MONSTER' && gameState.monsterTransform != null) {
+      // Move toward monster
+      final toMonster = gameState.monsterTransform!.position - ally.transform.position;
+      final moveDirection = toMonster.normalized();
+      ally.transform.position += moveDirection * 0.3;
+      print('Ally moving toward monster');
+    } else if (decision == 'ATTACK' && ally.abilityCooldown <= 0) {
+      // Use ability
+      ally.abilityCooldown = ally.abilityCooldownMax;
+
+      if (ally.abilityIndex == 0) {
+        // Ability 0: Sword (melee attack - collision handled elsewhere)
+        print('Ally attacks with Sword!');
+      } else if (ally.abilityIndex == 1) {
+        // Ability 1: Fireball (ranged projectile)
+        final toMonster = gameState.monsterTransform!.position - ally.transform.position;
+        final direction = toMonster.normalized();
+
+        final fireballMesh = Mesh.cube(
+          size: GameConfig.allyFireballSize,
+          color: Vector3(1.0, 0.4, 0.0), // Orange fireball
+        );
+        final fireballTransform = Transform3d(
+          position: ally.transform.position.clone() + direction * 0.5,
+          scale: Vector3(1, 1, 1),
+        );
+
+        ally.projectiles.add(
+          Projectile(
+            mesh: fireballMesh,
+            transform: fireballTransform,
+            velocity: direction * 8.0,
+          ),
+        );
+        print('Ally casts Fireball!');
+      } else if (ally.abilityIndex == 2) {
+        // Ability 2: Heal (restore ally's own health)
+        if (ally.health < ally.maxHealth) {
+          ally.health = math.min(ally.maxHealth, ally.health + GameConfig.allyHealAmount);
+        }
+        print('Ally heals itself! Health: ${ally.health}/${ally.maxHealth}');
+      }
+    } else if (decision == 'HEAL' && ally.abilityCooldown <= 0) {
+      // Execute heal
+      ally.abilityCooldown = ally.abilityCooldownMax;
+      ally.health = math.min(ally.maxHealth, ally.health + GameConfig.allyHealAmount);
+      print('Ally heals itself! Health: ${ally.health}/${ally.maxHealth}');
+    }
+  }
+
+  // ==================== PROJECTILE UPDATES ====================
+
+  /// Updates monster projectiles
+  ///
+  /// Parameters:
+  /// - dt: Time elapsed since last frame (in seconds)
+  /// - gameState: Current game state to update
+  static void updateMonsterProjectiles(double dt, GameState gameState) {
+    gameState.monsterProjectiles.removeWhere((projectile) {
+      projectile.transform.position += projectile.velocity * dt;
+      projectile.lifetime -= dt;
+
+      // Check collision with player
+      if (gameState.playerTransform != null) {
+        final distance = (projectile.transform.position - gameState.playerTransform!.position).length;
+        if (distance < 1.0) {
+          // Hit player - create impact
+          final impactMesh = Mesh.cube(
+            size: GameConfig.monsterProjectileImpactSize,
+            color: Vector3(0.5, 0.0, 0.5), // Purple impact
+          );
+          final impactTransform = Transform3d(
+            position: projectile.transform.position.clone(),
+            scale: Vector3(1, 1, 1),
+          );
+          gameState.impactEffects.add(ImpactEffect(
+            mesh: impactMesh,
+            transform: impactTransform,
+          ));
+          print('Monster hit player! (implement player damage later)');
+          return true;
+        }
+      }
+
+      return projectile.lifetime <= 0;
+    });
+  }
+
+  /// Updates ally projectiles
+  ///
+  /// Parameters:
+  /// - dt: Time elapsed since last frame (in seconds)
+  /// - gameState: Current game state to update
+  /// - checkAndHandleCollision: Callback for collision detection and handling
+  static void updateAllyProjectiles(
+    double dt,
+    GameState gameState,
+    bool Function({
+      required Vector3 attackerPosition,
+      required Vector3 targetPosition,
+      required double collisionThreshold,
+      required double damage,
+      required String attackType,
+      required Vector3 impactColor,
+      required double impactSize,
+    }) checkAndHandleCollision,
+  ) {
+    for (final ally in gameState.allies) {
+      ally.projectiles.removeWhere((projectile) {
+        projectile.transform.position += projectile.velocity * dt;
+        projectile.lifetime -= dt;
+
+        // Check collision with monster using generalized function
+        if (gameState.monsterTransform != null) {
+          final hitRegistered = checkAndHandleCollision(
+            attackerPosition: projectile.transform.position,
+            targetPosition: gameState.monsterTransform!.position,
+            collisionThreshold: GameConfig.collisionThreshold,
+            damage: GameConfig.allyFireballDamage,
+            attackType: 'Ally fireball',
+            impactColor: GameConfig.allyFireballImpactColor,
+            impactSize: GameConfig.allyFireballImpactSize,
+          );
+          if (hitRegistered) return true;
+        }
+
+        return projectile.lifetime <= 0;
+      });
+    }
+  }
+
+  // ==================== UTILITY FUNCTIONS ====================
+
+  /// Adds a message to the Monster AI chat log
+  ///
+  /// Parameters:
+  /// - gameState: Current game state
+  /// - text: Message text
+  /// - isInput: Whether this is input (true) or output (false)
+  static void logMonsterAI(GameState gameState, String text, {required bool isInput}) {
+    if (text.isNotEmpty) {
+      gameState.monsterAIChat.add(AIChatMessage(
+        text: text,
+        isInput: isInput,
+        timestamp: DateTime.now(),
+      ));
+      // Keep chat log from growing too large
+      if (gameState.monsterAIChat.length > 50) {
+        gameState.monsterAIChat.removeAt(0);
+      }
+    }
+  }
+}

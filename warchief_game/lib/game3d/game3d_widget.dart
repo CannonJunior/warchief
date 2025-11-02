@@ -23,6 +23,7 @@ import 'state/game_config.dart';
 import 'state/game_state.dart';
 import 'systems/physics_system.dart';
 import 'systems/ability_system.dart';
+import 'systems/ai_system.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -328,150 +329,16 @@ class _Game3DState extends State<Game3D> {
     // Update player ability cooldowns and effects
     AbilitySystem.update(dt, gameState);
 
-    // Update monster ability cooldowns
-    if (gameState.monsterAbility1Cooldown > 0) gameState.monsterAbility1Cooldown -= dt;
-    if (gameState.monsterAbility2Cooldown > 0) gameState.monsterAbility2Cooldown -= dt;
-    if (gameState.monsterAbility3Cooldown > 0) gameState.monsterAbility3Cooldown -= dt;
-
-    // Update ally cooldowns
-    for (final ally in gameState.allies) {
-      if (ally.abilityCooldown > 0) ally.abilityCooldown -= dt;
-    }
-
-    // ===== MONSTER AI SYSTEM =====
-    if (!gameState.monsterPaused && gameState.monsterHealth > 0 && gameState.monsterTransform != null && gameState.playerTransform != null) {
-      gameState.monsterAiTimer += dt;
-
-      // AI thinks every 2 seconds
-      if (gameState.monsterAiTimer >= gameState.monsterAiInterval) {
-        gameState.monsterAiTimer = 0.0;
-
-        // Calculate distance to player
-        final distanceToPlayer = (gameState.monsterTransform!.position - gameState.playerTransform!.position).length;
-
-        // Log AI input (game state)
-        _logMonsterAI('Health: ${gameState.monsterHealth.toStringAsFixed(0)} | Dist: ${distanceToPlayer.toStringAsFixed(1)}', isInput: true);
-
-        // Always face the player
-        final toPlayer = gameState.playerTransform!.position - gameState.monsterTransform!.position;
-        gameState.monsterRotation = math.atan2(-toPlayer.x, -toPlayer.z) * (180 / math.pi);
-        gameState.monsterDirectionIndicatorTransform?.rotation.y = gameState.monsterRotation;
-
-        // Decision making
-        String decision = '';
-        if (distanceToPlayer > 8.0) {
-          // Move toward player if too far
-          final moveDirection = toPlayer.normalized();
-          gameState.monsterTransform!.position += moveDirection * 0.5;
-          decision = 'MOVE_FORWARD';
-        } else if (distanceToPlayer < 3.0) {
-          // Move away if too close
-          final moveDirection = toPlayer.normalized();
-          gameState.monsterTransform!.position -= moveDirection * 0.3;
-          decision = 'RETREAT';
-        } else {
-          decision = 'HOLD';
-        }
-
-        // Use abilities based on distance and cooldown
-        if (distanceToPlayer < 5.0 && gameState.monsterAbility1Cooldown <= 0) {
-          _activateMonsterAbility1(); // Dark strike
-          decision += ' + DARK_STRIKE';
-        } else if (distanceToPlayer > 4.0 && distanceToPlayer < 12.0 && gameState.monsterAbility2Cooldown <= 0) {
-          _activateMonsterAbility2(); // Shadow bolt
-          decision += ' + SHADOW_BOLT';
-        } else if (gameState.monsterHealth < 50 && gameState.monsterAbility3Cooldown <= 0) {
-          _activateMonsterAbility3(); // Healing
-          decision += ' + HEAL';
-        }
-
-        // Log AI output (decision)
-        _logMonsterAI(decision, isInput: false);
-      }
-    }
-
-    // ===== ALLY AI SYSTEM =====
-    for (final ally in gameState.allies) {
-      if (ally.health <= 0) continue; // Skip dead allies
-
-      ally.aiTimer += dt;
-
-      // AI thinks every 3 seconds
-      if (ally.aiTimer >= ally.aiInterval) {
-        ally.aiTimer = 0.0;
-
-        if (gameState.playerTransform != null && gameState.monsterTransform != null) {
-          // Calculate distances
-          final distanceToPlayer = (ally.transform.position - gameState.playerTransform!.position).length;
-          final distanceToMonster = (ally.transform.position - gameState.monsterTransform!.position).length;
-
-          // Fallback rule-based AI (when Ollama unavailable)
-          String decision = _makeAllyDecision(ally, distanceToPlayer, distanceToMonster);
-
-          // Execute decision
-          _executeAllyDecision(ally, decision);
-        }
-      }
-
-      // Update ally's direction indicator to face monster
-      if (ally.directionIndicatorTransform != null && gameState.monsterTransform != null) {
-        final toMonster = gameState.monsterTransform!.position - ally.transform.position;
-        ally.rotation = math.atan2(-toMonster.x, -toMonster.z) * (180 / math.pi);
-        ally.directionIndicatorTransform!.rotation.y = ally.rotation;
-      }
-
-      // Update ally's projectiles
-      ally.projectiles.removeWhere((projectile) {
-        projectile.transform.position += projectile.velocity * dt;
-        projectile.lifetime -= dt;
-
-        // Check collision with monster using generalized function
-        if (gameState.monsterTransform != null) {
-          final hitRegistered = _checkAndHandleCollision(
-            attackerPosition: projectile.transform.position,
-            targetPosition: gameState.monsterTransform!.position,
-            collisionThreshold: 1.0,
-            damage: 15.0, // Ally fireball does 15 damage
-            attackType: 'Ally fireball',
-            impactColor: Vector3(1.0, 0.4, 0.0), // Orange impact
-            impactSize: 0.6,
-          );
-          if (hitRegistered) return true;
-        }
-
-        return projectile.lifetime <= 0;
-      });
-    }
-
-    // Update monster projectiles
-    gameState.monsterProjectiles.removeWhere((projectile) {
-      projectile.transform.position += projectile.velocity * dt;
-      projectile.lifetime -= dt;
-
-      // Check collision with player
-      if (gameState.playerTransform != null) {
-        final distance = (projectile.transform.position - gameState.playerTransform!.position).length;
-        if (distance < 1.0) {
-          // Hit player - create impact
-          final impactMesh = Mesh.cube(
-            size: 0.8,
-            color: Vector3(0.5, 0.0, 0.5), // Purple impact
-          );
-          final impactTransform = Transform3d(
-            position: projectile.transform.position.clone(),
-            scale: Vector3(1, 1, 1),
-          );
-          gameState.impactEffects.add(ImpactEffect(
-            mesh: impactMesh,
-            transform: impactTransform,
-          ));
-          print('Monster hit player! (implement player damage later)');
-          return true;
-        }
-      }
-
-      return projectile.lifetime <= 0;
-    });
+    // Update AI systems (monster AI, ally AI, projectiles)
+    AISystem.update(
+      dt,
+      gameState,
+      logMonsterAI: _logMonsterAI,
+      activateMonsterAbility1: _activateMonsterAbility1,
+      activateMonsterAbility2: _activateMonsterAbility2,
+      activateMonsterAbility3: _activateMonsterAbility3,
+      checkAndHandleCollision: _checkAndHandleCollision,
+    );
 
     // Handle player ability input
     AbilitySystem.handleAbility1Input(inputManager!.isActionPressed(GameAction.actionBar1), gameState);
@@ -740,173 +607,6 @@ class _Game3DState extends State<Game3D> {
     return false;
   }
 
-  // ===== ALLY AI HELPER METHODS =====
-
-  /// Make AI decision for an ally (fallback rule-based AI)
-  String _makeAllyDecision(Ally ally, double distanceToPlayer, double distanceToMonster) {
-    // Too far from player - move to player
-    if (distanceToPlayer > 8.0) {
-      return 'MOVE_TO_PLAYER';
-    }
-
-    // Too close to monster - retreat
-    if (distanceToMonster < 3.0) {
-      return 'RETREAT';
-    }
-
-    // Use ability if ready and monster in range
-    if (ally.abilityCooldown <= 0 && distanceToMonster < 10.0) {
-      return 'USE_ABILITY';
-    }
-
-    // Move toward monster if in good position
-    if (distanceToMonster > 6.0) {
-      return 'MOVE_TO_MONSTER';
-    }
-
-    return 'HOLD_POSITION';
-  }
-
-  /// Execute ally's AI decision
-  void _executeAllyDecision(Ally ally, String decision) {
-    if (decision == 'MOVE_TO_PLAYER' && gameState.playerTransform != null) {
-      // Move toward player
-      final direction = (gameState.playerTransform!.position - ally.transform.position).normalized();
-      ally.transform.position += direction * 0.5;
-    } else if (decision == 'MOVE_TO_MONSTER' && gameState.monsterTransform != null) {
-      // Move toward monster
-      final direction = (gameState.monsterTransform!.position - ally.transform.position).normalized();
-      ally.transform.position += direction * 0.5;
-    } else if (decision == 'RETREAT' && gameState.monsterTransform != null) {
-      // Move away from monster
-      final direction = (gameState.monsterTransform!.position - ally.transform.position).normalized();
-      ally.transform.position -= direction * 0.3;
-    } else if (decision == 'USE_ABILITY') {
-      // Use ally's ability based on their abilityIndex
-      if (ally.abilityIndex == 0) {
-        // Ability 0: Sword (melee attack with collision detection against all entities)
-        bool hitRegistered = false;
-
-        // Check collision with monster
-        if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
-          final distance = (ally.transform.position - gameState.monsterTransform!.position).length;
-          if (distance <= 2.0) {
-            hitRegistered = _checkAndHandleCollision(
-              attackerPosition: ally.transform.position,
-              targetPosition: gameState.monsterTransform!.position,
-              collisionThreshold: 2.0,
-              damage: 10.0,
-              attackType: 'Ally sword',
-              impactColor: Vector3(0.7, 0.7, 0.8),
-              impactSize: 0.5,
-            );
-            if (hitRegistered) {
-              print('Ally sword hit monster!');
-            }
-          }
-        }
-
-        // Check collision with player (if not already hit something)
-        if (!hitRegistered && gameState.playerTransform != null && gameState.playerHealth > 0) {
-          final distance = (ally.transform.position - gameState.playerTransform!.position).length;
-          if (distance <= 2.0) {
-            final distanceBefore = (ally.transform.position - gameState.playerTransform!.position).length;
-            if (distanceBefore <= 2.0) {
-              setState(() {
-                gameState.playerHealth = math.max(0, gameState.playerHealth - 10.0);
-
-                // Create impact effect
-                gameState.impactEffects.add(ImpactEffect(
-                  mesh: Mesh.cube(
-                    size: 0.5,
-                    color: Vector3(0.7, 0.7, 0.8),
-                  ),
-                  transform: Transform3d(
-                    position: gameState.playerTransform!.position.clone() + Vector3(0, 0.5, 0),
-                    scale: Vector3(1, 1, 1),
-                  ),
-                  lifetime: 0.3,
-                ));
-              });
-              hitRegistered = true;
-              print('Ally sword hit player! Player health: ${gameState.playerHealth}');
-            }
-          }
-        }
-
-        // Check collision with other allies (if not already hit something)
-        if (!hitRegistered) {
-          for (final otherAlly in gameState.allies) {
-            // Skip the attacker and dead allies
-            if (otherAlly == ally || otherAlly.health <= 0) continue;
-
-            final distance = (ally.transform.position - otherAlly.transform.position).length;
-            if (distance <= 2.0) {
-              setState(() {
-                otherAlly.health = math.max(0, otherAlly.health - 10.0);
-
-                // Create impact effect
-                gameState.impactEffects.add(ImpactEffect(
-                  mesh: Mesh.cube(
-                    size: 0.5,
-                    color: Vector3(0.7, 0.7, 0.8),
-                  ),
-                  transform: Transform3d(
-                    position: otherAlly.transform.position.clone() + Vector3(0, 0.5, 0),
-                    scale: Vector3(1, 1, 1),
-                  ),
-                  lifetime: 0.3,
-                ));
-              });
-              hitRegistered = true;
-              print('Ally sword hit another ally! Ally health: ${otherAlly.health}');
-              break; // Only hit one target
-            }
-          }
-        }
-
-        // Always set cooldown, whether hit lands or not
-        setState(() {
-          ally.abilityCooldown = ally.abilityCooldownMax;
-        });
-
-        if (!hitRegistered) {
-          print('Ally sword missed - out of range!');
-        }
-      } else if (ally.abilityIndex == 1 && gameState.monsterTransform != null) {
-        // Ability 1: Fireball (ranged projectile)
-        final direction = (gameState.monsterTransform!.position - ally.transform.position).normalized();
-        final fireballMesh = Mesh.cube(
-          size: 0.3,
-          color: Vector3(1.0, 0.4, 0.0), // Orange fireball
-        );
-        final startPos = ally.transform.position.clone() + Vector3(0, 0.4, 0);
-        final fireballTransform = Transform3d(
-          position: startPos,
-          scale: Vector3(1, 1, 1),
-        );
-
-        setState(() {
-          ally.projectiles.add(Projectile(
-            mesh: fireballMesh,
-            transform: fireballTransform,
-            velocity: direction * 10.0,
-            lifetime: 5.0,
-          ));
-          ally.abilityCooldown = ally.abilityCooldownMax;
-        });
-        print('Ally casts Fireball!');
-      } else if (ally.abilityIndex == 2) {
-        // Ability 2: Heal (restore ally's own health)
-        setState(() {
-          ally.health = math.min(ally.maxHealth, ally.health + 15);
-          ally.abilityCooldown = ally.abilityCooldownMax;
-        });
-        print('Ally heals itself! Health: ${ally.health}/${ally.maxHealth}');
-      }
-    }
-    // HOLD_POSITION - do nothing
-  }
 
   // ===== ALLY MANAGEMENT METHODS =====
 
@@ -919,7 +619,7 @@ class _Game3DState extends State<Game3D> {
 
     setState(() {
       // Force the ally to use their ability
-      _executeAllyDecision(ally, 'USE_ABILITY');
+      AISystem.executeAllyDecision(ally, 'ATTACK', gameState);
       print('Manually activated ally ability ${ally.abilityIndex}');
     });
   }
