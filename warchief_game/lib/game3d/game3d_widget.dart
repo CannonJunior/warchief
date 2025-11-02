@@ -19,6 +19,7 @@ import '../models/projectile.dart';
 import '../models/impact_effect.dart';
 import '../models/ally.dart';
 import '../models/ai_chat_message.dart';
+import 'state/game_config.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -68,19 +69,19 @@ class _Game3DState extends State<Game3D> {
   double monsterRotation = 180.0; // Face toward player initially
 
   // Monster health and abilities
-  double monsterHealth = 100.0;
-  final double monsterMaxHealth = 100.0;
+  double monsterHealth = GameConfig.monsterMaxHealth;
+  final double monsterMaxHealth = GameConfig.monsterMaxHealth;
   double monsterAbility1Cooldown = 0.0;
-  final double monsterAbility1CooldownMax = 2.0;
+  final double monsterAbility1CooldownMax = GameConfig.monsterAbility1CooldownMax;
   double monsterAbility2Cooldown = 0.0;
-  final double monsterAbility2CooldownMax = 4.0;
+  final double monsterAbility2CooldownMax = GameConfig.monsterAbility2CooldownMax;
   double monsterAbility3Cooldown = 0.0;
-  final double monsterAbility3CooldownMax = 8.0;
+  final double monsterAbility3CooldownMax = GameConfig.monsterAbility3CooldownMax;
 
   // Monster AI state
   bool monsterPaused = false;
   double monsterAiTimer = 0.0;
-  final double monsterAiInterval = 2.0; // Think every 2 seconds
+  final double monsterAiInterval = GameConfig.monsterAiInterval;
   List<Projectile> monsterProjectiles = [];
 
   // Ally state
@@ -90,8 +91,8 @@ class _Game3DState extends State<Game3D> {
   List<AIChatMessage> monsterAIChat = [];
 
   // Game state
-  double playerRotation = 0.0;
-  double playerSpeed = 5.0;
+  double playerRotation = GameConfig.playerStartRotation;
+  double playerSpeed = GameConfig.playerSpeed;
   int? animationFrameId;
   DateTime? lastFrameTime;
   int frameCount = 0;
@@ -102,30 +103,30 @@ class _Game3DState extends State<Game3D> {
   bool isGrounded = true;
   int jumpsRemaining = 2; // Allow 2 jumps total (ground jump + air jump)
   final int maxJumps = 2;
-  final double jumpForce = 8.0;
-  final double gravity = 20.0;
-  final double groundLevel = 0.5; // Player's Y position when on ground
+  final double jumpForce = GameConfig.jumpVelocity;
+  final double gravity = GameConfig.gravity;
+  final double groundLevel = GameConfig.groundLevel;
   bool jumpKeyWasPressed = false; // Track previous jump key state
 
   // Ability system
   // Ability 1: Sword Attack (melee)
   double ability1Cooldown = 0.0;
-  final double ability1CooldownMax = 1.5; // 1.5 seconds
+  final double ability1CooldownMax = GameConfig.ability1CooldownMax;
   bool ability1Active = false;
   double ability1ActiveTime = 0.0;
-  final double ability1Duration = 0.3; // Sword swing duration
+  final double ability1Duration = GameConfig.ability1Duration;
   Mesh? swordMesh;
   Transform3d? swordTransform;
 
   // Ability 2: Fireball (projectile)
   double ability2Cooldown = 0.0;
-  final double ability2CooldownMax = 3.0; // 3 seconds
+  final double ability2CooldownMax = GameConfig.ability2CooldownMax;
   List<Projectile> fireballs = []; // List of active fireballs
   List<ImpactEffect> impactEffects = []; // List of active impact effects
 
   // Ability 3: Heal
   double ability3Cooldown = 0.0;
-  final double ability3CooldownMax = 10.0; // 10 seconds
+  final double ability3CooldownMax = GameConfig.ability3CooldownMax;
   bool ability3Active = false;
   double ability3ActiveTime = 0.0;
   final double ability3Duration = 1.0; // Heal effect duration
@@ -188,21 +189,21 @@ class _Game3DState extends State<Game3D> {
 
       // Initialize terrain
       terrainTiles = TerrainGenerator.createTileGrid(
-        width: 20,
-        height: 20,
-        tileSize: 1.0,
+        width: GameConfig.terrainGridSize,
+        height: GameConfig.terrainGridSize,
+        tileSize: GameConfig.terrainTileSize,
       );
 
       // Initialize player
       playerMesh = PlayerMesh.createSimpleCharacter();
       playerTransform = Transform3d(
-        position: Vector3(0, 0.5, 0), // Slightly above ground
+        position: GameConfig.playerStartPosition,
         scale: Vector3(1, 1, 1),
       );
 
       // Initialize direction indicator (red triangle on top of player)
       directionIndicator = Mesh.triangle(
-        size: 0.5,
+        size: GameConfig.playerDirectionIndicatorSize,
         color: Vector3(1.0, 0.0, 0.0), // Red color
       );
       directionIndicatorTransform = Transform3d(
@@ -244,22 +245,22 @@ class _Game3DState extends State<Game3D> {
 
       // Initialize monster (purple enemy at opposite end of terrain)
       monsterMesh = Mesh.cube(
-        size: 1.2,
+        size: GameConfig.monsterSize,
         color: Vector3(0.6, 0.2, 0.8), // Purple color
       );
       monsterTransform = Transform3d(
-        position: Vector3(18, 0.6, 18), // Opposite end of 20x20 terrain
+        position: GameConfig.monsterStartPosition,
         rotation: Vector3(0, monsterRotation, 0),
         scale: Vector3(1, 1, 1),
       );
 
       // Initialize monster direction indicator (green triangle on top of monster)
       monsterDirectionIndicator = Mesh.triangle(
-        size: 0.5,
+        size: GameConfig.monsterDirectionIndicatorSize,
         color: Vector3(0.0, 1.0, 0.0), // Green color
       );
       monsterDirectionIndicatorTransform = Transform3d(
-        position: Vector3(18, 1.3, 18), // On top of monster cube
+        position: Vector3(GameConfig.monsterStartPosition.x, GameConfig.monsterStartPosition.y + 0.7, GameConfig.monsterStartPosition.z),
         rotation: Vector3(0, monsterRotation + 180, 0),
         scale: Vector3(1, 1, 1),
       );
