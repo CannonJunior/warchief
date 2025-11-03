@@ -26,6 +26,11 @@ import 'systems/ability_system.dart';
 import 'systems/ai_system.dart';
 import 'systems/input_system.dart';
 import 'systems/render_system.dart';
+import 'ui/instructions_overlay.dart';
+import 'ui/monster_hud.dart';
+import 'ui/ai_chat_panel.dart';
+import 'ui/player_hud.dart';
+import 'ui/allies_panel.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -561,632 +566,55 @@ class _Game3DState extends State<Game3D> {
             SizedBox.expand(),
 
             // Instructions overlay
+            InstructionsOverlay(
+              camera: camera,
+              gameState: gameState,
+            ),
+
+            // Monster HUD
+            MonsterHud(
+              gameState: gameState,
+              onAbility1Pressed: _activateMonsterAbility1,
+              onAbility2Pressed: _activateMonsterAbility2,
+              onAbility3Pressed: _activateMonsterAbility3,
+              onPauseToggle: () {
+                setState(() {
+                  gameState.monsterPaused = !gameState.monsterPaused;
+                });
+                print('Monster AI ${gameState.monsterPaused ? 'paused' : 'resumed'}');
+              },
+            ),
+
+            // AI Chat Panel
+            AIChatPanel(
+              messages: gameState.monsterAIChat,
+            ),
+
+            // Player and Allies Panel
             Positioned(
-            top: 10,
-            left: 10,
-            child: Container(
-              padding: EdgeInsets.all(8),
-              color: Colors.black54,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Camera: J/L=Yaw | N/M=Pitch | I/K=Zoom',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Movement: W/S=Forward/Back | A/D=Rotate | Q/E=Strafe',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Jump: Spacebar',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Abilities:',
-                    style: TextStyle(color: Colors.cyan, fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    '1: Sword ${gameState.ability1Cooldown > 0 ? "(${gameState.ability1Cooldown.toStringAsFixed(1)}s)" : "READY"}',
-                    style: TextStyle(
-                      color: gameState.ability1Cooldown > 0 ? Colors.red : Colors.green,
-                      fontSize: 10,
-                    ),
-                  ),
-                  Text(
-                    '2: Fireball ${gameState.ability2Cooldown > 0 ? "(${gameState.ability2Cooldown.toStringAsFixed(1)}s)" : "READY"}',
-                    style: TextStyle(
-                      color: gameState.ability2Cooldown > 0 ? Colors.red : Colors.green,
-                      fontSize: 10,
-                    ),
-                  ),
-                  Text(
-                    '3: Heal ${gameState.ability3Cooldown > 0 ? "(${gameState.ability3Cooldown.toStringAsFixed(1)}s)" : "READY"}',
-                    style: TextStyle(
-                      color: gameState.ability3Cooldown > 0 ? Colors.red : Colors.green,
-                      fontSize: 10,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Camera Angle to Terrain: ${(camera?.pitch.abs() ?? 0).toStringAsFixed(1)}°',
-                    style: TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Camera Position: '
-                    'X: ${camera?.position.x.toStringAsFixed(1) ?? "0"} | '
-                    'Y: ${camera?.position.y.toStringAsFixed(1) ?? "0"} | '
-                    'Z: ${camera?.position.z.toStringAsFixed(1) ?? "0"}',
-                    style: TextStyle(color: Colors.amber, fontSize: 10),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Pitch: ${camera?.pitch.toStringAsFixed(1) ?? "0"}° | '
-                    'Yaw: ${camera?.yaw.toStringAsFixed(1) ?? "0"}°',
-                    style: TextStyle(color: Colors.white70, fontSize: 10),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // HUD - Monster Information (Top-left, below camera controls)
-          Positioned(
-            top: 360,
-            left: 10,
-            child: Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.purple, width: 2),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Monster label
-                  Text(
-                    'BOSS MONSTER',
-                    style: TextStyle(
-                      color: Colors.purple,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  // Health bar
-                  Container(
-                    width: 200,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade800,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.grey.shade600, width: 2),
-                    ),
-                    child: Stack(
-                      children: [
-                        // Health fill
-                        FractionallySizedBox(
-                          widthFactor: (gameState.monsterHealth / gameState.monsterMaxHealth).clamp(0.0, 1.0),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: gameState.monsterHealth > 50 ? Colors.green :
-                                     gameState.monsterHealth > 25 ? Colors.orange : Colors.red,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        // Health text
-                        Center(
-                          child: Text(
-                            '${gameState.monsterHealth.toStringAsFixed(0)} / ${gameState.monsterMaxHealth.toStringAsFixed(0)}',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black,
-                                  blurRadius: 2,
-                                  offset: Offset(1, 1),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  // Ability buttons
-                  Row(
-                    children: [
-                      _buildAbilityButton(
-                        label: 'M1',
-                        color: Color(0xFF9B59B6), // Purple
-                        cooldown: gameState.monsterAbility1Cooldown,
-                        maxCooldown: gameState.monsterAbility1CooldownMax,
-                        onPressed: _activateMonsterAbility1,
-                      ),
-                      SizedBox(width: 8),
-                      _buildAbilityButton(
-                        label: 'M2',
-                        color: Color(0xFF8E44AD), // Darker purple
-                        cooldown: gameState.monsterAbility2Cooldown,
-                        maxCooldown: gameState.monsterAbility2CooldownMax,
-                        onPressed: _activateMonsterAbility2,
-                      ),
-                      SizedBox(width: 8),
-                      _buildAbilityButton(
-                        label: 'M3',
-                        color: Color(0xFF6C3483), // Even darker purple
-                        cooldown: gameState.monsterAbility3Cooldown,
-                        maxCooldown: gameState.monsterAbility3CooldownMax,
-                        onPressed: _activateMonsterAbility3,
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12),
-                  // Pause button for monster AI
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        gameState.monsterPaused = !gameState.monsterPaused;
-                      });
-                      print('Monster AI ${gameState.monsterPaused ? 'paused' : 'resumed'}');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: gameState.monsterPaused ? Colors.green : Colors.red,
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    ),
-                    child: Text(
-                      gameState.monsterPaused ? 'Resume Monster' : 'Pause Monster',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // HUD - AI Chat Interface (Below Monster)
-          Positioned(
-            top: 640,
-            left: 10,
-            child: Container(
-              width: 300,
-              height: 200,
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.cyan, width: 2),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'MONSTER AI CHAT',
-                    style: TextStyle(
-                      color: Colors.cyan,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: 6),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade900.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: ListView.builder(
-                        reverse: true, // Latest messages at bottom
-                        itemCount: gameState.monsterAIChat.length,
-                        itemBuilder: (context, index) {
-                          final reversedIndex = gameState.monsterAIChat.length - 1 - index;
-                          final message = gameState.monsterAIChat[reversedIndex];
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  message.isInput ? '→ ' : '← ',
-                                  style: TextStyle(
-                                    color: message.isInput ? Colors.yellow : Colors.green,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    message.text,
-                                    style: TextStyle(
-                                      color: message.isInput ? Colors.yellow.shade200 : Colors.green.shade200,
-                                      fontSize: 8,
-                                    ),
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // HUD - Player and Allies (Top-right corner)
-          Positioned(
-            top: 120,
-            right: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Player Interface
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue, width: 2),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      // Player label
-                      Text(
-                        'PLAYER',
-                        style: TextStyle(
-                          color: Colors.blue,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      // Health circles
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: List.generate(4, (index) {
-                          return Container(
-                            margin: EdgeInsets.only(left: index > 0 ? 8 : 0),
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.red,
-                              border: Border.all(color: Colors.red.shade900, width: 3),
-                            ),
-                          );
-                        }),
-                      ),
-                      SizedBox(height: 12),
-                      // Ability buttons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          _buildAbilityButton(
-                            label: '1',
-                            color: Color(0xFFB3B3CC), // Gray (sword)
-                            cooldown: gameState.ability1Cooldown,
-                            maxCooldown: gameState.ability1CooldownMax,
-                            onPressed: _activateAbility1,
-                          ),
-                          SizedBox(width: 10),
-                          _buildAbilityButton(
-                            label: '2',
-                            color: Color(0xFFFF6600), // Orange (fireball)
-                            cooldown: gameState.ability2Cooldown,
-                            maxCooldown: gameState.ability2CooldownMax,
-                            onPressed: _activateAbility2,
-                          ),
-                          SizedBox(width: 10),
-                          _buildAbilityButton(
-                            label: '3',
-                            color: Color(0xFF80FF4D), // Green (heal)
-                            cooldown: gameState.ability3Cooldown,
-                            maxCooldown: gameState.ability3CooldownMax,
-                            onPressed: _activateAbility3,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Allies Display
-                ...gameState.allies.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final ally = entry.value;
-                  final abilityNames = ['Sword', 'Fireball', 'Heal'];
-                  final abilityColors = [
-                    Color(0xFFB3B3CC), // Gray (sword)
-                    Color(0xFFFF6600), // Orange (fireball)
-                    Color(0xFF80FF4D), // Green (heal)
-                  ];
-
-                  return Container(
-                    margin: EdgeInsets.only(top: 12),
-                    padding: EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.cyan, width: 2),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        // Ally label
-                        Text(
-                          'ALLY ${index + 1}',
-                          style: TextStyle(
-                            color: Colors.cyan,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        SizedBox(height: 6),
-                        // Health bar
-                        Container(
-                          width: 150,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade800,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.grey.shade600, width: 2),
-                          ),
-                          child: Stack(
-                            children: [
-                              // Health fill
-                              FractionallySizedBox(
-                                widthFactor: (ally.health / ally.maxHealth).clamp(0.0, 1.0),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: ally.health > 25 ? Colors.green :
-                                           ally.health > 12 ? Colors.orange : Colors.red,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ),
-                              ),
-                              // Health text
-                              Center(
-                                child: Text(
-                                  '${ally.health.toStringAsFixed(0)} / ${ally.maxHealth.toStringAsFixed(0)}',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        // Ability display
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              abilityNames[ally.abilityIndex],
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 9,
-                              ),
-                            ),
-                            SizedBox(width: 6),
-                            InkWell(
-                              onTap: ally.abilityCooldown > 0 || ally.health <= 0
-                                  ? null
-                                  : () => _activateAllyAbility(ally),
-                              borderRadius: BorderRadius.circular(6),
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.white30, width: 2),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Stack(
-                                  children: [
-                                    // Base color
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: ally.abilityCooldown > 0
-                                            ? Colors.grey.shade700
-                                            : abilityColors[ally.abilityIndex],
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                    // Cooldown clock animation
-                                    if (ally.abilityCooldown > 0)
-                                      CustomPaint(
-                                        size: Size(40, 40),
-                                        painter: CooldownClockPainter(
-                                          progress: 1.0 - (ally.abilityCooldown / ally.abilityCooldownMax),
-                                        ),
-                                      ),
-                                    // Ability number label
-                                    Center(
-                                      child: Text(
-                                        '${ally.abilityIndex + 1}',
-                                        style: TextStyle(
-                                          color: ally.abilityCooldown > 0
-                                              ? Colors.white38
-                                              : Colors.white,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ],
-            ),
-          ),
-
-          // Ally management buttons (Top-right corner)
-          Positioned(
-            top: 10,
-            right: 170,
-            child: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.cyan, width: 2),
-              ),
+              top: 120,
+              right: 20,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    'ALLIES (${gameState.allies.length})',
-                    style: TextStyle(
-                      color: Colors.cyan,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Row(
-                    children: [
-                      // Add Ally button
-                      ElevatedButton(
-                        onPressed: _addAlly,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          minimumSize: Size(50, 30),
-                        ),
-                        child: Text(
-                          '+ Ally',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      // Remove Ally button
-                      ElevatedButton(
-                        onPressed: gameState.allies.isEmpty ? null : _removeAlly,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          disabledBackgroundColor: Colors.grey.shade700,
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          minimumSize: Size(50, 30),
-                        ),
-                        child: Text(
-                          '- Ally',
-                          style: TextStyle(
-                            color: gameState.allies.isEmpty ? Colors.white38 : Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
+                  // Player HUD
+                  PlayerHud(
+                    gameState: gameState,
+                    onAbility1Pressed: _activateAbility1,
+                    onAbility2Pressed: _activateAbility2,
+                    onAbility3Pressed: _activateAbility3,
                   ),
                 ],
               ),
             ),
-          ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  // Build ability button with cooldown clock animation
-  Widget _buildAbilityButton({
-    required String label,
-    required Color color,
-    required double cooldown,
-    required double maxCooldown,
-    VoidCallback? onPressed,
-  }) {
-    final isOnCooldown = cooldown > 0;
-    final progress = isOnCooldown ? (1.0 - (cooldown / maxCooldown)) : 1.0;
-
-    return InkWell(
-      onTap: isOnCooldown || onPressed == null ? null : onPressed,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          color: Colors.black87,
-          border: Border.all(color: Colors.white30, width: 2),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Stack(
-          children: [
-            // Base color
-            Container(
-              decoration: BoxDecoration(
-                color: isOnCooldown ? Colors.grey.shade700 : color,
-                borderRadius: BorderRadius.circular(6),
-              ),
+            // Allies Panel
+            AlliesPanel(
+              allies: gameState.allies,
+              onActivateAllyAbility: _activateAllyAbility,
+              onAddAlly: _addAlly,
+              onRemoveAlly: _removeAlly,
             ),
-            // Cooldown clock animation
-            if (isOnCooldown)
-              CustomPaint(
-                size: Size(60, 60),
-                painter: CooldownClockPainter(progress: progress),
-              ),
-            // Label
-            Center(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: isOnCooldown ? Colors.white38 : Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            // Cooldown text
-            if (isOnCooldown)
-              Positioned(
-                bottom: 4,
-                right: 4,
-                child: Text(
-                  cooldown.toStringAsFixed(1),
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -1213,41 +641,4 @@ class _Game3DState extends State<Game3D> {
 class Math {
   static double sin(double radians) => math.sin(radians);
   static double cos(double radians) => math.cos(radians);
-}
-
-/// CustomPainter for cooldown clock animation
-/// Draws a sweeping dark overlay that reveals the ability as cooldown completes
-class CooldownClockPainter extends CustomPainter {
-  final double progress; // 0.0 = just started cooldown, 1.0 = ready
-
-  CooldownClockPainter({required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-
-    // Dark overlay that sweeps clockwise as cooldown progresses
-    final paint = Paint()
-      ..color = Colors.black.withOpacity(0.7)
-      ..style = PaintingStyle.fill;
-
-    // Calculate sweep angle (starts at top, sweeps clockwise)
-    // progress 0.0 = full circle (360°), progress 1.0 = no circle (0°)
-    final sweepAngle = (1.0 - progress) * 2 * math.pi;
-
-    // Draw arc from top (-π/2) sweeping clockwise
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2, // Start at top (12 o'clock)
-      sweepAngle, // Sweep clockwise
-      true, // Use center (filled pie slice)
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(CooldownClockPainter oldDelegate) {
-    return oldDelegate.progress != progress;
-  }
 }
