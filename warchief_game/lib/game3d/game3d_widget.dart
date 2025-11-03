@@ -25,6 +25,7 @@ import 'systems/physics_system.dart';
 import 'systems/ability_system.dart';
 import 'systems/ai_system.dart';
 import 'systems/input_system.dart';
+import 'systems/render_system.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -321,77 +322,7 @@ class _Game3DState extends State<Game3D> {
       return;
     }
 
-    // Clear screen
-    renderer!.clear();
-
-    // Render terrain tiles
-    if (gameState.terrainTiles != null) {
-      for (final tile in gameState.terrainTiles!) {
-        renderer!.render(tile.mesh, tile.transform, camera!);
-      }
-    }
-
-    // Render shadow (before player so it appears underneath)
-    if (gameState.shadowMesh != null && gameState.shadowTransform != null) {
-      renderer!.render(gameState.shadowMesh!, gameState.shadowTransform!, camera!);
-    }
-
-    // Render player
-    if (gameState.playerMesh != null && gameState.playerTransform != null) {
-      renderer!.render(gameState.playerMesh!, gameState.playerTransform!, camera!);
-    }
-
-    // Render direction indicator
-    if (gameState.directionIndicator != null && gameState.directionIndicatorTransform != null) {
-      renderer!.render(gameState.directionIndicator!, gameState.directionIndicatorTransform!, camera!);
-    }
-
-    // Render monster
-    if (gameState.monsterMesh != null && gameState.monsterTransform != null) {
-      renderer!.render(gameState.monsterMesh!, gameState.monsterTransform!, camera!);
-    }
-
-    // Render monster direction indicator
-    if (gameState.monsterDirectionIndicator != null && gameState.monsterDirectionIndicatorTransform != null) {
-      renderer!.render(gameState.monsterDirectionIndicator!, gameState.monsterDirectionIndicatorTransform!, camera!);
-    }
-
-    // Render allies
-    for (final ally in gameState.allies) {
-      // Render ally mesh
-      renderer!.render(ally.mesh, ally.transform, camera!);
-
-      // Render ally projectiles
-      for (final projectile in ally.projectiles) {
-        renderer!.render(projectile.mesh, projectile.transform, camera!);
-      }
-    }
-
-    // Render ability effects
-    // Render sword attack
-    if (gameState.ability1Active && gameState.swordMesh != null && gameState.swordTransform != null) {
-      renderer!.render(gameState.swordMesh!, gameState.swordTransform!, camera!);
-    }
-
-    // Render fireballs
-    for (final fireball in gameState.fireballs) {
-      renderer!.render(fireball.mesh, fireball.transform, camera!);
-    }
-
-    // Render monster projectiles
-    for (final projectile in gameState.monsterProjectiles) {
-      renderer!.render(projectile.mesh, projectile.transform, camera!);
-    }
-
-    // Render impact effects
-    for (final impact in gameState.impactEffects) {
-      renderer!.render(impact.mesh, impact.transform, camera!);
-    }
-
-    // Render heal effect
-    if (gameState.ability3Active && gameState.healEffectMesh != null && gameState.healEffectTransform != null) {
-      renderer!.render(gameState.healEffectMesh!, gameState.healEffectTransform!, camera!);
-    }
+    RenderSystem.render(renderer!, camera!, gameState);
   }
 
   void _onKeyEvent(KeyEvent event) {
