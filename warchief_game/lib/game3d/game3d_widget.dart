@@ -1,10 +1,7 @@
 import 'dart:html' as html;
-import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:vector_math/vector_math.dart' hide Colors;
-import 'dart:ui' as ui;
 
 import '../rendering3d/webgl_renderer.dart';
 import '../rendering3d/camera3d.dart';
