@@ -17,6 +17,7 @@ import '../models/ally.dart';
 import '../models/ai_chat_message.dart';
 import 'state/game_config.dart';
 import 'state/game_state.dart';
+import 'state/abilities_config.dart';
 import 'systems/physics_system.dart';
 import 'systems/ability_system.dart';
 import 'systems/ai_system.dart';
@@ -194,6 +195,17 @@ class _Game3DState extends State<Game3D> {
         scale: Vector3(1, 1, 1),
       );
 
+      // Initialize monster sword mesh (giant dark purple sword)
+      gameState.monsterSwordMesh = Mesh.plane(
+        width: GameConfig.monsterSwordWidth,
+        height: GameConfig.monsterSwordHeight,
+        color: GameConfig.monsterSwordColor,
+      );
+      gameState.monsterSwordTransform = Transform3d(
+        position: Vector3(0, 0, 0), // Will be positioned when active
+        scale: Vector3(1, 1, 1),
+      );
+
       print('Game3D initialized successfully!');
 
       // Start game loop
@@ -352,14 +364,18 @@ class _Game3DState extends State<Game3D> {
 
   // ===== MONSTER ABILITY METHODS =====
 
-  /// Activate Monster Ability 1: Dark Strike (melee attack)
+  /// Activate Monster Ability 1: Dark Strike (melee sword attack)
   void _activateMonsterAbility1() {
     if (gameState.monsterAbility1Cooldown > 0 || gameState.monsterHealth <= 0) return;
+    if (gameState.monsterAbility1Active) return; // Already swinging
 
     setState(() {
       gameState.monsterAbility1Cooldown = gameState.monsterAbility1CooldownMax;
+      gameState.monsterAbility1Active = true;
+      gameState.monsterAbility1ActiveTime = 0.0;
+      gameState.monsterAbility1HitRegistered = false;
     });
-    print('Monster uses Dark Strike! (melee attack)');
+    print('Monster uses Dark Strike! (sword attack)');
   }
 
   /// Activate Monster Ability 2: Shadow Bolt (ranged projectile)
@@ -367,11 +383,13 @@ class _Game3DState extends State<Game3D> {
     if (gameState.monsterAbility2Cooldown > 0 || gameState.monsterHealth <= 0) return;
     if (gameState.monsterTransform == null || gameState.playerTransform == null) return;
 
+    final shadowBolt = AbilitiesConfig.monsterShadowBolt;
+
     // Create shadow bolt projectile aimed at player
     final direction = (gameState.playerTransform!.position - gameState.monsterTransform!.position).normalized();
     final projectileMesh = Mesh.cube(
-      size: 0.5,
-      color: Vector3(0.5, 0.0, 0.5), // Purple
+      size: shadowBolt.projectileSize,
+      color: shadowBolt.color,
     );
     final projectileTransform = Transform3d(
       position: gameState.monsterTransform!.position.clone() + Vector3(0, 1, 0),
@@ -382,24 +400,25 @@ class _Game3DState extends State<Game3D> {
       gameState.monsterProjectiles.add(Projectile(
         mesh: projectileMesh,
         transform: projectileTransform,
-        velocity: direction * 8.0,
+        velocity: direction * shadowBolt.projectileSpeed,
         lifetime: 5.0,
       ));
       gameState.monsterAbility2Cooldown = gameState.monsterAbility2CooldownMax;
     });
-    print('Monster casts Shadow Bolt! (projectile)');
+    print('Monster casts ${shadowBolt.name}!');
   }
 
   /// Activate Monster Ability 3: Dark Healing (restore health)
   void _activateMonsterAbility3() {
     if (gameState.monsterAbility3Cooldown > 0 || gameState.monsterHealth <= 0) return;
 
+    final darkHeal = AbilitiesConfig.monsterDarkHeal;
+
     setState(() {
-      // Heal for 20-30 HP
-      gameState.monsterHealth = math.min(gameState.monsterMaxHealth.toDouble(), gameState.monsterHealth + 25);
+      gameState.monsterHealth = math.min(gameState.monsterMaxHealth.toDouble(), gameState.monsterHealth + darkHeal.healAmount);
       gameState.monsterAbility3Cooldown = gameState.monsterAbility3CooldownMax;
     });
-    print('Monster heals itself! Health: ${gameState.monsterHealth}/${gameState.monsterMaxHealth}');
+    print('Monster uses ${darkHeal.name}! Health: ${gameState.monsterHealth}/${gameState.monsterMaxHealth}');
   }
 
   // ===== AI CHAT LOGGING =====

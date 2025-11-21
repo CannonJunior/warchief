@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import '../state/game_state.dart';
 import '../state/game_config.dart';
+import '../state/abilities_config.dart';
 import '../../models/ally.dart';
 import '../../models/ai_chat_message.dart';
 import '../../rendering3d/mesh.dart';
@@ -42,6 +43,7 @@ class AISystem {
   }) {
     updateCooldowns(dt, gameState);
     updateMonsterAI(dt, gameState, logMonsterAI, activateMonsterAbility1, activateMonsterAbility2, activateMonsterAbility3);
+    updateMonsterSword(dt, gameState);
     updateAllyAI(dt, gameState);
     updateMonsterProjectiles(dt, gameState);
     updateAllyProjectiles(dt, gameState);
@@ -184,6 +186,60 @@ class AISystem {
     return decision;
   }
 
+  // ==================== MONSTER SWORD ====================
+
+  /// Updates monster sword animation and collision detection
+  ///
+  /// Handles the monster's melee sword swing, positioning, and damage
+  /// to player and allies within range.
+  ///
+  /// Parameters:
+  /// - dt: Time elapsed since last frame (in seconds)
+  /// - gameState: Current game state to update
+  static void updateMonsterSword(double dt, GameState gameState) {
+    if (!gameState.monsterAbility1Active) return;
+    if (gameState.monsterTransform == null || gameState.monsterSwordTransform == null) return;
+
+    final darkStrike = AbilitiesConfig.monsterDarkStrike;
+    gameState.monsterAbility1ActiveTime += dt;
+
+    if (gameState.monsterAbility1ActiveTime >= darkStrike.duration) {
+      // Sword swing finished
+      gameState.monsterAbility1Active = false;
+    } else {
+      // Position sword in front of monster, rotating during swing
+      final forward = Vector3(
+        -math.sin(gameState.monsterRotation * (math.pi / 180)),
+        0,
+        -math.cos(gameState.monsterRotation * (math.pi / 180)),
+      );
+      final swingProgress = gameState.monsterAbility1ActiveTime / darkStrike.duration;
+      final swingAngle = swingProgress * 180; // 0 to 180 degrees
+
+      gameState.monsterSwordTransform!.position = gameState.monsterTransform!.position + forward * 1.2;
+      gameState.monsterSwordTransform!.position.y = gameState.monsterTransform!.position.y;
+      gameState.monsterSwordTransform!.rotation.y = gameState.monsterRotation + swingAngle - 90;
+
+      // Check collision with player and allies (only once per swing)
+      if (!gameState.monsterAbility1HitRegistered) {
+        final swordTipPosition = gameState.monsterTransform!.position + forward * darkStrike.range;
+
+        final hitRegistered = CombatSystem.checkAndDamagePlayerOrAllies(
+          gameState,
+          attackerPosition: swordTipPosition,
+          damage: darkStrike.damage,
+          attackType: darkStrike.name,
+          impactColor: darkStrike.impactColor,
+          impactSize: darkStrike.impactSize,
+        );
+
+        if (hitRegistered) {
+          gameState.monsterAbility1HitRegistered = true;
+        }
+      }
+    }
+  }
+
   // ==================== ALLY AI ====================
 
   /// Updates ally AI (decision making and execution)
@@ -260,20 +316,21 @@ class AISystem {
       ally.transform.position += moveDirection * 0.3;
       print('Ally moving toward monster');
     } else if (decision == 'ATTACK' && ally.abilityCooldown <= 0) {
-      // Use ability
+      // Use ability based on ally's ability index
+      final ability = AbilitiesConfig.getAllyAbility(ally.abilityIndex);
       ally.abilityCooldown = ally.abilityCooldownMax;
 
       if (ally.abilityIndex == 0) {
-        // Ability 0: Sword (melee attack - collision handled elsewhere)
-        print('Ally attacks with Sword!');
+        // Sword (melee attack - collision handled elsewhere)
+        print('Ally attacks with ${ability.name}!');
       } else if (ally.abilityIndex == 1) {
-        // Ability 1: Fireball (ranged projectile)
+        // Fireball (ranged projectile)
         final toMonster = gameState.monsterTransform!.position - ally.transform.position;
         final direction = toMonster.normalized();
 
         final fireballMesh = Mesh.cube(
-          size: GameConfig.allyFireballSize,
-          color: Vector3(1.0, 0.4, 0.0), // Orange fireball
+          size: ability.projectileSize,
+          color: ability.color,
         );
         final fireballTransform = Transform3d(
           position: ally.transform.position.clone() + direction * 0.5,
@@ -284,22 +341,23 @@ class AISystem {
           Projectile(
             mesh: fireballMesh,
             transform: fireballTransform,
-            velocity: direction * 8.0,
+            velocity: direction * ability.projectileSpeed,
           ),
         );
-        print('Ally casts Fireball!');
+        print('Ally casts ${ability.name}!');
       } else if (ally.abilityIndex == 2) {
-        // Ability 2: Heal (restore ally's own health)
+        // Heal (restore ally's own health)
         if (ally.health < ally.maxHealth) {
-          ally.health = math.min(ally.maxHealth, ally.health + GameConfig.allyHealAmount);
+          ally.health = math.min(ally.maxHealth, ally.health + ability.healAmount);
         }
-        print('Ally heals itself! Health: ${ally.health}/${ally.maxHealth}');
+        print('Ally uses ${ability.name}! Health: ${ally.health}/${ally.maxHealth}');
       }
     } else if (decision == 'HEAL' && ally.abilityCooldown <= 0) {
       // Execute heal
+      final healAbility = AbilitiesConfig.allyHeal;
       ally.abilityCooldown = ally.abilityCooldownMax;
-      ally.health = math.min(ally.maxHealth, ally.health + GameConfig.allyHealAmount);
-      print('Ally heals itself! Health: ${ally.health}/${ally.maxHealth}');
+      ally.health = math.min(ally.maxHealth, ally.health + healAbility.healAmount);
+      print('Ally uses ${healAbility.name}! Health: ${ally.health}/${ally.maxHealth}');
     }
   }
 
@@ -311,6 +369,8 @@ class AISystem {
   /// - dt: Time elapsed since last frame (in seconds)
   /// - gameState: Current game state to update
   static void updateMonsterProjectiles(double dt, GameState gameState) {
+    final shadowBolt = AbilitiesConfig.monsterShadowBolt;
+
     gameState.monsterProjectiles.removeWhere((projectile) {
       projectile.transform.position += projectile.velocity * dt;
       projectile.lifetime -= dt;
@@ -319,10 +379,10 @@ class AISystem {
       final hitRegistered = CombatSystem.checkAndDamagePlayerOrAllies(
         gameState,
         attackerPosition: projectile.transform.position,
-        damage: GameConfig.monsterAbility2Damage,
-        attackType: 'Shadow Bolt',
-        impactColor: GameConfig.monsterAbility2ImpactColor,
-        impactSize: GameConfig.monsterProjectileImpactSize,
+        damage: shadowBolt.damage,
+        attackType: shadowBolt.name,
+        impactColor: shadowBolt.impactColor,
+        impactSize: shadowBolt.impactSize,
       );
 
       if (hitRegistered) return true;
@@ -337,6 +397,8 @@ class AISystem {
   /// - dt: Time elapsed since last frame (in seconds)
   /// - gameState: Current game state to update
   static void updateAllyProjectiles(double dt, GameState gameState) {
+    final allyFireball = AbilitiesConfig.allyFireball;
+
     for (final ally in gameState.allies) {
       ally.projectiles.removeWhere((projectile) {
         projectile.transform.position += projectile.velocity * dt;
@@ -346,10 +408,10 @@ class AISystem {
         final hitRegistered = CombatSystem.checkAndDamageMonster(
           gameState,
           attackerPosition: projectile.transform.position,
-          damage: GameConfig.allyFireballDamage,
-          attackType: 'Ally Fireball',
-          impactColor: GameConfig.allyFireballImpactColor,
-          impactSize: GameConfig.allyFireballImpactSize,
+          damage: allyFireball.damage,
+          attackType: allyFireball.name,
+          impactColor: allyFireball.impactColor,
+          impactSize: allyFireball.impactSize,
         );
 
         if (hitRegistered) return true;

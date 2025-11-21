@@ -3,6 +3,7 @@ import 'dart:math' as Math;
 
 import '../state/game_state.dart';
 import '../state/game_config.dart';
+import '../state/abilities_config.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
@@ -100,15 +101,16 @@ class AbilitySystem {
 
       // Check collision with monster (only once per swing)
       if (!gameState.ability1HitRegistered) {
-        final swordTipPosition = gameState.playerTransform!.position + forward * GameConfig.ability1Range;
+        final sword = AbilitiesConfig.playerSword;
+        final swordTipPosition = gameState.playerTransform!.position + forward * sword.range;
 
         final hitRegistered = CombatSystem.checkAndDamageMonster(
           gameState,
           attackerPosition: swordTipPosition,
-          damage: GameConfig.ability1Damage,
-          attackType: 'Sword',
-          impactColor: GameConfig.ability1ImpactColor,
-          impactSize: GameConfig.ability1ImpactSize,
+          damage: sword.damage,
+          attackType: sword.name,
+          impactColor: sword.impactColor,
+          impactSize: sword.impactSize,
         );
 
         if (hitRegistered) {
@@ -131,6 +133,8 @@ class AbilitySystem {
     if (ability2KeyPressed &&
         gameState.ability2Cooldown <= 0 &&
         gameState.playerTransform != null) {
+      final fireball = AbilitiesConfig.playerFireball;
+
       // Create fireball projectile
       final forward = Vector3(
         -Math.sin(_radians(gameState.playerRotation)),
@@ -139,8 +143,8 @@ class AbilitySystem {
       );
 
       final fireballMesh = Mesh.cube(
-        size: GameConfig.ability2ProjectileSize,
-        color: GameConfig.ability2ProjectileColor,
+        size: fireball.projectileSize,
+        color: fireball.color,
       );
 
       final startPos = gameState.playerTransform!.position.clone() + forward * 1.0;
@@ -154,11 +158,11 @@ class AbilitySystem {
       gameState.fireballs.add(Projectile(
         mesh: fireballMesh,
         transform: fireballTransform,
-        velocity: forward * GameConfig.ability2ProjectileSpeed,
+        velocity: forward * fireball.projectileSpeed,
       ));
 
       gameState.ability2Cooldown = gameState.ability2CooldownMax;
-      print('Fireball launched!');
+      print('${fireball.name} launched!');
     }
   }
 
@@ -171,6 +175,8 @@ class AbilitySystem {
   /// - dt: Time elapsed since last frame (in seconds)
   /// - gameState: Current game state to update
   static void updateAbility2(double dt, GameState gameState) {
+    final fireballConfig = AbilitiesConfig.playerFireball;
+
     gameState.fireballs.removeWhere((fireball) {
       // Move fireball
       fireball.transform.position += fireball.velocity * dt;
@@ -180,10 +186,10 @@ class AbilitySystem {
       final hitRegistered = CombatSystem.checkAndDamageMonster(
         gameState,
         attackerPosition: fireball.transform.position,
-        damage: GameConfig.ability2Damage,
-        attackType: 'Fireball',
-        impactColor: GameConfig.fireballImpactColor,
-        impactSize: GameConfig.fireballImpactSize,
+        damage: fireballConfig.damage,
+        attackType: fireballConfig.name,
+        impactColor: fireballConfig.impactColor,
+        impactSize: fireballConfig.impactSize,
       );
 
       if (hitRegistered) return true;

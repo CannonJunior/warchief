@@ -64,9 +64,16 @@ class GameConfig {
 
   // ==================== MONSTER ABILITIES ====================
 
-  /// Monster Ability 1: Dark Strike (Melee)
+  /// Monster Ability 1: Dark Strike (Melee Sword)
   static const double monsterAbility1CooldownMax = 2.0;
   static const double monsterAbility1Damage = 15.0;
+  static const double monsterAbility1Range = 3.0; // Melee attack range
+  static const double monsterAbility1Duration = 0.4; // Sword swing duration
+  static const double monsterSwordWidth = 0.5; // Giant sword width
+  static const double monsterSwordHeight = 2.5; // Giant sword height
+  static final Vector3 monsterSwordColor = Vector3(0.4, 0.1, 0.5); // Dark purple
+  static final Vector3 monsterAbility1ImpactColor = Vector3(0.6, 0.2, 0.8); // Purple impact
+  static const double monsterAbility1ImpactSize = 0.6;
 
   /// Monster Ability 2: Shadow Bolt (Ranged Projectile)
   static const double monsterAbility2CooldownMax = 4.0;

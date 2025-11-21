@@ -70,9 +70,14 @@ class RenderSystem {
     }
 
     // Render ability effects
-    // Render sword attack
+    // Render player sword attack
     if (gameState.ability1Active && gameState.swordMesh != null && gameState.swordTransform != null) {
       renderer.render(gameState.swordMesh!, gameState.swordTransform!, camera);
+    }
+
+    // Render monster sword attack
+    if (gameState.monsterAbility1Active && gameState.monsterSwordMesh != null && gameState.monsterSwordTransform != null) {
+      renderer.render(gameState.monsterSwordMesh!, gameState.monsterSwordTransform!, camera);
     }
 
     // Render fireballs

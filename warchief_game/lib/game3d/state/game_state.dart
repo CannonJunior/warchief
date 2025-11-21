@@ -60,6 +60,13 @@ class GameState {
   final double monsterAiInterval = GameConfig.monsterAiInterval;
   List<Projectile> monsterProjectiles = [];
 
+  // Monster sword state (for melee ability 1)
+  Mesh? monsterSwordMesh;
+  Transform3d? monsterSwordTransform;
+  bool monsterAbility1Active = false;
+  double monsterAbility1ActiveTime = 0.0;
+  bool monsterAbility1HitRegistered = false;
+
   // ==================== ALLY STATE ====================
 
   List<Ally> allies = []; // Start with zero allies
