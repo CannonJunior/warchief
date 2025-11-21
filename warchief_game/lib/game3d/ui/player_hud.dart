@@ -40,21 +40,48 @@ class PlayerHud extends StatelessWidget {
             ),
           ),
           SizedBox(height: 8),
-          // Health circles
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: List.generate(4, (index) {
-              return Container(
-                margin: EdgeInsets.only(left: index > 0 ? 8 : 0),
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.red,
-                  border: Border.all(color: Colors.red.shade900, width: 3),
+          // Health bar
+          Container(
+            width: 200,
+            height: 24,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade800,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.grey.shade600, width: 2),
+            ),
+            child: Stack(
+              children: [
+                // Health fill
+                FractionallySizedBox(
+                  widthFactor: (gameState.playerHealth / gameState.playerMaxHealth).clamp(0.0, 1.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: gameState.playerHealth > 50 ? Colors.green :
+                             gameState.playerHealth > 25 ? Colors.orange : Colors.red,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                 ),
-              );
-            }),
+                // Health text
+                Center(
+                  child: Text(
+                    '${gameState.playerHealth.toStringAsFixed(0)} / ${gameState.playerMaxHealth.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black,
+                          blurRadius: 2,
+                          offset: Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           SizedBox(height: 12),
           // Ability buttons

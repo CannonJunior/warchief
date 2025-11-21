@@ -87,6 +87,7 @@ class GameState {
   bool ability1Active = false;
   double ability1ActiveTime = 0.0;
   final double ability1Duration = GameConfig.ability1Duration;
+  bool ability1HitRegistered = false; // Prevent multiple hits per swing
   Mesh? swordMesh;
   Transform3d? swordTransform;
 

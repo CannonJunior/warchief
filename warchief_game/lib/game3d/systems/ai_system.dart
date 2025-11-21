@@ -5,10 +5,10 @@ import '../state/game_state.dart';
 import '../state/game_config.dart';
 import '../../models/ally.dart';
 import '../../models/ai_chat_message.dart';
-import '../../models/impact_effect.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
+import 'combat_system.dart';
 
 /// AI System - Handles all NPC AI logic
 ///
@@ -32,7 +32,6 @@ class AISystem {
   /// - activateMonsterAbility1: Callback to activate monster ability 1
   /// - activateMonsterAbility2: Callback to activate monster ability 2
   /// - activateMonsterAbility3: Callback to activate monster ability 3
-  /// - checkAndHandleCollision: Callback for collision detection and handling
   static void update(
     double dt,
     GameState gameState, {
@@ -40,21 +39,12 @@ class AISystem {
     required void Function() activateMonsterAbility1,
     required void Function() activateMonsterAbility2,
     required void Function() activateMonsterAbility3,
-    required bool Function({
-      required Vector3 attackerPosition,
-      required Vector3 targetPosition,
-      required double collisionThreshold,
-      required double damage,
-      required String attackType,
-      required Vector3 impactColor,
-      required double impactSize,
-    }) checkAndHandleCollision,
   }) {
     updateCooldowns(dt, gameState);
     updateMonsterAI(dt, gameState, logMonsterAI, activateMonsterAbility1, activateMonsterAbility2, activateMonsterAbility3);
     updateAllyAI(dt, gameState);
     updateMonsterProjectiles(dt, gameState);
-    updateAllyProjectiles(dt, gameState, checkAndHandleCollision);
+    updateAllyProjectiles(dt, gameState);
   }
 
   /// Updates all ability cooldowns for monster and allies
@@ -325,27 +315,17 @@ class AISystem {
       projectile.transform.position += projectile.velocity * dt;
       projectile.lifetime -= dt;
 
-      // Check collision with player
-      if (gameState.playerTransform != null) {
-        final distance = (projectile.transform.position - gameState.playerTransform!.position).length;
-        if (distance < 1.0) {
-          // Hit player - create impact
-          final impactMesh = Mesh.cube(
-            size: GameConfig.monsterProjectileImpactSize,
-            color: Vector3(0.5, 0.0, 0.5), // Purple impact
-          );
-          final impactTransform = Transform3d(
-            position: projectile.transform.position.clone(),
-            scale: Vector3(1, 1, 1),
-          );
-          gameState.impactEffects.add(ImpactEffect(
-            mesh: impactMesh,
-            transform: impactTransform,
-          ));
-          print('Monster hit player! (implement player damage later)');
-          return true;
-        }
-      }
+      // Check collision with player and allies using unified combat system
+      final hitRegistered = CombatSystem.checkAndDamagePlayerOrAllies(
+        gameState,
+        attackerPosition: projectile.transform.position,
+        damage: GameConfig.monsterAbility2Damage,
+        attackType: 'Shadow Bolt',
+        impactColor: GameConfig.monsterAbility2ImpactColor,
+        impactSize: GameConfig.monsterProjectileImpactSize,
+      );
+
+      if (hitRegistered) return true;
 
       return projectile.lifetime <= 0;
     });
@@ -356,38 +336,23 @@ class AISystem {
   /// Parameters:
   /// - dt: Time elapsed since last frame (in seconds)
   /// - gameState: Current game state to update
-  /// - checkAndHandleCollision: Callback for collision detection and handling
-  static void updateAllyProjectiles(
-    double dt,
-    GameState gameState,
-    bool Function({
-      required Vector3 attackerPosition,
-      required Vector3 targetPosition,
-      required double collisionThreshold,
-      required double damage,
-      required String attackType,
-      required Vector3 impactColor,
-      required double impactSize,
-    }) checkAndHandleCollision,
-  ) {
+  static void updateAllyProjectiles(double dt, GameState gameState) {
     for (final ally in gameState.allies) {
       ally.projectiles.removeWhere((projectile) {
         projectile.transform.position += projectile.velocity * dt;
         projectile.lifetime -= dt;
 
-        // Check collision with monster using generalized function
-        if (gameState.monsterTransform != null) {
-          final hitRegistered = checkAndHandleCollision(
-            attackerPosition: projectile.transform.position,
-            targetPosition: gameState.monsterTransform!.position,
-            collisionThreshold: GameConfig.collisionThreshold,
-            damage: GameConfig.allyFireballDamage,
-            attackType: 'Ally fireball',
-            impactColor: GameConfig.allyFireballImpactColor,
-            impactSize: GameConfig.allyFireballImpactSize,
-          );
-          if (hitRegistered) return true;
-        }
+        // Check collision with monster using unified combat system
+        final hitRegistered = CombatSystem.checkAndDamageMonster(
+          gameState,
+          attackerPosition: projectile.transform.position,
+          damage: GameConfig.allyFireballDamage,
+          attackType: 'Ally Fireball',
+          impactColor: GameConfig.allyFireballImpactColor,
+          impactSize: GameConfig.allyFireballImpactSize,
+        );
+
+        if (hitRegistered) return true;
 
         return projectile.lifetime <= 0;
       });

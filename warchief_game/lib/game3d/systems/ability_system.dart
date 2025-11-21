@@ -6,7 +6,7 @@ import '../state/game_config.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
-import '../../models/impact_effect.dart';
+import 'combat_system.dart';
 
 /// Ability System - Handles all player ability logic
 ///
@@ -64,13 +64,15 @@ class AbilitySystem {
       gameState.ability1Active = true;
       gameState.ability1ActiveTime = 0.0;
       gameState.ability1Cooldown = gameState.ability1CooldownMax;
+      gameState.ability1HitRegistered = false; // Reset hit tracker for new swing
       print('Sword attack activated!');
     }
   }
 
-  /// Updates Ability 1 (Sword) animation
+  /// Updates Ability 1 (Sword) animation and collision detection
   ///
   /// Updates the sword position and swing animation during the active duration.
+  /// Checks for collision with the monster and applies damage.
   ///
   /// Parameters:
   /// - dt: Time elapsed since last frame (in seconds)
@@ -95,6 +97,24 @@ class AbilitySystem {
       gameState.swordTransform!.position = gameState.playerTransform!.position + forward * 0.8;
       gameState.swordTransform!.position.y = gameState.playerTransform!.position.y;
       gameState.swordTransform!.rotation.y = gameState.playerRotation + swingAngle - 90;
+
+      // Check collision with monster (only once per swing)
+      if (!gameState.ability1HitRegistered) {
+        final swordTipPosition = gameState.playerTransform!.position + forward * GameConfig.ability1Range;
+
+        final hitRegistered = CombatSystem.checkAndDamageMonster(
+          gameState,
+          attackerPosition: swordTipPosition,
+          damage: GameConfig.ability1Damage,
+          attackType: 'Sword',
+          impactColor: GameConfig.ability1ImpactColor,
+          impactSize: GameConfig.ability1ImpactSize,
+        );
+
+        if (hitRegistered) {
+          gameState.ability1HitRegistered = true;
+        }
+      }
     }
   }
 
@@ -156,35 +176,17 @@ class AbilitySystem {
       fireball.transform.position += fireball.velocity * dt;
       fireball.lifetime -= dt;
 
-      // Check collision with monster
-      if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
-        final distance = (fireball.transform.position - gameState.monsterTransform!.position).length;
+      // Check collision with monster using unified combat system
+      final hitRegistered = CombatSystem.checkAndDamageMonster(
+        gameState,
+        attackerPosition: fireball.transform.position,
+        damage: GameConfig.ability2Damage,
+        attackType: 'Fireball',
+        impactColor: GameConfig.fireballImpactColor,
+        impactSize: GameConfig.fireballImpactSize,
+      );
 
-        if (distance < GameConfig.collisionThreshold) {
-          // Create impact effect at collision point
-          final impactMesh = Mesh.cube(
-            size: GameConfig.fireballImpactSize,
-            color: GameConfig.fireballImpactColor,
-          );
-          final impactTransform = Transform3d(
-            position: fireball.transform.position.clone(),
-            scale: Vector3(1, 1, 1),
-          );
-          gameState.impactEffects.add(ImpactEffect(
-            mesh: impactMesh,
-            transform: impactTransform,
-          ));
-
-          // Deal damage to monster
-          gameState.monsterHealth = (gameState.monsterHealth - GameConfig.ability2Damage)
-              .clamp(0.0, gameState.monsterMaxHealth);
-          print('Fireball hit monster for ${GameConfig.ability2Damage} damage! '
-                'Monster health: ${gameState.monsterHealth.toStringAsFixed(1)}');
-
-          // Remove fireball
-          return true;
-        }
-      }
+      if (hitRegistered) return true;
 
       // Remove if lifetime expired
       return fireball.lifetime <= 0;

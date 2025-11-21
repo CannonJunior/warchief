@@ -66,10 +66,13 @@ class GameConfig {
 
   /// Monster Ability 1: Dark Strike (Melee)
   static const double monsterAbility1CooldownMax = 2.0;
+  static const double monsterAbility1Damage = 15.0;
 
   /// Monster Ability 2: Shadow Bolt (Ranged Projectile)
   static const double monsterAbility2CooldownMax = 4.0;
   static const double monsterAbility2ProjectileSize = 0.5;
+  static const double monsterAbility2Damage = 12.0;
+  static final Vector3 monsterAbility2ImpactColor = Vector3(0.5, 0.0, 0.5); // Purple
 
   /// Monster Ability 3: Dark Healing
   static const double monsterAbility3CooldownMax = 8.0;
@@ -110,6 +113,9 @@ class GameConfig {
   static const double ability1CooldownMax = 1.5; // 1.5 seconds
   static const double ability1Duration = 0.3; // Sword visible for 0.3 seconds
   static const double ability1Range = 2.0; // Hit detection range
+  static const double ability1Damage = 25.0; // Sword damage per hit
+  static final Vector3 ability1ImpactColor = Vector3(0.8, 0.8, 0.9); // Silver/gray impact
+  static const double ability1ImpactSize = 0.5;
 
   /// Ability 2: Fireball (Ranged Projectile)
   static const double ability2CooldownMax = 3.0; // 3 seconds

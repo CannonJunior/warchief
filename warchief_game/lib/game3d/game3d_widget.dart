@@ -13,7 +13,6 @@ import '../game/controllers/input_manager.dart';
 import '../models/game_action.dart';
 import '../ai/ollama_client.dart';
 import '../models/projectile.dart';
-import '../models/impact_effect.dart';
 import '../models/ally.dart';
 import '../models/ai_chat_message.dart';
 import 'state/game_config.dart';
@@ -265,7 +264,6 @@ class _Game3DState extends State<Game3D> {
       activateMonsterAbility1: _activateMonsterAbility1,
       activateMonsterAbility2: _activateMonsterAbility2,
       activateMonsterAbility3: _activateMonsterAbility3,
-      checkAndHandleCollision: _checkAndHandleCollision,
     );
 
     // Handle player ability input
@@ -420,51 +418,6 @@ class _Game3DState extends State<Game3D> {
       }
     });
   }
-
-  // ===== COLLISION DETECTION HELPER =====
-
-  /// Generalized collision detection with damage and impact effects
-  ///
-  /// Returns true if collision occurred
-  bool _checkAndHandleCollision({
-    required Vector3 attackerPosition,
-    required Vector3 targetPosition,
-    required double collisionThreshold,
-    required double damage,
-    required String attackType,
-    required Vector3 impactColor,
-    double impactSize = 0.6,
-  }) {
-    final distance = (attackerPosition - targetPosition).length;
-
-    if (distance < collisionThreshold && gameState.monsterHealth > 0) {
-      // Create impact effect
-      final impactMesh = Mesh.cube(
-        size: impactSize,
-        color: impactColor,
-      );
-      final impactTransform = Transform3d(
-        position: targetPosition.clone(),
-        scale: Vector3(1, 1, 1),
-      );
-
-      setState(() {
-        gameState.impactEffects.add(ImpactEffect(
-          mesh: impactMesh,
-          transform: impactTransform,
-        ));
-
-        // Deal damage to monster
-        gameState.monsterHealth = (gameState.monsterHealth - damage).clamp(0.0, gameState.monsterMaxHealth);
-      });
-
-      print('$attackType hit monster for $damage damage! Monster health: ${gameState.monsterHealth.toStringAsFixed(1)}');
-      return true;
-    }
-
-    return false;
-  }
-
 
   // ===== ALLY MANAGEMENT METHODS =====
 
