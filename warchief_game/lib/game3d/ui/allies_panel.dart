@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/ally.dart';
 import 'cooldown_clock_painter.dart';
+import 'ui_config.dart';
 
 /// Allies Panel displaying all allies with health bars, ability buttons, and add/remove buttons
 class AlliesPanel extends StatelessWidget {
@@ -27,8 +28,8 @@ class AlliesPanel extends StatelessWidget {
     ];
 
     return Positioned(
-      top: 120,
-      right: 20,
+      top: UIConfig.alliesPanelTop,
+      right: UIConfig.alliesPanelRight,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -125,8 +126,8 @@ class AlliesPanel extends StatelessWidget {
                   SizedBox(height: 6),
                   // Health bar
                   Container(
-                    width: 150,
-                    height: 20,
+                    width: UIConfig.allyHealthBarWidth,
+                    height: UIConfig.allyHealthBarHeight,
                     decoration: BoxDecoration(
                       color: Colors.grey.shade800,
                       borderRadius: BorderRadius.circular(4),
@@ -178,8 +179,8 @@ class AlliesPanel extends StatelessWidget {
                             : () => onActivateAllyAbility(ally),
                         borderRadius: BorderRadius.circular(6),
                         child: Container(
-                          width: 40,
-                          height: 40,
+                          width: UIConfig.allyAbilityButtonSize,
+                          height: UIConfig.allyAbilityButtonSize,
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.white30, width: 2),
                             borderRadius: BorderRadius.circular(6),
@@ -198,7 +199,7 @@ class AlliesPanel extends StatelessWidget {
                               // Cooldown clock animation
                               if (ally.abilityCooldown > 0)
                                 CustomPaint(
-                                  size: Size(40, 40),
+                                  size: Size(UIConfig.allyAbilityButtonSize, UIConfig.allyAbilityButtonSize),
                                   painter: CooldownClockPainter(
                                     progress: 1.0 - (ally.abilityCooldown / ally.abilityCooldownMax),
                                   ),

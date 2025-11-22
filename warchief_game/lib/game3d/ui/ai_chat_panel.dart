@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/ai_chat_message.dart';
+import 'ui_config.dart';
 
 /// AI Chat Panel displaying the Monster AI chat log interface
 class AIChatPanel extends StatelessWidget {
@@ -13,8 +14,8 @@ class AIChatPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: 640,
-      left: 10,
+      top: UIConfig.aiChatPanelTop,
+      left: UIConfig.aiChatPanelLeft,
       child: Container(
         width: 300,
         height: 200,

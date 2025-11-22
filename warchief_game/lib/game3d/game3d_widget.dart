@@ -28,6 +28,7 @@ import 'ui/monster_hud.dart';
 import 'ui/ai_chat_panel.dart';
 import 'ui/player_hud.dart';
 import 'ui/allies_panel.dart';
+import 'ui/ui_config.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -559,21 +560,15 @@ class _Game3DState extends State<Game3D> {
               messages: gameState.monsterAIChat,
             ),
 
-            // Player and Allies Panel
+            // Player HUD
             Positioned(
-              top: 120,
-              right: 20,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // Player HUD
-                  PlayerHud(
-                    gameState: gameState,
-                    onAbility1Pressed: _activateAbility1,
-                    onAbility2Pressed: _activateAbility2,
-                    onAbility3Pressed: _activateAbility3,
-                  ),
-                ],
+              top: UIConfig.playerHudTop,
+              right: UIConfig.playerHudRight,
+              child: PlayerHud(
+                gameState: gameState,
+                onAbility1Pressed: _activateAbility1,
+                onAbility2Pressed: _activateAbility2,
+                onAbility3Pressed: _activateAbility3,
               ),
             ),
 

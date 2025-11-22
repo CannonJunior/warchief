@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../state/game_state.dart';
 import 'ability_button.dart';
+import 'ui_config.dart';
 
 /// Player HUD displaying health circles and ability buttons
 class PlayerHud extends StatelessWidget {
@@ -42,8 +43,8 @@ class PlayerHud extends StatelessWidget {
           SizedBox(height: 8),
           // Health bar
           Container(
-            width: 200,
-            height: 24,
+            width: UIConfig.healthBarWidth,
+            height: UIConfig.healthBarHeight,
             decoration: BoxDecoration(
               color: Colors.grey.shade800,
               borderRadius: BorderRadius.circular(4),

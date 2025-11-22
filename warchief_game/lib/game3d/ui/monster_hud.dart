@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../state/game_state.dart';
 import 'ability_button.dart';
+import 'ui_config.dart';
 
 /// Monster HUD displaying health bar, ability buttons, and pause button
 class MonsterHud extends StatelessWidget {
@@ -22,8 +23,8 @@ class MonsterHud extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: 360,
-      left: 10,
+      top: UIConfig.monsterHudTop,
+      left: UIConfig.monsterHudLeft,
       child: Container(
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -47,8 +48,8 @@ class MonsterHud extends StatelessWidget {
             SizedBox(height: 8),
             // Health bar
             Container(
-              width: 200,
-              height: 24,
+              width: UIConfig.healthBarWidth,
+              height: UIConfig.healthBarHeight,
               decoration: BoxDecoration(
                 color: Colors.grey.shade800,
                 borderRadius: BorderRadius.circular(4),
