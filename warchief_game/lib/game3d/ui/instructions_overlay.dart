@@ -25,8 +25,17 @@ class InstructionsOverlay extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Camera: J/L=Yaw | N/M=Pitch | I/K=Zoom',
+              'Camera: J/L=Yaw | N/M=Pitch | I/K=Zoom | V=Toggle Mode',
               style: TextStyle(color: Colors.white, fontSize: 12),
+            ),
+            SizedBox(height: 2),
+            Text(
+              'Mode: ${camera?.mode == CameraMode.thirdPerson ? "Third-Person (90° FOV)" : "Static Orbit"}',
+              style: TextStyle(
+                color: camera?.mode == CameraMode.thirdPerson ? Colors.cyan : Colors.white70,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             SizedBox(height: 4),
             Text(

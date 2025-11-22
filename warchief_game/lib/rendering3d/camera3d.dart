@@ -2,6 +2,12 @@ import 'dart:math' as math;
 import 'package:vector_math/vector_math.dart';
 import 'math/transform3d.dart';
 
+/// Camera Mode - Different camera perspectives
+enum CameraMode {
+  static,       // Static orbit camera
+  thirdPerson,  // Third-person over-the-shoulder following camera
+}
+
 /// Camera3D - 3D perspective camera with dual-axis rotation
 ///
 /// Supports true pitch (X-axis) and yaw (Y-axis) rotation for WoW-style camera control.
@@ -46,6 +52,19 @@ class Camera3D {
   /// Min/max pitch angles (in degrees)
   final double minPitch = -89.0;  // Almost straight down
   final double maxPitch = 89.0;   // Almost straight up
+
+  /// Current camera mode
+  CameraMode _mode = CameraMode.static;
+
+  /// Third-person camera settings
+  double _thirdPersonDistance = 8.0;  // Distance behind player
+  double _thirdPersonHeight = 4.0;     // Height above player
+  double _thirdPersonPitch = 25.0;     // Fixed pitch angle for third-person
+  final double _thirdPersonFOV = 90.0; // Wide FOV for third-person view
+  final double _staticFOV = 60.0;      // Standard FOV for static camera
+
+  /// Smooth camera interpolation speed
+  final double _cameraLerpSpeed = 8.0;
 
   Camera3D({
     Vector3? position,
@@ -202,4 +221,92 @@ class Camera3D {
 
   /// Get up direction
   Vector3 get up => transform.up;
+
+  // ==================== CAMERA MODE MANAGEMENT ====================
+
+  /// Get current camera mode
+  CameraMode get mode => _mode;
+
+  /// Set camera mode
+  void setMode(CameraMode newMode) {
+    if (_mode == newMode) return;
+
+    _mode = newMode;
+
+    // Adjust FOV based on mode
+    if (_mode == CameraMode.thirdPerson) {
+      fov = _thirdPersonFOV;
+    } else {
+      fov = _staticFOV;
+    }
+  }
+
+  /// Toggle between camera modes
+  void toggleMode() {
+    if (_mode == CameraMode.static) {
+      setMode(CameraMode.thirdPerson);
+    } else {
+      setMode(CameraMode.static);
+    }
+  }
+
+  /// Update camera in third-person mode to follow a target
+  ///
+  /// Parameters:
+  /// - targetPosition: Position of the player/target to follow
+  /// - targetRotation: Y-axis rotation of the player (in degrees)
+  /// - dt: Delta time for smooth interpolation
+  void updateThirdPersonFollow(Vector3 targetPosition, double targetRotation, double dt) {
+    if (_mode != CameraMode.thirdPerson) return;
+
+    // Calculate desired camera position behind the player
+    // Add 180 degrees to position camera behind instead of in front
+    final rotationRad = radians(targetRotation + 180.0);
+
+    // Position behind player based on their rotation
+    final offsetX = -math.sin(rotationRad) * _thirdPersonDistance;
+    final offsetZ = -math.cos(rotationRad) * _thirdPersonDistance;
+
+    final desiredPosition = Vector3(
+      targetPosition.x + offsetX,
+      targetPosition.y + _thirdPersonHeight,
+      targetPosition.z + offsetZ,
+    );
+
+    // Smooth interpolation to desired position
+    final lerpFactor = math.min(1.0, _cameraLerpSpeed * dt);
+    transform.position = Vector3(
+      transform.position.x + (desiredPosition.x - transform.position.x) * lerpFactor,
+      transform.position.y + (desiredPosition.y - transform.position.y) * lerpFactor,
+      transform.position.z + (desiredPosition.z - transform.position.z) * lerpFactor,
+    );
+
+    // Set camera to look at a point slightly above the player
+    final lookAtPoint = Vector3(
+      targetPosition.x,
+      targetPosition.y + 1.0,  // Look at player's upper body/head area
+      targetPosition.z,
+    );
+
+    _target = lookAtPoint;
+
+    // Set the pitch angle for third-person view
+    transform.rotation.x = _thirdPersonPitch;
+    transform.rotation.y = targetRotation; // Camera faces same direction as player (towards the player from behind)
+  }
+
+  /// Set third-person camera distance from player
+  void setThirdPersonDistance(double distance) {
+    _thirdPersonDistance = distance.clamp(3.0, 15.0);
+  }
+
+  /// Set third-person camera height above player
+  void setThirdPersonHeight(double height) {
+    _thirdPersonHeight = height.clamp(1.0, 10.0);
+  }
+
+  /// Set third-person camera pitch angle
+  void setThirdPersonPitch(double pitch) {
+    _thirdPersonPitch = pitch.clamp(0.0, 60.0);
+  }
 }

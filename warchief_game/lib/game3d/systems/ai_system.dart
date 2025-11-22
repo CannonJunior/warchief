@@ -10,6 +10,8 @@ import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
 import 'combat_system.dart';
+import '../ai/mcp_tools.dart';
+import '../utils/bezier_path.dart';
 
 /// AI System - Handles all NPC AI logic
 ///
@@ -42,8 +44,10 @@ class AISystem {
     required void Function() activateMonsterAbility3,
   }) {
     updateCooldowns(dt, gameState);
+    updateMonsterMovement(dt, gameState); // Smooth continuous movement
     updateMonsterAI(dt, gameState, logMonsterAI, activateMonsterAbility1, activateMonsterAbility2, activateMonsterAbility3);
     updateMonsterSword(dt, gameState);
+    updateAllyMovement(dt, gameState); // Smooth ally movement
     updateAllyAI(dt, gameState);
     updateMonsterProjectiles(dt, gameState);
     updateAllyProjectiles(dt, gameState);
@@ -66,9 +70,136 @@ class AISystem {
     }
   }
 
+  // ==================== MONSTER MOVEMENT ====================
+
+  /// Updates monster movement along current path (every frame)
+  ///
+  /// This provides smooth continuous movement instead of jerky AI-interval updates
+  static void updateMonsterMovement(double dt, GameState gameState) {
+    if (gameState.monsterTransform == null || gameState.monsterHealth <= 0) return;
+
+    // Follow current path if one exists
+    if (gameState.monsterCurrentPath != null) {
+      final distance = gameState.monsterMoveSpeed * dt;
+      final newPos = gameState.monsterCurrentPath!.advance(distance);
+
+      if (newPos != null) {
+        gameState.monsterTransform!.position = newPos;
+
+        // Update rotation to face movement direction
+        final tangent = gameState.monsterCurrentPath!.getTangentAt(
+          gameState.monsterCurrentPath!.progress
+        );
+        gameState.monsterRotation = math.atan2(-tangent.x, -tangent.z) * (180 / math.pi);
+        gameState.monsterDirectionIndicatorTransform?.rotation.y = gameState.monsterRotation;
+      } else {
+        // Path completed
+        gameState.monsterCurrentPath = null;
+      }
+    }
+  }
+
+  // ==================== ALLY MOVEMENT ====================
+
+  /// Updates ally movement along current paths (every frame)
+  static void updateAllyMovement(double dt, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+
+    for (final ally in gameState.allies) {
+      if (ally.health <= 0) continue;
+
+      // Handle different movement modes
+      switch (ally.movementMode) {
+        case AllyMovementMode.stationary:
+          // Do nothing - stay in place
+          break;
+
+        case AllyMovementMode.followPlayer:
+          _updateAllyFollowMode(dt, ally, gameState);
+          break;
+
+        case AllyMovementMode.commanded:
+        case AllyMovementMode.tactical:
+          // Follow current path if exists
+          if (ally.currentPath != null) {
+            final distance = ally.moveSpeed * dt;
+            final newPos = ally.currentPath!.advance(distance);
+
+            if (newPos != null) {
+              ally.transform.position = newPos;
+              ally.isMoving = true;
+
+              // Update rotation to face movement direction
+              final tangent = ally.currentPath!.getTangentAt(ally.currentPath!.progress);
+              ally.rotation = math.atan2(-tangent.x, -tangent.z) * (180 / math.pi);
+              ally.directionIndicatorTransform?.rotation.y = ally.rotation;
+            } else {
+              // Path completed
+              ally.currentPath = null;
+              ally.isMoving = false;
+            }
+          }
+          break;
+      }
+    }
+  }
+
+  /// Helper to update ally in follow mode
+  static void _updateAllyFollowMode(double dt, Ally ally, GameState gameState) {
+    final playerPos = gameState.playerTransform!.position;
+    final distanceToPlayer = (ally.transform.position - playerPos).length;
+    final playerVelocity = gameState.playerMovementTracker.getVelocity();
+    final playerIsMoving = playerVelocity.length > 0.1;
+
+    // If player is moving and ally is too far, create follow path
+    if (playerIsMoving && distanceToPlayer > ally.followBufferDistance * 1.3) {
+      // Calculate target position at buffer distance from player
+      final toAlly = (ally.transform.position - playerPos).normalized();
+      final targetPos = playerPos + toAlly * ally.followBufferDistance;
+
+      // Create smooth path to target
+      ally.currentPath = BezierPath.interception(
+        start: ally.transform.position,
+        target: targetPos,
+        velocity: null, // Ally's current velocity could be tracked
+      );
+      ally.isMoving = true;
+    }
+
+    // If player stopped and ally is close enough, stop and re-randomize buffer
+    if (!playerIsMoving && distanceToPlayer <= ally.followBufferDistance * 1.2) {
+      ally.currentPath = null;
+      ally.isMoving = false;
+      // Re-randomize buffer distance for next movement (3-5 units)
+      ally.followBufferDistance = math.Random().nextDouble() * 2.0 + 3.0;
+    }
+
+    // Continue moving along existing path if one exists
+    if (ally.currentPath != null) {
+      final distance = ally.moveSpeed * dt;
+      final newPos = ally.currentPath!.advance(distance);
+
+      if (newPos != null) {
+        ally.transform.position = newPos;
+
+        // Update rotation
+        final tangent = ally.currentPath!.getTangentAt(ally.currentPath!.progress);
+        ally.rotation = math.atan2(-tangent.x, -tangent.z) * (180 / math.pi);
+        ally.directionIndicatorTransform?.rotation.y = ally.rotation;
+      } else {
+        ally.currentPath = null;
+        ally.isMoving = false;
+      }
+    }
+  }
+
   // ==================== MONSTER AI ====================
 
-  /// Updates monster AI (decision making, movement, ability usage)
+  /// Updates monster AI (decision making using MCP tools)
+  ///
+  /// Uses layered decision-making:
+  /// - Fast tactical tools every frame for threat response
+  /// - Strategic planning on AI interval for movement/combat strategy
   ///
   /// Parameters:
   /// - dt: Time elapsed since last frame (in seconds)
@@ -89,101 +220,149 @@ class AISystem {
         gameState.monsterHealth > 0 &&
         gameState.monsterTransform != null &&
         gameState.playerTransform != null) {
+
+      // Create AI context
+      final context = _createMonsterAIContext(gameState);
+
+      // Fast tactical assessment (every frame for immediate threats)
+      final threatResponse = MCPTools.assessThreat(context);
+      if (threatResponse.action == 'RETREAT_URGENT' && threatResponse.confidence > 0.8) {
+        // Emergency retreat - create immediate escape path
+        final awayFromPlayer = (gameState.monsterTransform!.position - gameState.playerTransform!.position).normalized();
+        final escapeTarget = gameState.monsterTransform!.position + awayFromPlayer * 5.0;
+        gameState.monsterCurrentPath = BezierPath.interception(
+          start: gameState.monsterTransform!.position,
+          target: escapeTarget,
+          velocity: null,
+        );
+      }
+
       gameState.monsterAiTimer += dt;
 
-      // AI thinks every 2 seconds
+      // Strategic planning on AI interval (every 2 seconds)
       if (gameState.monsterAiTimer >= gameState.monsterAiInterval) {
         gameState.monsterAiTimer = 0.0;
 
-        // Calculate distance to player
-        final distanceToPlayer = (gameState.monsterTransform!.position - gameState.playerTransform!.position).length;
+        final distanceToPlayer = context.distanceToPlayer;
 
-        // Log AI input (game state)
-        logMonsterAI('Health: ${gameState.monsterHealth.toStringAsFixed(0)} | Dist: ${distanceToPlayer.toStringAsFixed(1)}', isInput: true);
+        // Log AI input
+        logMonsterAI('Health: ${context.selfHealth.toStringAsFixed(0)} | Dist: ${distanceToPlayer.toStringAsFixed(1)} | Vel: ${context.playerVelocity?.length.toStringAsFixed(1) ?? "0"}', isInput: true);
 
-        // Always face the player
-        final toPlayer = gameState.playerTransform!.position - gameState.monsterTransform!.position;
-        gameState.monsterRotation = math.atan2(-toPlayer.x, -toPlayer.z) * (180 / math.pi);
-        gameState.monsterDirectionIndicatorTransform?.rotation.y = gameState.monsterRotation;
+        // Get strategic plan
+        final strategy = MCPTools.planCombatStrategy(context);
+        gameState.monsterCurrentStrategy = strategy.action;
 
-        // Decision making
-        String decision = _makeMonsterMovementDecision(distanceToPlayer, toPlayer, gameState);
+        // Create movement path based on strategy
+        _executeMonsterMovementStrategy(strategy, gameState, context);
 
-        // Use abilities based on distance and cooldown
-        decision = _makeMonsterAbilityDecision(
-          distanceToPlayer,
-          decision,
+        // Select and execute abilities
+        final abilityDecision = MCPTools.selectQuickAbility(context);
+        String decision = _executeMonsterAbilities(
+          abilityDecision,
           gameState,
           activateMonsterAbility1,
           activateMonsterAbility2,
           activateMonsterAbility3,
         );
 
-        // Log AI output (decision)
-        logMonsterAI(decision, isInput: false);
+        // Log decision
+        logMonsterAI('${strategy.action}: $decision (${strategy.reasoning})', isInput: false);
       }
     }
   }
 
-  /// Makes monster movement decision based on distance to player
-  ///
-  /// Parameters:
-  /// - distanceToPlayer: Distance from monster to player
-  /// - toPlayer: Vector from monster to player
-  /// - gameState: Current game state
-  ///
-  /// Returns:
-  /// - Decision string describing the movement action
-  static String _makeMonsterMovementDecision(double distanceToPlayer, Vector3 toPlayer, GameState gameState) {
-    String decision = '';
-    if (distanceToPlayer > GameConfig.monsterMoveThresholdMax) {
-      // Move toward player if too far
-      final moveDirection = toPlayer.normalized();
-      gameState.monsterTransform!.position += moveDirection * 0.5;
-      decision = 'MOVE_FORWARD';
-    } else if (distanceToPlayer < GameConfig.monsterMoveThresholdMin) {
-      // Move away if too close
-      final moveDirection = toPlayer.normalized();
-      gameState.monsterTransform!.position -= moveDirection * 0.3;
-      decision = 'RETREAT';
-    } else {
-      decision = 'HOLD';
-    }
-    return decision;
+  /// Creates AI context from game state
+  static AIContext _createMonsterAIContext(GameState gameState) {
+    final distanceToPlayer = (gameState.monsterTransform!.position - gameState.playerTransform!.position).length;
+    final playerVelocity = gameState.playerMovementTracker.getVelocity();
+
+    // Build ally context list
+    final allyContexts = gameState.allies.map((ally) {
+      return AllyContext(
+        position: ally.transform.position,
+        health: ally.health,
+        distanceToSelf: (ally.transform.position - gameState.monsterTransform!.position).length,
+      );
+    }).toList();
+
+    return AIContext(
+      selfPosition: gameState.monsterTransform!.position,
+      playerPosition: gameState.playerTransform!.position,
+      playerVelocity: playerVelocity,
+      distanceToPlayer: distanceToPlayer,
+      selfHealth: gameState.monsterHealth,
+      selfMaxHealth: gameState.monsterMaxHealth,
+      playerHealth: gameState.playerHealth,
+      allies: allyContexts,
+      abilityCooldowns: {
+        'ability1': gameState.monsterAbility1Cooldown,
+        'ability2': gameState.monsterAbility2Cooldown,
+        'ability3': gameState.monsterAbility3Cooldown,
+      },
+    );
   }
 
-  /// Makes monster ability decision and activates abilities
-  ///
-  /// Parameters:
-  /// - distanceToPlayer: Distance from monster to player
-  /// - decision: Current decision string
-  /// - gameState: Current game state
-  /// - activateMonsterAbility1: Callback to activate ability 1
-  /// - activateMonsterAbility2: Callback to activate ability 2
-  /// - activateMonsterAbility3: Callback to activate ability 3
-  ///
-  /// Returns:
-  /// - Updated decision string with ability actions
-  static String _makeMonsterAbilityDecision(
-    double distanceToPlayer,
-    String decision,
+  /// Executes movement strategy using Bezier paths
+  static void _executeMonsterMovementStrategy(
+    MCPToolResponse strategy,
     GameState gameState,
-    void Function() activateMonsterAbility1,
-    void Function() activateMonsterAbility2,
-    void Function() activateMonsterAbility3,
+    AIContext context,
   ) {
-    // Use abilities based on distance and cooldown
-    if (distanceToPlayer < 5.0 && gameState.monsterAbility1Cooldown <= 0) {
-      activateMonsterAbility1(); // Dark strike
-      decision += ' + DARK_STRIKE';
-    } else if (distanceToPlayer > 4.0 && distanceToPlayer < 12.0 && gameState.monsterAbility2Cooldown <= 0) {
-      activateMonsterAbility2(); // Shadow bolt
-      decision += ' + SHADOW_BOLT';
-    } else if (gameState.monsterHealth < GameConfig.monsterHealThreshold && gameState.monsterAbility3Cooldown <= 0) {
-      activateMonsterAbility3(); // Healing
-      decision += ' + HEAL';
+    final playerPos = gameState.playerTransform!.position;
+    final monsterPos = gameState.monsterTransform!.position;
+    final playerVelocity = context.playerVelocity ?? Vector3.zero();
+
+    // Determine target position based on strategy
+    Vector3 targetPos;
+
+    if (strategy.action == 'AGGRESSIVE_STRATEGY') {
+      // Intercept player's predicted position
+      final predictedPlayerPos = gameState.playerMovementTracker.predictPosition(1.5);
+      targetPos = predictedPlayerPos;
+    } else if (strategy.action == 'DEFENSIVE_STRATEGY') {
+      // Maintain distance
+      final toMonster = (monsterPos - playerPos).normalized();
+      targetPos = playerPos + toMonster * 8.0; // Stay at 8 units
+    } else {
+      // Balanced - optimal range from strategy parameters
+      final optimalRange = (strategy.parameters['preferredRange'] == 'close') ? 4.0 :
+                          (strategy.parameters['preferredRange'] == 'medium') ? 6.0 : 8.0;
+      final toMonster = (monsterPos - playerPos).normalized();
+      targetPos = playerPos + toMonster * optimalRange;
     }
-    return decision;
+
+    // Create smooth intercept path
+    gameState.monsterCurrentPath = MCPTools.calculateInterceptPath(
+      currentPosition: monsterPos,
+      targetPosition: targetPos,
+      targetVelocity: playerVelocity,
+      currentVelocity: null,
+      interceptorSpeed: gameState.monsterMoveSpeed,
+    );
+  }
+
+  /// Executes ability decisions
+  static String _executeMonsterAbilities(
+    MCPToolResponse abilityDecision,
+    GameState gameState,
+    void Function() activateAbility1,
+    void Function() activateAbility2,
+    void Function() activateAbility3,
+  ) {
+    if (abilityDecision.action == 'USE_ABILITY') {
+      final ability = abilityDecision.parameters['ability'];
+      if (ability == 'ability1') {
+        activateAbility1();
+        return 'Using Melee Attack';
+      } else if (ability == 'ability2') {
+        activateAbility2();
+        return 'Casting Shadow Bolt';
+      } else if (ability == 'ability3') {
+        activateAbility3();
+        return 'Using Ability 3';
+      }
+    }
+    return abilityDecision.action;
   }
 
   // ==================== MONSTER SWORD ====================

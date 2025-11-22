@@ -6,6 +6,8 @@ import '../../models/impact_effect.dart';
 import '../../models/ally.dart';
 import '../../models/ai_chat_message.dart';
 import 'game_config.dart';
+import '../utils/movement_prediction.dart';
+import '../utils/bezier_path.dart';
 
 /// Game State - Centralized state management for the 3D game
 ///
@@ -60,6 +62,11 @@ class GameState {
   final double monsterAiInterval = GameConfig.monsterAiInterval;
   List<Projectile> monsterProjectiles = [];
 
+  // Monster movement and pathfinding
+  BezierPath? monsterCurrentPath;
+  double monsterMoveSpeed = 3.0; // Units per second
+  String monsterCurrentStrategy = 'BALANCED'; // Current combat strategy
+
   // Monster sword state (for melee ability 1)
   Mesh? monsterSwordMesh;
   Transform3d? monsterSwordTransform;
@@ -74,6 +81,11 @@ class GameState {
   // ==================== AI CHAT ====================
 
   List<AIChatMessage> monsterAIChat = [];
+
+  // ==================== UI STATE ====================
+
+  /// Whether the abilities modal is currently open
+  bool abilitiesModalOpen = false;
 
   // ==================== JUMP/PHYSICS STATE ====================
 
@@ -117,6 +129,11 @@ class GameState {
   // ==================== VISUAL EFFECTS ====================
 
   List<ImpactEffect> impactEffects = []; // List of active impact effects
+
+  // ==================== MOVEMENT TRACKING ====================
+
+  /// Player movement tracker for AI prediction
+  final PlayerMovementTracker playerMovementTracker = PlayerMovementTracker();
 
   // ==================== GAME LOOP STATE ====================
 

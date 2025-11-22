@@ -1,6 +1,7 @@
 import 'dart:html' as html;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:vector_math/vector_math.dart' hide Colors;
 
 import '../rendering3d/webgl_renderer.dart';
@@ -29,6 +30,7 @@ import 'ui/ai_chat_panel.dart';
 import 'ui/player_hud.dart';
 import 'ui/allies_panel.dart';
 import 'ui/ui_config.dart';
+import 'ui/abilities_modal.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -265,6 +267,15 @@ class _Game3DState extends State<Game3D> {
     // Update physics (gravity, vertical movement, ground collision)
     PhysicsSystem.update(dt, gameState);
 
+    // Track player movement for AI prediction
+    if (gameState.playerTransform != null) {
+      final currentTime = DateTime.now().millisecondsSinceEpoch / 1000.0;
+      gameState.playerMovementTracker.update(
+        gameState.playerTransform!.position,
+        currentTime,
+      );
+    }
+
     // ===== ABILITY SYSTEM =====
     // Update player ability cooldowns and effects
     AbilitySystem.update(dt, gameState);
@@ -316,16 +327,25 @@ class _Game3DState extends State<Game3D> {
       gameState.shadowTransform!.scale = Vector3(scaleFactor, 1, scaleFactor);
     }
 
-    // Update camera to follow player (with smoothing to avoid "terrain moving" effect)
-    // Only update camera target if player moves significantly from center
-    final currentTarget = camera!.getTarget();
-    final distanceFromTarget = (gameState.playerTransform!.position - currentTarget).length;
+    // Update camera based on mode
+    if (camera!.mode == CameraMode.thirdPerson) {
+      // Third-person mode: Camera follows player from behind
+      camera!.updateThirdPersonFollow(
+        gameState.playerTransform!.position,
+        gameState.playerRotation,
+        dt,
+      );
+    } else {
+      // Static mode: Camera orbits around player with smoothing
+      final currentTarget = camera!.getTarget();
+      final distanceFromTarget = (gameState.playerTransform!.position - currentTarget).length;
 
-    // Update camera target smoothly when player moves away from center
-    if (distanceFromTarget > 0.1) {
-      // Smoothly interpolate camera target toward player position
-      final newTarget = currentTarget + (gameState.playerTransform!.position - currentTarget) * 0.05;
-      camera!.setTarget(newTarget);
+      // Update camera target smoothly when player moves away from center
+      if (distanceFromTarget > 0.1) {
+        // Smoothly interpolate camera target toward player position
+        final newTarget = currentTarget + (gameState.playerTransform!.position - currentTarget) * 0.05;
+        camera!.setTarget(newTarget);
+      }
     }
   }
 
@@ -339,6 +359,16 @@ class _Game3DState extends State<Game3D> {
   }
 
   void _onKeyEvent(KeyEvent event) {
+    // Handle P key for abilities modal (only on key down, not repeat)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyP) {
+      print('P key detected! Toggling modal. Current state: ${gameState.abilitiesModalOpen}');
+      setState(() {
+        gameState.abilitiesModalOpen = !gameState.abilitiesModalOpen;
+        print('Modal now: ${gameState.abilitiesModalOpen}');
+      });
+      return;
+    }
+
     if (inputManager != null) {
       inputManager!.handleKeyEvent(event);
     }
@@ -579,6 +609,16 @@ class _Game3DState extends State<Game3D> {
               onAddAlly: _addAlly,
               onRemoveAlly: _removeAlly,
             ),
+
+            // Abilities Modal (Press P to toggle)
+            if (gameState.abilitiesModalOpen)
+              AbilitiesModal(
+                onClose: () {
+                  setState(() {
+                    gameState.abilitiesModalOpen = false;
+                  });
+                },
+              ),
           ],
         ),
       ),

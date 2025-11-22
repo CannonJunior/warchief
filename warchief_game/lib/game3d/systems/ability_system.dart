@@ -204,6 +204,7 @@ class AbilitySystem {
   /// Handles Ability 3 (Heal) input
   ///
   /// Activates the heal effect if cooldown is ready and ability is not already active.
+  /// Immediately restores health to the player.
   ///
   /// Parameters:
   /// - ability3KeyPressed: Whether the ability 3 key is currently pressed
@@ -215,7 +216,14 @@ class AbilitySystem {
       gameState.ability3Active = true;
       gameState.ability3ActiveTime = 0.0;
       gameState.ability3Cooldown = gameState.ability3CooldownMax;
-      print('Heal activated!');
+
+      // Actually heal the player
+      final healAbility = AbilitiesConfig.playerHeal;
+      final oldHealth = gameState.playerHealth;
+      gameState.playerHealth = Math.min(gameState.playerMaxHealth, gameState.playerHealth + healAbility.healAmount);
+      final healedAmount = gameState.playerHealth - oldHealth;
+
+      print('Heal activated! Restored ${healedAmount.toStringAsFixed(1)} HP (${gameState.playerHealth.toStringAsFixed(0)}/${gameState.playerMaxHealth})');
     }
   }
 

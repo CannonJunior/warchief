@@ -17,6 +17,9 @@ import '../../models/game_action.dart';
 class InputSystem {
   InputSystem._(); // Private constructor
 
+  /// Track previous camera toggle state to detect single press
+  static bool _previousCameraToggleState = false;
+
   /// Main entry point - processes all input
   ///
   /// Parameters:
@@ -42,7 +45,7 @@ class InputSystem {
     handlePlayerMovement(dt, inputManager, gameState);
   }
 
-  /// Handles camera input (yaw, pitch, zoom)
+  /// Handles camera input (yaw, pitch, zoom, mode toggle)
   ///
   /// Parameters:
   /// - dt: Time elapsed since last frame
@@ -53,6 +56,14 @@ class InputSystem {
     InputManager inputManager,
     Camera3D camera,
   ) {
+    // Camera mode toggle (V key) - detect single press
+    final cameraTogglePressed = inputManager.isActionPressed(GameAction.cameraToggleMode);
+    if (cameraTogglePressed && !_previousCameraToggleState) {
+      camera.toggleMode();
+      print('Camera mode toggled to: ${camera.mode}');
+    }
+    _previousCameraToggleState = cameraTogglePressed;
+
     if (inputManager.isActionPressed(GameAction.cameraRotateLeft)) {
       camera.yawBy(-90 * dt); // J key - yaw left
     }

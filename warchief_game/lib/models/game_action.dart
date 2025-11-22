@@ -23,6 +23,7 @@ enum GameAction {
   cameraPanRight,
   cameraPitchUp,
   cameraPitchDown,
+  cameraToggleMode,
 
   // Action Bar
   actionBar1,
@@ -86,6 +87,8 @@ extension GameActionExtension on GameAction {
         return 'Camera Pitch Up';
       case GameAction.cameraPitchDown:
         return 'Camera Pitch Down';
+      case GameAction.cameraToggleMode:
+        return 'Toggle Camera Mode';
       case GameAction.actionBar1:
         return 'Action Bar 1';
       case GameAction.actionBar2:
@@ -164,6 +167,8 @@ extension GameActionExtension on GameAction {
         return LogicalKeyboardKey.keyN;
       case GameAction.cameraPitchDown:
         return LogicalKeyboardKey.keyM;
+      case GameAction.cameraToggleMode:
+        return LogicalKeyboardKey.keyV;
       case GameAction.actionBar1:
         return LogicalKeyboardKey.digit1;
       case GameAction.actionBar2:
