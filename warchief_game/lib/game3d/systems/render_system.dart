@@ -1,11 +1,13 @@
 import '../state/game_state.dart';
 import '../../rendering3d/webgl_renderer.dart';
 import '../../rendering3d/camera3d.dart';
+import '../../rendering3d/math/transform3d.dart';
+import 'package:vector_math/vector_math.dart';
 
 /// Render System - Handles 3D scene rendering
 ///
 /// Orchestrates rendering of all game objects in the correct order:
-/// 1. Terrain
+/// 1. Terrain (with LOD)
 /// 2. Shadows
 /// 3. Characters (player, monster, allies)
 /// 4. Effects (abilities, projectiles, impacts)
@@ -26,8 +28,21 @@ class RenderSystem {
     // Clear screen
     renderer.clear();
 
-    // Render terrain tiles
-    if (gameState.terrainTiles != null) {
+    // Render infinite terrain chunks with LOD (new system)
+    if (gameState.infiniteTerrainManager != null) {
+      final chunks = gameState.infiniteTerrainManager!.getLoadedChunks();
+      for (final chunk in chunks) {
+        // Create transform for chunk
+        final chunkTransform = Transform3d(
+          position: chunk.worldPosition,
+        );
+
+        // Render appropriate LOD mesh
+        renderer.render(chunk.currentMesh, chunkTransform, camera);
+      }
+    }
+    // Fallback to old terrain system (backwards compatibility)
+    else if (gameState.terrainTiles != null) {
       for (final tile in gameState.terrainTiles!) {
         renderer.render(tile.mesh, tile.transform, camera);
       }

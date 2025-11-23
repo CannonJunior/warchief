@@ -1,5 +1,4 @@
 import 'dart:html' as html;
-import 'dart:web_gl' as webgl;
 import 'package:vector_math/vector_math.dart';
 
 /// ShaderProgram - Manages WebGL shader compilation and uniform setting
@@ -16,11 +15,11 @@ import 'package:vector_math/vector_math.dart';
 /// shader.setUniformMatrix4('uModel', modelMatrix);
 /// ```
 class ShaderProgram {
-  final webgl.RenderingContext gl;
-  final webgl.Program program;
+  final dynamic gl; // WebGL RenderingContext (typed as dynamic for compatibility)
+  final dynamic program; // WebGL Program
 
   /// Cache uniform locations for performance
-  final Map<String, webgl.UniformLocation> _uniformLocations = {};
+  final Map<String, dynamic> _uniformLocations = {}; // WebGL UniformLocation
 
   /// Cache attribute locations for performance
   final Map<String, int> _attribLocations = {};
@@ -29,7 +28,7 @@ class ShaderProgram {
 
   /// Create a shader program from vertex and fragment shader source
   factory ShaderProgram.fromSource(
-    webgl.RenderingContext gl,
+    dynamic gl, // WebGL RenderingContext
     String vertexSource,
     String fragmentSource,
   ) {
@@ -75,8 +74,8 @@ class ShaderProgram {
   }
 
   /// Compile a shader from source
-  static webgl.Shader? _compileShader(
-    webgl.RenderingContext gl,
+  static dynamic _compileShader( // Returns WebGL Shader
+    dynamic gl, // WebGL RenderingContext
     int type,
     String source,
   ) {
@@ -103,7 +102,7 @@ class ShaderProgram {
   }
 
   /// Get uniform location (cached)
-  webgl.UniformLocation? _getUniformLocation(String name) {
+  dynamic _getUniformLocation(String name) { // Returns WebGL UniformLocation
     if (_uniformLocations.containsKey(name)) {
       return _uniformLocations[name];
     }

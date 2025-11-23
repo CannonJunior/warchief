@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:vector_math/vector_math.dart';
 import 'mesh.dart';
 import 'math/transform3d.dart';
+import 'heightmap.dart';
 
 /// TerrainGenerator - Creates 3D terrain meshes for isometric world
 ///
@@ -140,23 +141,156 @@ class TerrainGenerator {
     );
   }
 
-  /// Create terrain with random height variation
+  /// Create terrain with heightmap-based elevation
   ///
-  /// Similar to createSingleMesh, but with per-vertex height variation.
-  /// Useful for hills, valleys, etc.
-  static Mesh createHeightmapTerrain({
+  /// Generates terrain using Perlin noise for natural-looking hills and valleys.
+  /// Returns both the mesh and the heightmap for collision detection.
+  ///
+  /// Parameters:
+  /// - width: Number of tiles in X direction
+  /// - height: Number of tiles in Z direction
+  /// - tileSize: Size of each tile in world units
+  /// - maxHeight: Maximum elevation above ground level
+  /// - seed: Random seed for terrain generation
+  /// - terrainType: Type of terrain to generate ('perlin', 'hills', 'flat')
+  /// - noiseScale: Controls noise frequency (lower = larger features, gentler slopes)
+  /// - noiseOctaves: Number of noise layers (more = more detail)
+  /// - noisePersistence: How much each octave contributes (0.0 to 1.0)
+  ///
+  /// Returns: Record with mesh and heightmap
+  static ({Mesh mesh, Heightmap heightmap}) createHeightmapTerrain({
     required int width,
     required int height,
     double tileSize = 1.0,
-    double maxHeight = 2.0,
+    double maxHeight = 10.0,
     int? seed,
+    String terrainType = 'perlin',
+    double noiseScale = 0.08,
+    int noiseOctaves = 2,
+    double noisePersistence = 0.5,
   }) {
-    // TODO: Implement perlin noise or simplex noise for natural-looking terrain
-    // For now, return flat terrain
-    return createSingleMesh(
+    final actualSeed = seed ?? DateTime.now().millisecondsSinceEpoch;
+
+    // Create heightmap
+    final heightmap = Heightmap(
+      width: width + 1,
+      height: height + 1,
+      tileSize: tileSize,
+      maxHeight: maxHeight,
+    );
+
+    // Generate terrain based on type
+    switch (terrainType) {
+      case 'perlin':
+        heightmap.generatePerlinNoise(
+          seed: actualSeed,
+          scale: noiseScale, // Use parameter for configurable terrain smoothness
+          octaves: noiseOctaves, // Use parameter for configurable detail
+          persistence: noisePersistence, // Use parameter for configurable octave contribution
+        );
+        break;
+      case 'hills':
+        heightmap.generateHills();
+        break;
+      case 'flat':
+      default:
+        heightmap.generateFlat();
+        break;
+    }
+
+    // Create mesh from heightmap
+    final mesh = _createMeshFromHeightmap(
+      heightmap: heightmap,
       width: width,
       height: height,
       tileSize: tileSize,
+    );
+
+    return (mesh: mesh, heightmap: heightmap);
+  }
+
+  /// Create a mesh from a heightmap
+  static Mesh _createMeshFromHeightmap({
+    required Heightmap heightmap,
+    required int width,
+    required int height,
+    required double tileSize,
+  }) {
+    final color = Vector3(0.4, 0.6, 0.3); // Grass green
+
+    // Calculate vertex and index counts
+    final vertexCount = (width + 1) * (height + 1);
+    final triangleCount = width * height * 2;
+    final indexCount = triangleCount * 3;
+
+    // Allocate arrays
+    final vertices = Float32List(vertexCount * 3);
+    final normals = Float32List(vertexCount * 3);
+    final colors = Float32List(vertexCount * 4);
+    final indices = Uint16List(indexCount);
+
+    // Generate vertices with heightmap values
+    int vertIdx = 0;
+    for (int z = 0; z <= height; z++) {
+      for (int x = 0; x <= width; x++) {
+        // Center grid around origin
+        final posX = (x - width / 2.0) * tileSize;
+        final posZ = (z - height / 2.0) * tileSize;
+
+        // Get height from heightmap
+        final terrainHeight = heightmap.getHeightAt(x, z);
+
+        vertices[vertIdx * 3 + 0] = posX;
+        vertices[vertIdx * 3 + 1] = terrainHeight;
+        vertices[vertIdx * 3 + 2] = posZ;
+
+        // Calculate normal (for now, point up - could be improved with proper normal calculation)
+        normals[vertIdx * 3 + 0] = 0.0;
+        normals[vertIdx * 3 + 1] = 1.0;
+        normals[vertIdx * 3 + 2] = 0.0;
+
+        // Color based on height for visual variety
+        final heightFactor = terrainHeight / heightmap.maxHeight;
+        final r = color.x * (0.7 + heightFactor * 0.3); // Darker at low, lighter at high
+        final g = color.y * (0.7 + heightFactor * 0.3);
+        final b = color.z * (0.7 + heightFactor * 0.3);
+
+        colors[vertIdx * 4 + 0] = r;
+        colors[vertIdx * 4 + 1] = g;
+        colors[vertIdx * 4 + 2] = b;
+        colors[vertIdx * 4 + 3] = 1.0;
+
+        vertIdx++;
+      }
+    }
+
+    // Generate indices (two triangles per tile)
+    int idxIdx = 0;
+    for (int z = 0; z < height; z++) {
+      for (int x = 0; x < width; x++) {
+        // Vertex indices for this tile's corners
+        final topLeft = z * (width + 1) + x;
+        final topRight = topLeft + 1;
+        final bottomLeft = (z + 1) * (width + 1) + x;
+        final bottomRight = bottomLeft + 1;
+
+        // First triangle (top-left, bottom-left, bottom-right)
+        indices[idxIdx++] = topLeft;
+        indices[idxIdx++] = bottomLeft;
+        indices[idxIdx++] = bottomRight;
+
+        // Second triangle (top-left, bottom-right, top-right)
+        indices[idxIdx++] = topLeft;
+        indices[idxIdx++] = bottomRight;
+        indices[idxIdx++] = topRight;
+      }
+    }
+
+    return Mesh(
+      vertices: vertices,
+      indices: indices,
+      normals: normals,
+      colors: colors,
     );
   }
 }

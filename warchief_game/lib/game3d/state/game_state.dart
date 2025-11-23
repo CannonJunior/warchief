@@ -1,6 +1,8 @@
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../rendering3d/terrain_generator.dart';
+import '../../rendering3d/heightmap.dart';
+import '../../rendering3d/infinite_terrain_manager.dart';
 import '../../models/projectile.dart';
 import '../../models/impact_effect.dart';
 import '../../models/ally.dart';
@@ -20,7 +22,12 @@ import '../utils/bezier_path.dart';
 class GameState {
   // ==================== TERRAIN ====================
 
+  // Old terrain system (for backwards compatibility)
   List<TerrainTile>? terrainTiles;
+  Heightmap? terrainHeightmap; // For collision detection
+
+  // New infinite terrain system with LOD
+  InfiniteTerrainManager? infiniteTerrainManager;
 
   // ==================== PLAYER STATE ====================
 

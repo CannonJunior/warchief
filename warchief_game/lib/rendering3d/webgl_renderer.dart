@@ -1,5 +1,4 @@
 import 'dart:html' as html;
-import 'dart:web_gl' as webgl;
 import 'package:vector_math/vector_math.dart';
 import 'camera3d.dart';
 import 'mesh.dart';
@@ -20,7 +19,7 @@ import 'shader_program.dart';
 /// ```
 class WebGLRenderer {
   final html.CanvasElement canvas;
-  final webgl.RenderingContext gl;
+  final dynamic gl; // WebGL RenderingContext (typed as dynamic for compatibility)
 
   /// Active shader program
   late ShaderProgram shader;
@@ -158,7 +157,7 @@ class WebGLRenderer {
   }
 
   /// Create a WebGL buffer and upload data
-  webgl.Buffer _createBuffer(int target, dynamic data) {
+  dynamic _createBuffer(int target, dynamic data) { // Returns WebGL Buffer
     final buffer = gl.createBuffer();
     if (buffer == null) {
       throw Exception('Failed to create WebGL buffer');
@@ -198,10 +197,10 @@ class WebGLRenderer {
 
 /// Internal class to store GPU buffers for a mesh
 class _MeshBuffers {
-  final webgl.Buffer vertexBuffer;
-  final webgl.Buffer indexBuffer;
-  final webgl.Buffer? normalBuffer;
-  final webgl.Buffer? colorBuffer;
+  final dynamic vertexBuffer; // WebGL Buffer
+  final dynamic indexBuffer; // WebGL Buffer
+  final dynamic normalBuffer; // WebGL Buffer
+  final dynamic colorBuffer; // WebGL Buffer
 
   _MeshBuffers({
     required this.vertexBuffer,

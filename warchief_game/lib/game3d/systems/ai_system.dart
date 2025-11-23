@@ -84,7 +84,11 @@ class AISystem {
       final newPos = gameState.monsterCurrentPath!.advance(distance);
 
       if (newPos != null) {
-        gameState.monsterTransform!.position = newPos;
+        // Update horizontal position from path
+        gameState.monsterTransform!.position.x = newPos.x;
+        gameState.monsterTransform!.position.z = newPos.z;
+        // Keep monster at ground level (prevent falling through terrain)
+        gameState.monsterTransform!.position.y = gameState.groundLevel;
 
         // Update rotation to face movement direction
         final tangent = gameState.monsterCurrentPath!.getTangentAt(
@@ -96,6 +100,11 @@ class AISystem {
         // Path completed
         gameState.monsterCurrentPath = null;
       }
+    }
+
+    // Ensure monster stays at ground level even when not moving
+    if (gameState.monsterTransform != null) {
+      gameState.monsterTransform!.position.y = gameState.groundLevel;
     }
   }
 
@@ -526,17 +535,21 @@ class AISystem {
         print('Ally casts ${ability.name}!');
       } else if (ally.abilityIndex == 2) {
         // Heal (restore ally's own health)
+        final oldHealth = ally.health;
         if (ally.health < ally.maxHealth) {
           ally.health = math.min(ally.maxHealth, ally.health + ability.healAmount);
         }
-        print('Ally uses ${ability.name}! Health: ${ally.health}/${ally.maxHealth}');
+        final healedAmount = ally.health - oldHealth;
+        print('[HEAL] Ally uses ${ability.name}! Restored ${healedAmount.toStringAsFixed(1)} HP (${ally.health.toStringAsFixed(0)}/${ally.maxHealth})');
       }
     } else if (decision == 'HEAL' && ally.abilityCooldown <= 0) {
       // Execute heal
       final healAbility = AbilitiesConfig.allyHeal;
       ally.abilityCooldown = ally.abilityCooldownMax;
+      final oldHealth = ally.health;
       ally.health = math.min(ally.maxHealth, ally.health + healAbility.healAmount);
-      print('Ally uses ${healAbility.name}! Health: ${ally.health}/${ally.maxHealth}');
+      final healedAmount = ally.health - oldHealth;
+      print('[HEAL] Ally uses ${healAbility.name}! Restored ${healedAmount.toStringAsFixed(1)} HP (${ally.health.toStringAsFixed(0)}/${ally.maxHealth})');
     }
   }
 

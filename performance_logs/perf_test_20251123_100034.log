@@ -1,0 +1,32 @@
+[10:00:34] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+Launching lib/main.dart on Web Server in debug mode...
+[10:00:34] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+Waiting for connection from debug service on Web Server...      [10:00:34] Dart PID: 3281623 | CPU:  151% | MEM:  0.3% | VSZ: 828972 KB | RSS: 107528 KB
+[10:00:35] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+[10:00:35] Dart PID: 3281623 | CPU: 78.2% | MEM:  0.3% | VSZ: 896048 KB | RSS: 107912 KB
+[10:00:36] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+[10:00:36] Dart PID: 3281623 | CPU: 51.1% | MEM:  0.3% | VSZ: 896048 KB | RSS: 107912 KB
+[10:00:37] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+[10:00:37] Dart PID: 3281623 | CPU: 38.0% | MEM:  0.3% | VSZ: 896048 KB | RSS: 107912 KB
+[10:00:37] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+[10:00:37] Dart PID: 3281623 | CPU: 30.2% | MEM:  0.3% | VSZ: 896048 KB | RSS: 107912 KB
+[10:00:38] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+[10:00:38] Dart PID: 3281623 | CPU: 25.1% | MEM:  0.3% | VSZ: 896048 KB | RSS: 107912 KB
+[10:00:39] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+[10:00:39] Dart PID: 3281623 | CPU: 21.4% | MEM:  0.3% | VSZ: 896048 KB | RSS: 107912 KB
+[10:00:39] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+[10:00:39] Dart PID: 3281623 | CPU: 18.7% | MEM:  0.3% | VSZ: 896048 KB | RSS: 107912 KB
+[10:00:40] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+[10:00:40] Dart PID: 3281623 | CPU: 16.6% | MEM:  0.3% | VSZ: 896048 KB | RSS: 107912 KB
+[10:00:41] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+[10:00:41] Dart PID: 3281623 | CPU: 14.9% | MEM:  0.3% | VSZ: 896048 KB | RSS: 107912 KB
+[10:00:42] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+[10:00:42] Dart PID: 3281623 | CPU: 13.5% | MEM:  0.3% | VSZ: 896048 KB | RSS: 107912 KB
+[10:00:42] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+[10:00:42] Dart PID: 3281623 | CPU: 12.4% | MEM:  0.3% | VSZ: 896048 KB | RSS: 107912 KB
+[10:00:43] Flutter PID: 3281565 | CPU:  0.0% | MEM:  0.0% | VSZ:   8296 KB | RSS:  1936 KB
+[10:00:43] Dart PID: 3281623 | CPU: 11.4% | MEM:  0.3% | VSZ: 896048 KB | RSS: 107912 KB
+
+The Dart compiler exited unexpectedly.
+Waiting for connection from debug service on Web Server...          9.3s
+Failed to compile application.

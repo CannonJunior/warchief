@@ -445,11 +445,13 @@ class _Game3DState extends State<Game3D> {
 
     final darkHeal = AbilitiesConfig.monsterDarkHeal;
 
+    final oldHealth = gameState.monsterHealth;
     setState(() {
       gameState.monsterHealth = math.min(gameState.monsterMaxHealth.toDouble(), gameState.monsterHealth + darkHeal.healAmount);
       gameState.monsterAbility3Cooldown = gameState.monsterAbility3CooldownMax;
     });
-    print('Monster uses ${darkHeal.name}! Health: ${gameState.monsterHealth}/${gameState.monsterMaxHealth}');
+    final healedAmount = gameState.monsterHealth - oldHealth;
+    print('[HEAL] Monster uses ${darkHeal.name}! Restored ${healedAmount.toStringAsFixed(1)} HP (${gameState.monsterHealth.toStringAsFixed(0)}/${gameState.monsterMaxHealth})');
   }
 
   // ===== AI CHAT LOGGING =====

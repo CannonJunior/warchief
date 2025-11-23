@@ -9,11 +9,27 @@ class GameConfig {
 
   // ==================== TERRAIN CONFIGURATION ====================
 
-  /// Size of the terrain grid (20x20 tiles)
-  static const int terrainGridSize = 20;
+  /// Size of the terrain grid (50x50 tiles - optimized for performance)
+  /// PERFORMANCE FIX: Reduced from 200 to prevent system freezing
+  /// This reduces vertices from 40,401 to 2,601 (94% reduction)
+  static const int terrainGridSize = 50;
 
   /// Size of each terrain tile
   static const double terrainTileSize = 1.0;
+
+  /// Maximum terrain height (reduced for gentler slopes)
+  /// FIX: Reduced from 10.0 to 3.0 for rolling hills instead of steep mountains
+  static const double terrainMaxHeight = 3.0;
+
+  /// Terrain noise scale (larger = bigger features, gentler slopes)
+  /// FIX: Reduced from 0.08 to 0.03 for smoother, more rolling terrain
+  static const double terrainNoiseScale = 0.03;
+
+  /// Terrain noise octaves (detail layers)
+  static const int terrainNoiseOctaves = 2;
+
+  /// Terrain noise persistence (how much each octave contributes)
+  static const double terrainNoisePersistence = 0.5;
 
   // ==================== PLAYER CONFIGURATION ====================
 
@@ -43,8 +59,8 @@ class GameConfig {
   /// Monster mesh size
   static const double monsterSize = 1.2;
 
-  /// Monster starting position
-  static final Vector3 monsterStartPosition = Vector3(18, 0.6, 18);
+  /// Monster starting position (Y will be set to groundLevel + monsterSize/2 on spawn)
+  static final Vector3 monsterStartPosition = Vector3(18, groundLevel, 18);
 
   /// Monster starting rotation (degrees)
   static const double monsterStartRotation = 180.0;

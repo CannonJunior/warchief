@@ -1,5 +1,5 @@
 import 'package:vector_math/vector_math.dart';
-import 'dart:math' as Math;
+import 'dart:math' as math;
 
 import '../state/game_state.dart';
 import '../state/game_config.dart';
@@ -88,9 +88,9 @@ class AbilitySystem {
     } else if (gameState.swordTransform != null && gameState.playerTransform != null) {
       // Position sword in front of player, rotating during swing
       final forward = Vector3(
-        -Math.sin(_radians(gameState.playerRotation)),
+        -math.sin(_radians(gameState.playerRotation)),
         0,
-        -Math.cos(_radians(gameState.playerRotation)),
+        -math.cos(_radians(gameState.playerRotation)),
       );
       final swingProgress = gameState.ability1ActiveTime / gameState.ability1Duration;
       final swingAngle = swingProgress * 180; // 0 to 180 degrees
@@ -137,9 +137,9 @@ class AbilitySystem {
 
       // Create fireball projectile
       final forward = Vector3(
-        -Math.sin(_radians(gameState.playerRotation)),
+        -math.sin(_radians(gameState.playerRotation)),
         0,
-        -Math.cos(_radians(gameState.playerRotation)),
+        -math.cos(_radians(gameState.playerRotation)),
       );
 
       final fireballMesh = Mesh.cube(
@@ -220,10 +220,10 @@ class AbilitySystem {
       // Actually heal the player
       final healAbility = AbilitiesConfig.playerHeal;
       final oldHealth = gameState.playerHealth;
-      gameState.playerHealth = Math.min(gameState.playerMaxHealth, gameState.playerHealth + healAbility.healAmount);
+      gameState.playerHealth = math.min(gameState.playerMaxHealth, gameState.playerHealth + healAbility.healAmount);
       final healedAmount = gameState.playerHealth - oldHealth;
 
-      print('Heal activated! Restored ${healedAmount.toStringAsFixed(1)} HP (${gameState.playerHealth.toStringAsFixed(0)}/${gameState.playerMaxHealth})');
+      print('[HEAL] Player heal activated! Restored ${healedAmount.toStringAsFixed(1)} HP (${gameState.playerHealth.toStringAsFixed(0)}/${gameState.playerMaxHealth})');
     }
   }
 
@@ -244,7 +244,7 @@ class AbilitySystem {
     } else if (gameState.healEffectTransform != null && gameState.playerTransform != null) {
       // Position heal effect around player with pulsing animation
       gameState.healEffectTransform!.position = gameState.playerTransform!.position.clone();
-      final pulseScale = 1.0 + (Math.sin(gameState.ability3ActiveTime * 10) * 0.2);
+      final pulseScale = 1.0 + (math.sin(gameState.ability3ActiveTime * 10) * 0.2);
       gameState.healEffectTransform!.scale = Vector3(pulseScale, pulseScale, pulseScale);
     }
   }
@@ -280,5 +280,5 @@ class AbilitySystem {
   ///
   /// Returns:
   /// - Angle in radians
-  static double _radians(double degrees) => degrees * (Math.pi / 180);
+  static double _radians(double degrees) => degrees * (math.pi / 180);
 }
