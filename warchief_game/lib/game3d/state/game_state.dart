@@ -7,6 +7,7 @@ import '../../models/projectile.dart';
 import '../../models/impact_effect.dart';
 import '../../models/ally.dart';
 import '../../models/ai_chat_message.dart';
+import '../../models/football.dart';
 import 'game_config.dart';
 import '../utils/movement_prediction.dart';
 import '../utils/bezier_path.dart';
@@ -28,6 +29,23 @@ class GameState {
 
   // New infinite terrain system with LOD
   InfiniteTerrainManager? infiniteTerrainManager;
+
+  // ==================== FOOTBALL FIELD ====================
+
+  // Football field components
+  Mesh? footballFieldMesh;
+  Transform3d? footballFieldTransform;
+  List<({Mesh mesh, Transform3d transform})> footballFieldMarkings = [];
+  List<({Mesh mesh, Transform3d transform})> footballFieldEndZones = [];
+  List<({Mesh mesh, Transform3d transform})> footballFieldGoalPosts = [];
+
+  // ==================== FOOTBALL (BALL) STATE ====================
+
+  /// Active football (when thrown/fumbled)
+  Football? activeFootball;
+
+  /// Ball possession state
+  bool ballCarrierHasBall = true;
 
   // ==================== PLAYER STATE ====================
 

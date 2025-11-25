@@ -1,9 +1,9 @@
 # Warchief Game - Flutter/Flame Project
 
 ## Port Configuration
-- **ALWAYS run this web application on port 8008 ONLY**
+- **ALWAYS run this web application on port 9009 ONLY**
 - Never change the port without explicit user permission
-- The default server port is 8008 - maintain this consistency across all sessions
+- The default server port is 9009 - maintain this consistency across all sessions
 
 ## Project Structure
 This is the Flutter/Flame implementation of the Warchief 3D isometric game.
@@ -33,7 +33,7 @@ cd /home/junior/src/warchief
 
 ### Run from this directory
 ```bash
-flutter run -d web-server --web-port=8008 --web-hostname=localhost
+flutter run -d web-server --web-port=9009 --web-hostname=localhost
 ```
 
 ### Testing

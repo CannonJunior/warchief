@@ -9,6 +9,7 @@ import '../rendering3d/camera3d.dart';
 import '../rendering3d/mesh.dart';
 import '../rendering3d/math/transform3d.dart';
 import '../rendering3d/terrain_generator.dart';
+import '../rendering3d/football_field_generator.dart';
 import '../rendering3d/player_mesh.dart';
 import '../game/controllers/input_manager.dart';
 import '../models/game_action.dart';
@@ -109,23 +110,33 @@ class _Game3DState extends State<Game3D> {
       // Initialize renderer
       renderer = WebGLRenderer(canvas);
 
-      // Initialize camera
+      // Initialize camera for football field view
+      // Position camera behind the player, looking down the field
       camera = Camera3D(
-        position: Vector3(0, 10, 15),
-        rotation: Vector3(30, 0, 0), // Start at 30 degrees
+        position: Vector3(0, 20, -40), // Higher and further back for field view
+        rotation: Vector3(35, 0, 0), // Looking down at ~35 degrees
         aspectRatio: canvas.width! / canvas.height!,
       );
 
-      // Set camera to orbit around origin
-      camera!.setTarget(Vector3(0, 0, 0));
-      camera!.setTargetDistance(15);
+      // Set camera to follow ball carrier (positioned at midfield initially)
+      camera!.setTarget(Vector3(0, 0, -30)); // Looking toward opponent's end zone
+      camera!.setTargetDistance(25); // Further back for better field view
 
-      // Initialize terrain
-      gameState.terrainTiles = TerrainGenerator.createTileGrid(
-        width: GameConfig.terrainGridSize,
-        height: GameConfig.terrainGridSize,
-        tileSize: GameConfig.terrainTileSize,
-      );
+      // Initialize football field
+      final footballField = FootballFieldGenerator.createField();
+      gameState.footballFieldMesh = footballField.fieldMesh;
+      gameState.footballFieldTransform = footballField.fieldTransform;
+      gameState.footballFieldMarkings = footballField.markings;
+      gameState.footballFieldEndZones = footballField.endZones;
+      gameState.footballFieldGoalPosts = footballField.goalPosts;
+      print('Football field created with ${footballField.markings.length} markings');
+
+      // OLD: Initialize terrain (commented out for now)
+      // gameState.terrainTiles = TerrainGenerator.createTileGrid(
+      //   width: GameConfig.terrainGridSize,
+      //   height: GameConfig.terrainGridSize,
+      //   tileSize: GameConfig.terrainTileSize,
+      // );
 
       // Initialize player
       gameState.playerMesh = PlayerMesh.createSimpleCharacter();

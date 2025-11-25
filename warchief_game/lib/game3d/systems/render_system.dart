@@ -28,8 +28,27 @@ class RenderSystem {
     // Clear screen
     renderer.clear();
 
-    // Render infinite terrain chunks with LOD (new system)
-    if (gameState.infiniteTerrainManager != null) {
+    // Render football field (main surface)
+    if (gameState.footballFieldMesh != null && gameState.footballFieldTransform != null) {
+      renderer.render(gameState.footballFieldMesh!, gameState.footballFieldTransform!, camera);
+
+      // Render end zones
+      for (final endZone in gameState.footballFieldEndZones) {
+        renderer.render(endZone.mesh, endZone.transform, camera);
+      }
+
+      // Render field markings (yard lines and hash marks)
+      for (final marking in gameState.footballFieldMarkings) {
+        renderer.render(marking.mesh, marking.transform, camera);
+      }
+
+      // Render goal posts
+      for (final goalPost in gameState.footballFieldGoalPosts) {
+        renderer.render(goalPost.mesh, goalPost.transform, camera);
+      }
+    }
+    // Fallback to infinite terrain chunks with LOD (old system)
+    else if (gameState.infiniteTerrainManager != null) {
       final chunks = gameState.infiniteTerrainManager!.getLoadedChunks();
       for (final chunk in chunks) {
         // Create transform for chunk
