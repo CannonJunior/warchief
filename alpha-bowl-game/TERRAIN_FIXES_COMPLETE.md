@@ -232,7 +232,7 @@ Typical distribution at runtime:
 
 ### Build Test
 ```bash
-cd /home/junior/src/warchief/warchief_game
+cd /home/junior/src/alpha-bowl/alpha_bowl_game
 flutter build web --release
 ```
 
@@ -246,7 +246,7 @@ Compiling lib/main.dart for the Web...                             20.6s
 
 ### Runtime Test
 ```bash
-cd /home/junior/src/warchief
+cd /home/junior/src/alpha-bowl
 ./start.sh
 ```
 
@@ -399,19 +399,19 @@ for (int dx = -renderDistance; dx <= renderDistance; dx++) {
 
 ### Running the Game
 ```bash
-cd /home/junior/src/warchief
+cd /home/junior/src/alpha-bowl
 ./start.sh
 ```
 
 ### Performance Testing
 ```bash
-cd /home/junior/src/warchief
+cd /home/junior/src/alpha-bowl
 ./test_performance.sh
 ```
 
 ### Building for Production
 ```bash
-cd /home/junior/src/warchief/warchief_game
+cd /home/junior/src/alpha-bowl/alpha_bowl_game
 flutter build web --release
 ```
 

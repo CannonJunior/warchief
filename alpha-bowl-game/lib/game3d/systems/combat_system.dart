@@ -31,10 +31,8 @@ class CombatSystem {
     required Vector3 color,
     required double size,
   }) {
-    final impactMesh = Mesh.cube(
-      size: size,
-      color: color,
-    );
+    // PERFORMANCE FIX: Reuse singleton mesh instead of creating new one
+    final impactMesh = gameState.getImpactEffectMesh();
     final impactTransform = Transform3d(
       position: position.clone(),
       scale: Vector3(1, 1, 1),

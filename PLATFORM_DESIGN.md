@@ -1047,11 +1047,11 @@ class _KeybindSettingsScreenState extends State<KeybindSettingsScreen> {
 ### 8.4 Project Structure
 
 ```
-warchief/
+alpha-bowl/
 ├── lib/
 │   ├── main.dart
 │   ├── game/
-│   │   ├── warchief_game.dart          # Main FlameGame class
+│   │   ├── alpha_bowl_game.dart          # Main FlameGame class
 │   │   ├── components/
 │   │   │   ├── player_character.dart
 │   │   │   ├── npc_follower.dart

@@ -142,10 +142,8 @@ class AbilitySystem {
         -math.cos(_radians(gameState.playerRotation)),
       );
 
-      final fireballMesh = Mesh.cube(
-        size: fireball.projectileSize,
-        color: fireball.color,
-      );
+      // PERFORMANCE FIX: Reuse singleton mesh instead of creating new one
+      final fireballMesh = gameState.getFireballMesh();
 
       final startPos = gameState.playerTransform!.position.clone() + forward * 1.0;
       startPos.y = gameState.playerTransform!.position.y;

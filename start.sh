@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Warchief Game Start Script
+# Alpha Bowl Game Start Script
 # Checks if port 8008 is in use and kills the process if needed
 # Then starts the Flutter web server
 
@@ -10,7 +10,7 @@ PORT=8008
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "========================================="
-echo "  Warchief 3D Isometric Game Launcher"
+echo "  Alpha Bowl 3D Football Game Launcher"
 echo "========================================="
 echo ""
 
@@ -47,9 +47,9 @@ if [ ! -f "$PROJECT_DIR/pubspec.yaml" ]; then
     echo "⚠️  No Flutter project found in $PROJECT_DIR"
     echo "Creating new Flutter project..."
     cd "$PROJECT_DIR"
-    flutter create --platforms=web --org=com.warchief warchief_game
-    cd warchief_game
-    PROJECT_DIR="$PROJECT_DIR/warchief_game"
+    flutter create --platforms=web --org=com.alphabowl alpha-bowl-game
+    cd alpha-bowl-game
+    PROJECT_DIR="$PROJECT_DIR/alpha-bowl-game"
 fi
 
 cd "$PROJECT_DIR"
@@ -60,7 +60,7 @@ flutter pub get
 
 echo ""
 echo "========================================="
-echo "  Starting Warchief on http://localhost:$PORT"
+echo "  Starting Alpha Bowl on http://localhost:$PORT"
 echo "========================================="
 echo ""
 echo "Press Ctrl+C to stop the server"

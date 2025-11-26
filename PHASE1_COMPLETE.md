@@ -88,7 +88,7 @@ Phase 1 delivered a complete, playable game foundation with all core systems wor
 ---
 
 ### ✅ 5. Game Integration
-**File**: `lib/game/warchief_game.dart`
+**File**: `lib/game/alpha_bowl_game.dart`
 
 - **Complete keyboard handling** - All keys routed through InputManager
 - **Mouse event handling** - Drag, scroll, hover all working
@@ -122,7 +122,7 @@ Phase 1 delivered a complete, playable game foundation with all core systems wor
 - `lib/game/world/isometric_map.dart` - Isometric tile rendering
 
 ### Core
-- `lib/game/warchief_game.dart` - Main game class (updated)
+- `lib/game/alpha_bowl_game.dart` - Main game class (updated)
 - `lib/main.dart` - Entry point with Riverpod (updated)
 
 ### Scripts & Config
@@ -137,7 +137,7 @@ Phase 1 delivered a complete, playable game foundation with all core systems wor
 
 ### Starting the Game
 ```bash
-cd /home/junior/src/warchief
+cd /home/junior/src/alpha-bowl
 ./start.sh
 ```
 
@@ -275,7 +275,7 @@ These are intentional for Phase 1:
 - `camera_controller.dart`: ~130 lines
 - `isometric_map.dart`: ~135 lines
 - `game_action.dart`: ~145 lines
-- `warchief_game.dart`: ~180 lines
+- `alpha_bowl_game.dart`: ~180 lines
 
 **Total New Code**: ~940 lines of production code
 
@@ -338,7 +338,7 @@ Phase 1 is **100% COMPLETE** with all goals achieved:
 
 ---
 
-**Repository**: `/home/junior/src/warchief`
+**Repository**: `/home/junior/src/alpha-bowl`
 **Main Docs**: PLATFORM_DESIGN.md, README.md, TASK.md
 **Play Now**: `./start.sh` → http://localhost:8008
 

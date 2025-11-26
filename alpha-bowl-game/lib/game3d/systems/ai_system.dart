@@ -516,10 +516,8 @@ class AISystem {
         final toMonster = gameState.monsterTransform!.position - ally.transform.position;
         final direction = toMonster.normalized();
 
-        final fireballMesh = Mesh.cube(
-          size: ability.projectileSize,
-          color: ability.color,
-        );
+        // PERFORMANCE FIX: Reuse singleton mesh instead of creating new one
+        final fireballMesh = gameState.getFireballMesh();
         final fireballTransform = Transform3d(
           position: ally.transform.position.clone() + direction * 0.5,
           scale: Vector3(1, 1, 1),

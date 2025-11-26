@@ -223,7 +223,7 @@ static const int lodLevels = 3;             // 3 detail levels
 
 ### 1. Run Performance Test
 ```bash
-cd /home/junior/src/warchief
+cd /home/junior/src/alpha-bowl
 ./test_performance.sh
 ```
 

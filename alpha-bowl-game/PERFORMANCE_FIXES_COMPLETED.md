@@ -219,11 +219,11 @@ ChunkManager(
 ## 📊 Performance Monitoring Tools
 
 ### 1. Performance Test Script
-**Location**: `/home/junior/src/warchief/test_performance.sh`
+**Location**: `/home/junior/src/alpha-bowl/test_performance.sh`
 
 **Usage**:
 ```bash
-cd /home/junior/src/warchief
+cd /home/junior/src/alpha-bowl
 ./test_performance.sh
 ```
 
@@ -264,7 +264,7 @@ cd /home/junior/src/warchief
 - Testing procedures
 
 ### 2. Performance Test Script
-**File**: `/home/junior/src/warchief/test_performance.sh`
+**File**: `/home/junior/src/alpha-bowl/test_performance.sh`
 
 Safe testing with automatic shutdown to prevent system freezes.
 
@@ -381,7 +381,7 @@ The chunk-based terrain system is **designed and implemented**, ready for integr
 5. `lib/rendering3d/shader_program.dart` - Fixed WebGL compatibility
 
 **Key Files Created**:
-1. `/home/junior/src/warchief/test_performance.sh` - Performance testing
+1. `/home/junior/src/alpha-bowl/test_performance.sh` - Performance testing
 2. `PERFORMANCE_MITIGATION_PLAN.md` - Complete implementation guide
 3. `lib/rendering3d/terrain_chunk.dart` - Chunk system (Phase 2)
 4. `lib/rendering3d/chunk_manager.dart` - Chunk management (Phase 2)

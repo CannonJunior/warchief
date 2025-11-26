@@ -261,7 +261,7 @@
 ## 🚀 How to Test Current Progress
 
 ```bash
-cd /home/junior/src/alpha-bowl/warchief_game
+cd /home/junior/src/alpha-bowl/alpha_bowl_game
 flutter run -d web-server --web-port=9009 --web-hostname=localhost
 ```
 

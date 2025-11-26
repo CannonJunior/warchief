@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Performance Testing Script for Warchief Game
+# Performance Testing Script for Alpha Bowl Game
 # Runs the game with a 10-second timeout and captures performance data
 
 set +e  # Don't exit on error
@@ -10,7 +10,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TIMEOUT=10  # 10 second timeout
 
 echo "========================================="
-echo "  Warchief Performance Test"
+echo "  Alpha Bowl Performance Test"
 echo "========================================="
 echo ""
 echo "⚠️  WARNING: This will run for ONLY $TIMEOUT seconds"
@@ -28,7 +28,7 @@ if [ ! -z "$PORT_PID" ]; then
     sleep 1
 fi
 
-cd "$PROJECT_DIR/warchief_game"
+cd "$PROJECT_DIR/alpha-bowl-game"
 
 # Create performance log directory
 PERF_DIR="$PROJECT_DIR/performance_logs"

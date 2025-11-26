@@ -67,6 +67,11 @@ class _Game3DState extends State<Game3D> {
   // Game state - centralized state management
   final GameState gameState = GameState();
 
+  // PERFORMANCE FIX: Track previous UI state to avoid unnecessary rebuilds
+  double _lastPlayerHealth = 100.0;
+  double _lastMonsterHealth = 100.0;
+  int _lastAllyCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -238,11 +243,21 @@ class _Game3DState extends State<Game3D> {
       if (!mounted) return;
 
       final now = DateTime.now();
-      final dt = gameState.lastFrameTime != null
-          ? (now.millisecondsSinceEpoch - gameState.lastFrameTime!.millisecondsSinceEpoch) / 1000.0
-          : 0.016; // Default to ~60fps
+      final dtMs = gameState.lastFrameTime != null
+          ? (now.millisecondsSinceEpoch - gameState.lastFrameTime!.millisecondsSinceEpoch).toDouble()
+          : 16.67; // Default to ~60fps
       gameState.lastFrameTime = now;
 
+      // PERFORMANCE FIX: Frame rate limiting - skip frames if running too fast
+      gameState.frameTimeAccumulator += dtMs;
+      if (gameState.frameTimeAccumulator < GameState.targetFrameTime) {
+        // Frame came too early, skip it
+        gameState.animationFrameId = html.window.requestAnimationFrame(gameLoop);
+        return;
+      }
+      gameState.frameTimeAccumulator = 0.0;
+
+      final dt = dtMs / 1000.0; // Convert to seconds
       gameState.frameCount++;
 
       // Log every 60 frames (~1 second at 60fps)
@@ -253,9 +268,19 @@ class _Game3DState extends State<Game3D> {
       _update(dt);
       _render();
 
-      // Update UI every 10 frames to show camera changes
+      // PERFORMANCE FIX: Only update UI when state actually changes
+      // Check every 10 frames to avoid too many comparisons
       if (gameState.frameCount % 10 == 0 && mounted) {
-        setState(() {});
+        final healthChanged = gameState.playerHealth != _lastPlayerHealth ||
+                             gameState.monsterHealth != _lastMonsterHealth;
+        final alliesChanged = gameState.allies.length != _lastAllyCount;
+
+        if (healthChanged || alliesChanged) {
+          _lastPlayerHealth = gameState.playerHealth;
+          _lastMonsterHealth = gameState.monsterHealth;
+          _lastAllyCount = gameState.allies.length;
+          setState(() {});
+        }
       }
 
       gameState.animationFrameId = html.window.requestAnimationFrame(gameLoop);
@@ -291,15 +316,20 @@ class _Game3DState extends State<Game3D> {
     // Update player ability cooldowns and effects
     AbilitySystem.update(dt, gameState);
 
-    // Update AI systems (monster AI, ally AI, projectiles)
-    AISystem.update(
-      dt,
-      gameState,
-      logMonsterAI: _logMonsterAI,
-      activateMonsterAbility1: _activateMonsterAbility1,
-      activateMonsterAbility2: _activateMonsterAbility2,
-      activateMonsterAbility3: _activateMonsterAbility3,
-    );
+    // PERFORMANCE FIX: Throttle AI updates to every 100ms instead of every frame
+    gameState.aiAccumulatedTime += dt;
+    if (gameState.aiAccumulatedTime >= GameState.aiUpdateInterval) {
+      // Update AI systems (monster AI, ally AI, projectiles)
+      AISystem.update(
+        gameState.aiAccumulatedTime, // Use accumulated time
+        gameState,
+        logMonsterAI: _logMonsterAI,
+        activateMonsterAbility1: _activateMonsterAbility1,
+        activateMonsterAbility2: _activateMonsterAbility2,
+        activateMonsterAbility3: _activateMonsterAbility3,
+      );
+      gameState.aiAccumulatedTime = 0.0; // Reset accumulator
+    }
 
     // Handle player ability input
     AbilitySystem.handleAbility1Input(inputManager!.isActionPressed(GameAction.actionBar1), gameState);
@@ -429,10 +459,8 @@ class _Game3DState extends State<Game3D> {
 
     // Create shadow bolt projectile aimed at player
     final direction = (gameState.playerTransform!.position - gameState.monsterTransform!.position).normalized();
-    final projectileMesh = Mesh.cube(
-      size: shadowBolt.projectileSize,
-      color: shadowBolt.color,
-    );
+    // PERFORMANCE FIX: Reuse singleton mesh instead of creating new one
+    final projectileMesh = gameState.getShadowBoltMesh();
     final projectileTransform = Transform3d(
       position: gameState.monsterTransform!.position.clone() + Vector3(0, 1, 0),
       scale: Vector3(1, 1, 1),

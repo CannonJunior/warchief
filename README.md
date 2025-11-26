@@ -1,6 +1,6 @@
-# Warchief - 3D Isometric Game with AI-Powered NPCs
+# Alpha Bowl - 3D Football Game with AI-Powered NPCs
 
-A 3D isometric game built with Flutter and Dart featuring AI-powered NPC companions using local LLMs (Ollama + Model Context Protocol).
+A real-time 3D American Football RPG game built with Flutter and Dart featuring AI-powered NPCs using local LLMs (Ollama + Model Context Protocol).
 
 ## Features
 
@@ -32,7 +32,7 @@ ollama pull llama3.1:8b-instruct-q8_0
 ./start.sh
 
 # Or manually:
-cd warchief_game
+cd alpha_bowl_game
 flutter run -d web-server --web-port=8008 --web-hostname=localhost
 ```
 
@@ -41,13 +41,13 @@ Then open your browser to: **http://localhost:8008**
 ## Project Structure
 
 ```
-warchief/
+alpha-bowl/
 ├── start.sh                     # Quick start script
 ├── PLATFORM_DESIGN.md           # Complete architecture (READ THIS!)
 ├── QUICK_START.md               # Developer quick reference
 ├── TASK.md                      # Implementation tasks
 ├── CLAUDE.md                    # Project instructions
-└── warchief_game/               # Flutter/Flame project
+└── alpha_bowl_game/               # Flutter/Flame project
     ├── lib/
     │   ├── game/                # Game components
     │   ├── ui/                  # UI components
@@ -98,14 +98,14 @@ Visit http://localhost:8008 after running `./start.sh`
 ## Configuration
 
 ### Game Settings
-Edit `warchief_game/config/game_config.json`:
+Edit `alpha_bowl_game/config/game_config.json`:
 - Server port (default: 8008)
 - Ollama integration settings
 - Graphics options (FPS, zoom, tile size)
 - NPC AI settings
 
 ### UI Configuration
-Edit `warchief_game/config/ui_config.json`:
+Edit `alpha_bowl_game/config/ui_config.json`:
 - UI component layout
 - Asset paths for SVG/PNG files
 - Theme settings
@@ -117,13 +117,13 @@ While the game is running, press `r` to hot reload changes.
 
 ### Running Tests
 ```bash
-cd warchief_game
+cd alpha_bowl_game
 flutter test
 ```
 
 ### Building for Production
 ```bash
-cd warchief_game
+cd alpha_bowl_game
 flutter build web
 ```
 

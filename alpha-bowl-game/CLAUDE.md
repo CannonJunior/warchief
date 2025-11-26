@@ -1,4 +1,4 @@
-# Warchief Game - Flutter/Flame Project
+# Alpha Bowl Game - Flutter/Flame Project
 
 ## Port Configuration
 - **ALWAYS run this web application on port 9009 ONLY**
@@ -6,10 +6,10 @@
 - The default server port is 9009 - maintain this consistency across all sessions
 
 ## Project Structure
-This is the Flutter/Flame implementation of the Warchief 3D isometric game.
+This is the Flutter/Flame implementation of the Alpha Bowl 3D football game.
 
 ```
-warchief_game/
+alpha-bowl-game/
 ├── lib/
 │   ├── main.dart              # Entry point
 │   ├── game/                  # Game components
@@ -27,7 +27,7 @@ warchief_game/
 
 ### Start the game
 ```bash
-cd /home/junior/src/warchief
+cd /home/junior/src/alpha-bowl
 ./start.sh
 ```
 

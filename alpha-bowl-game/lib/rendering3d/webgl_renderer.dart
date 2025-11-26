@@ -170,6 +170,23 @@ class WebGLRenderer {
     return buffer;
   }
 
+  /// Dispose GPU buffers for a specific mesh
+  ///
+  /// Call this when a mesh is no longer needed (e.g., projectile removed)
+  /// to free GPU memory and prevent memory leaks.
+  ///
+  /// Parameters:
+  /// - mesh: The mesh whose GPU buffers should be freed
+  void disposeMesh(Mesh mesh) {
+    final buffers = _meshBuffers.remove(mesh);
+    if (buffers != null) {
+      gl.deleteBuffer(buffers.vertexBuffer);
+      gl.deleteBuffer(buffers.indexBuffer);
+      if (buffers.normalBuffer != null) gl.deleteBuffer(buffers.normalBuffer);
+      if (buffers.colorBuffer != null) gl.deleteBuffer(buffers.colorBuffer);
+    }
+  }
+
   /// Resize renderer (call when canvas size changes)
   void resize(int width, int height) {
     canvas.width = width;

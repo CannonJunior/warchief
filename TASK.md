@@ -35,7 +35,7 @@
 - ✅ Tested and verified server runs on port 8008
 - **Deliverables**:
   - start.sh (automated startup script)
-  - warchief_game/ (complete Flutter project)
+  - alpha_bowl_game/ (complete Flutter project)
   - README.md (project overview)
   - Working game skeleton running on http://localhost:8008
 
@@ -77,7 +77,7 @@
   - lib/game/controllers/camera_controller.dart
   - lib/game/components/player_character.dart
   - lib/game/world/isometric_map.dart
-  - Updated lib/game/warchief_game.dart (fully integrated)
+  - Updated lib/game/alpha_bowl_game.dart (fully integrated)
   - Fully playable game with WASD movement on isometric map!
 
 ## Upcoming Tasks

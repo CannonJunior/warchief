@@ -1,6 +1,6 @@
 {
-    "name": "warchief_game",
-    "short_name": "warchief_game",
+    "name": "alpha_bowl_game",
+    "short_name": "alpha_bowl_game",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

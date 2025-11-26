@@ -1,3 +1,5 @@
+import 'package:vector_math/vector_math.dart';
+
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../rendering3d/terrain_generator.dart';
@@ -21,6 +23,41 @@ import '../utils/bezier_path.dart';
 /// - Projectiles and visual effects
 /// - Game loop state (frame count, timing)
 class GameState {
+  // ==================== SINGLETON MESHES (REUSABLE) ====================
+
+  /// Singleton projectile meshes (reused to prevent memory leak)
+  /// These are created once and reused for all projectiles
+  static Mesh? _fireballMeshSingleton;
+  static Mesh? _shadowBoltMeshSingleton;
+  static Mesh? _impactEffectMeshSingleton;
+
+  /// Get or create fireball mesh singleton
+  Mesh getFireballMesh() {
+    _fireballMeshSingleton ??= Mesh.cube(
+      size: 0.3,
+      color: Vector3(1.0, 0.4, 0.0), // Orange fireball
+    );
+    return _fireballMeshSingleton!;
+  }
+
+  /// Get or create shadow bolt mesh singleton
+  Mesh getShadowBoltMesh() {
+    _shadowBoltMeshSingleton ??= Mesh.cube(
+      size: 0.4,
+      color: Vector3(0.5, 0.1, 0.8), // Purple shadow bolt
+    );
+    return _shadowBoltMeshSingleton!;
+  }
+
+  /// Get or create impact effect mesh singleton
+  Mesh getImpactEffectMesh() {
+    _impactEffectMeshSingleton ??= Mesh.cube(
+      size: 0.5,
+      color: Vector3(1.0, 1.0, 0.0), // Yellow impact
+    );
+    return _impactEffectMeshSingleton!;
+  }
+
   // ==================== TERRAIN ====================
 
   // Old terrain system (for backwards compatibility)
@@ -165,4 +202,12 @@ class GameState {
   int? animationFrameId;
   DateTime? lastFrameTime;
   int frameCount = 0;
+
+  // PERFORMANCE FIX: Frame rate limiting (cap at 60 FPS)
+  static const double targetFrameTime = 1000 / 60; // ~16.67ms per frame
+  double frameTimeAccumulator = 0.0;
+
+  // PERFORMANCE FIX: AI throttling (run every 100ms instead of every frame)
+  double aiAccumulatedTime = 0.0;
+  static const double aiUpdateInterval = 0.1; // 100ms = 10 updates per second
 }

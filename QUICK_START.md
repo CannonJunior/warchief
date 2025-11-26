@@ -1,4 +1,4 @@
-# Quick Start Guide - Warchief 3D Isometric Game
+# Quick Start Guide - Alpha Bowl 3D Football Game
 
 ## What Is This Project?
 
@@ -60,7 +60,7 @@ NPCs use Model Context Protocol to:
 ## Project Structure
 
 ```
-warchief/
+alpha-bowl/
 ├── lib/
 │   ├── game/              # Flame game components
 │   ├── ui/                # UI components (action bars, health bars)
@@ -103,7 +103,7 @@ ollama pull qwen2.5:7b-instruct
 ### Setup
 ```bash
 # Clone and setup
-cd warchief
+cd alpha-bowl
 uv sync                    # Install dependencies
 
 # Start Ollama (in separate terminal)
