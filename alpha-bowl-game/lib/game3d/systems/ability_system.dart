@@ -6,8 +6,10 @@ import '../state/game_config.dart';
 import '../state/abilities_config.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
+import '../../rendering3d/camera3d.dart';
 import '../../models/projectile.dart';
 import 'combat_system.dart';
+import '../utils/culling_system.dart';
 
 /// Ability System - Handles all player ability logic
 ///
@@ -49,11 +51,11 @@ class AbilitySystem {
     if (gameState.ability3Cooldown > 0) gameState.ability3Cooldown -= dt;
   }
 
-  // ==================== ABILITY 1: SWORD ====================
+  // ==================== ABILITY 1: BULLET PASS ====================
 
-  /// Handles Ability 1 (Sword) input
+  /// Handles Ability 1 (Bullet Pass) input
   ///
-  /// Activates the sword attack if cooldown is ready and ability is not already active.
+  /// Throws a football forward if cooldown is ready.
   ///
   /// Parameters:
   /// - ability1KeyPressed: Whether the ability 1 key is currently pressed
@@ -61,70 +63,56 @@ class AbilitySystem {
   static void handleAbility1Input(bool ability1KeyPressed, GameState gameState) {
     if (ability1KeyPressed &&
         gameState.ability1Cooldown <= 0 &&
-        !gameState.ability1Active) {
-      gameState.ability1Active = true;
-      gameState.ability1ActiveTime = 0.0;
-      gameState.ability1Cooldown = gameState.ability1CooldownMax;
-      gameState.ability1HitRegistered = false; // Reset hit tracker for new swing
-      print('Sword attack activated!');
-    }
-  }
+        gameState.playerTransform != null) {
+      final pass = AbilitiesConfig.bulletPass;
 
-  /// Updates Ability 1 (Sword) animation and collision detection
-  ///
-  /// Updates the sword position and swing animation during the active duration.
-  /// Checks for collision with the monster and applies damage.
-  ///
-  /// Parameters:
-  /// - dt: Time elapsed since last frame (in seconds)
-  /// - gameState: Current game state to update
-  static void updateAbility1(double dt, GameState gameState) {
-    if (!gameState.ability1Active) return;
-
-    gameState.ability1ActiveTime += dt;
-
-    if (gameState.ability1ActiveTime >= gameState.ability1Duration) {
-      gameState.ability1Active = false;
-    } else if (gameState.swordTransform != null && gameState.playerTransform != null) {
-      // Position sword in front of player, rotating during swing
+      // Calculate throw direction
       final forward = Vector3(
         -math.sin(_radians(gameState.playerRotation)),
         0,
         -math.cos(_radians(gameState.playerRotation)),
       );
-      final swingProgress = gameState.ability1ActiveTime / gameState.ability1Duration;
-      final swingAngle = swingProgress * 180; // 0 to 180 degrees
 
-      gameState.swordTransform!.position = gameState.playerTransform!.position + forward * 0.8;
-      gameState.swordTransform!.position.y = gameState.playerTransform!.position.y;
-      gameState.swordTransform!.rotation.y = gameState.playerRotation + swingAngle - 90;
+      // Create football projectile
+      final footballMesh = gameState.getFireballMesh(); // Reuse mesh (will appear as football)
 
-      // Check collision with monster (only once per swing)
-      if (!gameState.ability1HitRegistered) {
-        final sword = AbilitiesConfig.playerSword;
-        final swordTipPosition = gameState.playerTransform!.position + forward * sword.range;
+      final startPos = gameState.playerTransform!.position.clone() + forward * 1.0;
+      startPos.y = gameState.playerTransform!.position.y + 0.5; // Throw from chest height
 
-        final hitRegistered = CombatSystem.checkAndDamageMonster(
-          gameState,
-          attackerPosition: swordTipPosition,
-          damage: sword.damage,
-          attackType: sword.name,
-          impactColor: sword.impactColor,
-          impactSize: sword.impactSize,
-        );
+      final footballTransform = Transform3d(
+        position: startPos,
+        scale: Vector3(pass.projectileSize, pass.projectileSize, pass.projectileSize),
+      );
 
-        if (hitRegistered) {
-          gameState.ability1HitRegistered = true;
-        }
-      }
+      gameState.fireballs.add(Projectile(
+        mesh: footballMesh,
+        transform: footballTransform,
+        velocity: forward * pass.projectileSpeed,
+      ));
+
+      gameState.ability1Cooldown = gameState.ability1CooldownMax;
+      print('${pass.name} thrown!');
     }
   }
 
-  // ==================== ABILITY 2: FIREBALL ====================
-
-  /// Handles Ability 2 (Fireball) input
+  /// Updates Ability 1 (Bullet Pass) - Football projectiles
   ///
-  /// Creates a new fireball projectile if cooldown is ready.
+  /// Football projectiles are handled in updateAbility2() with other projectiles.
+  /// This method is kept for backwards compatibility but does nothing for passes.
+  ///
+  /// Parameters:
+  /// - dt: Time elapsed since last frame (in seconds)
+  /// - gameState: Current game state to update
+  static void updateAbility1(double dt, GameState gameState) {
+    // Bullet Pass is instant - no ongoing animation needed
+    // Football projectiles are updated in updateAbility2()
+  }
+
+  // ==================== ABILITY 2: SPRINT ====================
+
+  /// Handles Ability 2 (Sprint) input
+  ///
+  /// Activates speed boost if cooldown is ready.
   ///
   /// Parameters:
   /// - ability2KeyPressed: Whether the ability 2 key is currently pressed
@@ -132,102 +120,130 @@ class AbilitySystem {
   static void handleAbility2Input(bool ability2KeyPressed, GameState gameState) {
     if (ability2KeyPressed &&
         gameState.ability2Cooldown <= 0 &&
-        gameState.playerTransform != null) {
-      final fireball = AbilitiesConfig.playerFireball;
+        !gameState.ability2Active) {
+      final sprint = AbilitiesConfig.sprint;
 
-      // Create fireball projectile
-      final forward = Vector3(
-        -math.sin(_radians(gameState.playerRotation)),
-        0,
-        -math.cos(_radians(gameState.playerRotation)),
-      );
-
-      // PERFORMANCE FIX: Reuse singleton mesh instead of creating new one
-      final fireballMesh = gameState.getFireballMesh();
-
-      final startPos = gameState.playerTransform!.position.clone() + forward * 1.0;
-      startPos.y = gameState.playerTransform!.position.y;
-
-      final fireballTransform = Transform3d(
-        position: startPos,
-        scale: Vector3(1, 1, 1),
-      );
-
-      gameState.fireballs.add(Projectile(
-        mesh: fireballMesh,
-        transform: fireballTransform,
-        velocity: forward * fireball.projectileSpeed,
-      ));
-
+      gameState.ability2Active = true;
+      gameState.ability2ActiveTime = 0.0;
       gameState.ability2Cooldown = gameState.ability2CooldownMax;
-      print('${fireball.name} launched!');
+
+      // Apply speed boost
+      gameState.playerSpeed *= (1.0 + sprint.statusStrength); // +75% speed
+
+      print('${sprint.name} activated! Speed boosted for ${sprint.duration}s');
     }
   }
 
-  /// Updates Ability 2 (Fireball) projectiles and collision detection
+  /// Updates Ability 2 (Sprint) timer and speed restoration
   ///
-  /// Moves all active fireballs, checks for collisions with the monster,
-  /// and creates impact effects on hit.
+  /// Manages sprint duration and restores normal speed when sprint ends.
   ///
   /// Parameters:
   /// - dt: Time elapsed since last frame (in seconds)
   /// - gameState: Current game state to update
   static void updateAbility2(double dt, GameState gameState) {
-    final fireballConfig = AbilitiesConfig.playerFireball;
+    // Update sprint timer
+    if (gameState.ability2Active) {
+      gameState.ability2ActiveTime += dt;
+      final sprint = AbilitiesConfig.sprint;
 
-    gameState.fireballs.removeWhere((fireball) {
-      // Move fireball
-      fireball.transform.position += fireball.velocity * dt;
-      fireball.lifetime -= dt;
+      // Check if sprint duration expired
+      if (gameState.ability2ActiveTime >= sprint.duration) {
+        // Restore normal speed
+        gameState.playerSpeed = GameConfig.playerSpeed;
+        gameState.ability2Active = false;
+        print('${sprint.name} ended - speed restored');
+      }
+    }
+
+    // Also update football projectiles (from Bullet Pass ability 1)
+    final passConfig = AbilitiesConfig.bulletPass;
+
+    gameState.fireballs.removeWhere((projectile) {
+      // Move projectile
+      projectile.transform.position += projectile.velocity * dt;
+      projectile.lifetime -= dt;
+
+      // PERFORMANCE: Cull projectiles that leave the field
+      if (!CullingSystem.isWithinFieldBounds(projectile.transform.position)) {
+        return true; // Remove off-field projectile
+      }
 
       // Check collision with monster using unified combat system
       final hitRegistered = CombatSystem.checkAndDamageMonster(
         gameState,
-        attackerPosition: fireball.transform.position,
-        damage: fireballConfig.damage,
-        attackType: fireballConfig.name,
-        impactColor: fireballConfig.impactColor,
-        impactSize: fireballConfig.impactSize,
+        attackerPosition: projectile.transform.position,
+        damage: passConfig.damage,
+        attackType: passConfig.name,
+        impactColor: passConfig.impactColor,
+        impactSize: passConfig.impactSize,
       );
 
       if (hitRegistered) return true;
 
       // Remove if lifetime expired
-      return fireball.lifetime <= 0;
+      return projectile.lifetime <= 0;
     });
   }
 
-  // ==================== ABILITY 3: HEAL ====================
+  // ==================== ABILITY 3: SPIN-OUT ====================
 
-  /// Handles Ability 3 (Heal) input
+  /// Handles Ability 3 (Spin-out) input
   ///
-  /// Activates the heal effect if cooldown is ready and ability is not already active.
-  /// Immediately restores health to the player.
+  /// Activates spin evasion move if cooldown is ready.
+  /// Spin direction is determined by current movement:
+  /// - Clockwise (E key): Spins around right edge
+  /// - Counter-clockwise (Q key or default): Spins around left edge
   ///
   /// Parameters:
   /// - ability3KeyPressed: Whether the ability 3 key is currently pressed
+  /// - spinClockwise: True for clockwise (E), false for counter-clockwise (Q or default)
   /// - gameState: Current game state to update
-  static void handleAbility3Input(bool ability3KeyPressed, GameState gameState) {
+  static void handleAbility3Input(bool ability3KeyPressed, bool spinClockwise, GameState gameState) {
     if (ability3KeyPressed &&
         gameState.ability3Cooldown <= 0 &&
-        !gameState.ability3Active) {
+        !gameState.ability3Active &&
+        gameState.playerTransform != null) {
+      final spinMove = AbilitiesConfig.spinMove;
+
       gameState.ability3Active = true;
       gameState.ability3ActiveTime = 0.0;
       gameState.ability3Cooldown = gameState.ability3CooldownMax;
+      gameState.ability3SpinClockwise = spinClockwise;
 
-      // Actually heal the player
-      final healAbility = AbilitiesConfig.playerHeal;
-      final oldHealth = gameState.playerHealth;
-      gameState.playerHealth = math.min(gameState.playerMaxHealth, gameState.playerHealth + healAbility.healAmount);
-      final healedAmount = gameState.playerHealth - oldHealth;
+      // Store initial position and rotation
+      gameState.ability3StartPosition = gameState.playerTransform!.position.clone();
+      gameState.ability3StartRotation = gameState.playerRotation;
 
-      print('[HEAL] Player heal activated! Restored ${healedAmount.toStringAsFixed(1)} HP (${gameState.playerHealth.toStringAsFixed(0)}/${gameState.playerMaxHealth})');
+      // Calculate pivot point based on spin direction
+      // Player size is 0.5, so edge is 0.25 units from center
+      final playerRadius = GameConfig.playerSize / 2.0;
+
+      // Get perpendicular direction (90 degrees from facing direction)
+      // For counter-clockwise: pivot on LEFT edge (add 90 degrees)
+      // For clockwise: pivot on RIGHT edge (subtract 90 degrees)
+      final pivotAngle = spinClockwise
+          ? gameState.playerRotation - 90  // Right edge
+          : gameState.playerRotation + 90; // Left edge
+
+      final pivotAngleRad = _radians(pivotAngle);
+      final pivotOffset = Vector3(
+        -math.sin(pivotAngleRad) * playerRadius,
+        0,
+        -math.cos(pivotAngleRad) * playerRadius,
+      );
+
+      gameState.ability3PivotPoint = gameState.ability3StartPosition! + pivotOffset;
+
+      final direction = spinClockwise ? 'clockwise around right edge' : 'counter-clockwise around left edge';
+      print('${spinMove.name} activated! Spinning $direction to evade tacklers...');
     }
   }
 
-  /// Updates Ability 3 (Heal) visual effect
+  /// Updates Ability 3 (Spin-out) animation and rotation
   ///
-  /// Updates the heal effect position and pulsing animation during the active duration.
+  /// Orbits the player around the pivot point (left or right edge) while rotating.
+  /// Direction is determined when ability is activated based on movement keys.
   ///
   /// Parameters:
   /// - dt: Time elapsed since last frame (in seconds)
@@ -236,14 +252,53 @@ class AbilitySystem {
     if (!gameState.ability3Active) return;
 
     gameState.ability3ActiveTime += dt;
+    final spinMove = AbilitiesConfig.spinMove;
 
-    if (gameState.ability3ActiveTime >= gameState.ability3Duration) {
+    if (gameState.ability3ActiveTime >= spinMove.duration) {
       gameState.ability3Active = false;
-    } else if (gameState.healEffectTransform != null && gameState.playerTransform != null) {
-      // Position heal effect around player with pulsing animation
-      gameState.healEffectTransform!.position = gameState.playerTransform!.position.clone();
-      final pulseScale = 1.0 + (math.sin(gameState.ability3ActiveTime * 10) * 0.2);
-      gameState.healEffectTransform!.scale = Vector3(pulseScale, pulseScale, pulseScale);
+      print('${spinMove.name} completed!');
+    } else if (gameState.playerTransform != null &&
+               gameState.ability3PivotPoint != null &&
+               gameState.ability3StartPosition != null) {
+      // Calculate spin progress (0 to 1)
+      final spinProgress = gameState.ability3ActiveTime / spinMove.duration;
+
+      // Player rotates 360 degrees but only orbits 180 degrees around pivot
+      // This creates the football spin move where player ends up displaced by their width
+      final rotationAngle = spinProgress * 360; // Full 360° rotation
+      final orbitalAngle = spinProgress * 180;  // Half 180° orbit (displacement)
+
+      // Get initial angle from pivot to player
+      final toPlayer = gameState.ability3StartPosition! - gameState.ability3PivotPoint!;
+      final radius = math.sqrt(toPlayer.x * toPlayer.x + toPlayer.z * toPlayer.z);
+      final initialAngle = math.atan2(toPlayer.x, toPlayer.z) * (180 / math.pi);
+
+      // Calculate current orbital position based on spin direction
+      // Counter-clockwise: orbit counter-clockwise (subtract angle)
+      // Clockwise: orbit clockwise (add angle)
+      final currentAngle = gameState.ability3SpinClockwise
+          ? initialAngle + orbitalAngle  // Clockwise: add angle
+          : initialAngle - orbitalAngle; // Counter-clockwise: subtract angle
+
+      final currentAngleRad = _radians(currentAngle);
+
+      // Position player at current angle around pivot
+      final newX = gameState.ability3PivotPoint!.x + (radius * math.sin(currentAngleRad));
+      final newZ = gameState.ability3PivotPoint!.z + (radius * math.cos(currentAngleRad));
+
+      gameState.playerTransform!.position.x = newX;
+      gameState.playerTransform!.position.z = newZ;
+
+      // Rotate player by full 360 degrees (independent of orbital motion)
+      gameState.playerRotation = gameState.ability3StartRotation +
+                                  (gameState.ability3SpinClockwise ? rotationAngle : -rotationAngle);
+      gameState.playerRotation = gameState.playerRotation % 360;
+
+      // Visual effect: slightly increase player size during spin
+      final spinScale = 1.0 + (math.sin(spinProgress * math.pi) * 0.15); // Pulse during spin
+      if (gameState.playerMesh != null) {
+        gameState.playerTransform!.scale = Vector3(spinScale, spinScale, spinScale);
+      }
     }
   }
 
@@ -254,12 +309,19 @@ class AbilitySystem {
   /// Handles the lifecycle and animation of visual impact effects,
   /// including scaling and removal when expired.
   ///
+  /// PERFORMANCE OPTIMIZATION: Removes effects that leave field boundaries
+  ///
   /// Parameters:
   /// - dt: Time elapsed since last frame (in seconds)
   /// - gameState: Current game state to update
   static void updateImpactEffects(double dt, GameState gameState) {
     gameState.impactEffects.removeWhere((impact) {
       impact.lifetime -= dt;
+
+      // PERFORMANCE: Cull impact effects that are off-field
+      if (!CullingSystem.isWithinFieldBounds(impact.transform.position)) {
+        return true; // Remove off-field effect
+      }
 
       // Scale effect (expand and fade)
       final scale = 1.0 + (impact.progress * GameConfig.impactEffectGrowthScale);

@@ -73,7 +73,7 @@ alpha-bowl/
 │   ├── tiles/             # Isometric tiles
 │   └── icons/             # Ability icons
 ├── config/
-│   ├── game_config.json   # Game settings (port 8008)
+│   ├── game_config.json   # Game settings (port 9009)
 │   └── ui_config.json     # UI layout configuration
 ├── personalities/
 │   ├── warrior_companion.txt
@@ -110,7 +110,7 @@ uv sync                    # Install dependencies
 ollama serve               # Runs on port 11434
 
 # Run game
-uv run server.py           # Game runs on port 8008
+uv run server.py           # Game runs on port 9009
 ```
 
 ## Development Workflow
@@ -165,7 +165,7 @@ curl http://localhost:11434/api/chat -d '{
 
 ```bash
 # Development
-uv run server.py           # Run game server (port 8008)
+uv run server.py           # Run game server (port 9009)
 uv run pytest              # Run tests
 
 # Ollama
@@ -185,7 +185,7 @@ flutter build web          # Build for production
 2. **Configuration Over Code**: Use JSON/assets instead of hardcoding
 3. **Web-First Development**: Fast iteration with hot-reload
 4. **Modular Components**: Clean separation (game/ui/ai)
-5. **Port 8008**: Standard port for this project
+5. **Port 9009**: Standard port for this project
 
 ## Recommended Models for NPCs
 

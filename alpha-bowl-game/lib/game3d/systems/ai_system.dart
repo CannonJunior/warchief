@@ -12,6 +12,7 @@ import '../../models/projectile.dart';
 import 'combat_system.dart';
 import '../ai/mcp_tools.dart';
 import '../utils/bezier_path.dart';
+import '../utils/culling_system.dart';
 
 /// AI System - Handles all NPC AI logic
 ///
@@ -555,6 +556,8 @@ class AISystem {
 
   /// Updates monster projectiles
   ///
+  /// PERFORMANCE OPTIMIZATION: Culls projectiles that leave field boundaries
+  ///
   /// Parameters:
   /// - dt: Time elapsed since last frame (in seconds)
   /// - gameState: Current game state to update
@@ -564,6 +567,11 @@ class AISystem {
     gameState.monsterProjectiles.removeWhere((projectile) {
       projectile.transform.position += projectile.velocity * dt;
       projectile.lifetime -= dt;
+
+      // PERFORMANCE: Cull projectiles that leave the field
+      if (!CullingSystem.isWithinFieldBounds(projectile.transform.position)) {
+        return true; // Remove off-field projectile
+      }
 
       // Check collision with player and allies using unified combat system
       final hitRegistered = CombatSystem.checkAndDamagePlayerOrAllies(
@@ -583,6 +591,8 @@ class AISystem {
 
   /// Updates ally projectiles
   ///
+  /// PERFORMANCE OPTIMIZATION: Culls projectiles that leave field boundaries
+  ///
   /// Parameters:
   /// - dt: Time elapsed since last frame (in seconds)
   /// - gameState: Current game state to update
@@ -593,6 +603,11 @@ class AISystem {
       ally.projectiles.removeWhere((projectile) {
         projectile.transform.position += projectile.velocity * dt;
         projectile.lifetime -= dt;
+
+        // PERFORMANCE: Cull projectiles that leave the field
+        if (!CullingSystem.isWithinFieldBounds(projectile.transform.position)) {
+          return true; // Remove off-field projectile
+        }
 
         // Check collision with monster using unified combat system
         final hitRegistered = CombatSystem.checkAndDamageMonster(

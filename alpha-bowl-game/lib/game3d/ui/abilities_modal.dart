@@ -341,6 +341,23 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
         return Colors.teal.shade700;
       case AbilityType.utility:
         return Colors.grey.shade700;
+      // Football-specific types
+      case AbilityType.pass:
+        return Colors.brown.shade700;
+      case AbilityType.evasion:
+        return Colors.lightBlue.shade700;
+      case AbilityType.power:
+        return Colors.red.shade900;
+      case AbilityType.tackle:
+        return Colors.red.shade800;
+      case AbilityType.passRush:
+        return Colors.deepOrange.shade700;
+      case AbilityType.kick:
+        return Colors.blueGrey.shade700;
+      case AbilityType.movement:
+        return Colors.yellow.shade700;
+      case AbilityType.protection:
+        return Colors.green.shade800;
     }
   }
 

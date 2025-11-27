@@ -1,12 +1,12 @@
 {
-    "name": "alpha_bowl_game",
-    "short_name": "alpha_bowl_game",
+    "name": "Alpha Bowl",
+    "short_name": "Alpha Bowl",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#1B5E20",
+    "theme_color": "#2E7D32",
+    "description": "Alpha Bowl - 3D Football Game with AI-powered teammates",
+    "orientation": "landscape-primary",
     "prefer_related_applications": false,
     "icons": [
         {

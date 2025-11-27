@@ -8,7 +8,7 @@ A real-time 3D American Football RPG game built with Flutter and Dart featuring 
 - **AI-Powered NPCs**: Control companions with high-level intent or direct commands
 - **Local LLM Integration**: Ollama + MCP for privacy-focused AI
 - **Asset-Based UI**: Easy SVG/PNG asset replacement with hot-reload
-- **Web-First Development**: Fast iteration on port 8008
+- **Web-First Development**: Fast iteration on port 9009
 
 ## Quick Start
 
@@ -33,10 +33,10 @@ ollama pull llama3.1:8b-instruct-q8_0
 
 # Or manually:
 cd alpha_bowl_game
-flutter run -d web-server --web-port=8008 --web-hostname=localhost
+flutter run -d web-server --web-port=9009 --web-hostname=localhost
 ```
 
-Then open your browser to: **http://localhost:8008**
+Then open your browser to: **http://localhost:9009**
 
 ## Project Structure
 
@@ -75,7 +75,7 @@ alpha-bowl/
 - [x] All systems integrated and working
 
 **🎮 Game is PLAYABLE!**
-Visit http://localhost:8008 after running `./start.sh`
+Visit http://localhost:9009 after running `./start.sh`
 
 **Next Up: Phase 2 (UI System)**
 - [ ] UI configuration system
@@ -93,13 +93,13 @@ Visit http://localhost:8008 after running `./start.sh`
 | State | Riverpod 2.6.1 |
 | AI/LLM | Ollama (local) |
 | Protocol | Model Context Protocol |
-| Port | **8008** |
+| Port | **9009** |
 
 ## Configuration
 
 ### Game Settings
 Edit `alpha_bowl_game/config/game_config.json`:
-- Server port (default: 8008)
+- Server port (default: 9009)
 - Ollama integration settings
 - Graphics options (FPS, zoom, tile size)
 - NPC AI settings
@@ -184,5 +184,5 @@ Private project - All rights reserved
 ---
 
 **Current Build**: v0.1.0 (Development)
-**Port**: 8008
+**Port**: 9009
 **Status**: Phase 1 Complete ✅

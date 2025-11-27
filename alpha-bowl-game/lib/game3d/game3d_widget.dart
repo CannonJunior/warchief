@@ -248,7 +248,7 @@ class _Game3DState extends State<Game3D> {
           : 16.67; // Default to ~60fps
       gameState.lastFrameTime = now;
 
-      // PERFORMANCE FIX: Frame rate limiting - skip frames if running too fast
+      // Frame rate limiting - skip frames if running too fast
       gameState.frameTimeAccumulator += dtMs;
       if (gameState.frameTimeAccumulator < GameState.targetFrameTime) {
         // Frame came too early, skip it
@@ -262,7 +262,7 @@ class _Game3DState extends State<Game3D> {
 
       // Log every 60 frames (~1 second at 60fps)
       if (gameState.frameCount % 60 == 0) {
-        print('Frame ${gameState.frameCount} - dt: ${dt.toStringAsFixed(4)}s - Terrain: ${gameState.terrainTiles?.length ?? 0} tiles');
+        print('Frame ${gameState.frameCount} - dt: ${dt.toStringAsFixed(4)}s');
       }
 
       _update(dt);
@@ -334,7 +334,19 @@ class _Game3DState extends State<Game3D> {
     // Handle player ability input
     AbilitySystem.handleAbility1Input(inputManager!.isActionPressed(GameAction.actionBar1), gameState);
     AbilitySystem.handleAbility2Input(inputManager!.isActionPressed(GameAction.actionBar2), gameState);
-    AbilitySystem.handleAbility3Input(inputManager!.isActionPressed(GameAction.actionBar3), gameState);
+
+    // Check spin direction: E (strafe right) = clockwise, Q (strafe left) = counter-clockwise
+    final strafeRight = inputManager!.isActionPressed(GameAction.strafeRight);
+    final strafeLeft = inputManager!.isActionPressed(GameAction.strafeLeft);
+    final spinClockwise = strafeRight; // E = clockwise
+    final spinCounterClockwise = strafeLeft; // Q = counter-clockwise
+
+    // Pass true for clockwise if E is pressed, false if Q is pressed or neither
+    AbilitySystem.handleAbility3Input(
+      inputManager!.isActionPressed(GameAction.actionBar3),
+      spinClockwise && !spinCounterClockwise, // Only clockwise if E pressed and Q not pressed
+      gameState
+    );
     // ===== END ABILITY SYSTEM =====
 
     // Update direction indicator position and rotation to match player
@@ -430,7 +442,11 @@ class _Game3DState extends State<Game3D> {
 
   void _activateAbility3() {
     setState(() {
-      AbilitySystem.handleAbility3Input(true, gameState);
+      // Check spin direction: E = clockwise, Q = counter-clockwise
+      final strafeRight = inputManager?.isActionPressed(GameAction.strafeRight) ?? false;
+      final strafeLeft = inputManager?.isActionPressed(GameAction.strafeLeft) ?? false;
+      final spinClockwise = strafeRight && !strafeLeft;
+      AbilitySystem.handleAbility3Input(true, spinClockwise, gameState);
     });
   }
 

@@ -99,7 +99,7 @@ final dynamic gl; // WebGL RenderingContext (typed as dynamic for compatibility)
 **Results**:
 ```bash
 ✅ Build successful: ~20 seconds
-✅ App runs: http://localhost:8008
+✅ App runs: http://localhost:9009
 ✅ No system freezing
 ✅ Stable performance
 ```

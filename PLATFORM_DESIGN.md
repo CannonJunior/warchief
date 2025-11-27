@@ -1019,7 +1019,7 @@ class _KeybindSettingsScreenState extends State<KeybindSettingsScreen> {
 ```json
 {
   "server": {
-    "port": 8008,
+    "port": 9009,
     "enable_hot_reload": true
   },
   "ollama": {

@@ -264,7 +264,7 @@ Example:
 
 ## Test Instructions
 
-1. Open browser to http://localhost:8008
+1. Open browser to http://localhost:9009
 2. Open browser console (F12) to check for errors
 3. Test each item systematically
 4. Mark items with ✅ or ❌

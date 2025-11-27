@@ -4,7 +4,7 @@
 
 **Completion Date**: 2025-10-29
 **Status**: ✅ FULLY PLAYABLE
-**Server**: http://localhost:8008
+**Server**: http://localhost:9009
 
 ---
 
@@ -141,7 +141,7 @@ cd /home/junior/src/alpha-bowl
 ./start.sh
 ```
 
-Then open: **http://localhost:8008**
+Then open: **http://localhost:9009**
 
 ### Controls
 | Key | Action |
@@ -237,7 +237,7 @@ Game Loop → IsometricMap renders tiles
 
 ## Testing Checklist ✅
 
-- [x] Game loads on http://localhost:8008
+- [x] Game loads on http://localhost:9009
 - [x] Isometric map visible (checkerboard pattern)
 - [x] Player character visible (blue circle)
 - [x] WASD movement works
@@ -315,7 +315,7 @@ Estimated: 1-2 weeks
 
 ## Performance Metrics
 
-**Measured on localhost:8008**
+**Measured on localhost:9009**
 - Average FPS: 60
 - Frame time: ~16ms
 - Tile count: 400 (20x20)
@@ -340,6 +340,6 @@ Phase 1 is **100% COMPLETE** with all goals achieved:
 
 **Repository**: `/home/junior/src/alpha-bowl`
 **Main Docs**: PLATFORM_DESIGN.md, README.md, TASK.md
-**Play Now**: `./start.sh` → http://localhost:8008
+**Play Now**: `./start.sh` → http://localhost:9009
 
 🎮 Happy gaming! 🎮

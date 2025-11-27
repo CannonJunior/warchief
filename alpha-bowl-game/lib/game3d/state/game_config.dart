@@ -132,24 +132,24 @@ class GameConfig {
 
   // ==================== PLAYER ABILITIES ====================
 
-  /// Ability 1: Sword (Melee)
-  static const double ability1CooldownMax = 1.5; // 1.5 seconds
-  static const double ability1Duration = 0.3; // Sword visible for 0.3 seconds
-  static const double ability1Range = 2.0; // Hit detection range
-  static const double ability1Damage = 25.0; // Sword damage per hit
-  static final Vector3 ability1ImpactColor = Vector3(0.8, 0.8, 0.9); // Silver/gray impact
-  static const double ability1ImpactSize = 0.5;
+  /// Ability 1: Bullet Pass (Quick Throw)
+  static const double ability1CooldownMax = 0.5; // 0.5 seconds - fast throw
+  static const double ability1Duration = 0.0; // Instant throw
+  static const double ability1Range = 15.0; // 15 yards
+  static const double ability1Damage = 0.0; // No damage - creates football
+  static final Vector3 ability1ImpactColor = Vector3(1.0, 1.0, 1.0); // White impact
+  static const double ability1ImpactSize = 0.3;
 
-  /// Ability 2: Fireball (Ranged Projectile)
+  /// Ability 2: Sprint (Speed Burst)
   static const double ability2CooldownMax = 3.0; // 3 seconds
-  static const double ability2ProjectileSpeed = 10.0; // units per second
-  static const double ability2ProjectileSize = 0.4;
-  static const double ability2Damage = 20.0;
-  static final Vector3 ability2ProjectileColor = Vector3(1.0, 0.4, 0.0); // Orange
+  static const double ability2Duration = 2.0; // Sprint lasts 2 seconds
+  static const double ability2SpeedMultiplier = 1.75; // 75% speed boost (1.75x)
+  static final Vector3 ability2EffectColor = Vector3(1.0, 1.0, 0.0); // Yellow
 
-  /// Ability 3: Heal
-  static const double ability3CooldownMax = 10.0; // 10 seconds
-  static const double ability3HealAmount = 20.0;
+  /// Ability 3: Spin Move (Evasion)
+  static const double ability3CooldownMax = 2.5; // 2.5 seconds
+  static const double ability3Duration = 0.4; // Spin animation duration
+  static final Vector3 ability3EffectColor = Vector3(0.5, 0.8, 1.0); // Light blue
 
   // ==================== PROJECTILE CONFIGURATION ====================
 

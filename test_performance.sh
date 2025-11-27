@@ -5,7 +5,7 @@
 
 set +e  # Don't exit on error
 
-PORT=8008
+PORT=9009
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TIMEOUT=10  # 10 second timeout
 
@@ -17,7 +17,7 @@ echo "⚠️  WARNING: This will run for ONLY $TIMEOUT seconds"
 echo "    then automatically kill the process"
 echo ""
 
-# Check if port 8008 is in use
+# Check if port 9009 is in use
 echo "Checking if port $PORT is available..."
 PORT_PID=$(lsof -ti:$PORT 2>/dev/null || echo "")
 
@@ -128,7 +128,7 @@ echo ""
 echo "Full log: $LOG_FILE"
 echo ""
 
-# Clean up any remaining processes on port 8008
+# Clean up any remaining processes on port 9009
 PORT_PID=$(lsof -ti:$PORT 2>/dev/null || echo "")
 if [ ! -z "$PORT_PID" ]; then
     echo "🧹 Cleaning up port $PORT (PID: $PORT_PID)..."

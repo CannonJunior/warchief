@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Alpha Bowl Game Start Script
-# Checks if port 8008 is in use and kills the process if needed
+# Checks if port 9009 is in use and kills the process if needed
 # Then starts the Flutter web server
 
 set -e
 
-PORT=8008
+PORT=9009
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "========================================="
@@ -14,7 +14,7 @@ echo "  Alpha Bowl 3D Football Game Launcher"
 echo "========================================="
 echo ""
 
-# Check if port 8008 is in use
+# Check if port 9009 is in use
 echo "Checking if port $PORT is available..."
 PORT_PID=$(lsof -ti:$PORT 2>/dev/null || echo "")
 
@@ -66,5 +66,5 @@ echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-# Start Flutter web server on port 8008
+# Start Flutter web server on port 9009
 flutter run -d web-server --web-port=$PORT --web-hostname=localhost

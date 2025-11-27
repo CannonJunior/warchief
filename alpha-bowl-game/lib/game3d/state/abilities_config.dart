@@ -2,6 +2,7 @@ import 'package:vector_math/vector_math.dart';
 
 /// Ability type enumeration
 enum AbilityType {
+  // Legacy types (keep for compatibility)
   melee,      // Close-range physical attacks
   ranged,     // Projectile-based attacks
   heal,       // Health restoration
@@ -12,6 +13,16 @@ enum AbilityType {
   channeled,  // Requires standing still to cast
   summon,     // Creates temporary units
   utility,    // Non-combat abilities (movement, vision, etc.)
+
+  // Football-specific types
+  pass,       // Throwing the football
+  evasion,    // Avoid tackles and defenders
+  power,      // Physical, strength-based moves
+  tackle,     // Defensive takedown maneuvers
+  passRush,   // Defensive line pressure techniques
+  kick,       // Special teams kicking
+  movement,   // Speed and agility abilities
+  protection, // Blocking and ball security
 }
 
 /// Status effect type enumeration
@@ -96,49 +107,60 @@ class AbilityData {
 class AbilitiesConfig {
   AbilitiesConfig._(); // Private constructor
 
-  // ==================== PLAYER ABILITIES ====================
+  // ==================== PLAYER ABILITIES (FOOTBALL) ====================
 
-  /// Player Ability 1: Sword (Melee Attack)
-  static final playerSword = AbilityData(
-    name: 'Sword',
-    description: 'A swift melee attack that damages nearby enemies',
-    type: AbilityType.melee,
-    damage: 25.0,
-    cooldown: 1.5,
-    duration: 0.3,
-    range: 2.0,
-    color: Vector3(0.7, 0.7, 0.8), // Gray metallic
-    impactColor: Vector3(0.8, 0.8, 0.9), // Silver
-    impactSize: 0.5,
+  /// Player Ability 1: Bullet Pass (Quick Throw)
+  static final bulletPass = AbilityData(
+    name: 'Bullet Pass',
+    description: 'Fast, short-range throw with high velocity',
+    type: AbilityType.pass,
+    damage: 0.0, // No damage - this creates a football projectile
+    cooldown: 0.5,
+    range: 15.0, // 15 yards
+    color: Vector3(0.6, 0.4, 0.2), // Brown football
+    impactColor: Vector3(1.0, 1.0, 1.0), // White impact
+    impactSize: 0.3,
+    projectileSpeed: 20.0, // Fast throw
+    projectileSize: 0.2,
+    category: 'offense',
   );
 
-  /// Player Ability 2: Fireball (Ranged Projectile)
-  static final playerFireball = AbilityData(
-    name: 'Fireball',
-    description: 'Launches a blazing projectile at enemies',
-    type: AbilityType.ranged,
-    damage: 20.0,
+  /// Player Ability 2: Sprint (Speed Burst)
+  static final sprint = AbilityData(
+    name: 'Sprint',
+    description: 'Explosive burst of speed for 2 seconds',
+    type: AbilityType.movement,
+    damage: 0.0,
     cooldown: 3.0,
-    range: 50.0, // Max travel distance
-    color: Vector3(1.0, 0.4, 0.0), // Orange
-    impactColor: Vector3(1.0, 0.5, 0.0), // Orange-yellow
-    impactSize: 0.8,
-    projectileSpeed: 10.0,
-    projectileSize: 0.4,
+    duration: 2.0, // 2 second sprint
+    color: Vector3(1.0, 1.0, 0.0), // Yellow speed lines
+    impactColor: Vector3(1.0, 1.0, 0.0), // Yellow
+    impactSize: 0.5,
+    statusEffect: StatusEffect.haste,
+    statusDuration: 2.0,
+    statusStrength: 0.75, // 75% speed boost
+    category: 'universal',
   );
 
-  /// Player Ability 3: Heal (Self Heal)
-  static final playerHeal = AbilityData(
-    name: 'Heal',
-    description: 'Restores health over time',
-    type: AbilityType.heal,
-    cooldown: 10.0,
-    duration: 1.0,
-    healAmount: 20.0,
-    color: Vector3(0.5, 1.0, 0.3), // Green/yellow
-    impactColor: Vector3(0.3, 1.0, 0.5), // Green glow
-    impactSize: 1.5,
+  /// Player Ability 3: Spin-out (Evasion)
+  static final spinMove = AbilityData(
+    name: 'Spin-out',
+    description: '360° spin to evade tackle attempt',
+    type: AbilityType.evasion,
+    damage: 0.0,
+    cooldown: 2.5,
+    duration: 0.4, // Spin animation duration
+    range: 1.0, // Evasion radius
+    color: Vector3(0.5, 0.8, 1.0), // Light blue swirl
+    impactColor: Vector3(0.3, 0.6, 1.0), // Blue
+    impactSize: 0.8,
+    category: 'offense',
   );
+
+  // Legacy aliases for backwards compatibility
+  static final playerSword = bulletPass; // Deprecated
+  static final playerFireball = bulletPass; // Deprecated
+  static final playerHeal = sprint; // Deprecated
 
   // ==================== MONSTER ABILITIES ====================
 
@@ -841,21 +863,6 @@ class AbilitiesConfig {
   );
 
   // ==================== UTILITY/MOVEMENT ABILITIES ====================
-
-  /// Sprint - Movement speed buff
-  static final sprint = AbilityData(
-    name: 'Sprint',
-    description: 'Greatly increases movement speed temporarily',
-    type: AbilityType.buff,
-    cooldown: 30.0,
-    duration: 8.0,
-    color: Vector3(0.9, 0.9, 0.3), // Yellow
-    impactColor: Vector3(1.0, 1.0, 0.5), // Bright yellow
-    impactSize: 0.6,
-    statusEffect: StatusEffect.haste,
-    statusStrength: 1.5, // 50% speed increase
-    category: 'utility',
-  );
 
   /// Battle Shout - AoE damage buff for allies
   static final battleShout = AbilityData(

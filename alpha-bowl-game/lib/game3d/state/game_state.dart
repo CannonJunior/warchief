@@ -161,31 +161,37 @@ class GameState {
   final double groundLevel = GameConfig.groundLevel;
   bool jumpKeyWasPressed = false; // Track previous jump key state
 
-  // ==================== ABILITY 1: SWORD ====================
+  // ==================== ABILITY 1: BULLET PASS ====================
 
   double ability1Cooldown = 0.0;
   final double ability1CooldownMax = GameConfig.ability1CooldownMax;
   bool ability1Active = false;
   double ability1ActiveTime = 0.0;
   final double ability1Duration = GameConfig.ability1Duration;
-  bool ability1HitRegistered = false; // Prevent multiple hits per swing
-  Mesh? swordMesh;
+  bool ability1HitRegistered = false; // Prevent multiple hits
+  Mesh? swordMesh; // Reused for visual effects
   Transform3d? swordTransform;
 
-  // ==================== ABILITY 2: FIREBALL ====================
+  // ==================== ABILITY 2: SPRINT ====================
 
   double ability2Cooldown = 0.0;
   final double ability2CooldownMax = GameConfig.ability2CooldownMax;
-  List<Projectile> fireballs = []; // List of active fireballs
+  bool ability2Active = false;
+  double ability2ActiveTime = 0.0;
+  List<Projectile> fireballs = []; // Reused for football projectiles (Bullet Pass)
 
-  // ==================== ABILITY 3: HEAL ====================
+  // ==================== ABILITY 3: SPIN-OUT ====================
 
   double ability3Cooldown = 0.0;
   final double ability3CooldownMax = GameConfig.ability3CooldownMax;
   bool ability3Active = false;
   double ability3ActiveTime = 0.0;
-  final double ability3Duration = 1.0; // Heal effect duration
-  Mesh? healEffectMesh;
+  final double ability3Duration = GameConfig.ability3Duration;
+  bool ability3SpinClockwise = false; // Spin direction (true = clockwise, false = counter-clockwise)
+  Vector3? ability3PivotPoint; // Pivot point for orbital spinning (left edge for CCW, right edge for CW)
+  Vector3? ability3StartPosition; // Player position at start of spin
+  double ability3StartRotation = 0.0; // Player rotation at start of spin
+  Mesh? healEffectMesh; // Reused for visual effects
   Transform3d? healEffectTransform;
 
   // ==================== VISUAL EFFECTS ====================
@@ -203,8 +209,8 @@ class GameState {
   DateTime? lastFrameTime;
   int frameCount = 0;
 
-  // PERFORMANCE FIX: Frame rate limiting (cap at 60 FPS)
-  static const double targetFrameTime = 1000 / 60; // ~16.67ms per frame
+  // Frame rate limiting - target 60 FPS
+  static const double targetFrameTime = 1000 / 60; // ~16.67ms per frame for 60 FPS
   double frameTimeAccumulator = 0.0;
 
   // PERFORMANCE FIX: AI throttling (run every 100ms instead of every frame)

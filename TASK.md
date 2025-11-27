@@ -19,11 +19,11 @@
 - **Deliverables**:
   - PLATFORM_DESIGN.md (comprehensive architecture document)
   - QUICK_START.md (developer quick reference)
-  - Updated CLAUDE.md (port changed from 8888 to 8008)
+  - Updated CLAUDE.md (port changed from 8888 to 9009)
 
 #### Phase 1 Setup (Started 2025-10-29)
 **Task**: Set up Flutter web project with Flame engine
-- ✅ Created start.sh script with port 8008 checking/killing
+- ✅ Created start.sh script with port 9009 checking/killing
 - ✅ Initialized Flutter project with web platform
 - ✅ Set up pubspec.yaml with all dependencies (Flame, Riverpod, etc.)
 - ✅ Created complete project directory structure (lib/game, lib/ui, lib/ai, etc.)
@@ -32,12 +32,12 @@
 - ✅ Implemented basic WarchiefGame class with Flame
 - ✅ Created main.dart entry point with Riverpod
 - ✅ Added development overlay UI with control hints
-- ✅ Tested and verified server runs on port 8008
+- ✅ Tested and verified server runs on port 9009
 - **Deliverables**:
   - start.sh (automated startup script)
   - alpha_bowl_game/ (complete Flutter project)
   - README.md (project overview)
-  - Working game skeleton running on http://localhost:8008
+  - Working game skeleton running on http://localhost:9009
 
 #### Phase 1 Core Features (Completed 2025-10-29)
 **Task**: Implement core game infrastructure with WASD movement, camera, and isometric rendering
@@ -143,9 +143,9 @@
 
 ## Notes
 
-- Project uses **port 8008** (not 8888)
+- Project uses **port 9009** (not 8888)
 - Always use **uv** instead of pip for package management
-- All new directories need CLAUDE.md with port 8008 requirement
+- All new directories need CLAUDE.md with port 9009 requirement
 - Create Pytest unit tests for all new features
 - Never create files longer than 500 lines - refactor instead
 - Use venv_linux for Python commands

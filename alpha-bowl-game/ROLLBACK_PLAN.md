@@ -117,7 +117,7 @@ After any rollback, verify game still works:
 
 2. **Run the game**
    ```bash
-   flutter run -d web-server --web-port=8008
+   flutter run -d web-server --web-port=9009
    ```
 
 3. **Test critical paths**
