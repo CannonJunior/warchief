@@ -190,14 +190,14 @@ class AbilitySystem {
 
   /// Handles Ability 3 (Spin-out) input
   ///
-  /// Activates spin evasion move if cooldown is ready.
-  /// Spin direction is determined by current movement:
-  /// - Clockwise (E key): Spins around right edge
-  /// - Counter-clockwise (Q key or default): Spins around left edge
+  /// Activates lateral evasion move if cooldown is ready.
+  /// Movement direction is determined by strafe input:
+  /// - E key: Displace right
+  /// - Q key: Displace left
   ///
   /// Parameters:
   /// - ability3KeyPressed: Whether the ability 3 key is currently pressed
-  /// - spinClockwise: True for clockwise (E), false for counter-clockwise (Q or default)
+  /// - spinClockwise: True for right displacement (E), false for left displacement (Q)
   /// - gameState: Current game state to update
   static void handleAbility3Input(bool ability3KeyPressed, bool spinClockwise, GameState gameState) {
     if (ability3KeyPressed &&
@@ -211,32 +211,11 @@ class AbilitySystem {
       gameState.ability3Cooldown = gameState.ability3CooldownMax;
       gameState.ability3SpinClockwise = spinClockwise;
 
-      // Store initial position and rotation
+      // Store initial position
       gameState.ability3StartPosition = gameState.playerTransform!.position.clone();
-      gameState.ability3StartRotation = gameState.playerRotation;
 
-      // Calculate pivot point based on spin direction
-      // Player size is 0.5, so edge is 0.25 units from center
-      final playerRadius = GameConfig.playerSize / 2.0;
-
-      // Get perpendicular direction (90 degrees from facing direction)
-      // For counter-clockwise: pivot on LEFT edge (add 90 degrees)
-      // For clockwise: pivot on RIGHT edge (subtract 90 degrees)
-      final pivotAngle = spinClockwise
-          ? gameState.playerRotation - 90  // Right edge
-          : gameState.playerRotation + 90; // Left edge
-
-      final pivotAngleRad = _radians(pivotAngle);
-      final pivotOffset = Vector3(
-        -math.sin(pivotAngleRad) * playerRadius,
-        0,
-        -math.cos(pivotAngleRad) * playerRadius,
-      );
-
-      gameState.ability3PivotPoint = gameState.ability3StartPosition! + pivotOffset;
-
-      final direction = spinClockwise ? 'clockwise around right edge' : 'counter-clockwise around left edge';
-      print('${spinMove.name} activated! Spinning $direction to evade tacklers...');
+      final direction = spinClockwise ? 'right' : 'left';
+      print('${spinMove.name} activated! Evading $direction...');
     }
   }
 
@@ -255,6 +234,37 @@ class AbilitySystem {
     final spinMove = AbilitiesConfig.spinMove;
 
     if (gameState.ability3ActiveTime >= spinMove.duration) {
+      // Spin complete - lock in final position at 180° orbit
+      if (gameState.playerTransform != null &&
+          gameState.ability3PivotPoint != null &&
+          gameState.ability3StartPosition != null) {
+
+        final toPlayer = gameState.ability3StartPosition! - gameState.ability3PivotPoint!;
+        final radius = math.sqrt(toPlayer.x * toPlayer.x + toPlayer.z * toPlayer.z);
+        final initialAngle = math.atan2(toPlayer.x, toPlayer.z) * (180 / math.pi);
+
+        // Final position at 180° orbit
+        final finalAngle = gameState.ability3SpinClockwise
+            ? initialAngle + 180
+            : initialAngle - 180;
+
+        final finalAngleRad = _radians(finalAngle);
+
+        // Lock player at final orbital position
+        gameState.playerTransform!.position.x =
+            gameState.ability3PivotPoint!.x + (radius * math.sin(finalAngleRad));
+        gameState.playerTransform!.position.z =
+            gameState.ability3PivotPoint!.z + (radius * math.cos(finalAngleRad));
+
+        // Restore original facing direction (player ends facing forward)
+        gameState.playerRotation = gameState.ability3StartRotation;
+
+        // Reset scale
+        if (gameState.playerMesh != null) {
+          gameState.playerTransform!.scale = Vector3(1.0, 1.0, 1.0);
+        }
+      }
+
       gameState.ability3Active = false;
       print('${spinMove.name} completed!');
     } else if (gameState.playerTransform != null &&
@@ -263,9 +273,8 @@ class AbilitySystem {
       // Calculate spin progress (0 to 1)
       final spinProgress = gameState.ability3ActiveTime / spinMove.duration;
 
-      // Player rotates 360 degrees but only orbits 180 degrees around pivot
-      // This creates the football spin move where player ends up displaced by their width
-      final rotationAngle = spinProgress * 360; // Full 360° rotation
+      // Player orbits 180 degrees around pivot for lateral displacement
+      // Rotation stays at start angle to maintain forward facing direction
       final orbitalAngle = spinProgress * 180;  // Half 180° orbit (displacement)
 
       // Get initial angle from pivot to player
@@ -289,10 +298,10 @@ class AbilitySystem {
       gameState.playerTransform!.position.x = newX;
       gameState.playerTransform!.position.z = newZ;
 
-      // Rotate player by full 360 degrees (independent of orbital motion)
-      gameState.playerRotation = gameState.ability3StartRotation +
-                                  (gameState.ability3SpinClockwise ? rotationAngle : -rotationAngle);
-      gameState.playerRotation = gameState.playerRotation % 360;
+      // Maintain forward facing direction throughout spin
+      // Add a subtle rotation wobble for visual effect (360° spin that returns to start)
+      final visualSpinAngle = math.sin(spinProgress * 2 * math.pi) * 30; // ±30° wobble
+      gameState.playerRotation = gameState.ability3StartRotation + visualSpinAngle;
 
       // Visual effect: slightly increase player size during spin
       final spinScale = 1.0 + (math.sin(spinProgress * math.pi) * 0.15); // Pulse during spin

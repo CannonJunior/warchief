@@ -149,6 +149,9 @@ class GameState {
   /// Whether the abilities modal is currently open
   bool abilitiesModalOpen = false;
 
+  /// Whether the playbook modal is currently open
+  bool playbookModalOpen = false;
+
   // ==================== JUMP/PHYSICS STATE ====================
 
   bool isJumping = false;

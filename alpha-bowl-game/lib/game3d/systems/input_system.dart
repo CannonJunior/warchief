@@ -97,6 +97,9 @@ class InputSystem {
   ) {
     if (gameState.playerTransform == null) return;
 
+    // Disable movement during Spin-out ability (ability 3)
+    if (gameState.ability3Active) return;
+
     // W = Forward
     if (inputManager.isActionPressed(GameAction.moveForward)) {
       final forward = Vector3(

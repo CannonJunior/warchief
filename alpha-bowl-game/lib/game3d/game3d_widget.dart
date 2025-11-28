@@ -32,6 +32,7 @@ import 'ui/player_hud.dart';
 import 'ui/allies_panel.dart';
 import 'ui/ui_config.dart';
 import 'ui/abilities_modal.dart';
+import 'ui/playbook_modal.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -422,6 +423,16 @@ class _Game3DState extends State<Game3D> {
       return;
     }
 
+    // Handle O key for playbook modal (only on key down, not repeat)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyO) {
+      print('O key detected! Toggling playbook. Current state: ${gameState.playbookModalOpen}');
+      setState(() {
+        gameState.playbookModalOpen = !gameState.playbookModalOpen;
+        print('Playbook now: ${gameState.playbookModalOpen}');
+      });
+      return;
+    }
+
     if (inputManager != null) {
       inputManager!.handleKeyEvent(event);
     }
@@ -673,6 +684,16 @@ class _Game3DState extends State<Game3D> {
                 onClose: () {
                   setState(() {
                     gameState.abilitiesModalOpen = false;
+                  });
+                },
+              ),
+
+            // Playbook Modal (Press O to toggle)
+            if (gameState.playbookModalOpen)
+              PlaybookModal(
+                onClose: () {
+                  setState(() {
+                    gameState.playbookModalOpen = false;
                   });
                 },
               ),

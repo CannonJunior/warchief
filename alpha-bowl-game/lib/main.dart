@@ -23,7 +23,7 @@ class WarchiefApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Warchief - 3D Isometric Game',
+      title: 'Alpha Bowl - 3D Football Game',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -63,7 +63,7 @@ class GameScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    'Warchief v0.2.0 - 3D',
+                    'Alpha Bowl v0.0.11',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 12,
