@@ -128,6 +128,11 @@ class AISystem {
           _updateAllyFollowMode(dt, ally, gameState);
           break;
 
+        case AllyMovementMode.followPath:
+          // Follow waypoint path (for play execution)
+          _updateAllyPathFollowing(dt, ally, gameState);
+          break;
+
         case AllyMovementMode.commanded:
         case AllyMovementMode.tactical:
           // Follow current path if exists
@@ -150,6 +155,64 @@ class AISystem {
             }
           }
           break;
+      }
+    }
+  }
+
+  /// Helper to update ally in path following mode (for play execution)
+  static void _updateAllyPathFollowing(double dt, Ally ally, GameState gameState) {
+    if (ally.pathWaypoints == null || ally.pathWaypoints!.isEmpty) {
+      // No path to follow
+      ally.isMoving = false;
+      return;
+    }
+
+    // Check if all waypoints have been reached
+    if (ally.currentWaypointIndex >= ally.pathWaypoints!.length) {
+      // Path completed - stop moving
+      ally.isMoving = false;
+      return;
+    }
+
+    // Get current target waypoint
+    final targetWaypoint = ally.pathWaypoints![ally.currentWaypointIndex];
+    final currentPos = ally.transform.position;
+
+    // Calculate direction and distance to target
+    final toTarget = targetWaypoint - currentPos;
+    final distance = toTarget.length;
+
+    // Waypoint reached threshold (units)
+    const waypointReachedThreshold = 0.5;
+
+    if (distance < waypointReachedThreshold) {
+      // Reached current waypoint - advance to next
+      ally.currentWaypointIndex++;
+
+      if (ally.currentWaypointIndex >= ally.pathWaypoints!.length) {
+        // All waypoints reached
+        ally.isMoving = false;
+        return;
+      }
+    } else {
+      // Move toward current waypoint
+      final direction = toTarget.normalized();
+      final moveDistance = ally.moveSpeed * dt * 1.5; // Slightly faster for play execution
+      final moveVector = direction * moveDistance;
+
+      // Don't overshoot the waypoint
+      if (moveVector.length > distance) {
+        ally.transform.position = targetWaypoint.clone();
+      } else {
+        ally.transform.position = currentPos + moveVector;
+      }
+
+      ally.isMoving = true;
+
+      // Update rotation to face movement direction
+      ally.rotation = math.atan2(-direction.x, -direction.z) * (180 / math.pi);
+      if (ally.directionIndicatorTransform != null) {
+        ally.directionIndicatorTransform!.rotation.y = ally.rotation;
       }
     }
   }

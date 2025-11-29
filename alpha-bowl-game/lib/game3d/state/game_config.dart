@@ -42,11 +42,12 @@ class GameConfig {
   /// Player mesh size
   static const double playerSize = 0.5;
 
-  /// Player starting position
-  static final Vector3 playerStartPosition = Vector3(10, 0.5, 2);
+  /// Player starting position (own 35 yard line on football field)
+  /// 35 yards from own end zone, 65 yards from opponent's end zone
+  static final Vector3 playerStartPosition = Vector3(0, 0.5, -15);
 
-  /// Player starting rotation (degrees)
-  static const double playerStartRotation = 0.0;
+  /// Player starting rotation (degrees) - facing opposite direction down field
+  static const double playerStartRotation = 180.0;
 
   /// Player direction indicator size
   static const double playerDirectionIndicatorSize = 0.5;

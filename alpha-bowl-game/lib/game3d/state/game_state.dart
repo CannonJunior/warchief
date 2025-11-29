@@ -84,6 +84,17 @@ class GameState {
   /// Ball possession state
   bool ballCarrierHasBall = true;
 
+  // ==================== PLAYBOOK & SNAP STATE ====================
+
+  /// Currently loaded play name from Playbook
+  String? loadedPlayName;
+
+  /// Whether a play is currently snapped (ball is live)
+  bool playIsSnapped = false;
+
+  /// Player positions from loaded play (for action execution)
+  List<dynamic>? loadedPlayPositions; // List<PlayerPosition> from playbook
+
   // ==================== PLAYER STATE ====================
 
   Mesh? playerMesh;

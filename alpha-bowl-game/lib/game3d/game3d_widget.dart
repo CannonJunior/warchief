@@ -17,6 +17,7 @@ import '../ai/ollama_client.dart';
 import '../models/projectile.dart';
 import '../models/ally.dart';
 import '../models/ai_chat_message.dart';
+import '../models/football.dart';
 import 'state/game_config.dart';
 import 'state/game_state.dart';
 import 'state/abilities_config.dart';
@@ -553,6 +554,232 @@ class _Game3DState extends State<Game3D> {
     });
   }
 
+  /// Snap the ball to start the play
+  void _snapBall() {
+    if (gameState.activeFootball == null || gameState.loadedPlayPositions == null) {
+      print('Cannot snap: no football or loaded play');
+      return;
+    }
+
+    setState(() {
+      gameState.playIsSnapped = true;
+
+      // Find Center and QB positions from loaded play
+      final positions = gameState.loadedPlayPositions as List<dynamic>;
+
+      // Find Center (ball carrier)
+      final centerPos = positions.firstWhere(
+        (p) => p.abbreviation == 'C',
+        orElse: () => null,
+      );
+
+      // Find QB (snap target) - or designated snap target
+      var snapTarget = positions.firstWhere(
+        (p) => p.abbreviation == 'QB',
+        orElse: () => null,
+      );
+
+      // If no QB found, snap to first backfield player (RB/FB)
+      snapTarget ??= positions.firstWhere(
+        (p) => p.abbreviation == 'RB' || p.abbreviation == 'FB',
+        orElse: () => null,
+      );
+
+      if (centerPos == null || snapTarget == null) {
+        print('Cannot snap: Center or snap target not found');
+        return;
+      }
+
+      // Find corresponding ally positions on field for Center and snap target
+      Ally? centerAlly;
+      Ally? targetAlly;
+
+      for (int i = 0; i < gameState.allies.length; i++) {
+        final pos = positions[i];
+        if (pos.abbreviation == 'C') {
+          centerAlly = gameState.allies[i];
+        } else if (pos.abbreviation == snapTarget.abbreviation) {
+          targetAlly = gameState.allies[i];
+        }
+      }
+
+      if (centerAlly == null || targetAlly == null) {
+        print('Cannot snap: Center or target ally not found on field');
+        return;
+      }
+
+      // Calculate snap velocity (from Center to QB)
+      final centerPosition = centerAlly.transform.position;
+      final targetPosition = targetAlly.transform.position;
+      final snapDirection = (targetPosition - centerPosition).normalized();
+      final snapSpeed = 15.0; // Fast snap speed
+      final snapVelocity = snapDirection * snapSpeed;
+
+      // Update football to be a moving projectile (snap)
+      gameState.activeFootball!.velocity = snapVelocity;
+      gameState.activeFootball!.state = FootballState.inFlight;
+      gameState.activeFootball!.timeInFlight = 0.0;
+      gameState.ballCarrierHasBall = false;
+
+      print('SNAP! Ball snapped from Center to ${snapTarget.abbreviation}');
+      print('Ball velocity: ${snapVelocity}');
+
+      // Start executing player actions (routes, blocks, runs)
+      _executePlayerActions();
+    });
+  }
+
+  /// Execute player actions from the loaded play
+  void _executePlayerActions() {
+    if (gameState.loadedPlayPositions == null) return;
+
+    final positions = gameState.loadedPlayPositions as List<dynamic>;
+
+    for (int i = 0; i < positions.length && i < gameState.allies.length; i++) {
+      final playerPos = positions[i];
+      final ally = gameState.allies[i];
+
+      // Skip if no action assigned
+      if (playerPos.assignedAction == null) {
+        print('${playerPos.abbreviation}: No action assigned');
+        continue;
+      }
+
+      final action = playerPos.assignedAction as String;
+      final isFlipped = playerPos.actionFlipped ?? false;
+
+      print('${playerPos.abbreviation}: Executing ${action}${isFlipped ? " (flipped)" : ""}');
+
+      // Get action visual definition from playbook
+      final actionPath = _getActionVisualPath(action);
+
+      if (actionPath != null) {
+        // Convert action path to 3D movement path for ally
+        _setAllyActionPath(ally, actionPath, isFlipped, playerPos.abbreviation);
+      } else {
+        print('Warning: No visual path found for action: ${action}');
+      }
+    }
+  }
+
+  /// Get action visual path from playbook action definitions
+  List<Map<String, dynamic>>? _getActionVisualPath(String actionName) {
+    // Import action definitions from PlaybookModal
+    // These are the same visual definitions used in the playbook
+
+    // Routes
+    final routes = {
+      'Go': [
+        {'x': 0.0, 'y': -200.0}, // Straight downfield
+      ],
+      'Post': [
+        {'x': 0.0, 'y': -80.0},
+        {'x': -60.0, 'y': -140.0}, // Cut toward middle
+      ],
+      'Corner': [
+        {'x': 0.0, 'y': -80.0},
+        {'x': 60.0, 'y': -140.0}, // Cut toward sideline
+      ],
+      'Slant': [
+        {'x': 40.0, 'y': -60.0}, // Quick diagonal cut
+      ],
+      'Out': [
+        {'x': 0.0, 'y': -40.0},
+        {'x': 80.0, 'y': -40.0}, // Break to sideline
+      ],
+      'In': [
+        {'x': 0.0, 'y': -40.0},
+        {'x': -80.0, 'y': -40.0}, // Break to middle
+      ],
+      'Curl': [
+        {'x': 0.0, 'y': -80.0},
+        {'x': 0.0, 'y': -60.0}, // Run then come back
+      ],
+      'Flat': [
+        {'x': 60.0, 'y': -20.0}, // Quick out to flat
+      ],
+    };
+
+    // Blocks
+    final blocks = {
+      'Drive Block': [
+        {'x': 0.0, 'y': -30.0}, // Push forward
+      ],
+      'Pull Block': [
+        {'x': 80.0, 'y': -20.0}, // Pull to the side
+      ],
+      'Reach Block': [
+        {'x': 40.0, 'y': -10.0}, // Reach to outside
+      ],
+      'Down Block': [
+        {'x': -40.0, 'y': -10.0}, // Block down inside
+      ],
+      'Pass Block': [
+        {'x': 0.0, 'y': -10.0}, // Slight backpedal
+      ],
+    };
+
+    // Runs
+    final runs = {
+      'Dive': [
+        {'x': 0.0, 'y': -60.0}, // Straight ahead
+      ],
+      'Sweep': [
+        {'x': 100.0, 'y': -40.0}, // Wide to sideline
+      ],
+      'Power': [
+        {'x': 40.0, 'y': -60.0}, // Power to hole
+      ],
+      'Counter': [
+        {'x': -30.0, 'y': 10.0}, // Fake one way
+        {'x': 60.0, 'y': -60.0}, // Cut back other way
+      ],
+    };
+
+    // Check all action categories
+    if (routes.containsKey(actionName)) return routes[actionName];
+    if (blocks.containsKey(actionName)) return blocks[actionName];
+    if (runs.containsKey(actionName)) return runs[actionName];
+
+    return null;
+  }
+
+  /// Set ally to follow action path in 3D space
+  void _setAllyActionPath(Ally ally, List<Map<String, dynamic>> actionPath, bool isFlipped, String position) {
+    // Convert playbook 2D path to 3D field coordinates
+    final startPosition = ally.transform.position.clone();
+
+    // Build 3D waypoints from 2D action path
+    final waypoints = <Vector3>[];
+    waypoints.add(startPosition); // Start at current position
+
+    // Playbook scaling: 1 yard = 13.33 pixels in playbook
+    final yardsPerPixel = 30.0 / 400.0; // 30 yards over 400 pixels
+    final fieldWidth = 50.0;
+
+    for (final segment in actionPath) {
+      final pixelX = (segment['x'] as double) * (isFlipped ? -1 : 1); // Flip X if needed
+      final pixelY = segment['y'] as double;
+
+      // Convert to yards
+      final yardsX = pixelX * yardsPerPixel;
+      final yardsY = pixelY * yardsPerPixel;
+
+      // Scale to game field coordinates
+      final fieldX = startPosition.x + (yardsX * (fieldWidth / 53.33)); // Scale to field width
+      final fieldZ = startPosition.z + yardsY; // Y in playbook = Z in game
+
+      waypoints.add(Vector3(fieldX, 0.4, fieldZ));
+    }
+
+    // Set ally to follow this path
+    ally.movementMode = AllyMovementMode.followPath;
+    ally.pathWaypoints = waypoints;
+    ally.currentWaypointIndex = 0;
+
+    print('${position} executing path with ${waypoints.length} waypoints');
+  }
+
   /// Add a new ally with a random ability
   void _addAlly() {
     setState(() {
@@ -618,6 +845,161 @@ class _Game3DState extends State<Game3D> {
     });
   }
 
+  /// Spawn units from playbook onto the field
+  void _spawnPlaybookUnits(List<PlayerPosition> players, String? playName) {
+    setState(() {
+      // Store loaded play data
+      gameState.loadedPlayName = playName;
+      gameState.loadedPlayPositions = players;
+      gameState.playIsSnapped = false;
+
+      // Clear existing allies
+      gameState.allies.clear();
+
+      // The playbook modal field represents 30 yards (10 behind LOS, 20 downfield)
+      // Playbook dimensions: 700x400 pixels
+      // LOS is at y=266.67 (2/3 from top)
+
+      final playbookWidth = 700.0;
+      final playbookHeight = 400.0;
+      final playbookLOS = 266.67; // Line of scrimmage in playbook (pixels)
+
+      // Field width: 53.33 yards = ~50 game units
+      final fieldWidth = 50.0;
+
+      // Playbook represents 30 yards total depth
+      final playbookYards = 30.0;
+      final yardsPerPixel = playbookYards / playbookHeight; // 30 yards / 400 pixels = 0.075 yards/pixel
+
+      // Player is at z=-15, let's position LOS at z=-9 (6 yards ahead of player/QB)
+      final gameLOS = -9.0;
+
+      for (final player in players) {
+        // Convert playbook X to field X (centered)
+        // Playbook X (0-700) -> Field X (-25 to 25)
+        final fieldX = ((player.position.x / playbookWidth) - 0.5) * fieldWidth;
+
+        // Convert playbook Y to field Z
+        // Playbook Y coordinates: Top (0) = +20 yards, Middle (266.67) = LOS (0), Bottom (400) = -10 yards
+        // Calculate yards from LOS in playbook
+        final pixelsFromLOS = player.position.y - playbookLOS;
+        final yardsFromLOS = pixelsFromLOS * yardsPerPixel;
+
+        // Map to game field position relative to game LOS
+        final fieldZ = gameLOS + yardsFromLOS;
+
+        // Create ally mesh with different colors based on position
+        final color = _getPositionColor(player.abbreviation);
+        final allyMesh = Mesh.cube(
+          size: 0.8,
+          color: color,
+        );
+
+        final allyTransform = Transform3d(
+          position: Vector3(fieldX, 0.4, fieldZ),
+          scale: Vector3(1, 1, 1),
+        );
+
+        // Assign ability based on player position/action
+        final abilityIndex = _getAbilityForPosition(player);
+
+        final ally = Ally(
+          mesh: allyMesh,
+          transform: allyTransform,
+          rotation: math.pi, // 180 degrees - face downfield toward opponent's end zone
+          abilityIndex: abilityIndex,
+          health: 50.0,
+          maxHealth: 50.0,
+          abilityCooldown: 0.0,
+          abilityCooldownMax: 5.0,
+          aiTimer: 0.0,
+          movementMode: AllyMovementMode.stationary,
+        );
+
+        gameState.allies.add(ally);
+      }
+
+      // Create football at line of scrimmage (center of field, at LOS)
+      // Football positioned at ground level at the LOS
+      final footballMesh = Mesh.cube(
+        size: 0.3, // Small football size
+        color: Vector3(0.6, 0.4, 0.2), // Brown football color
+      );
+
+      final footballPosition = Vector3(0, 0.15, gameLOS); // Center X, on ground, at LOS Z
+
+      final footballTransform = Transform3d(
+        position: footballPosition,
+        scale: Vector3(0.4, 0.3, 0.6), // Ellipsoid shape
+      );
+
+      // Create football entity (not active/thrown yet, just placed at LOS)
+      gameState.activeFootball = Football(
+        position: footballPosition,
+        velocity: Vector3.zero(),
+        mesh: footballMesh,
+        transform: footballTransform,
+        state: FootballState.carried, // Ball is at center, not in flight
+        timeInFlight: 0.0,
+        maxFlightTime: 999.0, // Won't auto-incomplete while on ground
+      );
+
+      print('Spawned ${gameState.allies.length} units from playbook onto field');
+      print('Loaded play: ${playName ?? "unnamed"}');
+      print('Football placed at LOS (z=${gameLOS})');
+    });
+  }
+
+  /// Get color for position type
+  Vector3 _getPositionColor(String abbreviation) {
+    // QB - Red
+    if (abbreviation == 'QB') return Vector3(1.0, 0.3, 0.3);
+
+    // RB/FB - Orange
+    if (abbreviation == 'RB' || abbreviation == 'FB') return Vector3(1.0, 0.6, 0.2);
+
+    // Offensive Line - Blue
+    if (abbreviation == 'LT' || abbreviation == 'LG' || abbreviation == 'C' ||
+        abbreviation == 'RG' || abbreviation == 'RT') return Vector3(0.3, 0.5, 1.0);
+
+    // TE - Cyan
+    if (abbreviation == 'TE') return Vector3(0.3, 0.8, 0.8);
+
+    // WR - Yellow/Green
+    if (abbreviation == 'WR1' || abbreviation == 'WR2') return Vector3(0.5, 1.0, 0.3);
+
+    // Default - Light blue
+    return Vector3(0.4, 0.7, 1.0);
+  }
+
+  /// Get ability index based on player position and assigned action
+  int _getAbilityForPosition(PlayerPosition player) {
+    // If the player has an assigned action, try to map it to an ability
+    if (player.assignedAction != null) {
+      final action = player.assignedAction!;
+
+      // Routes get Fireball (ranged attack)
+      if (action.contains('Route') || action.contains('Go') || action.contains('Post') ||
+          action.contains('Corner') || action.contains('Fly')) {
+        return 1; // Fireball
+      }
+
+      // Blocks get Sword (melee)
+      if (action.contains('Block')) {
+        return 0; // Sword
+      }
+    }
+
+    // Default assignments based on position
+    if (player.abbreviation == 'QB') return 1; // Fireball
+    if (player.abbreviation == 'RB' || player.abbreviation == 'FB') return 0; // Sword
+    if (player.abbreviation == 'WR1' || player.abbreviation == 'WR2') return 1; // Fireball
+    if (player.abbreviation == 'TE') return 0; // Sword
+
+    // Offensive line gets random
+    return math.Random().nextInt(3);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Focus(
@@ -678,6 +1060,41 @@ class _Game3DState extends State<Game3D> {
               onRemoveAlly: _removeAlly,
             ),
 
+            // Snap Button (only shown when play is loaded)
+            if (gameState.loadedPlayName != null && !gameState.playIsSnapped)
+              Positioned(
+                bottom: 40,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Play: ${gameState.loadedPlayName}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          backgroundColor: Colors.black54,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      ElevatedButton(
+                        onPressed: _snapBall,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                          textStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                        child: Text('SNAP'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
             // Abilities Modal (Press P to toggle)
             if (gameState.abilitiesModalOpen)
               AbilitiesModal(
@@ -695,6 +1112,9 @@ class _Game3DState extends State<Game3D> {
                   setState(() {
                     gameState.playbookModalOpen = false;
                   });
+                },
+                onPractice: (players, playName) {
+                  _spawnPlaybookUnits(players, playName);
                 },
               ),
           ],

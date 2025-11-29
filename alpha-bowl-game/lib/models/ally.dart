@@ -1,3 +1,4 @@
+import 'package:vector_math/vector_math.dart';
 import '../rendering3d/mesh.dart';
 import '../rendering3d/math/transform3d.dart';
 import 'projectile.dart';
@@ -9,6 +10,7 @@ enum AllyMovementMode {
   followPlayer, // Follows player at buffer distance
   commanded, // Moves to commanded position
   tactical, // AI-controlled tactical movement
+  followPath, // Follows a predefined waypoint path (for play execution)
 }
 
 /// Ally - Represents an allied NPC character
@@ -32,6 +34,10 @@ class Ally {
   double moveSpeed;
   double followBufferDistance; // Distance to maintain from player when following
   bool isMoving;
+
+  // Waypoint following (for play execution)
+  List<Vector3>? pathWaypoints; // List of 3D waypoints to follow
+  int currentWaypointIndex = 0; // Current waypoint being pursued
 
   Ally({
     required this.mesh,
