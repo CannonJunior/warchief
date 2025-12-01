@@ -163,6 +163,9 @@ class GameState {
   /// Whether the playbook modal is currently open
   bool playbookModalOpen = false;
 
+  /// Whether the video panel is currently open
+  bool videoPanelOpen = false;
+
   // ==================== JUMP/PHYSICS STATE ====================
 
   bool isJumping = false;

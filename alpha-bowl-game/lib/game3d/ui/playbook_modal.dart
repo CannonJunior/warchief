@@ -819,12 +819,18 @@ class _PlaybookModalState extends State<PlaybookModal> {
                                             ),
                                           ),
 
-                                          // Action Path Visualizations
+                                          // Action Path Visualizations (with double-click to flip)
                                           Positioned.fill(
-                                            child: CustomPaint(
-                                              painter: ActionPathPainter(
-                                                players: players,
-                                                actionVisuals: actionVisuals,
+                                            child: GestureDetector(
+                                              onDoubleTapDown: (details) {
+                                                // Double-click on action path to flip it
+                                                _handleActionPathDoubleTap(details.localPosition);
+                                              },
+                                              child: CustomPaint(
+                                                painter: ActionPathPainter(
+                                                  players: players,
+                                                  actionVisuals: actionVisuals,
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -968,6 +974,91 @@ class _PlaybookModalState extends State<PlaybookModal> {
     ),
   );
 }
+
+  /// Handle double-tap on action path lines to flip the action
+  void _handleActionPathDoubleTap(Offset tapPosition) {
+    // Threshold distance in pixels for detecting tap on path
+    const double tapThreshold = 25.0;
+
+    // Check each player's action path
+    for (int i = 0; i < players.length; i++) {
+      final player = players[i];
+
+      // Skip players without assigned actions
+      if (player.assignedAction == null) continue;
+
+      // Get action definition
+      final actionDef = actionVisuals[player.assignedAction];
+      if (actionDef == null) continue;
+
+      // Player position
+      final playerPos = player.position;
+
+      // Check each segment of the action path
+      for (final segment in actionDef.segments) {
+        // Apply flip if action is currently flipped
+        final flipMultiplier = player.actionFlipped ? -1.0 : 1.0;
+
+        // Calculate segment start and end positions
+        final start = Offset(
+          playerPos.x + (segment.start.x * 30 * flipMultiplier),
+          playerPos.y + (segment.start.y * 30),
+        );
+        final end = Offset(
+          playerPos.x + (segment.end.x * 30 * flipMultiplier),
+          playerPos.y + (segment.end.y * 30),
+        );
+
+        // Calculate distance from tap to this line segment
+        final distance = _distanceToLineSegment(tapPosition, start, end);
+
+        // If tap is close enough to this segment, flip the action
+        if (distance < tapThreshold) {
+          setState(() {
+            player.actionFlipped = !player.actionFlipped;
+            // Update the appropriate data structure
+            if (selectedFormationIndex != null) {
+              if (selectedPlayIndex != null) {
+                formations[selectedFormationIndex!].plays[selectedPlayIndex!].players =
+                    players.map((p) => p.copy()).toList();
+              } else {
+                formations[selectedFormationIndex!].defaultPlayers =
+                    players.map((p) => p.copy()).toList();
+              }
+            }
+          });
+          _saveFormations();
+          return; // Only flip one action per double-click
+        }
+      }
+    }
+  }
+
+  /// Calculate distance from a point to a line segment
+  double _distanceToLineSegment(Offset point, Offset lineStart, Offset lineEnd) {
+    final dx = lineEnd.dx - lineStart.dx;
+    final dy = lineEnd.dy - lineStart.dy;
+
+    // If the line segment is actually a point
+    if (dx == 0 && dy == 0) {
+      return (point - lineStart).distance;
+    }
+
+    // Calculate the parameter t that determines the closest point on the line segment
+    final t = ((point.dx - lineStart.dx) * dx + (point.dy - lineStart.dy) * dy) / (dx * dx + dy * dy);
+
+    // Clamp t to [0, 1] to stay within the line segment
+    final tClamped = t.clamp(0.0, 1.0);
+
+    // Calculate the closest point on the line segment
+    final closestPoint = Offset(
+      lineStart.dx + tClamped * dx,
+      lineStart.dy + tClamped * dy,
+    );
+
+    // Return distance from the tap point to the closest point
+    return (point - closestPoint).distance;
+  }
 
   void _showContextMenu(BuildContext context, Offset position, int playerIndex) {
     final List<PopupMenuEntry> menuItems = <PopupMenuEntry>[

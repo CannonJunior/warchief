@@ -168,7 +168,7 @@ extension GameActionExtension on GameAction {
       case GameAction.cameraPitchDown:
         return LogicalKeyboardKey.keyM;
       case GameAction.cameraToggleMode:
-        return LogicalKeyboardKey.keyV;
+        return LogicalKeyboardKey.keyC;
       case GameAction.actionBar1:
         return LogicalKeyboardKey.digit1;
       case GameAction.actionBar2:

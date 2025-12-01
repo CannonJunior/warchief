@@ -34,6 +34,7 @@ import 'ui/allies_panel.dart';
 import 'ui/ui_config.dart';
 import 'ui/abilities_modal.dart';
 import 'ui/playbook_modal.dart';
+import 'ui/video_panel.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -414,8 +415,14 @@ class _Game3DState extends State<Game3D> {
   }
 
   void _onKeyEvent(KeyEvent event) {
-    // Handle P key for abilities modal (only on key down, not repeat)
-    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyP) {
+    // Check if any modifier keys are pressed (CTRL, ALT, SHIFT, META)
+    final hasModifiers = HardwareKeyboard.instance.isControlPressed ||
+                         HardwareKeyboard.instance.isAltPressed ||
+                         HardwareKeyboard.instance.isShiftPressed ||
+                         HardwareKeyboard.instance.isMetaPressed;
+
+    // Handle P key for abilities modal (only on key down, not repeat, no modifiers)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyP && !hasModifiers) {
       print('P key detected! Toggling modal. Current state: ${gameState.abilitiesModalOpen}');
       setState(() {
         gameState.abilitiesModalOpen = !gameState.abilitiesModalOpen;
@@ -424,12 +431,22 @@ class _Game3DState extends State<Game3D> {
       return;
     }
 
-    // Handle O key for playbook modal (only on key down, not repeat)
-    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyO) {
+    // Handle O key for playbook modal (only on key down, not repeat, no modifiers)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyO && !hasModifiers) {
       print('O key detected! Toggling playbook. Current state: ${gameState.playbookModalOpen}');
       setState(() {
         gameState.playbookModalOpen = !gameState.playbookModalOpen;
         print('Playbook now: ${gameState.playbookModalOpen}');
+      });
+      return;
+    }
+
+    // Handle V key for video panel (only on key down, not repeat, no modifiers)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyV && !hasModifiers) {
+      print('V key detected! Toggling video panel. Current state: ${gameState.videoPanelOpen}');
+      setState(() {
+        gameState.videoPanelOpen = !gameState.videoPanelOpen;
+        print('Video panel now: ${gameState.videoPanelOpen}');
       });
       return;
     }
@@ -1005,6 +1022,31 @@ class _Game3DState extends State<Game3D> {
     return Focus(
       autofocus: true,
       onKeyEvent: (node, event) {
+        // If any modal with text input is open, allow keyboard events to pass through
+        // (except for modal toggle keys WITHOUT modifiers)
+        final modalOpen = gameState.abilitiesModalOpen || gameState.playbookModalOpen || gameState.videoPanelOpen;
+
+        if (modalOpen) {
+          // Check if this is a modal toggle key (P, O, V) WITHOUT modifiers
+          if (event is KeyDownEvent) {
+            final hasModifiers = HardwareKeyboard.instance.isControlPressed ||
+                                HardwareKeyboard.instance.isAltPressed ||
+                                HardwareKeyboard.instance.isShiftPressed ||
+                                HardwareKeyboard.instance.isMetaPressed;
+
+            if (!hasModifiers &&
+                (event.logicalKey == LogicalKeyboardKey.keyP ||
+                 event.logicalKey == LogicalKeyboardKey.keyO ||
+                 event.logicalKey == LogicalKeyboardKey.keyV)) {
+              _onKeyEvent(event);
+              return KeyEventResult.handled;
+            }
+          }
+          // For all other keys (including CTRL+V, CTRL+C, etc.), let them pass through to text fields
+          return KeyEventResult.ignored;
+        }
+
+        // No modal open - handle game input normally
         _onKeyEvent(event);
         return KeyEventResult.handled;
       },
@@ -1115,6 +1157,21 @@ class _Game3DState extends State<Game3D> {
                 },
                 onPractice: (players, playName) {
                   _spawnPlaybookUnits(players, playName);
+                },
+              ),
+
+            // Video Panel (Press V to toggle)
+            if (gameState.videoPanelOpen)
+              VideoPanel(
+                onClose: () {
+                  setState(() {
+                    gameState.videoPanelOpen = false;
+                  });
+                },
+                onMakePlay: (formationName, playName, videoUrl) {
+                  // The formation has already been saved by VideoAnalysisService
+                  // Just show confirmation that it was created
+                  print('Formation "$formationName" with play "$playName" created from video: $videoUrl');
                 },
               ),
           ],

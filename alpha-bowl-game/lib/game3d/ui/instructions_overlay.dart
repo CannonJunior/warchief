@@ -25,7 +25,7 @@ class InstructionsOverlay extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Camera: J/L=Yaw | N/M=Pitch | I/K=Zoom | V=Toggle Mode',
+              'Camera: J/L=Yaw | N/M=Pitch | I/K=Zoom | C=Toggle Mode',
               style: TextStyle(color: Colors.white, fontSize: 12),
             ),
             SizedBox(height: 2),
@@ -46,6 +46,11 @@ class InstructionsOverlay extends StatelessWidget {
             Text(
               'Jump: Spacebar',
               style: TextStyle(color: Colors.white, fontSize: 12),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Modals: P=Abilities | O=Playbook | V=Videos',
+              style: TextStyle(color: Colors.cyan, fontSize: 12),
             ),
             SizedBox(height: 8),
             Text(
