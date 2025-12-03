@@ -177,7 +177,9 @@ class _VideoPanelState extends State<VideoPanel> {
     }
 
     if (videoId != null) {
-      return 'https://www.youtube.com/embed/$videoId?enablejsapi=1';
+      // Use youtube-nocookie.com for better privacy and embedding compatibility
+      // Add parameters for better embedding support
+      return 'https://www.youtube-nocookie.com/embed/$videoId?enablejsapi=1&origin=${html.window.location.origin}&rel=0&modestbranding=1';
     }
 
     return url; // Return original if can't parse
@@ -208,7 +210,9 @@ class _VideoPanelState extends State<VideoPanel> {
         ..style.width = '100%'
         ..style.height = '100%'
         ..style.border = 'none'
-        ..allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        ..allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'
+        ..setAttribute('allowfullscreen', 'true')
+        ..setAttribute('frameborder', '0');
 
       // Register view factory for iframe
       // ignore: undefined_prefixed_name
