@@ -35,6 +35,7 @@ import 'ui/ui_config.dart';
 import 'ui/abilities_modal.dart';
 import 'ui/playbook_modal.dart';
 import 'ui/video_panel.dart';
+import 'ui/video_analysis_chat.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -74,6 +75,9 @@ class _Game3DState extends State<Game3D> {
   double _lastPlayerHealth = 100.0;
   double _lastMonsterHealth = 100.0;
   int _lastAllyCount = 0;
+
+  // Video Analysis Chat Messages
+  final List<VideoAnalysisMessage> videoAnalysisMessages = [];
 
   @override
   void initState() {
@@ -447,6 +451,16 @@ class _Game3DState extends State<Game3D> {
       setState(() {
         gameState.videoPanelOpen = !gameState.videoPanelOpen;
         print('Video panel now: ${gameState.videoPanelOpen}');
+      });
+      return;
+    }
+
+    // Handle C key for video analysis chat panel (only on key down, not repeat, no modifiers)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyC && !hasModifiers) {
+      print('C key detected! Toggling video analysis chat. Current state: ${gameState.videoAnalysisChatOpen}');
+      setState(() {
+        gameState.videoAnalysisChatOpen = !gameState.videoAnalysisChatOpen;
+        print('Video analysis chat now: ${gameState.videoAnalysisChatOpen}');
       });
       return;
     }
@@ -1037,7 +1051,8 @@ class _Game3DState extends State<Game3D> {
             if (!hasModifiers &&
                 (event.logicalKey == LogicalKeyboardKey.keyP ||
                  event.logicalKey == LogicalKeyboardKey.keyO ||
-                 event.logicalKey == LogicalKeyboardKey.keyV)) {
+                 event.logicalKey == LogicalKeyboardKey.keyV ||
+                 event.logicalKey == LogicalKeyboardKey.keyC)) {
               _onKeyEvent(event);
               return KeyEventResult.handled;
             }
@@ -1168,10 +1183,40 @@ class _Game3DState extends State<Game3D> {
                     gameState.videoPanelOpen = false;
                   });
                 },
-                onMakePlay: (formationName, playName, videoUrl) {
+                onMakePlay: (formationName, playName, videoUrl, analysis) {
                   // The formation has already been saved by VideoAnalysisService
-                  // Just show confirmation that it was created
+                  // Add the analysis to the video analysis chat
+                  setState(() {
+                    videoAnalysisMessages.add(VideoAnalysisMessage(
+                      text: analysis,
+                      timestamp: DateTime.now(),
+                      isSystem: true,
+                    ));
+                    // Auto-open the chat panel to show the analysis
+                    gameState.videoAnalysisChatOpen = true;
+                  });
                   print('Formation "$formationName" with play "$playName" created from video: $videoUrl');
+                },
+              ),
+
+            // Video Analysis Chat Panel (Press C to toggle)
+            if (gameState.videoAnalysisChatOpen)
+              VideoAnalysisChatPanel(
+                onClose: () {
+                  setState(() {
+                    gameState.videoAnalysisChatOpen = false;
+                  });
+                },
+                messages: videoAnalysisMessages,
+                onSendMessage: (message) {
+                  // Future: handle user queries about the video
+                  setState(() {
+                    videoAnalysisMessages.add(VideoAnalysisMessage(
+                      text: message,
+                      timestamp: DateTime.now(),
+                      isSystem: false,
+                    ));
+                  });
                 },
               ),
           ],

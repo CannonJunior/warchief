@@ -166,6 +166,9 @@ class GameState {
   /// Whether the video panel is currently open
   bool videoPanelOpen = false;
 
+  /// Whether the video analysis chat panel is currently open
+  bool videoAnalysisChatOpen = false;
+
   // ==================== JUMP/PHYSICS STATE ====================
 
   bool isJumping = false;

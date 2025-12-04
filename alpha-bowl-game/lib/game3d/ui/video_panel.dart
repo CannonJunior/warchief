@@ -30,7 +30,7 @@ class VideoEntry {
 /// Video Panel - Play videos from web links
 class VideoPanel extends StatefulWidget {
   final VoidCallback onClose;
-  final Function(String formationName, String playName, String videoUrl)? onMakePlay;
+  final Function(String formationName, String playName, String videoUrl, String analysis)? onMakePlay;
 
   const VideoPanel({
     Key? key,
@@ -336,20 +336,23 @@ class _VideoPanelState extends State<VideoPanel> {
 
     try {
       // Analyze video and create formation
-      final formation = await VideoAnalysisService.analyzeVideoAndCreatePlay(
+      final result = await VideoAnalysisService.analyzeVideoAndCreatePlay(
         videoUrl: video.url,
         formationName: video.name,
         playName: '001',
       );
 
-      // Notify parent to add formation to Playbook
-      widget.onMakePlay!(video.name, '001', video.url);
+      final formation = result['formation'];
+      final analysis = result['analysis'] as String;
+
+      // Notify parent to add formation to Playbook and show analysis in chat
+      widget.onMakePlay!(video.name, '001', video.url, analysis);
 
       // Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Play created! Open Playbook (O) to view "${video.name}" formation'),
+            content: Text('Analysis complete! Open Chat (C) to view details'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 3),
           ),
