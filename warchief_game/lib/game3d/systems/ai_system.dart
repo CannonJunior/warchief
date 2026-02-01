@@ -11,6 +11,7 @@ import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
 import 'combat_system.dart';
 import '../ai/mcp_tools.dart';
+import '../ai/ally_behavior_tree.dart';
 import '../utils/bezier_path.dart';
 
 /// AI System - Handles all NPC AI logic
@@ -187,22 +188,36 @@ class AISystem {
     final playerIsMoving = playerVelocity.length > 0.1;
 
     // If player is moving and ally is too far, create follow path
-    if (playerIsMoving && distanceToPlayer > ally.followBufferDistance * 1.3) {
-      // Calculate target position at buffer distance from player
-      final toAlly = (ally.transform.position - playerPos).normalized();
-      final targetPos = playerPos + toAlly * ally.followBufferDistance;
+    // Reduced from 1.3x to 1.1x for more responsive following
+    if (playerIsMoving && distanceToPlayer > ally.followBufferDistance * 1.1) {
+      // Calculate target position - predict where player will be
+      final predictedPlayerPos = playerPos + playerVelocity * 0.5; // 0.5s prediction
+      final toAlly = (ally.transform.position - predictedPlayerPos).normalized();
+      final targetPos = predictedPlayerPos + toAlly * ally.followBufferDistance;
 
       // Create smooth path to target
       ally.currentPath = BezierPath.interception(
         start: ally.transform.position,
         target: targetPos,
-        velocity: null, // Ally's current velocity could be tracked
+        velocity: playerVelocity, // Use player velocity for better interception
+      );
+      ally.isMoving = true;
+    }
+
+    // If ally is very far from player (>2x buffer), immediately start following
+    if (distanceToPlayer > ally.followBufferDistance * 2.0 && ally.currentPath == null) {
+      final toPlayer = (playerPos - ally.transform.position).normalized();
+      final targetPos = playerPos - toPlayer * ally.followBufferDistance;
+      ally.currentPath = BezierPath.interception(
+        start: ally.transform.position,
+        target: targetPos,
+        velocity: null,
       );
       ally.isMoving = true;
     }
 
     // If player stopped and ally is close enough, stop and re-randomize buffer
-    if (!playerIsMoving && distanceToPlayer <= ally.followBufferDistance * 1.2) {
+    if (!playerIsMoving && distanceToPlayer <= ally.followBufferDistance * 1.1) {
       ally.currentPath = null;
       ally.isMoving = false;
       // Re-randomize buffer distance for next movement (3-5 units)
@@ -460,7 +475,7 @@ class AISystem {
 
   // ==================== ALLY AI ====================
 
-  /// Updates ally AI (decision making and execution)
+  /// Updates ally AI using behavior tree (decision making and execution)
   ///
   /// Parameters:
   /// - dt: Time elapsed since last frame (in seconds)
@@ -471,27 +486,27 @@ class AISystem {
 
       ally.aiTimer += dt;
 
-      // AI thinks every 3 seconds
+      // AI thinks on interval (reduced to 1 second for responsiveness)
       if (ally.aiTimer >= ally.aiInterval) {
         ally.aiTimer = 0.0;
 
-        if (gameState.playerTransform != null && gameState.monsterTransform != null) {
-          // Calculate distances
-          final distanceToPlayer = (ally.transform.position - gameState.playerTransform!.position).length;
-          final distanceToMonster = (ally.transform.position - gameState.monsterTransform!.position).length;
-
-          // Fallback rule-based AI (when Ollama unavailable)
-          String decision = makeAllyDecision(ally, distanceToPlayer, distanceToMonster, gameState);
-
-          // Execute decision
-          executeAllyDecision(ally, decision, gameState);
+        if (gameState.playerTransform != null) {
+          // Use behavior tree for decision making
+          AllyBehaviorEvaluator.evaluate(ally, gameState);
         }
       }
 
-      // Update ally's direction indicator to face monster
-      if (ally.directionIndicatorTransform != null && gameState.monsterTransform != null) {
-        final toMonster = gameState.monsterTransform!.position - ally.transform.position;
-        ally.rotation = math.atan2(-toMonster.x, -toMonster.z) * (180 / math.pi);
+      // Update ally's direction indicator based on current state
+      // Only auto-face monster if in combat (not following player)
+      if (ally.directionIndicatorTransform != null) {
+        if (ally.movementMode == AllyMovementMode.tactical &&
+            gameState.monsterTransform != null &&
+            gameState.monsterHealth > 0) {
+          // In combat - face monster
+          final toMonster = gameState.monsterTransform!.position - ally.transform.position;
+          ally.rotation = math.atan2(-toMonster.x, -toMonster.z) * (180 / math.pi);
+        }
+        // Otherwise rotation is set by movement direction in updateAllyMovement
         ally.directionIndicatorTransform!.rotation.y = ally.rotation;
       }
     }
@@ -543,30 +558,74 @@ class AISystem {
       ally.abilityCooldown = ally.abilityCooldownMax;
 
       if (ally.abilityIndex == 0) {
-        // Sword (melee attack - collision handled elsewhere)
-        print('Ally attacks with ${ability.name}!');
+        // Sword (melee attack with collision detection)
+        if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
+          // Calculate attack direction toward monster
+          final toMonster = gameState.monsterTransform!.position - ally.transform.position;
+          final direction = toMonster.normalized();
+
+          // Attack position is in front of ally at sword range
+          final attackPosition = ally.transform.position + direction * ability.range;
+
+          // Check collision and apply damage
+          final hitRegistered = CombatSystem.checkAndDamageMonster(
+            gameState,
+            attackerPosition: attackPosition,
+            damage: ability.damage,
+            attackType: ability.name,
+            impactColor: ability.impactColor,
+            impactSize: ability.impactSize,
+          );
+
+          if (hitRegistered) {
+            print('Ally ${ability.name} hit monster for ${ability.damage} damage!');
+          } else {
+            print('Ally ${ability.name} missed (out of range)');
+          }
+        }
       } else if (ally.abilityIndex == 1) {
-        // Fireball (ranged projectile)
-        final toMonster = gameState.monsterTransform!.position - ally.transform.position;
-        final direction = toMonster.normalized();
+        // Fireball (ranged projectile with lead targeting)
+        if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
+          final monsterPos = gameState.monsterTransform!.position;
+          final allyPos = ally.transform.position;
 
-        final fireballMesh = Mesh.cube(
-          size: ability.projectileSize,
-          color: ability.color,
-        );
-        final fireballTransform = Transform3d(
-          position: ally.transform.position.clone() + direction * 0.5,
-          scale: Vector3(1, 1, 1),
-        );
+          // Calculate distance and travel time
+          final distanceToMonster = (monsterPos - allyPos).length;
+          final travelTime = distanceToMonster / ability.projectileSpeed;
 
-        ally.projectiles.add(
-          Projectile(
-            mesh: fireballMesh,
-            transform: fireballTransform,
-            velocity: direction * ability.projectileSpeed,
-          ),
-        );
-        print('Ally casts ${ability.name}!');
+          // Predict monster position based on current movement path
+          Vector3 predictedPos = monsterPos.clone();
+          if (gameState.monsterCurrentPath != null) {
+            // Monster is moving - lead the target
+            final tangent = gameState.monsterCurrentPath!.getTangentAt(
+              gameState.monsterCurrentPath!.progress
+            );
+            final monsterVelocity = tangent * gameState.monsterMoveSpeed;
+            predictedPos = monsterPos + monsterVelocity * travelTime * 0.7; // 70% lead
+          }
+
+          // Aim at predicted position
+          final toTarget = predictedPos - allyPos;
+          final direction = toTarget.normalized();
+
+          final fireballMesh = Mesh.cube(
+            size: ability.projectileSize,
+            color: ability.color,
+          );
+          final fireballTransform = Transform3d(
+            position: allyPos.clone() + direction * 0.5,
+            scale: Vector3(1, 1, 1),
+          );
+
+          ally.projectiles.add(
+            Projectile(
+              mesh: fireballMesh,
+              transform: fireballTransform,
+              velocity: direction * ability.projectileSpeed,
+            ),
+          );
+          print('Ally casts ${ability.name}! (leading target)');
+        }
       } else if (ally.abilityIndex == 2) {
         // Heal (restore ally's own health)
         final oldHealth = ally.health;

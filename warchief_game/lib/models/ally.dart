@@ -11,6 +11,15 @@ enum AllyMovementMode {
   tactical, // AI-controlled tactical movement
 }
 
+/// Player commands for ally control
+enum AllyCommand {
+  none, // No active command - use AI
+  follow, // Follow player closely
+  attack, // Aggressively attack enemy
+  hold, // Hold current position
+  defensive, // Prioritize survival
+}
+
 /// Ally - Represents an allied NPC character
 class Ally {
   Mesh mesh;
@@ -23,7 +32,7 @@ class Ally {
   double abilityCooldown;
   double abilityCooldownMax;
   double aiTimer;
-  final double aiInterval = 3.0; // Think every 3 seconds
+  final double aiInterval = 1.0; // Think every 1 second for responsive AI
   List<Projectile> projectiles;
 
   // Movement and pathfinding
@@ -32,6 +41,10 @@ class Ally {
   double moveSpeed;
   double followBufferDistance; // Distance to maintain from player when following
   bool isMoving;
+
+  // Player command system
+  AllyCommand currentCommand;
+  double commandTimer; // Time since command was issued
 
   Ally({
     required this.mesh,
@@ -44,9 +57,11 @@ class Ally {
     this.abilityCooldown = 0.0,
     this.abilityCooldownMax = 5.0,
     this.aiTimer = 0.0,
-    this.movementMode = AllyMovementMode.stationary,
+    this.movementMode = AllyMovementMode.followPlayer,
     this.moveSpeed = 2.5,
     this.followBufferDistance = 4.0,
     this.isMoving = false,
+    this.currentCommand = AllyCommand.none,
+    this.commandTimer = 0.0,
   }) : projectiles = [];
 }

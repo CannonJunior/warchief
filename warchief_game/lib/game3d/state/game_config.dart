@@ -112,8 +112,8 @@ class GameConfig {
   /// Ally ability cooldown
   static const double allyAbilityCooldownMax = 5.0;
 
-  /// Ally AI decision interval (seconds)
-  static const double allyAiInterval = 3.0;
+  /// Ally AI decision interval (seconds) - reduced for responsive AI
+  static const double allyAiInterval = 1.0;
 
   /// Ally movement threshold distance for AI decisions
   static const double allyMoveThreshold = 10.0;

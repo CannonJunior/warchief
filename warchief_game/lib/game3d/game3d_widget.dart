@@ -382,6 +382,9 @@ class _Game3DState extends State<Game3D> {
     AbilitySystem.handleAbility4Input(inputManager!.isActionPressed(GameAction.actionBar4), gameState);
     // ===== END ABILITY SYSTEM =====
 
+    // ===== ALLY COMMAND SYSTEM =====
+    _handleAllyCommands();
+
     // Update direction indicator position and rotation to match player
     if (gameState.directionIndicatorTransform != null && gameState.playerTransform != null) {
       gameState.directionIndicatorTransform!.position.x = gameState.playerTransform!.position.x;
@@ -492,6 +495,57 @@ class _Game3DState extends State<Game3D> {
     setState(() {
       AbilitySystem.handleAbility4Input(true, gameState);
     });
+  }
+
+  // ===== ALLY COMMAND METHODS =====
+
+  /// Track previous command key states to detect key press (not hold)
+  bool _followKeyWasPressed = false;
+  bool _attackKeyWasPressed = false;
+  bool _holdKeyWasPressed = false;
+
+  /// Handle ally command input (F=Follow, G=Attack, H=Hold)
+  void _handleAllyCommands() {
+    if (inputManager == null) return;
+
+    final followPressed = inputManager!.isActionPressed(GameAction.petFollow);
+    final attackPressed = inputManager!.isActionPressed(GameAction.petAttack);
+    final holdPressed = inputManager!.isActionPressed(GameAction.petStay);
+
+    // F key - Follow command (toggle)
+    if (followPressed && !_followKeyWasPressed) {
+      _setAllyCommand(AllyCommand.follow);
+      print('[ALLY CMD] All allies: FOLLOW');
+    }
+    _followKeyWasPressed = followPressed;
+
+    // T key - Attack command (toggle)
+    if (attackPressed && !_attackKeyWasPressed) {
+      _setAllyCommand(AllyCommand.attack);
+      print('[ALLY CMD] All allies: ATTACK');
+    }
+    _attackKeyWasPressed = attackPressed;
+
+    // G key - Hold command (toggle)
+    if (holdPressed && !_holdKeyWasPressed) {
+      _setAllyCommand(AllyCommand.hold);
+      print('[ALLY CMD] All allies: HOLD');
+    }
+    _holdKeyWasPressed = holdPressed;
+  }
+
+  /// Set command for all allies
+  void _setAllyCommand(AllyCommand command) {
+    for (final ally in gameState.allies) {
+      // If same command, toggle it off
+      if (ally.currentCommand == command) {
+        ally.currentCommand = AllyCommand.none;
+        ally.movementMode = AllyMovementMode.followPlayer;
+      } else {
+        ally.currentCommand = command;
+        ally.commandTimer = 0.0;
+      }
+    }
   }
 
   // ===== MONSTER ABILITY METHODS =====
@@ -607,13 +661,21 @@ class _Game3DState extends State<Game3D> {
       final offsetX = math.cos(angle) * 2.0;
       final offsetZ = math.sin(angle) * 2.0;
 
-      final allyPosition = gameState.playerTransform != null
-          ? Vector3(
-              gameState.playerTransform!.position.x + offsetX,
-              0.4, // Slightly lower than player (0.5)
-              gameState.playerTransform!.position.z + offsetZ,
-            )
-          : Vector3(2, 0.4, 2); // Default position if no player
+      // Calculate ally position with terrain height
+      final allyX = gameState.playerTransform != null
+          ? gameState.playerTransform!.position.x + offsetX
+          : 2.0 + offsetX;
+      final allyZ = gameState.playerTransform != null
+          ? gameState.playerTransform!.position.z + offsetZ
+          : 2.0 + offsetZ;
+
+      // Get terrain height at ally position
+      double allyY = 0.4;
+      if (gameState.infiniteTerrainManager != null) {
+        allyY = gameState.infiniteTerrainManager!.getTerrainHeight(allyX, allyZ);
+      }
+
+      final allyPosition = Vector3(allyX, allyY, allyZ);
 
       final allyTransform = Transform3d(
         position: allyPosition,
