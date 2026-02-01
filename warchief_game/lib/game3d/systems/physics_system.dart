@@ -6,10 +6,18 @@ import '../state/game_state.dart';
 /// - Gravity application
 /// - Jump mechanics (including double jump)
 /// - Vertical velocity updates
-/// - Ground collision detection
+/// - Ground collision detection (terrain-aware)
 /// - Jump state management
 class PhysicsSystem {
   PhysicsSystem._(); // Private constructor to prevent instantiation
+
+  /// Get terrain height at position, with fallback to groundLevel
+  static double _getTerrainHeight(GameState gameState, double x, double z) {
+    if (gameState.infiniteTerrainManager != null) {
+      return gameState.infiniteTerrainManager!.getTerrainHeight(x, z);
+    }
+    return gameState.groundLevel;
+  }
 
   /// Updates physics state for the player
   ///
@@ -53,10 +61,11 @@ class PhysicsSystem {
     gameState.jumpKeyWasPressed = jumpKeyIsPressed;
   }
 
-  /// Checks for and handles ground collision
+  /// Checks for and handles ground collision with terrain
   ///
-  /// If the player has fallen below ground level:
-  /// - Resets position to ground level
+  /// Queries terrain height at player's X,Z position and checks if player
+  /// has fallen below the terrain surface. If so:
+  /// - Resets position to terrain height
   /// - Stops vertical velocity
   /// - Sets grounded state
   /// - Resets available jumps
@@ -66,8 +75,15 @@ class PhysicsSystem {
   static void _checkGroundCollision(GameState gameState) {
     if (gameState.playerTransform == null) return;
 
-    if (gameState.playerTransform!.position.y <= gameState.groundLevel) {
-      gameState.playerTransform!.position.y = gameState.groundLevel;
+    // Get terrain height at player's current X,Z position
+    final terrainHeight = _getTerrainHeight(
+      gameState,
+      gameState.playerTransform!.position.x,
+      gameState.playerTransform!.position.z,
+    );
+
+    if (gameState.playerTransform!.position.y <= terrainHeight) {
+      gameState.playerTransform!.position.y = terrainHeight;
       gameState.verticalVelocity = 0.0;
       gameState.isJumping = false;
       gameState.isGrounded = true;
@@ -75,13 +91,20 @@ class PhysicsSystem {
     }
   }
 
-  /// Gets the player's current height above ground
+  /// Gets the player's current height above terrain
   ///
   /// Returns:
-  /// - Height above ground level (in world units)
+  /// - Height above terrain surface (in world units)
   /// - 0.0 if player transform is null
   static double getPlayerHeight(GameState gameState) {
     if (gameState.playerTransform == null) return 0.0;
-    return gameState.playerTransform!.position.y - gameState.groundLevel;
+
+    final terrainHeight = _getTerrainHeight(
+      gameState,
+      gameState.playerTransform!.position.x,
+      gameState.playerTransform!.position.z,
+    );
+
+    return gameState.playerTransform!.position.y - terrainHeight;
   }
 }

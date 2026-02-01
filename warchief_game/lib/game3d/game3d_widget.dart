@@ -222,6 +222,9 @@ class _Game3DState extends State<Game3D> {
         scale: Vector3(1, 1, 1),
       );
 
+      // Adjust player and monster starting positions to terrain height
+      _adjustStartingPositionsToTerrain();
+
       print('Game3D initialized successfully!');
 
       // Start game loop
@@ -288,6 +291,46 @@ class _Game3DState extends State<Game3D> {
     print('Game loop started - animationFrameId: ${gameState.animationFrameId}');
   }
 
+  /// Adjust starting positions of units to match terrain height
+  ///
+  /// Called after terrain and units are initialized to ensure units
+  /// start at the correct elevation instead of floating or buried.
+  void _adjustStartingPositionsToTerrain() {
+    if (gameState.infiniteTerrainManager == null) return;
+
+    // Force initial terrain chunk loading around starting positions
+    // This ensures terrain exists before querying heights
+    final playerPos = gameState.playerTransform?.position;
+    if (playerPos != null) {
+      gameState.infiniteTerrainManager!.update(playerPos, playerPos);
+    }
+
+    // Adjust player Y to terrain height
+    if (gameState.playerTransform != null) {
+      final terrainHeight = gameState.infiniteTerrainManager!.getTerrainHeight(
+        gameState.playerTransform!.position.x,
+        gameState.playerTransform!.position.z,
+      );
+      gameState.playerTransform!.position.y = terrainHeight;
+      print('[Game3D] Player starting height adjusted to terrain: $terrainHeight');
+    }
+
+    // Adjust monster Y to terrain height
+    if (gameState.monsterTransform != null) {
+      final terrainHeight = gameState.infiniteTerrainManager!.getTerrainHeight(
+        gameState.monsterTransform!.position.x,
+        gameState.monsterTransform!.position.z,
+      );
+      gameState.monsterTransform!.position.y = terrainHeight;
+
+      // Also adjust monster direction indicator
+      if (gameState.monsterDirectionIndicatorTransform != null) {
+        gameState.monsterDirectionIndicatorTransform!.position.y = terrainHeight + 0.7;
+      }
+      print('[Game3D] Monster starting height adjusted to terrain: $terrainHeight');
+    }
+  }
+
   void _update(double dt) {
     if (inputManager == null || camera == null || gameState.playerTransform == null) return;
 
@@ -352,7 +395,7 @@ class _Game3DState extends State<Game3D> {
       final lightDirX = 0.5; // Light from right
       final lightDirZ = 0.3; // Light from front
 
-      // Calculate shadow offset based on player height (higher = further from player)
+      // Calculate shadow offset based on player height above terrain (higher = further from player)
       final playerHeight = PhysicsSystem.getPlayerHeight(gameState);
       final shadowOffsetX = playerHeight * lightDirX;
       final shadowOffsetZ = playerHeight * lightDirZ;
@@ -360,6 +403,15 @@ class _Game3DState extends State<Game3D> {
       // Position shadow with offset from player
       gameState.shadowTransform!.position.x = gameState.playerTransform!.position.x + shadowOffsetX;
       gameState.shadowTransform!.position.z = gameState.playerTransform!.position.z + shadowOffsetZ;
+
+      // Set shadow Y to terrain height at shadow position (slightly above to avoid z-fighting)
+      if (gameState.infiniteTerrainManager != null) {
+        final shadowTerrainHeight = gameState.infiniteTerrainManager!.getTerrainHeight(
+          gameState.shadowTransform!.position.x,
+          gameState.shadowTransform!.position.z,
+        );
+        gameState.shadowTransform!.position.y = shadowTerrainHeight + 0.01;
+      }
 
       // Rotate shadow to match player rotation
       gameState.shadowTransform!.rotation.y = gameState.playerRotation;

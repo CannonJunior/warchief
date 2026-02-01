@@ -20,8 +20,27 @@ import '../utils/bezier_path.dart';
 /// - Ally AI (decision making, execution)
 /// - Projectile updates (monster and ally projectiles)
 /// - AI cooldown management
+/// - Terrain-aware unit positioning
 class AISystem {
   AISystem._(); // Private constructor to prevent instantiation
+
+  /// Get terrain height at position, with fallback to groundLevel
+  static double _getTerrainHeight(GameState gameState, double x, double z) {
+    if (gameState.infiniteTerrainManager != null) {
+      return gameState.infiniteTerrainManager!.getTerrainHeight(x, z);
+    }
+    return gameState.groundLevel;
+  }
+
+  /// Apply terrain height to a unit's Y position
+  static void _applyTerrainHeight(GameState gameState, Transform3d transform) {
+    final terrainHeight = _getTerrainHeight(
+      gameState,
+      transform.position.x,
+      transform.position.z,
+    );
+    transform.position.y = terrainHeight;
+  }
 
   /// Updates all AI systems
   ///
@@ -74,7 +93,8 @@ class AISystem {
 
   /// Updates monster movement along current path (every frame)
   ///
-  /// This provides smooth continuous movement instead of jerky AI-interval updates
+  /// This provides smooth continuous movement instead of jerky AI-interval updates.
+  /// Monster Y position is set to terrain height for proper terrain following.
   static void updateMonsterMovement(double dt, GameState gameState) {
     if (gameState.monsterTransform == null || gameState.monsterHealth <= 0) return;
 
@@ -87,8 +107,6 @@ class AISystem {
         // Update horizontal position from path
         gameState.monsterTransform!.position.x = newPos.x;
         gameState.monsterTransform!.position.z = newPos.z;
-        // Keep monster at ground level (prevent falling through terrain)
-        gameState.monsterTransform!.position.y = gameState.groundLevel;
 
         // Update rotation to face movement direction
         final tangent = gameState.monsterCurrentPath!.getTangentAt(
@@ -102,15 +120,17 @@ class AISystem {
       }
     }
 
-    // Ensure monster stays at ground level even when not moving
+    // Set monster Y to terrain height (terrain following)
     if (gameState.monsterTransform != null) {
-      gameState.monsterTransform!.position.y = gameState.groundLevel;
+      _applyTerrainHeight(gameState, gameState.monsterTransform!);
     }
   }
 
   // ==================== ALLY MOVEMENT ====================
 
   /// Updates ally movement along current paths (every frame)
+  ///
+  /// Ally Y position is set to terrain height for proper terrain following.
   static void updateAllyMovement(double dt, GameState gameState) {
     if (gameState.playerTransform == null) return;
 
@@ -120,7 +140,8 @@ class AISystem {
       // Handle different movement modes
       switch (ally.movementMode) {
         case AllyMovementMode.stationary:
-          // Do nothing - stay in place
+          // Still apply terrain height even when stationary
+          _applyTerrainHeight(gameState, ally.transform);
           break;
 
         case AllyMovementMode.followPlayer:
@@ -135,7 +156,8 @@ class AISystem {
             final newPos = ally.currentPath!.advance(distance);
 
             if (newPos != null) {
-              ally.transform.position = newPos;
+              ally.transform.position.x = newPos.x;
+              ally.transform.position.z = newPos.z;
               ally.isMoving = true;
 
               // Update rotation to face movement direction
@@ -148,12 +170,16 @@ class AISystem {
               ally.isMoving = false;
             }
           }
+          // Apply terrain height
+          _applyTerrainHeight(gameState, ally.transform);
           break;
       }
     }
   }
 
   /// Helper to update ally in follow mode
+  ///
+  /// Ally Y position is set to terrain height for proper terrain following.
   static void _updateAllyFollowMode(double dt, Ally ally, GameState gameState) {
     final playerPos = gameState.playerTransform!.position;
     final distanceToPlayer = (ally.transform.position - playerPos).length;
@@ -189,7 +215,8 @@ class AISystem {
       final newPos = ally.currentPath!.advance(distance);
 
       if (newPos != null) {
-        ally.transform.position = newPos;
+        ally.transform.position.x = newPos.x;
+        ally.transform.position.z = newPos.z;
 
         // Update rotation
         final tangent = ally.currentPath!.getTangentAt(ally.currentPath!.progress);
@@ -200,6 +227,9 @@ class AISystem {
         ally.isMoving = false;
       }
     }
+
+    // Apply terrain height
+    _applyTerrainHeight(gameState, ally.transform);
   }
 
   // ==================== MONSTER AI ====================
@@ -498,10 +528,14 @@ class AISystem {
   /// - gameState: Current game state
   static void executeAllyDecision(Ally ally, String decision, GameState gameState) {
     if (decision == 'MOVE_TO_MONSTER' && gameState.monsterTransform != null) {
-      // Move toward monster
+      // Move toward monster (horizontal only, terrain height applied separately)
       final toMonster = gameState.monsterTransform!.position - ally.transform.position;
+      toMonster.y = 0; // Only move horizontally
       final moveDirection = toMonster.normalized();
-      ally.transform.position += moveDirection * 0.3;
+      ally.transform.position.x += moveDirection.x * 0.3;
+      ally.transform.position.z += moveDirection.z * 0.3;
+      // Apply terrain height
+      _applyTerrainHeight(gameState, ally.transform);
       print('Ally moving toward monster');
     } else if (decision == 'ATTACK' && ally.abilityCooldown <= 0) {
       // Use ability based on ally's ability index

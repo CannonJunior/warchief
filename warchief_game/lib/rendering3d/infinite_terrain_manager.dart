@@ -271,9 +271,14 @@ class InfiniteTerrainManager {
   }
 
   /// Convert world coordinate to chunk coordinate
+  ///
+  /// Accounts for chunks being centered around their worldPosition.
+  /// Chunk 0 is centered at (0,0) and spans [-halfSize, +halfSize).
   int _worldToChunkCoord(double worldCoord) {
     final chunkWorldSize = chunkSize * tileSize;
-    return (worldCoord / chunkWorldSize).floor();
+    final halfChunk = chunkWorldSize / 2;
+    // Offset by half chunk to account for centering
+    return ((worldCoord + halfChunk) / chunkWorldSize).floor();
   }
 
   /// Get number of loaded chunks
