@@ -39,6 +39,66 @@
   - README.md (project overview)
   - Working game skeleton running on http://localhost:8008
 
+#### WoW-Style Terrain Texturing (Completed 2026-01-31)
+**Task**: Implement WoW-style tile terrain with texture splatting
+- ✅ Created TextureManager class for procedural terrain texture generation
+  - Generates grass, dirt, rock, sand diffuse textures
+  - Generates corresponding normal maps for each terrain type
+  - High-frequency detail texture for close-up variation
+  - WebGL texture binding and mipmap generation
+- ✅ Created terrain splatting shaders (terrain_shaders.dart)
+  - Vertex shader with UV coordinates and height/slope calculation
+  - Fragment shader with 4-texture blending via splat map
+  - Height-based automatic terrain distribution (sand low, grass mid, rock high)
+  - Slope-based rock override for steep terrain
+  - Normal mapping support
+  - Detail texture overlay with distance fade
+  - Simplified shader variant for lower LOD levels
+  - Debug shader for visualizing splat weights
+- ✅ Added UV coordinates and proper normals to terrain mesh (terrain_lod.dart)
+  - UV coordinate generation for seamless chunk borders
+  - Normal calculation from heightmap gradients using central differences
+  - Updated TerrainChunkWithLOD to store splat map data
+- ✅ Created SplatMapGenerator for procedural terrain distribution
+  - Height-based terrain type weights
+  - Slope-based rock override
+  - Value noise layers for natural variation
+  - Smooth transitions between terrain types
+- ✅ Modified WebGLRenderer for texture-based terrain rendering
+  - Added initializeTerrainTexturing() method
+  - Added renderTerrain() method with multi-texture binding
+  - Texture unit management (0-9 for terrain textures + splat map)
+  - Fallback to vertex colors when texturing not available
+- ✅ Added texture uniforms to ShaderProgram
+  - setUniformSampler2D() for texture unit binding
+  - setUniformBool() for feature toggles
+  - setUniformVector2() for 2D uniforms
+- ✅ Updated InfiniteTerrainManager for texture integration
+  - Splat map generation per chunk
+  - GL context management for texture cleanup
+  - Lazy splat map texture creation
+- ✅ Extended TerrainConfig with texture settings
+  - useTextureSplatting toggle
+  - splatMapResolution (default: 16x16)
+  - textureScale (default: 4.0)
+  - Height/slope thresholds for terrain distribution
+  - VRAM usage estimation
+- ✅ Integrated into game3d_widget and render_system
+  - Async terrain texture initialization
+  - Terrain update loop integration
+  - renderTerrain() call for texture-splatted rendering
+- **Deliverables**:
+  - lib/rendering3d/texture_manager.dart (~400 lines)
+  - lib/rendering3d/shaders/terrain_shaders.dart (~350 lines)
+  - lib/rendering3d/splat_map_generator.dart (~270 lines)
+  - Updated lib/rendering3d/terrain_lod.dart (UV + normals)
+  - Updated lib/rendering3d/webgl_renderer.dart (terrain rendering)
+  - Updated lib/rendering3d/shader_program.dart (texture uniforms)
+  - Updated lib/rendering3d/infinite_terrain_manager.dart (splat maps)
+  - Updated lib/rendering3d/game_config_terrain.dart (texture config)
+  - Updated lib/game3d/game3d_widget.dart (initialization)
+  - Updated lib/game3d/systems/render_system.dart (renderTerrain)
+
 #### Phase 1 Core Features (Completed 2025-10-29)
 **Task**: Implement core game infrastructure with WASD movement, camera, and isometric rendering
 - ✅ Created GameAction enum with all keybindable actions

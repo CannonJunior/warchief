@@ -9,6 +9,8 @@ import '../rendering3d/camera3d.dart';
 import '../rendering3d/mesh.dart';
 import '../rendering3d/math/transform3d.dart';
 import '../rendering3d/terrain_generator.dart';
+import '../rendering3d/infinite_terrain_manager.dart';
+import '../rendering3d/game_config_terrain.dart';
 import '../rendering3d/player_mesh.dart';
 import '../game/controllers/input_manager.dart';
 import '../models/game_action.dart';
@@ -109,6 +111,9 @@ class _Game3DState extends State<Game3D> {
       // Initialize renderer
       renderer = WebGLRenderer(canvas);
 
+      // Initialize terrain texturing system (async but we don't wait for it)
+      _initializeTerrainTexturing();
+
       // Initialize camera
       camera = Camera3D(
         position: Vector3(0, 10, 15),
@@ -120,12 +125,20 @@ class _Game3DState extends State<Game3D> {
       camera!.setTarget(Vector3(0, 0, 0));
       camera!.setTargetDistance(15);
 
-      // Initialize terrain
-      gameState.terrainTiles = TerrainGenerator.createTileGrid(
-        width: GameConfig.terrainGridSize,
-        height: GameConfig.terrainGridSize,
-        tileSize: GameConfig.terrainTileSize,
-      );
+      // Initialize terrain - use infinite terrain if enabled
+      if (TerrainConfig.useInfiniteTerrain) {
+        gameState.infiniteTerrainManager = InfiniteTerrainManager.fromConfig();
+        // Set GL context for texture cleanup
+        gameState.infiniteTerrainManager!.setGLContext(renderer!.gl);
+        print('[Game3D] Infinite terrain enabled with texture splatting: ${TerrainConfig.useTextureSplatting}');
+      } else {
+        // Fallback to old terrain system
+        gameState.terrainTiles = TerrainGenerator.createTileGrid(
+          width: GameConfig.terrainGridSize,
+          height: GameConfig.terrainGridSize,
+          tileSize: GameConfig.terrainTileSize,
+        );
+      }
 
       // Initialize player
       gameState.playerMesh = PlayerMesh.createSimpleCharacter();
@@ -219,6 +232,27 @@ class _Game3DState extends State<Game3D> {
     }
   }
 
+  /// Initialize terrain texturing system
+  ///
+  /// This loads procedural terrain textures and creates the terrain shader.
+  /// Called asynchronously during game initialization.
+  Future<void> _initializeTerrainTexturing() async {
+    if (renderer == null) return;
+    if (!TerrainConfig.useTextureSplatting) {
+      print('[Game3D] Texture splatting disabled in config');
+      return;
+    }
+
+    try {
+      await renderer!.initializeTerrainTexturing();
+      print('[Game3D] Terrain texturing initialized successfully');
+      print(TerrainConfig.getSummary());
+    } catch (e) {
+      print('[Game3D] Failed to initialize terrain texturing: $e');
+      print('[Game3D] Falling back to vertex-colored terrain');
+    }
+  }
+
   void _startGameLoop() {
     gameState.lastFrameTime = DateTime.now();
     print('Starting game loop...');
@@ -273,6 +307,14 @@ class _Game3DState extends State<Game3D> {
       gameState.playerMovementTracker.update(
         gameState.playerTransform!.position,
         currentTime,
+      );
+    }
+
+    // Update infinite terrain (chunk loading/unloading based on player position)
+    if (gameState.infiniteTerrainManager != null && gameState.playerTransform != null && camera != null) {
+      gameState.infiniteTerrainManager!.update(
+        gameState.playerTransform!.position,
+        camera!.position,
       );
     }
 

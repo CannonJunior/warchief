@@ -1,7 +1,9 @@
 import 'package:vector_math/vector_math.dart' hide SimplexNoise;
 import 'dart:typed_data';
+import 'dart:math' as math;
 import 'mesh.dart';
 import 'heightmap.dart' show Heightmap, SimplexNoise;
+import 'splat_map_generator.dart';
 
 /// TerrainLOD - Level of Detail system for terrain rendering
 ///
@@ -55,9 +57,11 @@ class TerrainLOD {
     }
   }
 
-  /// Create a LOD mesh from heightmap
+  /// Create a LOD mesh from heightmap with UV coordinates and proper normals
   ///
   /// Generates a mesh with reduced vertex count based on LOD level.
+  /// Includes UV coordinates for texture splatting and calculated normals
+  /// from heightmap gradients.
   ///
   /// Parameters:
   /// - heightmap: Source heightmap data
@@ -75,7 +79,7 @@ class TerrainLOD {
     required int lodLevel,
   }) {
     final spacing = getVertexSpacing(lodLevel);
-    final color = Vector3(0.4, 0.6, 0.3); // Grass green
+    final color = Vector3(0.4, 0.6, 0.3); // Grass green (fallback color)
 
     // Calculate reduced vertex count
     final lodWidth = (width / spacing).ceil();
@@ -87,9 +91,10 @@ class TerrainLOD {
     final vertices = Float32List(vertexCount * 3);
     final normals = Float32List(vertexCount * 3);
     final colors = Float32List(vertexCount * 4);
+    final texCoords = Float32List(vertexCount * 2);
     final indices = Uint16List(triangleCount * 3);
 
-    // Generate vertices (skip vertices based on LOD spacing)
+    // First pass: Generate vertices and UV coordinates
     int vertIdx = 0;
     for (int z = 0; z <= height; z += spacing) {
       for (int x = 0; x <= width; x += spacing) {
@@ -106,12 +111,12 @@ class TerrainLOD {
         vertices[vertIdx * 3 + 1] = terrainHeight;
         vertices[vertIdx * 3 + 2] = posZ;
 
-        // Normal points up (could be improved with proper normal calculation)
-        normals[vertIdx * 3 + 0] = 0.0;
-        normals[vertIdx * 3 + 1] = 1.0;
-        normals[vertIdx * 3 + 2] = 0.0;
+        // UV coordinates: 0.0 to 1.0 across the chunk for splat map sampling
+        // These coordinates are seamless at chunk borders
+        texCoords[vertIdx * 2 + 0] = x / width.toDouble();
+        texCoords[vertIdx * 2 + 1] = z / height.toDouble();
 
-        // Color based on height for visual variety
+        // Color based on height for visual variety (fallback when textures disabled)
         final heightFactor = terrainHeight / heightmap.maxHeight;
         final r = color.x * (0.7 + heightFactor * 0.3);
         final g = color.y * (0.7 + heightFactor * 0.3);
@@ -125,6 +130,16 @@ class TerrainLOD {
         vertIdx++;
       }
     }
+
+    // Second pass: Calculate normals from heightmap gradients
+    _calculateTerrainNormals(
+      normals: normals,
+      heightmap: heightmap,
+      width: width,
+      height: height,
+      spacing: spacing,
+      tileSize: tileSize,
+    );
 
     // Generate indices (two triangles per tile)
     int idxIdx = 0;
@@ -152,8 +167,81 @@ class TerrainLOD {
       vertices: vertices,
       indices: indices,
       normals: normals,
+      texCoords: texCoords,
       colors: colors,
     );
+  }
+
+  /// Calculate terrain normals from heightmap gradients
+  ///
+  /// Uses central difference method to calculate surface normals
+  /// based on the slope of the terrain at each vertex.
+  static void _calculateTerrainNormals({
+    required Float32List normals,
+    required Heightmap heightmap,
+    required int width,
+    required int height,
+    required int spacing,
+    required double tileSize,
+  }) {
+    int vertIdx = 0;
+
+    for (int z = 0; z <= height; z += spacing) {
+      for (int x = 0; x <= width; x += spacing) {
+        // Sample heights at neighboring points for gradient calculation
+        // Use central differences where possible
+        final xLeft = (x - spacing).clamp(0, width);
+        final xRight = (x + spacing).clamp(0, width);
+        final zUp = (z - spacing).clamp(0, height);
+        final zDown = (z + spacing).clamp(0, height);
+
+        final heightLeft = heightmap.getHeightAt(xLeft, z);
+        final heightRight = heightmap.getHeightAt(xRight, z);
+        final heightUp = heightmap.getHeightAt(x, zUp);
+        final heightDown = heightmap.getHeightAt(x, zDown);
+
+        // Calculate gradient (rate of height change)
+        // Divide by actual distance to get proper slope
+        final dx = (xRight - xLeft) * tileSize;
+        final dz = (zDown - zUp) * tileSize;
+
+        double gradX = 0.0;
+        double gradZ = 0.0;
+
+        if (dx > 0) {
+          gradX = (heightRight - heightLeft) / dx;
+        }
+        if (dz > 0) {
+          gradZ = (heightDown - heightUp) / dz;
+        }
+
+        // Create normal vector from gradient
+        // Normal = normalize((-gradX, 1, -gradZ))
+        // The negative gradients point "uphill", and we want the normal to point "up"
+        var nx = -gradX;
+        var ny = 1.0;
+        var nz = -gradZ;
+
+        // Normalize
+        final len = math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (len > 0.0001) {
+          nx /= len;
+          ny /= len;
+          nz /= len;
+        } else {
+          // Flat surface, normal points straight up
+          nx = 0.0;
+          ny = 1.0;
+          nz = 0.0;
+        }
+
+        normals[vertIdx * 3 + 0] = nx;
+        normals[vertIdx * 3 + 1] = ny;
+        normals[vertIdx * 3 + 2] = nz;
+
+        vertIdx++;
+      }
+    }
   }
 
   /// Get vertex count for LOD level
@@ -184,7 +272,7 @@ class TerrainLOD {
 /// TerrainChunkWithLOD - Terrain chunk with multiple LOD meshes
 ///
 /// Stores 3 meshes (LOD 0, 1, 2) and switches between them based on
-/// distance from camera.
+/// distance from camera. Includes splat map data for texture splatting.
 class TerrainChunkWithLOD {
   /// Chunk grid coordinates
   final int chunkX;
@@ -205,6 +293,16 @@ class TerrainChunkWithLOD {
   /// Tile size
   final double tileSize;
 
+  /// Splat map data for this chunk (RGBA: grass, dirt, rock, sand)
+  /// Stored as Float32List for precision, converted to texture when rendering
+  Float32List? splatMapData;
+
+  /// Resolution of splat map (width = height = splatMapResolution)
+  int splatMapResolution;
+
+  /// WebGL texture for splat map (created by renderer)
+  dynamic splatMapTexture;
+
   /// Current distance from camera
   double distanceFromCamera = 0.0;
 
@@ -219,9 +317,12 @@ class TerrainChunkWithLOD {
     required this.lodMeshes,
     required this.heightmap,
     required this.tileSize,
+    this.splatMapData,
+    this.splatMapResolution = 16,
+    this.splatMapTexture,
   });
 
-  /// Generate all LOD levels for a terrain chunk
+  /// Generate all LOD levels for a terrain chunk with splat map
   static TerrainChunkWithLOD generate({
     required int chunkX,
     required int chunkZ,
@@ -232,6 +333,8 @@ class TerrainChunkWithLOD {
     double noiseScale = 0.03,
     int noiseOctaves = 2,
     double noisePersistence = 0.5,
+    bool generateSplatMap = true,
+    int splatMapResolution = 16,
   }) {
     // Calculate world position
     final worldX = chunkX * size * tileSize;
@@ -271,6 +374,17 @@ class TerrainChunkWithLOD {
       lodMeshes.add(mesh);
     }
 
+    // Generate splat map if enabled
+    Float32List? splatMapData;
+    if (generateSplatMap) {
+      splatMapData = SplatMapGenerator.generateSplatMap(
+        heightmap: heightmap,
+        resolution: splatMapResolution,
+        maxHeight: maxHeight,
+        seed: seed + chunkX * 1000 + chunkZ, // Vary by chunk for natural look
+      );
+    }
+
     return TerrainChunkWithLOD(
       chunkX: chunkX,
       chunkZ: chunkZ,
@@ -279,6 +393,8 @@ class TerrainChunkWithLOD {
       lodMeshes: lodMeshes,
       heightmap: heightmap,
       tileSize: tileSize,
+      splatMapData: splatMapData,
+      splatMapResolution: splatMapResolution,
     );
   }
 
@@ -332,6 +448,9 @@ class TerrainChunkWithLOD {
   /// Get current LOD mesh
   Mesh get currentMesh => lodMeshes[currentLOD];
 
+  /// Check if this chunk has splat map data
+  bool get hasSplatMap => splatMapData != null;
+
   /// Get terrain height at world position
   double? getHeightAt(double worldX, double worldZ) {
     final localX = worldX - worldPosition.x;
@@ -346,12 +465,54 @@ class TerrainChunkWithLOD {
     return heightmap.getTerrainHeight(localX, localZ);
   }
 
+  /// Get slope at world position (0 = vertical cliff, 1 = flat ground)
+  ///
+  /// Returns null if position is outside chunk bounds.
+  double? getSlopeAt(double worldX, double worldZ) {
+    final localX = worldX - worldPosition.x;
+    final localZ = worldZ - worldPosition.z;
+
+    final halfSize = (size * tileSize) / 2;
+    if (localX < -halfSize || localX > halfSize ||
+        localZ < -halfSize || localZ > halfSize) {
+      return null;
+    }
+
+    // Convert to grid coordinates
+    final gridX = ((localX / tileSize) + size / 2.0).toInt().clamp(0, size - 1);
+    final gridZ = ((localZ / tileSize) + size / 2.0).toInt().clamp(0, size - 1);
+
+    // Calculate slope from neighboring heights
+    final heightLeft = heightmap.getHeightAt((gridX - 1).clamp(0, size), gridZ);
+    final heightRight = heightmap.getHeightAt((gridX + 1).clamp(0, size), gridZ);
+    final heightUp = heightmap.getHeightAt(gridX, (gridZ - 1).clamp(0, size));
+    final heightDown = heightmap.getHeightAt(gridX, (gridZ + 1).clamp(0, size));
+
+    // Calculate gradient magnitude
+    final gradX = (heightRight - heightLeft) / (2 * tileSize);
+    final gradZ = (heightDown - heightUp) / (2 * tileSize);
+    final gradMagnitude = math.sqrt(gradX * gradX + gradZ * gradZ);
+
+    // Convert to slope (1 = flat, 0 = vertical)
+    // slope = cos(atan(gradMagnitude)) = 1 / sqrt(1 + gradMagnitude^2)
+    return 1.0 / math.sqrt(1.0 + gradMagnitude * gradMagnitude);
+  }
+
+  /// Dispose splat map texture (call when unloading chunk)
+  void disposeSplatMapTexture(dynamic gl) {
+    if (splatMapTexture != null && gl != null) {
+      gl.deleteTexture(splatMapTexture);
+      splatMapTexture = null;
+    }
+  }
+
   /// Get chunk key
   String get key => '$chunkX,$chunkZ';
 
   /// Get stats
   String getStats() {
-    return 'Chunk[$chunkX,$chunkZ] | Distance: ${distanceFromCamera.toStringAsFixed(1)} | ${TerrainLOD.getStats(size, size, currentLOD)}';
+    final splatInfo = hasSplatMap ? ' | SplatMap: ${splatMapResolution}x${splatMapResolution}' : '';
+    return 'Chunk[$chunkX,$chunkZ] | Distance: ${distanceFromCamera.toStringAsFixed(1)} | ${TerrainLOD.getStats(size, size, currentLOD)}$splatInfo';
   }
 
   @override

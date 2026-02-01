@@ -1,4 +1,3 @@
-import 'dart:html' as html;
 import 'package:vector_math/vector_math.dart';
 
 /// ShaderProgram - Manages WebGL shader compilation and uniform setting
@@ -102,17 +101,24 @@ class ShaderProgram {
   }
 
   /// Get uniform location (cached)
+  /// Returns null if uniform doesn't exist (or was optimized out)
   dynamic _getUniformLocation(String name) { // Returns WebGL UniformLocation
     if (_uniformLocations.containsKey(name)) {
       return _uniformLocations[name];
     }
 
-    final location = gl.getUniformLocation(program, name);
-    if (location != null) {
-      _uniformLocations[name] = location;
+    // Wrap in try-catch to handle null assertions in dart:web_gl
+    try {
+      final location = gl.getUniformLocation(program, name);
+      if (location != null) {
+        _uniformLocations[name] = location;
+      }
+      return location;
+    } catch (e) {
+      // Uniform doesn't exist or was optimized out
+      // This is normal for unused uniforms
+      return null;
     }
-
-    return location;
   }
 
   /// Get attribute location (cached)
@@ -163,6 +169,40 @@ class ShaderProgram {
     final location = _getUniformLocation(name);
     if (location != null) {
       gl.uniform1i(location, value);
+    }
+  }
+
+  /// Set a boolean uniform (as int: 0 or 1)
+  void setUniformBool(String name, bool value) {
+    final location = _getUniformLocation(name);
+    if (location != null) {
+      gl.uniform1i(location, value ? 1 : 0);
+    }
+  }
+
+  /// Set a sampler2D uniform (texture unit index)
+  ///
+  /// Use this to bind textures to samplers in shaders.
+  /// The textureUnit should match the texture unit where the texture is bound.
+  ///
+  /// Example:
+  /// ```dart
+  /// gl.activeTexture(gl.TEXTURE0);
+  /// gl.bindTexture(gl.TEXTURE_2D, myTexture);
+  /// shader.setUniformSampler2D('uTexture', 0);  // Unit 0
+  /// ```
+  void setUniformSampler2D(String name, int textureUnit) {
+    final location = _getUniformLocation(name);
+    if (location != null) {
+      gl.uniform1i(location, textureUnit);
+    }
+  }
+
+  /// Set a Vector2 uniform
+  void setUniformVector2(String name, double x, double y) {
+    final location = _getUniformLocation(name);
+    if (location != null) {
+      gl.uniform2f(location, x, y);
     }
   }
 

@@ -2,7 +2,6 @@ import '../state/game_state.dart';
 import '../../rendering3d/webgl_renderer.dart';
 import '../../rendering3d/camera3d.dart';
 import '../../rendering3d/math/transform3d.dart';
-import 'package:vector_math/vector_math.dart';
 
 /// Render System - Handles 3D scene rendering
 ///
@@ -28,7 +27,7 @@ class RenderSystem {
     // Clear screen
     renderer.clear();
 
-    // Render infinite terrain chunks with LOD (new system)
+    // Render infinite terrain chunks with LOD and texture splatting
     if (gameState.infiniteTerrainManager != null) {
       final chunks = gameState.infiniteTerrainManager!.getLoadedChunks();
       for (final chunk in chunks) {
@@ -37,8 +36,9 @@ class RenderSystem {
           position: chunk.worldPosition,
         );
 
-        // Render appropriate LOD mesh
-        renderer.render(chunk.currentMesh, chunkTransform, camera);
+        // Render terrain with texture splatting (if enabled)
+        // Falls back to regular rendering if texturing not initialized
+        renderer.renderTerrain(chunk, chunkTransform, camera);
       }
     }
     // Fallback to old terrain system (backwards compatibility)
