@@ -46,6 +46,7 @@ enum GameAction {
   petPassive,
   petDefensive,
   petAggressive,
+  cycleFormation,
 
   // UI
   toggleSettings,
@@ -125,6 +126,8 @@ extension GameActionExtension on GameAction {
         return 'Pet Defensive';
       case GameAction.petAggressive:
         return 'Pet Aggressive';
+      case GameAction.cycleFormation:
+        return 'Cycle Formation';
       case GameAction.toggleSettings:
         return 'Toggle Settings';
       case GameAction.toggleInventory:
@@ -205,6 +208,8 @@ extension GameActionExtension on GameAction {
         return LogicalKeyboardKey.keyJ;
       case GameAction.petAggressive:
         return LogicalKeyboardKey.keyK;
+      case GameAction.cycleFormation:
+        return LogicalKeyboardKey.keyR;
       case GameAction.toggleSettings:
         return LogicalKeyboardKey.escape;
       case GameAction.toggleInventory:

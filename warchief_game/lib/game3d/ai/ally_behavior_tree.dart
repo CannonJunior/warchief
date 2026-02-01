@@ -9,6 +9,8 @@ import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
 import '../systems/combat_system.dart';
 import '../utils/bezier_path.dart';
+import 'ally_strategy.dart';
+import 'tactical_positioning.dart';
 
 /// Behavior tree node status
 enum NodeStatus {
@@ -25,6 +27,26 @@ class AllyBehaviorContext {
   final double distanceToMonster;
   final bool monsterAlive;
   final bool playerAlive;
+  final TacticalPosition? tacticalPosition;
+
+  /// Current strategy for quick access
+  AllyStrategy get strategy => ally.strategy;
+
+  /// Health percentage (0-1)
+  double get healthPercent => ally.health / ally.maxHealth;
+
+  /// Player health percentage (0-1)
+  double get playerHealthPercent =>
+      gameState.playerHealth / gameState.playerMaxHealth;
+
+  /// Combat role based on ability
+  CombatRole get combatRole => TacticalPositioning.getAllyRole(ally);
+
+  /// Distance to tactical position
+  double get distanceToTacticalPosition {
+    if (tacticalPosition == null) return double.infinity;
+    return (ally.transform.position - tacticalPosition!.position).length;
+  }
 
   AllyBehaviorContext({
     required this.ally,
@@ -33,12 +55,17 @@ class AllyBehaviorContext {
     required this.distanceToMonster,
     required this.monsterAlive,
     required this.playerAlive,
+    this.tacticalPosition,
   });
 
   /// Create context from ally and game state
   factory AllyBehaviorContext.create(Ally ally, GameState gameState) {
     final playerPos = gameState.playerTransform?.position ?? Vector3.zero();
     final monsterPos = gameState.monsterTransform?.position ?? Vector3.zero();
+
+    // Get tactical position for this ally
+    final tacticalPositions = gameState.getTacticalPositions();
+    final tacticalPos = tacticalPositions[ally];
 
     return AllyBehaviorContext(
       ally: ally,
@@ -47,6 +74,7 @@ class AllyBehaviorContext {
       distanceToMonster: (ally.transform.position - monsterPos).length,
       monsterAlive: gameState.monsterHealth > 0,
       playerAlive: gameState.playerHealth > 0,
+      tacticalPosition: tacticalPos,
     );
   }
 }
@@ -284,15 +312,15 @@ class AllyBehaviorTreeFactory {
     }
   }
 
-  /// Self-preservation: heal when low health
+  /// Self-preservation: heal when low health (uses strategy threshold)
   static BehaviorNode _createSelfPreservationBranch() {
     return Sequence(
       name: 'SelfPreservation',
       children: [
-        // Condition: Health below 40%
+        // Condition: Health below strategy's heal threshold
         Condition(
           name: 'IsLowHealth',
-          check: (ctx) => ctx.ally.health < ctx.ally.maxHealth * 0.4,
+          check: (ctx) => ctx.healthPercent < ctx.strategy.healThreshold,
         ),
         // Condition: Has heal ability
         Condition(
@@ -303,6 +331,11 @@ class AllyBehaviorTreeFactory {
         Condition(
           name: 'HealReady',
           check: (ctx) => ctx.ally.abilityCooldown <= 0,
+        ),
+        // Condition: Defense weight allows healing (berserker won't heal much)
+        Condition(
+          name: 'StrategyAllowsHeal',
+          check: (ctx) => ctx.strategy.defenseWeight >= 0.3,
         ),
         // Action: Heal self
         Action(
@@ -332,7 +365,7 @@ class AllyBehaviorTreeFactory {
     );
   }
 
-  /// Melee attack branch (sword users)
+  /// Melee attack branch (sword users) - uses strategy's engage distance
   static BehaviorNode _createMeleeAttackBranch() {
     return Sequence(
       name: 'MeleeAttack',
@@ -341,13 +374,21 @@ class AllyBehaviorTreeFactory {
           name: 'MonsterAlive',
           check: (ctx) => ctx.monsterAlive,
         ),
+        // Use strategy's preferred range for melee (closer for aggressive)
         Condition(
           name: 'InMeleeRange',
-          check: (ctx) => ctx.distanceToMonster <= 3.0,
+          check: (ctx) => ctx.distanceToMonster <= ctx.strategy.preferredRange + 1.0,
         ),
         Condition(
           name: 'AbilityReady',
           check: (ctx) => ctx.ally.abilityCooldown <= 0,
+        ),
+        // Check we're not retreating (unless berserker)
+        Condition(
+          name: 'NotRetreating',
+          check: (ctx) =>
+              ctx.healthPercent > ctx.strategy.retreatThreshold ||
+              ctx.strategy.retreatThreshold == 0,
         ),
         Action(
           name: 'SwordAttack',
@@ -357,7 +398,7 @@ class AllyBehaviorTreeFactory {
     );
   }
 
-  /// Ranged attack branch (fireball users)
+  /// Ranged attack branch (fireball users) - uses strategy's preferred range
   static BehaviorNode _createRangedAttackBranch() {
     return Sequence(
       name: 'RangedAttack',
@@ -366,13 +407,25 @@ class AllyBehaviorTreeFactory {
           name: 'MonsterAlive',
           check: (ctx) => ctx.monsterAlive,
         ),
+        // Use strategy's engage distance and preferred range
         Condition(
           name: 'InRangedRange',
-          check: (ctx) => ctx.distanceToMonster <= 15.0 && ctx.distanceToMonster >= 4.0,
+          check: (ctx) {
+            final minRange = ctx.strategy.allowMeleeIfRanged ? 0.0 : 3.0;
+            return ctx.distanceToMonster <= ctx.strategy.engageDistance &&
+                   ctx.distanceToMonster >= minRange;
+          },
         ),
         Condition(
           name: 'AbilityReady',
           check: (ctx) => ctx.ally.abilityCooldown <= 0,
+        ),
+        // Check we're not retreating
+        Condition(
+          name: 'NotRetreating',
+          check: (ctx) =>
+              ctx.healthPercent > ctx.strategy.retreatThreshold ||
+              ctx.strategy.retreatThreshold == 0,
         ),
         Action(
           name: 'FireballAttack',
@@ -382,18 +435,18 @@ class AllyBehaviorTreeFactory {
     );
   }
 
-  /// Support branch (healer allies - heal player or self)
+  /// Support branch (healer allies - heal player or self) - uses strategy weights
   static BehaviorNode _createSupportBranch() {
     return Selector(
       name: 'Support',
       children: [
-        // Heal self if needed
+        // Heal self if needed (uses strategy heal threshold)
         Sequence(
           name: 'HealSelfIfNeeded',
           children: [
             Condition(
               name: 'SelfNeedsHealing',
-              check: (ctx) => ctx.ally.health < ctx.ally.maxHealth * 0.7,
+              check: (ctx) => ctx.healthPercent < ctx.strategy.healThreshold + 0.2,
             ),
             Condition(
               name: 'AbilityReady',
@@ -405,14 +458,15 @@ class AllyBehaviorTreeFactory {
             ),
           ],
         ),
-        // Stay near player
+        // Stay near player (support allies stay closer)
         Action(
           name: 'StayNearPlayer',
           execute: (ctx) {
-            // Just ensure following player
+            // Ensure following player at strategy's follow distance
             if (ctx.ally.movementMode != AllyMovementMode.followPlayer) {
               ctx.ally.movementMode = AllyMovementMode.followPlayer;
             }
+            ctx.ally.followBufferDistance = ctx.strategy.followDistance;
             return NodeStatus.success;
           },
         ),
@@ -420,32 +474,78 @@ class AllyBehaviorTreeFactory {
     );
   }
 
-  /// Approach monster if too far for attack
+  /// Approach monster if too far for attack - uses tactical positioning
   static BehaviorNode _createApproachMonsterBranch() {
-    return Sequence(
+    return Selector(
       name: 'ApproachMonster',
       children: [
-        Condition(
-          name: 'MonsterAlive',
-          check: (ctx) => ctx.monsterAlive,
+        // First try: Move to tactical position (formation-based)
+        Sequence(
+          name: 'MoveToTacticalPosition',
+          children: [
+            Condition(
+              name: 'MonsterAlive',
+              check: (ctx) => ctx.monsterAlive,
+            ),
+            Condition(
+              name: 'StrategyAllowsChase',
+              check: (ctx) => ctx.strategy.chaseEnemy,
+            ),
+            Condition(
+              name: 'NotRetreating',
+              check: (ctx) =>
+                  ctx.healthPercent > ctx.strategy.retreatThreshold ||
+                  ctx.strategy.retreatThreshold == 0,
+            ),
+            Condition(
+              name: 'HasTacticalPosition',
+              check: (ctx) => ctx.tacticalPosition != null,
+            ),
+            Condition(
+              name: 'NotAtTacticalPosition',
+              check: (ctx) => ctx.distanceToTacticalPosition > 1.5,
+            ),
+            Action(
+              name: 'MoveToTacticalPos',
+              execute: (ctx) => _executeMoveToTacticalPosition(ctx),
+            ),
+          ],
         ),
-        Condition(
-          name: 'TooFarFromMonster',
-          check: (ctx) {
-            // Melee needs to be closer, ranged can stay back
-            final idealRange = ctx.ally.abilityIndex == 0 ? 2.5 : 10.0;
-            return ctx.distanceToMonster > idealRange;
-          },
-        ),
-        Action(
-          name: 'MoveToMonster',
-          execute: (ctx) => _executeMoveToMonster(ctx),
+        // Fallback: Direct approach to monster
+        Sequence(
+          name: 'DirectApproach',
+          children: [
+            Condition(
+              name: 'MonsterAlive',
+              check: (ctx) => ctx.monsterAlive,
+            ),
+            Condition(
+              name: 'StrategyAllowsChase',
+              check: (ctx) => ctx.strategy.chaseEnemy,
+            ),
+            Condition(
+              name: 'NotRetreating',
+              check: (ctx) =>
+                  ctx.healthPercent > ctx.strategy.retreatThreshold ||
+                  ctx.strategy.retreatThreshold == 0,
+            ),
+            Condition(
+              name: 'TooFarFromMonster',
+              check: (ctx) {
+                return ctx.distanceToMonster > ctx.strategy.preferredRange + 2.0;
+              },
+            ),
+            Action(
+              name: 'MoveToMonster',
+              execute: (ctx) => _executeMoveToMonster(ctx),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  /// Default follow player behavior
+  /// Default follow player behavior - uses strategy's follow distance
   static BehaviorNode _createFollowBranch() {
     return Action(
       name: 'FollowPlayer',
@@ -454,6 +554,8 @@ class AllyBehaviorTreeFactory {
         if (ctx.ally.movementMode != AllyMovementMode.followPlayer) {
           ctx.ally.movementMode = AllyMovementMode.followPlayer;
         }
+        // Update follow distance based on strategy
+        ctx.ally.followBufferDistance = ctx.strategy.followDistance;
         return NodeStatus.success;
       },
     );
@@ -554,17 +656,34 @@ class AllyBehaviorTreeFactory {
     return NodeStatus.success;
   }
 
-  /// Execute move toward monster
+  /// Execute move toward monster - uses tactical position if available
   static NodeStatus _executeMoveToMonster(AllyBehaviorContext ctx) {
     if (ctx.gameState.monsterTransform == null) return NodeStatus.failure;
 
-    final monsterPos = ctx.gameState.monsterTransform!.position;
     final allyPos = ctx.ally.transform.position;
+    Vector3 targetPos;
 
-    // Calculate ideal position (closer for melee, farther for ranged)
-    final idealRange = ctx.ally.abilityIndex == 0 ? 2.0 : 8.0;
-    final toMonster = (monsterPos - allyPos).normalized();
-    final targetPos = monsterPos - toMonster * idealRange;
+    // Use tactical position if available, otherwise calculate direct approach
+    if (ctx.tacticalPosition != null) {
+      targetPos = TacticalPositioning.applyTerrainHeight(
+        ctx.gameState,
+        ctx.tacticalPosition!.position,
+      );
+    } else {
+      // Fallback: move directly toward monster at preferred range
+      final monsterPos = ctx.gameState.monsterTransform!.position;
+      final idealRange = ctx.strategy.preferredRange;
+      final toMonster = (monsterPos - allyPos).normalized();
+      targetPos = monsterPos - toMonster * idealRange;
+    }
+
+    // Only move if we're not already at the position
+    final distanceToTarget = (allyPos - targetPos).length;
+    if (distanceToTarget < 0.5) {
+      // Already at target position
+      ctx.ally.isMoving = false;
+      return NodeStatus.success;
+    }
 
     // Create path to target
     ctx.ally.currentPath = BezierPath.interception(
@@ -576,6 +695,45 @@ class AllyBehaviorTreeFactory {
     ctx.ally.isMoving = true;
 
     return NodeStatus.running; // Still moving
+  }
+
+  /// Execute move to tactical position (formation position)
+  static NodeStatus _executeMoveToTacticalPosition(AllyBehaviorContext ctx) {
+    if (ctx.tacticalPosition == null) return NodeStatus.failure;
+
+    final allyPos = ctx.ally.transform.position;
+    final targetPos = TacticalPositioning.applyTerrainHeight(
+      ctx.gameState,
+      ctx.tacticalPosition!.position,
+    );
+
+    final distanceToTarget = (allyPos - targetPos).length;
+
+    // Already at tactical position
+    if (distanceToTarget < 1.0) {
+      ctx.ally.isMoving = false;
+      // Face the correct direction based on tactical position
+      ctx.ally.rotation = ctx.tacticalPosition!.facingAngle;
+      ctx.ally.directionIndicatorTransform?.rotation.y = ctx.ally.rotation;
+      return NodeStatus.success;
+    }
+
+    // Create path to tactical position
+    ctx.ally.currentPath = BezierPath.interception(
+      start: allyPos,
+      target: targetPos,
+      velocity: null,
+    );
+    ctx.ally.movementMode = AllyMovementMode.tactical;
+    ctx.ally.isMoving = true;
+
+    return NodeStatus.running;
+  }
+
+  /// Check if ally should retreat based on strategy
+  static bool _shouldRetreat(AllyBehaviorContext ctx) {
+    if (ctx.strategy.retreatThreshold == 0) return false;
+    return ctx.healthPercent <= ctx.strategy.retreatThreshold;
   }
 }
 

@@ -10,6 +10,7 @@ import '../../models/ai_chat_message.dart';
 import 'game_config.dart';
 import '../utils/movement_prediction.dart';
 import '../utils/bezier_path.dart';
+import '../ai/tactical_positioning.dart';
 
 /// Game State - Centralized state management for the 3D game
 ///
@@ -84,6 +85,29 @@ class GameState {
   // ==================== ALLY STATE ====================
 
   List<Ally> allies = []; // Start with zero allies
+  FormationType currentFormation = FormationType.scattered; // Active formation
+  Map<Ally, TacticalPosition>? _cachedTacticalPositions;
+  double _tacticalPositionCacheTime = 0.0;
+
+  /// Get tactical positions for all allies (cached for performance)
+  Map<Ally, TacticalPosition> getTacticalPositions() {
+    // Recalculate every 0.5 seconds or when cache is invalid
+    final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
+    if (_cachedTacticalPositions == null ||
+        now - _tacticalPositionCacheTime > 0.5) {
+      _cachedTacticalPositions = TacticalPositioning.calculatePositions(
+        this,
+        currentFormation,
+      );
+      _tacticalPositionCacheTime = now;
+    }
+    return _cachedTacticalPositions!;
+  }
+
+  /// Force recalculation of tactical positions
+  void invalidateTacticalPositions() {
+    _cachedTacticalPositions = null;
+  }
 
   // ==================== AI CHAT ====================
 

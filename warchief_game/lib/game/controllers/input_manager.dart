@@ -109,6 +109,24 @@ class InputManager {
     return _pressedKeys.contains(key);
   }
 
+  /// Check if either shift key is currently pressed
+  bool isShiftPressed() {
+    return _pressedKeys.contains(LogicalKeyboardKey.shiftLeft) ||
+           _pressedKeys.contains(LogicalKeyboardKey.shiftRight);
+  }
+
+  /// Check if either control key is currently pressed
+  bool isControlPressed() {
+    return _pressedKeys.contains(LogicalKeyboardKey.controlLeft) ||
+           _pressedKeys.contains(LogicalKeyboardKey.controlRight);
+  }
+
+  /// Check if either alt key is currently pressed
+  bool isAltPressed() {
+    return _pressedKeys.contains(LogicalKeyboardKey.altLeft) ||
+           _pressedKeys.contains(LogicalKeyboardKey.altRight);
+  }
+
   /// Get the current key binding for an action
   LogicalKeyboardKey? getKeyForAction(GameAction action) {
     return _keyBindings[action];

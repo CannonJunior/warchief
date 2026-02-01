@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../models/ally.dart';
+import '../ai/ally_strategy.dart';
 import 'cooldown_clock_painter.dart';
 import 'ui_config.dart';
 
-/// Allies Panel displaying all allies with health bars, ability buttons, and add/remove buttons
+/// Allies Panel displaying all allies with health bars, ability buttons, strategy selectors, and add/remove buttons
 class AlliesPanel extends StatelessWidget {
   final List<Ally> allies;
   final void Function(Ally) onActivateAllyAbility;
+  final void Function(Ally, AllyStrategyType) onStrategyChanged;
   final VoidCallback onAddAlly;
   final VoidCallback onRemoveAlly;
 
@@ -14,6 +16,7 @@ class AlliesPanel extends StatelessWidget {
     Key? key,
     required this.allies,
     required this.onActivateAllyAbility,
+    required this.onStrategyChanged,
     required this.onAddAlly,
     required this.onRemoveAlly,
   }) : super(key: key);
@@ -160,7 +163,10 @@ class AlliesPanel extends StatelessWidget {
                       ],
                     ),
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 6),
+                  // Strategy selector
+                  _buildStrategySelector(ally),
+                  SizedBox(height: 6),
                   // Ability display
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -229,6 +235,52 @@ class AlliesPanel extends StatelessWidget {
           }).toList(),
         ],
       ),
+    );
+  }
+
+  /// Build strategy selector row for an ally
+  Widget _buildStrategySelector(Ally ally) {
+    final strategies = AllyStrategies.allStrategies;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: strategies.map((strategy) {
+        final isSelected = ally.strategyType == strategy.type;
+        return Padding(
+          padding: EdgeInsets.only(left: 3),
+          child: Tooltip(
+            message: '${strategy.name}\n${strategy.description}',
+            child: InkWell(
+              onTap: () => onStrategyChanged(ally, strategy.type),
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                width: 24,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Color(strategy.color)
+                      : Color(strategy.color).withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: isSelected ? Colors.white : Colors.white30,
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    strategy.shortLabel,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.white70,
+                      fontSize: 7,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

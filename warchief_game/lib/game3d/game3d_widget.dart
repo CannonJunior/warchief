@@ -18,6 +18,8 @@ import '../ai/ollama_client.dart';
 import '../models/projectile.dart';
 import '../models/ally.dart';
 import '../models/ai_chat_message.dart';
+import 'ai/ally_strategy.dart';
+import 'ai/tactical_positioning.dart';
 import 'state/game_config.dart';
 import 'state/game_state.dart';
 import 'state/abilities_config.dart';
@@ -31,6 +33,9 @@ import 'ui/monster_hud.dart';
 import 'ui/ai_chat_panel.dart';
 import 'ui/player_hud.dart';
 import 'ui/allies_panel.dart';
+import 'ui/formation_panel.dart';
+import 'ui/draggable_panel.dart';
+import 'ui/ally_command_panels.dart';
 import 'ui/ui_config.dart';
 import 'ui/abilities_modal.dart';
 
@@ -503,49 +508,139 @@ class _Game3DState extends State<Game3D> {
   bool _followKeyWasPressed = false;
   bool _attackKeyWasPressed = false;
   bool _holdKeyWasPressed = false;
+  bool _formationKeyWasPressed = false;
+
+  /// Panel visibility states (toggled with SHIFT+key)
+  bool _showAttackPanel = false;
+  bool _showFollowPanel = false;
+  bool _showHoldPanel = false;
+  bool _showFormationPanel = true; // Shown by default
+
+  /// Panel positions (for draggable panels)
+  Offset _attackPanelPosition = Offset(20, 200);
+  Offset _followPanelPosition = Offset(170, 200);
+  Offset _holdPanelPosition = Offset(320, 200);
+  Offset _formationPanelPosition = Offset(0, 0); // Will be set in build
+
+  /// Track SHIFT+key states for panel toggling
+  bool _shiftFollowWasPressed = false;
+  bool _shiftAttackWasPressed = false;
+  bool _shiftHoldWasPressed = false;
+  bool _shiftFormationWasPressed = false;
 
   /// Handle ally command input (F=Follow, G=Attack, H=Hold)
   void _handleAllyCommands() {
     if (inputManager == null) return;
 
+    final shiftPressed = inputManager!.isShiftPressed();
     final followPressed = inputManager!.isActionPressed(GameAction.petFollow);
     final attackPressed = inputManager!.isActionPressed(GameAction.petAttack);
     final holdPressed = inputManager!.isActionPressed(GameAction.petStay);
+    final formationPressed = inputManager!.isActionPressed(GameAction.cycleFormation);
 
-    // F key - Follow command (toggle)
-    if (followPressed && !_followKeyWasPressed) {
-      _setAllyCommand(AllyCommand.follow);
-      print('[ALLY CMD] All allies: FOLLOW');
+    // SHIFT+F - Toggle Follow panel
+    if (shiftPressed && followPressed && !_shiftFollowWasPressed) {
+      setState(() {
+        _showFollowPanel = !_showFollowPanel;
+      });
+      print('[UI] Follow panel: ${_showFollowPanel ? "shown" : "hidden"}');
     }
-    _followKeyWasPressed = followPressed;
+    _shiftFollowWasPressed = shiftPressed && followPressed;
 
-    // T key - Attack command (toggle)
-    if (attackPressed && !_attackKeyWasPressed) {
-      _setAllyCommand(AllyCommand.attack);
-      print('[ALLY CMD] All allies: ATTACK');
+    // SHIFT+T - Toggle Attack panel
+    if (shiftPressed && attackPressed && !_shiftAttackWasPressed) {
+      setState(() {
+        _showAttackPanel = !_showAttackPanel;
+      });
+      print('[UI] Attack panel: ${_showAttackPanel ? "shown" : "hidden"}');
     }
-    _attackKeyWasPressed = attackPressed;
+    _shiftAttackWasPressed = shiftPressed && attackPressed;
 
-    // G key - Hold command (toggle)
-    if (holdPressed && !_holdKeyWasPressed) {
-      _setAllyCommand(AllyCommand.hold);
-      print('[ALLY CMD] All allies: HOLD');
+    // SHIFT+G - Toggle Hold panel
+    if (shiftPressed && holdPressed && !_shiftHoldWasPressed) {
+      setState(() {
+        _showHoldPanel = !_showHoldPanel;
+      });
+      print('[UI] Hold panel: ${_showHoldPanel ? "shown" : "hidden"}');
     }
-    _holdKeyWasPressed = holdPressed;
+    _shiftHoldWasPressed = shiftPressed && holdPressed;
+
+    // SHIFT+R - Toggle Formation panel
+    if (shiftPressed && formationPressed && !_shiftFormationWasPressed) {
+      setState(() {
+        _showFormationPanel = !_showFormationPanel;
+      });
+      print('[UI] Formation panel: ${_showFormationPanel ? "shown" : "hidden"}');
+    }
+    _shiftFormationWasPressed = shiftPressed && formationPressed;
+
+    // Without SHIFT - execute commands
+    if (!shiftPressed) {
+      // F key - Follow command (toggle)
+      if (followPressed && !_followKeyWasPressed) {
+        _setAllyCommand(AllyCommand.follow);
+        print('[ALLY CMD] All allies: FOLLOW');
+      }
+      _followKeyWasPressed = followPressed;
+
+      // T key - Attack command (toggle)
+      if (attackPressed && !_attackKeyWasPressed) {
+        _setAllyCommand(AllyCommand.attack);
+        print('[ALLY CMD] All allies: ATTACK');
+      }
+      _attackKeyWasPressed = attackPressed;
+
+      // G key - Hold command (toggle)
+      if (holdPressed && !_holdKeyWasPressed) {
+        _setAllyCommand(AllyCommand.hold);
+        print('[ALLY CMD] All allies: HOLD');
+      }
+      _holdKeyWasPressed = holdPressed;
+
+      // R key - Cycle formation
+      if (formationPressed && !_formationKeyWasPressed) {
+        _cycleFormation();
+      }
+      _formationKeyWasPressed = formationPressed;
+    }
+  }
+
+  /// Cycle through available formations
+  void _cycleFormation() {
+    final formations = FormationType.values;
+    final currentIndex = formations.indexOf(gameState.currentFormation);
+    final nextIndex = (currentIndex + 1) % formations.length;
+    gameState.currentFormation = formations[nextIndex];
+    gameState.invalidateTacticalPositions();
+    print('[FORMATION] Changed to: ${gameState.currentFormation.name}');
   }
 
   /// Set command for all allies
   void _setAllyCommand(AllyCommand command) {
+    setState(() {
+      for (final ally in gameState.allies) {
+        // If same command, toggle it off
+        if (ally.currentCommand == command) {
+          ally.currentCommand = AllyCommand.none;
+          ally.movementMode = AllyMovementMode.followPlayer;
+        } else {
+          ally.currentCommand = command;
+          ally.commandTimer = 0.0;
+        }
+      }
+    });
+  }
+
+  /// Get the current command active across allies (for UI display)
+  AllyCommand _getCurrentAllyCommand() {
+    if (gameState.allies.isEmpty) return AllyCommand.none;
+    // Return the first non-none command, or none if all allies have none
     for (final ally in gameState.allies) {
-      // If same command, toggle it off
-      if (ally.currentCommand == command) {
-        ally.currentCommand = AllyCommand.none;
-        ally.movementMode = AllyMovementMode.followPlayer;
-      } else {
-        ally.currentCommand = command;
-        ally.commandTimer = 0.0;
+      if (ally.currentCommand != AllyCommand.none) {
+        return ally.currentCommand;
       }
     }
+    return AllyCommand.none;
   }
 
   // ===== MONSTER ABILITY METHODS =====
@@ -639,6 +734,25 @@ class _Game3DState extends State<Game3D> {
       // Force the ally to use their ability
       AISystem.executeAllyDecision(ally, 'ATTACK', gameState);
       print('Manually activated ally ability ${ally.abilityIndex}');
+    });
+  }
+
+  /// Change an ally's strategy
+  void _changeAllyStrategy(Ally ally, AllyStrategyType newStrategy) {
+    setState(() {
+      ally.strategyType = newStrategy;
+      // Update follow distance based on new strategy
+      ally.followBufferDistance = ally.strategy.followDistance;
+      print('Ally strategy changed to: ${ally.strategy.name}');
+    });
+  }
+
+  /// Change the formation type for all allies
+  void _changeFormation(FormationType newFormation) {
+    setState(() {
+      gameState.currentFormation = newFormation;
+      gameState.invalidateTacticalPositions();
+      print('[FORMATION] Changed to: ${newFormation.name}');
     });
   }
 
@@ -772,9 +886,59 @@ class _Game3DState extends State<Game3D> {
             AlliesPanel(
               allies: gameState.allies,
               onActivateAllyAbility: _activateAllyAbility,
+              onStrategyChanged: _changeAllyStrategy,
               onAddAlly: _addAlly,
               onRemoveAlly: _removeAlly,
             ),
+
+            // ========== DRAGGABLE ALLY COMMAND PANELS ==========
+
+            // Formation Panel (SHIFT+R to toggle)
+            if (gameState.allies.isNotEmpty && _showFormationPanel)
+              DraggablePanel(
+                initialPosition: Offset(MediaQuery.of(context).size.width - 200, 260),
+                onClose: () => setState(() => _showFormationPanel = false),
+                child: FormationSelector(
+                  currentFormation: gameState.currentFormation,
+                  onFormationChanged: _changeFormation,
+                ),
+              ),
+
+            // Attack Command Panel (SHIFT+T to toggle)
+            if (gameState.allies.isNotEmpty && _showAttackPanel)
+              DraggablePanel(
+                initialPosition: _attackPanelPosition,
+                onClose: () => setState(() => _showAttackPanel = false),
+                child: AttackCommandPanel(
+                  currentCommand: _getCurrentAllyCommand(),
+                  onActivate: () => _setAllyCommand(AllyCommand.attack),
+                  allyCount: gameState.allies.length,
+                ),
+              ),
+
+            // Follow Command Panel (SHIFT+F to toggle)
+            if (gameState.allies.isNotEmpty && _showFollowPanel)
+              DraggablePanel(
+                initialPosition: _followPanelPosition,
+                onClose: () => setState(() => _showFollowPanel = false),
+                child: FollowCommandPanel(
+                  currentCommand: _getCurrentAllyCommand(),
+                  onActivate: () => _setAllyCommand(AllyCommand.follow),
+                  allyCount: gameState.allies.length,
+                ),
+              ),
+
+            // Hold Command Panel (SHIFT+G to toggle)
+            if (gameState.allies.isNotEmpty && _showHoldPanel)
+              DraggablePanel(
+                initialPosition: _holdPanelPosition,
+                onClose: () => setState(() => _showHoldPanel = false),
+                child: HoldCommandPanel(
+                  currentCommand: _getCurrentAllyCommand(),
+                  onActivate: () => _setAllyCommand(AllyCommand.hold),
+                  allyCount: gameState.allies.length,
+                ),
+              ),
 
             // Abilities Modal (Press P to toggle)
             if (gameState.abilitiesModalOpen)

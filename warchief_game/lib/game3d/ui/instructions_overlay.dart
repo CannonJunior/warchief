@@ -74,6 +74,20 @@ class InstructionsOverlay extends StatelessWidget {
                 fontSize: 10,
               ),
             ),
+            SizedBox(height: 8),
+            Text(
+              'Ally Commands:',
+              style: TextStyle(color: Colors.cyan, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 2),
+            Text(
+              'T=Attack | F=Follow | G=Hold | R=Formation',
+              style: TextStyle(color: Colors.white, fontSize: 10),
+            ),
+            Text(
+              'SHIFT+key = Show/Hide panel (draggable)',
+              style: TextStyle(color: Colors.white60, fontSize: 9),
+            ),
             SizedBox(height: 4),
             Text(
               'Camera Angle to Terrain: ${(camera?.pitch.abs() ?? 0).toStringAsFixed(1)}°',

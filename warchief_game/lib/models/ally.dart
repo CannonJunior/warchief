@@ -2,6 +2,7 @@ import '../rendering3d/mesh.dart';
 import '../rendering3d/math/transform3d.dart';
 import 'projectile.dart';
 import '../game3d/utils/bezier_path.dart';
+import '../game3d/ai/ally_strategy.dart';
 
 /// Ally Movement Mode - Different ways an ally can move
 enum AllyMovementMode {
@@ -46,6 +47,12 @@ class Ally {
   AllyCommand currentCommand;
   double commandTimer; // Time since command was issued
 
+  // Strategy system
+  AllyStrategyType strategyType;
+
+  /// Get the current strategy configuration
+  AllyStrategy get strategy => AllyStrategies.getStrategy(strategyType);
+
   Ally({
     required this.mesh,
     required this.transform,
@@ -63,5 +70,6 @@ class Ally {
     this.isMoving = false,
     this.currentCommand = AllyCommand.none,
     this.commandTimer = 0.0,
+    this.strategyType = AllyStrategyType.balanced,
   }) : projectiles = [];
 }
