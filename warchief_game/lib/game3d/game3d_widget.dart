@@ -379,6 +379,7 @@ class _Game3DState extends State<Game3D> {
     AbilitySystem.handleAbility1Input(inputManager!.isActionPressed(GameAction.actionBar1), gameState);
     AbilitySystem.handleAbility2Input(inputManager!.isActionPressed(GameAction.actionBar2), gameState);
     AbilitySystem.handleAbility3Input(inputManager!.isActionPressed(GameAction.actionBar3), gameState);
+    AbilitySystem.handleAbility4Input(inputManager!.isActionPressed(GameAction.actionBar4), gameState);
     // ===== END ABILITY SYSTEM =====
 
     // Update direction indicator position and rotation to match player
@@ -484,6 +485,12 @@ class _Game3DState extends State<Game3D> {
   void _activateAbility3() {
     setState(() {
       AbilitySystem.handleAbility3Input(true, gameState);
+    });
+  }
+
+  void _activateAbility4() {
+    setState(() {
+      AbilitySystem.handleAbility4Input(true, gameState);
     });
   }
 
@@ -695,6 +702,7 @@ class _Game3DState extends State<Game3D> {
                 onAbility1Pressed: _activateAbility1,
                 onAbility2Pressed: _activateAbility2,
                 onAbility3Pressed: _activateAbility3,
+                onAbility4Pressed: _activateAbility4,
               ),
             ),
 

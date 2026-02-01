@@ -140,6 +140,22 @@ class AbilitiesConfig {
     impactSize: 1.5,
   );
 
+  /// Player Ability 4: Dash Attack (Dash Forward + Melee)
+  static final playerDashAttack = AbilityData(
+    name: 'Dash Attack',
+    description: 'Dash forward and strike enemies in your path',
+    type: AbilityType.melee,
+    damage: 30.0,
+    cooldown: 6.0,
+    duration: 0.4,
+    range: 6.0, // Dash distance
+    color: Vector3(0.9, 0.7, 0.3), // Gold
+    impactColor: Vector3(1.0, 0.8, 0.4), // Bright gold
+    impactSize: 0.7,
+    knockbackForce: 3.0,
+    category: 'warrior',
+  );
+
   // ==================== MONSTER ABILITIES ====================
 
   /// Monster Ability 1: Dark Strike (Melee Sword Attack)
@@ -231,7 +247,7 @@ class AbilitiesConfig {
 
   // ==================== HELPER METHODS ====================
 
-  /// Get player ability by index (0=Sword, 1=Fireball, 2=Heal)
+  /// Get player ability by index (0=Sword, 1=Fireball, 2=Heal, 3=DashAttack)
   static AbilityData getPlayerAbility(int index) {
     switch (index) {
       case 0:
@@ -240,6 +256,8 @@ class AbilitiesConfig {
         return playerFireball;
       case 2:
         return playerHeal;
+      case 3:
+        return playerDashAttack;
       default:
         return playerSword;
     }
@@ -278,6 +296,7 @@ class AbilitiesConfig {
     playerSword,
     playerFireball,
     playerHeal,
+    playerDashAttack,
   ];
 
   /// List of all monster abilities

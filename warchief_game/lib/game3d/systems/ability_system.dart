@@ -33,12 +33,13 @@ class AbilitySystem {
     updateAbility1(dt, gameState);
     updateAbility2(dt, gameState);
     updateAbility3(dt, gameState);
+    updateAbility4(dt, gameState);
     updateImpactEffects(dt, gameState);
   }
 
   /// Updates all ability cooldowns
   ///
-  /// Decrements cooldown timers for all three abilities.
+  /// Decrements cooldown timers for all abilities.
   ///
   /// Parameters:
   /// - dt: Time elapsed since last frame (in seconds)
@@ -47,6 +48,7 @@ class AbilitySystem {
     if (gameState.ability1Cooldown > 0) gameState.ability1Cooldown -= dt;
     if (gameState.ability2Cooldown > 0) gameState.ability2Cooldown -= dt;
     if (gameState.ability3Cooldown > 0) gameState.ability3Cooldown -= dt;
+    if (gameState.ability4Cooldown > 0) gameState.ability4Cooldown -= dt;
   }
 
   // ==================== ABILITY 1: SWORD ====================
@@ -246,6 +248,96 @@ class AbilitySystem {
       gameState.healEffectTransform!.position = gameState.playerTransform!.position.clone();
       final pulseScale = 1.0 + (math.sin(gameState.ability3ActiveTime * 10) * 0.2);
       gameState.healEffectTransform!.scale = Vector3(pulseScale, pulseScale, pulseScale);
+    }
+  }
+
+  // ==================== ABILITY 4: DASH ATTACK ====================
+
+  /// Handles Ability 4 (Dash Attack) input
+  ///
+  /// Activates the dash attack if cooldown is ready and ability is not already active.
+  /// The player will dash forward and damage enemies in their path.
+  ///
+  /// Parameters:
+  /// - ability4KeyPressed: Whether the ability 4 key is currently pressed
+  /// - gameState: Current game state to update
+  static void handleAbility4Input(bool ability4KeyPressed, GameState gameState) {
+    if (ability4KeyPressed &&
+        gameState.ability4Cooldown <= 0 &&
+        !gameState.ability4Active) {
+      gameState.ability4Active = true;
+      gameState.ability4ActiveTime = 0.0;
+      gameState.ability4Cooldown = gameState.ability4CooldownMax;
+      gameState.ability4HitRegistered = false; // Reset hit tracker for new dash
+      print('Dash Attack activated!');
+    }
+  }
+
+  /// Updates Ability 4 (Dash Attack) movement and collision detection
+  ///
+  /// Moves the player forward rapidly during the dash duration and checks
+  /// for collision with enemies, applying damage on hit.
+  ///
+  /// Parameters:
+  /// - dt: Time elapsed since last frame (in seconds)
+  /// - gameState: Current game state to update
+  static void updateAbility4(double dt, GameState gameState) {
+    if (!gameState.ability4Active) return;
+
+    gameState.ability4ActiveTime += dt;
+
+    if (gameState.ability4ActiveTime >= gameState.ability4Duration) {
+      gameState.ability4Active = false;
+    } else if (gameState.playerTransform != null) {
+      final dashConfig = AbilitiesConfig.playerDashAttack;
+
+      // Calculate forward direction based on player rotation
+      final forward = Vector3(
+        -math.sin(_radians(gameState.playerRotation)),
+        0,
+        -math.cos(_radians(gameState.playerRotation)),
+      );
+
+      // Calculate dash speed (total distance / duration)
+      final dashSpeed = dashConfig.range / dashConfig.duration;
+
+      // Move player forward at dash speed
+      gameState.playerTransform!.position += forward * dashSpeed * dt;
+
+      // Get terrain height at new position and apply it
+      if (gameState.infiniteTerrainManager != null) {
+        final terrainHeight = gameState.infiniteTerrainManager!.getTerrainHeight(
+          gameState.playerTransform!.position.x,
+          gameState.playerTransform!.position.z,
+        );
+        gameState.playerTransform!.position.y = terrainHeight;
+      }
+
+      // Check collision with monster during dash
+      if (!gameState.ability4HitRegistered) {
+        final hitRegistered = CombatSystem.checkAndDamageMonster(
+          gameState,
+          attackerPosition: gameState.playerTransform!.position,
+          damage: dashConfig.damage,
+          attackType: dashConfig.name,
+          impactColor: dashConfig.impactColor,
+          impactSize: dashConfig.impactSize,
+        );
+
+        if (hitRegistered) {
+          gameState.ability4HitRegistered = true;
+          // Apply knockback to monster
+          if (gameState.monsterTransform != null && dashConfig.knockbackForce > 0) {
+            gameState.monsterTransform!.position += forward * dashConfig.knockbackForce;
+          }
+        }
+      }
+
+      // Update dash trail visual effect if it exists
+      if (gameState.dashTrailTransform != null) {
+        gameState.dashTrailTransform!.position = gameState.playerTransform!.position.clone();
+        gameState.dashTrailTransform!.rotation.y = gameState.playerRotation;
+      }
     }
   }
 

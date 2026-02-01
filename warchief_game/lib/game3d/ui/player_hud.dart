@@ -9,6 +9,7 @@ class PlayerHud extends StatelessWidget {
   final VoidCallback onAbility1Pressed;
   final VoidCallback onAbility2Pressed;
   final VoidCallback onAbility3Pressed;
+  final VoidCallback? onAbility4Pressed;
 
   const PlayerHud({
     Key? key,
@@ -16,6 +17,7 @@ class PlayerHud extends StatelessWidget {
     required this.onAbility1Pressed,
     required this.onAbility2Pressed,
     required this.onAbility3Pressed,
+    this.onAbility4Pressed,
   }) : super(key: key);
 
   @override
@@ -112,6 +114,16 @@ class PlayerHud extends StatelessWidget {
                 maxCooldown: gameState.ability3CooldownMax,
                 onPressed: onAbility3Pressed,
               ),
+              if (onAbility4Pressed != null) ...[
+                SizedBox(width: 10),
+                AbilityButton(
+                  label: '4',
+                  color: Color(0xFFE6B333), // Gold (dash attack)
+                  cooldown: gameState.ability4Cooldown,
+                  maxCooldown: gameState.ability4CooldownMax,
+                  onPressed: onAbility4Pressed!,
+                ),
+              ],
             ],
           ),
         ],

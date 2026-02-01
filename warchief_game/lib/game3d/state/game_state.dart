@@ -133,6 +133,17 @@ class GameState {
   Mesh? healEffectMesh;
   Transform3d? healEffectTransform;
 
+  // ==================== ABILITY 4: DASH ATTACK ====================
+
+  double ability4Cooldown = 0.0;
+  final double ability4CooldownMax = 6.0; // 6 second cooldown
+  bool ability4Active = false;
+  double ability4ActiveTime = 0.0;
+  final double ability4Duration = 0.4; // Dash duration
+  bool ability4HitRegistered = false; // Prevent multiple hits per dash
+  Mesh? dashTrailMesh;
+  Transform3d? dashTrailTransform;
+
   // ==================== VISUAL EFFECTS ====================
 
   List<ImpactEffect> impactEffects = []; // List of active impact effects
