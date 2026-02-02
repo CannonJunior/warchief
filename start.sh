@@ -54,6 +54,21 @@ fi
 
 cd "$PROJECT_DIR"
 
+# Generate source tree for Settings panel
+echo "Generating source tree..."
+GAME_DIR="$PROJECT_DIR"
+# Check if we're in parent directory (warchief/) or game directory (warchief_game/)
+if [ -d "$PROJECT_DIR/warchief_game" ]; then
+    GAME_DIR="$PROJECT_DIR/warchief_game"
+fi
+if [ -f "$GAME_DIR/scripts/generate_source_tree.py" ]; then
+    python3 "$GAME_DIR/scripts/generate_source_tree.py" \
+        --root "$GAME_DIR" \
+        --output "$GAME_DIR/assets/data/source-tree.json" \
+        --project-name "warchief_game" 2>/dev/null || true
+    echo "✅ Source tree generated"
+fi
+
 # Get Flutter dependencies
 echo "Getting Flutter dependencies..."
 flutter pub get

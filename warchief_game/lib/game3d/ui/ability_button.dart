@@ -8,6 +8,7 @@ class AbilityButton extends StatelessWidget {
   final double cooldown;
   final double maxCooldown;
   final VoidCallback? onPressed;
+  final double size;
 
   const AbilityButton({
     Key? key,
@@ -16,19 +17,22 @@ class AbilityButton extends StatelessWidget {
     required this.cooldown,
     required this.maxCooldown,
     this.onPressed,
+    this.size = 60,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final isOnCooldown = cooldown > 0;
     final progress = isOnCooldown ? (1.0 - (cooldown / maxCooldown)) : 1.0;
+    final fontSize = size > 50 ? 24.0 : (size > 35 ? 16.0 : 12.0);
+    final cooldownFontSize = size > 50 ? 10.0 : 8.0;
 
     return InkWell(
       onTap: isOnCooldown || onPressed == null ? null : onPressed,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        width: 60,
-        height: 60,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           color: Colors.black87,
           border: Border.all(color: Colors.white30, width: 2),
@@ -46,7 +50,7 @@ class AbilityButton extends StatelessWidget {
             // Cooldown clock animation
             if (isOnCooldown)
               CustomPaint(
-                size: Size(60, 60),
+                size: Size(size, size),
                 painter: CooldownClockPainter(progress: progress),
               ),
             // Label
@@ -55,7 +59,7 @@ class AbilityButton extends StatelessWidget {
                 label,
                 style: TextStyle(
                   color: isOnCooldown ? Colors.white38 : Colors.white,
-                  fontSize: 24,
+                  fontSize: fontSize,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -63,13 +67,13 @@ class AbilityButton extends StatelessWidget {
             // Cooldown text
             if (isOnCooldown)
               Positioned(
-                bottom: 4,
-                right: 4,
+                bottom: 2,
+                right: 2,
                 child: Text(
                   cooldown.toStringAsFixed(1),
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 10,
+                    fontSize: cooldownFontSize,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

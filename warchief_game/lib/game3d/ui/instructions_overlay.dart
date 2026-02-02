@@ -88,6 +88,10 @@ class InstructionsOverlay extends StatelessWidget {
               'SHIFT+key = Show/Hide panel (draggable)',
               style: TextStyle(color: Colors.white60, fontSize: 9),
             ),
+            Text(
+              'O = Settings | ESC = Close panels',
+              style: TextStyle(color: Colors.white60, fontSize: 9),
+            ),
             SizedBox(height: 4),
             Text(
               'Camera Angle to Terrain: ${(camera?.pitch.abs() ?? 0).toStringAsFixed(1)}°',

@@ -38,6 +38,7 @@ import 'ui/draggable_panel.dart';
 import 'ui/ally_command_panels.dart';
 import 'ui/ui_config.dart';
 import 'ui/abilities_modal.dart';
+import 'ui/unit_frames/unit_frames.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -472,6 +473,16 @@ class _Game3DState extends State<Game3D> {
       return;
     }
 
+    // Handle Escape key to close any open modal/panel
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+      if (gameState.abilitiesModalOpen) {
+        setState(() {
+          gameState.abilitiesModalOpen = false;
+        });
+        return;
+      }
+    }
+
     if (inputManager != null) {
       inputManager!.handleKeyEvent(event);
     }
@@ -844,51 +855,134 @@ class _Game3DState extends State<Game3D> {
             // Canvas will be created and appended to body in initState
             SizedBox.expand(),
 
-            // Instructions overlay
+            // Instructions overlay (top-left)
             InstructionsOverlay(
               camera: camera,
               gameState: gameState,
             ),
 
-            // Monster HUD
-            MonsterHud(
-              gameState: gameState,
-              onAbility1Pressed: _activateMonsterAbility1,
-              onAbility2Pressed: _activateMonsterAbility2,
-              onAbility3Pressed: _activateMonsterAbility3,
-              onPauseToggle: () {
-                setState(() {
-                  gameState.monsterPaused = !gameState.monsterPaused;
-                });
-                print('Monster AI ${gameState.monsterPaused ? 'paused' : 'resumed'}');
-              },
-            ),
+            // ========== NEW WOW-STYLE UNIT FRAMES ==========
 
-            // AI Chat Panel
-            AIChatPanel(
-              messages: gameState.monsterAIChat,
-            ),
-
-            // Player HUD
+            // Party/Ally frames (left side, vertical stack)
             Positioned(
-              top: UIConfig.playerHudTop,
-              right: UIConfig.playerHudRight,
-              child: PlayerHud(
-                gameState: gameState,
-                onAbility1Pressed: _activateAbility1,
-                onAbility2Pressed: _activateAbility2,
-                onAbility3Pressed: _activateAbility3,
-                onAbility4Pressed: _activateAbility4,
+              left: 10,
+              top: 200,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  PartyFrames(
+                    allies: gameState.allies,
+                    onAllySelected: (index) {
+                      // Could implement ally selection
+                      print('Ally $index selected');
+                    },
+                    onAllyAbilityActivate: _activateAllyAbility,
+                  ),
+                  const SizedBox(height: 10),
+                  // Add/Remove ally buttons
+                  Row(
+                    children: [
+                      _buildAllyControlButton(
+                        icon: Icons.add,
+                        label: '+Ally',
+                        color: const Color(0xFF4CAF50),
+                        onPressed: _addAlly,
+                      ),
+                      const SizedBox(width: 6),
+                      _buildAllyControlButton(
+                        icon: Icons.remove,
+                        label: '-Ally',
+                        color: const Color(0xFFEF5350),
+                        onPressed: _removeAlly,
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
 
-            // Allies Panel
-            AlliesPanel(
-              allies: gameState.allies,
-              onActivateAllyAbility: _activateAllyAbility,
-              onStrategyChanged: _changeAllyStrategy,
-              onAddAlly: _addAlly,
-              onRemoveAlly: _removeAlly,
+            // Combat HUD (bottom-center) - Player frame, VS, Target frame, Action bar
+            Positioned(
+              bottom: 20,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: CombatHUD(
+                  // Player data
+                  playerName: 'Warchief',
+                  playerHealth: gameState.playerHealth,
+                  playerMaxHealth: gameState.playerMaxHealth,
+                  playerLevel: 10,
+                  // Target data
+                  targetName: 'Boss Monster',
+                  targetHealth: gameState.monsterHealth,
+                  targetMaxHealth: gameState.monsterMaxHealth.toDouble(),
+                  targetLevel: 15,
+                  hasTarget: true,
+                  // Ability cooldowns
+                  ability1Cooldown: gameState.ability1Cooldown,
+                  ability1CooldownMax: gameState.ability1CooldownMax,
+                  ability2Cooldown: gameState.ability2Cooldown,
+                  ability2CooldownMax: gameState.ability2CooldownMax,
+                  ability3Cooldown: gameState.ability3Cooldown,
+                  ability3CooldownMax: gameState.ability3CooldownMax,
+                  ability4Cooldown: gameState.ability4Cooldown,
+                  ability4CooldownMax: gameState.ability4CooldownMax,
+                  // Callbacks
+                  onAbility1Pressed: _activateAbility1,
+                  onAbility2Pressed: _activateAbility2,
+                  onAbility3Pressed: _activateAbility3,
+                  onAbility4Pressed: _activateAbility4,
+                ),
+              ),
+            ),
+
+            // Boss/Target abilities panel (top-left below instructions)
+            Positioned(
+              left: 10,
+              bottom: 140,
+              child: TargetFrame(
+                name: 'Boss Monster',
+                health: gameState.monsterHealth,
+                maxHealth: gameState.monsterMaxHealth.toDouble(),
+                level: 15,
+                subtitle: 'Elite',
+                isPaused: gameState.monsterPaused,
+                onPauseToggle: () {
+                  setState(() {
+                    gameState.monsterPaused = !gameState.monsterPaused;
+                  });
+                  print('Monster AI ${gameState.monsterPaused ? 'paused' : 'resumed'}');
+                },
+                abilities: [
+                  AbilityButtonData(
+                    label: 'M1',
+                    color: const Color(0xFF8B4513),
+                    cooldown: gameState.monsterAbility1Cooldown,
+                    maxCooldown: gameState.monsterAbility1CooldownMax,
+                    onPressed: _activateMonsterAbility1,
+                  ),
+                  AbilityButtonData(
+                    label: 'M2',
+                    color: const Color(0xFF4B0082),
+                    cooldown: gameState.monsterAbility2Cooldown,
+                    maxCooldown: gameState.monsterAbility2CooldownMax,
+                    onPressed: _activateMonsterAbility2,
+                  ),
+                  AbilityButtonData(
+                    label: 'M3',
+                    color: const Color(0xFF006400),
+                    cooldown: gameState.monsterAbility3Cooldown,
+                    maxCooldown: gameState.monsterAbility3CooldownMax,
+                    onPressed: _activateMonsterAbility3,
+                  ),
+                ],
+              ),
+            ),
+
+            // AI Chat Panel (bottom-left corner)
+            AIChatPanel(
+              messages: gameState.monsterAIChat,
             ),
 
             // ========== DRAGGABLE ALLY COMMAND PANELS ==========
@@ -949,6 +1043,41 @@ class _Game3DState extends State<Game3D> {
                   });
                 },
               ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build ally control button (+/- ally)
+  Widget _buildAllyControlButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: color, width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 14),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ),
