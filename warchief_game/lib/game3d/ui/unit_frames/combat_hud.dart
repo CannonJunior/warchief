@@ -13,6 +13,7 @@ class CombatHUD extends StatelessWidget {
   final double? playerPower;
   final double? playerMaxPower;
   final int playerLevel;
+  final Widget? playerPortraitWidget; // Custom portrait widget (e.g., 3D cube)
 
   // Target data
   final String? targetName;
@@ -20,6 +21,7 @@ class CombatHUD extends StatelessWidget {
   final double targetMaxHealth;
   final int? targetLevel;
   final bool hasTarget;
+  final Widget? targetPortraitWidget; // Custom portrait widget (e.g., 3D cube)
 
   // Ability cooldowns
   final double ability1Cooldown;
@@ -45,11 +47,13 @@ class CombatHUD extends StatelessWidget {
     this.playerPower,
     this.playerMaxPower,
     this.playerLevel = 1,
+    this.playerPortraitWidget,
     this.targetName,
     required this.targetHealth,
     required this.targetMaxHealth,
     this.targetLevel,
     this.hasTarget = true,
+    this.targetPortraitWidget,
     required this.ability1Cooldown,
     required this.ability1CooldownMax,
     required this.ability2Cooldown,
@@ -92,7 +96,7 @@ class CombatHUD extends StatelessWidget {
           maxPower: playerMaxPower,
           isPlayer: true,
           level: playerLevel,
-          portraitIcon: '\u{1F9D9}', // wizard
+          portraitWidget: playerPortraitWidget,
           borderColor: const Color(0xFF4cc9f0),
           healthColor: const Color(0xFF4CAF50),
           powerColor: const Color(0xFF2196F3),
@@ -110,7 +114,7 @@ class CombatHUD extends StatelessWidget {
             maxHealth: targetMaxHealth,
             isPlayer: false,
             level: targetLevel,
-            portraitIcon: '\u{1F47E}', // alien monster
+            portraitWidget: targetPortraitWidget,
             borderColor: const Color(0xFFFF6B6B),
             healthColor: const Color(0xFFEF5350),
             width: 200,
@@ -189,6 +193,7 @@ class TargetFrame extends StatelessWidget {
   final List<AbilityButtonData>? abilities;
   final VoidCallback? onPauseToggle;
   final bool isPaused;
+  final Widget? portraitWidget; // Custom portrait widget (e.g., 3D cube)
 
   const TargetFrame({
     Key? key,
@@ -200,6 +205,7 @@ class TargetFrame extends StatelessWidget {
     this.abilities,
     this.onPauseToggle,
     this.isPaused = false,
+    this.portraitWidget,
   }) : super(key: key);
 
   @override
@@ -229,7 +235,7 @@ class TargetFrame extends StatelessWidget {
           // Header row
           Row(
             children: [
-              // Boss icon
+              // Boss icon / portrait
               Container(
                 width: 32,
                 height: 32,
@@ -241,8 +247,8 @@ class TargetFrame extends StatelessWidget {
                     width: 1,
                   ),
                 ),
-                child: const Center(
-                  child: Text('\u{1F47E}', style: TextStyle(fontSize: 18)),
+                child: Center(
+                  child: portraitWidget ?? const Text('\u{1F47E}', style: TextStyle(fontSize: 18)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -416,4 +422,139 @@ class AbilityButtonData {
     required this.maxCooldown,
     required this.onPressed,
   });
+}
+
+/// Isometric cube portrait widget - renders a 3D-looking cube for character portraits
+class CubePortrait extends StatelessWidget {
+  final Color color;
+  final double size;
+  final bool hasDirectionIndicator;
+  final Color? indicatorColor;
+
+  const CubePortrait({
+    Key? key,
+    required this.color,
+    this.size = 36,
+    this.hasDirectionIndicator = true,
+    this.indicatorColor,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Calculate face colors (lighter top, darker sides)
+    final topColor = Color.lerp(color, Colors.white, 0.3)!;
+    final rightColor = Color.lerp(color, Colors.black, 0.2)!;
+    final leftColor = Color.lerp(color, Colors.black, 0.35)!;
+
+    // Isometric projection factors
+    final cubeWidth = size * 0.7;
+    final cubeHeight = size * 0.4;
+    final sideHeight = size * 0.5;
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _IsometricCubePainter(
+          topColor: topColor,
+          leftColor: leftColor,
+          rightColor: rightColor,
+          cubeWidth: cubeWidth,
+          cubeHeight: cubeHeight,
+          sideHeight: sideHeight,
+          hasIndicator: hasDirectionIndicator,
+          indicatorColor: indicatorColor ?? Colors.red,
+        ),
+      ),
+    );
+  }
+}
+
+class _IsometricCubePainter extends CustomPainter {
+  final Color topColor;
+  final Color leftColor;
+  final Color rightColor;
+  final double cubeWidth;
+  final double cubeHeight;
+  final double sideHeight;
+  final bool hasIndicator;
+  final Color indicatorColor;
+
+  _IsometricCubePainter({
+    required this.topColor,
+    required this.leftColor,
+    required this.rightColor,
+    required this.cubeWidth,
+    required this.cubeHeight,
+    required this.sideHeight,
+    required this.hasIndicator,
+    required this.indicatorColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centerX = size.width / 2;
+    final centerY = size.height / 2;
+
+    // Define the 6 vertices of the visible isometric cube
+    final top = Offset(centerX, centerY - sideHeight * 0.6);
+    final topLeft = Offset(centerX - cubeWidth / 2, centerY - cubeHeight / 2);
+    final topRight = Offset(centerX + cubeWidth / 2, centerY - cubeHeight / 2);
+    final center = Offset(centerX, centerY + cubeHeight * 0.1);
+    final bottomLeft = Offset(centerX - cubeWidth / 2, centerY + sideHeight * 0.4);
+    final bottomRight = Offset(centerX + cubeWidth / 2, centerY + sideHeight * 0.4);
+    final bottom = Offset(centerX, centerY + sideHeight * 0.7);
+
+    // Draw left face
+    final leftPath = Path()
+      ..moveTo(topLeft.dx, topLeft.dy)
+      ..lineTo(center.dx, center.dy)
+      ..lineTo(bottom.dx, bottom.dy)
+      ..lineTo(bottomLeft.dx, bottomLeft.dy)
+      ..close();
+    canvas.drawPath(leftPath, Paint()..color = leftColor);
+
+    // Draw right face
+    final rightPath = Path()
+      ..moveTo(topRight.dx, topRight.dy)
+      ..lineTo(center.dx, center.dy)
+      ..lineTo(bottom.dx, bottom.dy)
+      ..lineTo(bottomRight.dx, bottomRight.dy)
+      ..close();
+    canvas.drawPath(rightPath, Paint()..color = rightColor);
+
+    // Draw top face
+    final topPath = Path()
+      ..moveTo(top.dx, top.dy)
+      ..lineTo(topLeft.dx, topLeft.dy)
+      ..lineTo(center.dx, center.dy)
+      ..lineTo(topRight.dx, topRight.dy)
+      ..close();
+    canvas.drawPath(topPath, Paint()..color = topColor);
+
+    // Draw direction indicator (small triangle on top)
+    if (hasIndicator) {
+      final indicatorSize = cubeWidth * 0.3;
+      final indicatorY = top.dy - 2;
+      final indicatorPath = Path()
+        ..moveTo(centerX, indicatorY - indicatorSize * 0.5)
+        ..lineTo(centerX - indicatorSize * 0.4, indicatorY + indicatorSize * 0.3)
+        ..lineTo(centerX + indicatorSize * 0.4, indicatorY + indicatorSize * 0.3)
+        ..close();
+      canvas.drawPath(indicatorPath, Paint()..color = indicatorColor);
+    }
+
+    // Draw subtle edge lines
+    final edgePaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.3)
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawPath(topPath, edgePaint);
+    canvas.drawPath(leftPath, edgePaint);
+    canvas.drawPath(rightPath, edgePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

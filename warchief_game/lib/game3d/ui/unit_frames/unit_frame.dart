@@ -11,7 +11,8 @@ class UnitFrame extends StatelessWidget {
   final Color powerColor;
   final Color borderColor;
   final bool isPlayer; // true = portrait on left, false = portrait on right (mirrored for target)
-  final String? portraitIcon; // emoji or icon
+  final String? portraitIcon; // emoji or icon (deprecated, use portraitWidget)
+  final Widget? portraitWidget; // custom widget for portrait (e.g., 3D model preview)
   final int? level;
   final double width;
 
@@ -27,6 +28,7 @@ class UnitFrame extends StatelessWidget {
     this.borderColor = const Color(0xFF1a1a2e),
     this.isPlayer = true,
     this.portraitIcon,
+    this.portraitWidget,
     this.level,
     this.width = 220,
   }) : super(key: key);
@@ -76,9 +78,9 @@ class UnitFrame extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Portrait icon/image
+          // Portrait widget or icon/image
           Center(
-            child: Text(
+            child: portraitWidget ?? Text(
               portraitIcon ?? (isPlayer ? '\u{1F9D9}' : '\u{1F47E}'), // wizard vs alien
               style: const TextStyle(fontSize: 28),
             ),

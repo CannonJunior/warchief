@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'game3d/game3d_widget.dart';
 import 'game3d/ui/settings/settings_panel.dart';
+import 'game3d/ui/settings/interface_config.dart';
 
 /// Entry point for the Warchief game
 ///
@@ -16,6 +17,10 @@ void main() {
     ),
   );
 }
+
+/// Global interface configuration manager
+/// This is initialized in GameScreen and passed to components
+InterfaceConfigManager? globalInterfaceConfig;
 
 /// Main application widget
 class WarchiefApp extends StatelessWidget {

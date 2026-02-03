@@ -231,6 +231,9 @@ class _Game3DState extends State<Game3D> {
       // Adjust player and monster starting positions to terrain height
       _adjustStartingPositionsToTerrain();
 
+      // Spawn minions (8 Goblin Rogues, 4 Orc Warlocks, 2 Cultist Priests, 1 Skeleton Champion)
+      gameState.spawnMinions(gameState.infiniteTerrainManager);
+
       print('Game3D initialized successfully!');
 
       // Start game loop
@@ -863,81 +866,106 @@ class _Game3DState extends State<Game3D> {
 
             // ========== NEW WOW-STYLE UNIT FRAMES ==========
 
-            // Party/Ally frames (left side, vertical stack)
-            Positioned(
-              left: 10,
-              top: 200,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  PartyFrames(
-                    allies: gameState.allies,
-                    onAllySelected: (index) {
-                      // Could implement ally selection
-                      print('Ally $index selected');
-                    },
-                    onAllyAbilityActivate: _activateAllyAbility,
-                  ),
-                  const SizedBox(height: 10),
-                  // Add/Remove ally buttons
-                  Row(
-                    children: [
-                      _buildAllyControlButton(
-                        icon: Icons.add,
-                        label: '+Ally',
-                        color: const Color(0xFF4CAF50),
-                        onPressed: _addAlly,
-                      ),
-                      const SizedBox(width: 6),
-                      _buildAllyControlButton(
-                        icon: Icons.remove,
-                        label: '-Ally',
-                        color: const Color(0xFFEF5350),
-                        onPressed: _removeAlly,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Combat HUD (bottom-center) - Player frame, VS, Target frame, Action bar
+            // Combat HUD with Party frames (bottom-center)
+            // Party frames positioned to the LEFT of the Warchief frame
             Positioned(
               bottom: 20,
               left: 0,
               right: 0,
               child: Center(
-                child: CombatHUD(
-                  // Player data
-                  playerName: 'Warchief',
-                  playerHealth: gameState.playerHealth,
-                  playerMaxHealth: gameState.playerMaxHealth,
-                  playerLevel: 10,
-                  // Target data
-                  targetName: 'Boss Monster',
-                  targetHealth: gameState.monsterHealth,
-                  targetMaxHealth: gameState.monsterMaxHealth.toDouble(),
-                  targetLevel: 15,
-                  hasTarget: true,
-                  // Ability cooldowns
-                  ability1Cooldown: gameState.ability1Cooldown,
-                  ability1CooldownMax: gameState.ability1CooldownMax,
-                  ability2Cooldown: gameState.ability2Cooldown,
-                  ability2CooldownMax: gameState.ability2CooldownMax,
-                  ability3Cooldown: gameState.ability3Cooldown,
-                  ability3CooldownMax: gameState.ability3CooldownMax,
-                  ability4Cooldown: gameState.ability4Cooldown,
-                  ability4CooldownMax: gameState.ability4CooldownMax,
-                  // Callbacks
-                  onAbility1Pressed: _activateAbility1,
-                  onAbility2Pressed: _activateAbility2,
-                  onAbility3Pressed: _activateAbility3,
-                  onAbility4Pressed: _activateAbility4,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Party/Ally frames and controls (left of Warchief frame)
+                    // Always show the control buttons, only show party frames if allies exist
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Party frames (only if allies exist)
+                          if (gameState.allies.isNotEmpty)
+                            PartyFrames(
+                              allies: gameState.allies,
+                              onAllySelected: (index) {
+                                print('Ally $index selected');
+                              },
+                              onAllyAbilityActivate: _activateAllyAbility,
+                            ),
+                          if (gameState.allies.isNotEmpty)
+                            const SizedBox(height: 6),
+                          // Add/Remove ally buttons (ALWAYS visible)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildAllyControlButton(
+                                icon: Icons.add,
+                                label: '+Ally',
+                                color: const Color(0xFF4CAF50),
+                                onPressed: _addAlly,
+                              ),
+                              const SizedBox(width: 6),
+                              _buildAllyControlButton(
+                                icon: Icons.remove,
+                                label: '-Ally',
+                                color: const Color(0xFFEF5350),
+                                onPressed: _removeAlly,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Main Combat HUD (Warchief frame, VS, Target frame, Action bar)
+                    CombatHUD(
+                      // Player data
+                      playerName: 'Warchief',
+                      playerHealth: gameState.playerHealth,
+                      playerMaxHealth: gameState.playerMaxHealth,
+                      playerLevel: 10,
+                      // Player portrait: Blue cube (matching in-game character)
+                      playerPortraitWidget: const CubePortrait(
+                        color: Color(0xFF4D80CC), // Blue cube color (0.3, 0.5, 0.8)
+                        size: 36,
+                        hasDirectionIndicator: true,
+                        indicatorColor: Colors.red,
+                      ),
+                      // Target data
+                      targetName: 'Boss Monster',
+                      targetHealth: gameState.monsterHealth,
+                      targetMaxHealth: gameState.monsterMaxHealth.toDouble(),
+                      targetLevel: 15,
+                      hasTarget: true,
+                      // Target portrait: Purple cube (matching in-game monster)
+                      targetPortraitWidget: const CubePortrait(
+                        color: Color(0xFF9933CC), // Purple cube color (0.6, 0.2, 0.8)
+                        size: 36,
+                        hasDirectionIndicator: true,
+                        indicatorColor: Colors.green,
+                      ),
+                      // Ability cooldowns
+                      ability1Cooldown: gameState.ability1Cooldown,
+                      ability1CooldownMax: gameState.ability1CooldownMax,
+                      ability2Cooldown: gameState.ability2Cooldown,
+                      ability2CooldownMax: gameState.ability2CooldownMax,
+                      ability3Cooldown: gameState.ability3Cooldown,
+                      ability3CooldownMax: gameState.ability3CooldownMax,
+                      ability4Cooldown: gameState.ability4Cooldown,
+                      ability4CooldownMax: gameState.ability4CooldownMax,
+                      // Callbacks
+                      onAbility1Pressed: _activateAbility1,
+                      onAbility2Pressed: _activateAbility2,
+                      onAbility3Pressed: _activateAbility3,
+                      onAbility4Pressed: _activateAbility4,
+                    ),
+                  ],
                 ),
               ),
             ),
 
-            // Boss/Target abilities panel (top-left below instructions)
+            // Boss/Target abilities panel (bottom-left above chat)
             Positioned(
               left: 10,
               bottom: 140,
@@ -948,6 +976,13 @@ class _Game3DState extends State<Game3D> {
                 level: 15,
                 subtitle: 'Elite',
                 isPaused: gameState.monsterPaused,
+                // Monster portrait: Purple cube (matching in-game monster)
+                portraitWidget: const CubePortrait(
+                  color: Color(0xFF9933CC), // Purple cube color
+                  size: 24,
+                  hasDirectionIndicator: true,
+                  indicatorColor: Colors.green,
+                ),
                 onPauseToggle: () {
                   setState(() {
                     gameState.monsterPaused = !gameState.monsterPaused;
@@ -985,52 +1020,71 @@ class _Game3DState extends State<Game3D> {
               messages: gameState.monsterAIChat,
             ),
 
-            // ========== DRAGGABLE ALLY COMMAND PANELS ==========
-
-            // Formation Panel (SHIFT+R to toggle)
-            if (gameState.allies.isNotEmpty && _showFormationPanel)
-              DraggablePanel(
-                initialPosition: Offset(MediaQuery.of(context).size.width - 200, 260),
-                onClose: () => setState(() => _showFormationPanel = false),
-                child: FormationSelector(
-                  currentFormation: gameState.currentFormation,
-                  onFormationChanged: _changeFormation,
-                ),
-              ),
-
-            // Attack Command Panel (SHIFT+T to toggle)
-            if (gameState.allies.isNotEmpty && _showAttackPanel)
-              DraggablePanel(
-                initialPosition: _attackPanelPosition,
-                onClose: () => setState(() => _showAttackPanel = false),
-                child: AttackCommandPanel(
-                  currentCommand: _getCurrentAllyCommand(),
-                  onActivate: () => _setAllyCommand(AllyCommand.attack),
-                  allyCount: gameState.allies.length,
-                ),
-              ),
-
-            // Follow Command Panel (SHIFT+F to toggle)
-            if (gameState.allies.isNotEmpty && _showFollowPanel)
-              DraggablePanel(
-                initialPosition: _followPanelPosition,
-                onClose: () => setState(() => _showFollowPanel = false),
-                child: FollowCommandPanel(
-                  currentCommand: _getCurrentAllyCommand(),
-                  onActivate: () => _setAllyCommand(AllyCommand.follow),
-                  allyCount: gameState.allies.length,
-                ),
-              ),
-
-            // Hold Command Panel (SHIFT+G to toggle)
-            if (gameState.allies.isNotEmpty && _showHoldPanel)
-              DraggablePanel(
-                initialPosition: _holdPanelPosition,
-                onClose: () => setState(() => _showHoldPanel = false),
-                child: HoldCommandPanel(
-                  currentCommand: _getCurrentAllyCommand(),
-                  onActivate: () => _setAllyCommand(AllyCommand.hold),
-                  allyCount: gameState.allies.length,
+            // ========== ALLY COMMAND PANELS (Adjacent, Formation on top) ==========
+            // Positioned at top-right of screen, stacked vertically
+            if (gameState.allies.isNotEmpty && (_showFormationPanel || _showAttackPanel || _showHoldPanel || _showFollowPanel))
+              Positioned(
+                right: 10,
+                top: 150,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Formation Panel (on top) - SHIFT+R to toggle
+                    if (_showFormationPanel)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 4),
+                        child: _buildCommandPanelWithClose(
+                          child: FormationSelector(
+                            currentFormation: gameState.currentFormation,
+                            onFormationChanged: _changeFormation,
+                          ),
+                          onClose: () => setState(() => _showFormationPanel = false),
+                        ),
+                      ),
+                    // Attack, Hold, Follow panels in a row
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Attack Panel - SHIFT+T to toggle
+                        if (_showAttackPanel)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: _buildCommandPanelWithClose(
+                              child: AttackCommandPanel(
+                                currentCommand: _getCurrentAllyCommand(),
+                                onActivate: () => _setAllyCommand(AllyCommand.attack),
+                                allyCount: gameState.allies.length,
+                              ),
+                              onClose: () => setState(() => _showAttackPanel = false),
+                            ),
+                          ),
+                        // Hold Panel - SHIFT+G to toggle
+                        if (_showHoldPanel)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: _buildCommandPanelWithClose(
+                              child: HoldCommandPanel(
+                                currentCommand: _getCurrentAllyCommand(),
+                                onActivate: () => _setAllyCommand(AllyCommand.hold),
+                                allyCount: gameState.allies.length,
+                              ),
+                              onClose: () => setState(() => _showHoldPanel = false),
+                            ),
+                          ),
+                        // Follow Panel - SHIFT+F to toggle
+                        if (_showFollowPanel)
+                          _buildCommandPanelWithClose(
+                            child: FollowCommandPanel(
+                              currentCommand: _getCurrentAllyCommand(),
+                              onActivate: () => _setAllyCommand(AllyCommand.follow),
+                              allyCount: gameState.allies.length,
+                            ),
+                            onClose: () => setState(() => _showFollowPanel = false),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
 
@@ -1080,6 +1134,57 @@ class _Game3DState extends State<Game3D> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Build command panel with close button
+  Widget _buildCommandPanelWithClose({
+    required Widget child,
+    required VoidCallback onClose,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1a1a2e).withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: const Color(0xFF252542),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // Close button row
+          Padding(
+            padding: const EdgeInsets.only(right: 4, top: 2),
+            child: GestureDetector(
+              onTap: onClose,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6B6B).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: const Icon(
+                  Icons.close,
+                  color: Color(0xFFFF6B6B),
+                  size: 12,
+                ),
+              ),
+            ),
+          ),
+          // Panel content
+          child,
+        ],
       ),
     );
   }

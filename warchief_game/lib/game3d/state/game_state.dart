@@ -1,3 +1,4 @@
+import 'package:vector_math/vector_math.dart' hide Colors;
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../rendering3d/terrain_generator.dart';
@@ -7,10 +8,13 @@ import '../../models/projectile.dart';
 import '../../models/impact_effect.dart';
 import '../../models/ally.dart';
 import '../../models/ai_chat_message.dart';
+import '../../models/monster.dart';
+import '../../models/monster_ontology.dart';
 import 'game_config.dart';
 import '../utils/movement_prediction.dart';
 import '../utils/bezier_path.dart';
 import '../ai/tactical_positioning.dart';
+import '../data/monsters/minion_definitions.dart';
 
 /// Game State - Centralized state management for the 3D game
 ///
@@ -107,6 +111,120 @@ class GameState {
   /// Force recalculation of tactical positions
   void invalidateTacticalPositions() {
     _cachedTacticalPositions = null;
+  }
+
+  // ==================== MINIONS STATE ====================
+
+  /// List of active minion instances
+  List<Monster> minions = [];
+
+  /// Whether minions have been spawned this session
+  bool minionsSpawned = false;
+
+  /// Direction indicator meshes for minions (shared by type)
+  final Map<String, Mesh> _minionDirectionIndicators = {};
+
+  /// Get or create direction indicator mesh for a minion type
+  Mesh getMinionDirectionIndicator(MonsterDefinition definition) {
+    return _minionDirectionIndicators.putIfAbsent(
+      definition.id,
+      () => Mesh.triangle(
+        size: 0.3 * definition.effectiveScale,
+        color: definition.accentColor,
+      ),
+    );
+  }
+
+  /// Spawn all minions according to DefaultMinionSpawns configuration
+  /// Total: 8 Goblin Rogues + 4 Orc Warlocks + 2 Cultist Priests + 1 Skeleton Champion = 15 minions
+  void spawnMinions(InfiniteTerrainManager? terrainManager) {
+    if (minionsSpawned) return;
+
+    print('[MINIONS] Spawning minions...');
+    print(DefaultMinionSpawns.summary);
+
+    // Base spawn position (offset from monster)
+    final baseX = GameConfig.monsterStartPosition.x;
+    final baseZ = GameConfig.monsterStartPosition.z - 10; // Behind the boss
+
+    int totalSpawned = 0;
+
+    for (final spawnConfig in DefaultMinionSpawns.spawns) {
+      final definition = MinionDefinitions.getById(spawnConfig.definitionId);
+      if (definition == null) {
+        print('[MINIONS] Warning: Unknown definition ${spawnConfig.definitionId}');
+        continue;
+      }
+
+      // Calculate spawn center for this group (arrange groups in a line)
+      final groupOffset = totalSpawned * 0.5;
+      final centerX = baseX + (groupOffset % 4) * 4 - 6;
+      final centerZ = baseZ - (groupOffset ~/ 4) * 4;
+
+      // Get terrain height at spawn center
+      double centerY = 0.0;
+      if (terrainManager != null) {
+        centerY = terrainManager.getTerrainHeight(centerX, centerZ);
+      }
+
+      // Create monsters for this group
+      final monsters = MonsterFactory.createGroup(
+        definition: definition,
+        centerPosition: Vector3(centerX, centerY, centerZ),
+        count: spawnConfig.count,
+        spreadRadius: spawnConfig.spreadRadius,
+      );
+
+      // Adjust Y positions to terrain height
+      for (final monster in monsters) {
+        if (terrainManager != null) {
+          final terrainY = terrainManager.getTerrainHeight(
+            monster.transform.position.x,
+            monster.transform.position.z,
+          );
+          monster.transform.position.y = terrainY;
+          if (monster.directionIndicatorTransform != null) {
+            monster.directionIndicatorTransform!.position.y =
+                terrainY + definition.effectiveScale * 0.6;
+          }
+        }
+      }
+
+      minions.addAll(monsters);
+      totalSpawned += spawnConfig.count;
+
+      print('[MINIONS] Spawned ${spawnConfig.count}x ${definition.name} '
+          '(MP ${definition.monsterPower})');
+    }
+
+    minionsSpawned = true;
+    print('[MINIONS] Total spawned: ${minions.length} minions');
+    print('[MINIONS] Total Monster Power: ${DefaultMinionSpawns.totalMonsterPower}');
+  }
+
+  /// Get all alive minions
+  List<Monster> get aliveMinions => minions.where((m) => m.isAlive).toList();
+
+  /// Get minions by archetype
+  List<Monster> getMinionsByArchetype(MonsterArchetype archetype) {
+    return minions.where((m) =>
+        m.isAlive && m.definition.archetype == archetype).toList();
+  }
+
+  /// Get the nearest minion to a position
+  Monster? getNearestMinion(Vector3 position, {double maxRange = double.infinity}) {
+    Monster? nearest;
+    double nearestDist = maxRange;
+
+    for (final minion in aliveMinions) {
+      final dist = minion.distanceTo(position);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = minion;
+      }
+    }
+
+    return nearest;
   }
 
   // ==================== AI CHAT ====================

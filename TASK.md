@@ -39,6 +39,54 @@
   - README.md (project overview)
   - Working game skeleton running on http://localhost:8008
 
+#### Monster Ontology & Minion System (Completed 2026-02-02)
+**Task**: Create monster type system with 4 minion archetypes (Ancient Wilds Faction)
+- ✅ Created MonsterOntology with comprehensive type definitions
+  - MonsterArchetype enum (DPS, Support, Healer, Tank, Boss)
+  - MonsterFaction enum (Undead, Goblinoid, Orcish, Cultist, Beast, Elemental, etc.)
+  - MonsterSize enum with scale factors (Tiny 0.4x to Colossal 2.0x)
+  - MonsterAbilityDefinition for ability properties (damage, healing, buffs, projectiles)
+  - MonsterDefinition class with stats, visuals, AI behavior
+  - MonsterPowerCalculator for difficulty estimation (1-10 scale)
+- ✅ Created 4 minion types (Ancient Wilds/Greek Mythology theme):
+  - **Gnoll Marauder** (DPS, MP 4) - Savage hyena pack hunter
+    - Rending Bite (melee + bleed debuff, 60s CD)
+    - Pack Howl (self-buff +75% damage, 90s CD)
+    - Savage Leap (gap closer melee, 75s CD)
+  - **Satyr Hexblade** (Support, MP 5) - Fey curse-weaver with enchanted pipes
+    - Discordant Pipes (AoE debuff aura -40% enemy damage, 90s CD)
+    - Wild Revelry (ally buff +50% attack speed, 75s CD)
+    - Cursed Blade (ranged magic projectile + healing debuff, 60s CD)
+  - **Dryad Lifebinder** (Healer, MP 6) - Nature spirit healer
+    - Nature's Embrace (45 HP heal, 60s CD)
+    - Rejuvenation Aura (HoT aura for allies, 120s CD)
+    - Entangling Roots (AoE CC immobilize, 90s CD)
+    - Bark Shield (40 HP damage absorption, 75s CD)
+  - **Minotaur Bulwark** (Tank, MP 7) - Labyrinth guardian
+    - Gore Charge (gap closer 30 damage, 60s CD)
+    - Intimidating Presence (taunt aura, 90s CD)
+    - Labyrinthine Fortitude (self -60% damage taken, 120s CD)
+    - Earthshaker (AoE melee + 3s stun, 90s CD)
+- ✅ Ability coverage: Melee, Range, Magic, Buffs, Debuffs, Auras, Specialized (CC, Shields)
+- ✅ All abilities have 60+ second cooldowns
+- ✅ Created Monster runtime class with:
+  - MonsterAIState enum for behavior states
+  - Ability cooldowns and buff/debuff tracking
+  - Combat state management
+  - MonsterFactory for instance creation
+- ✅ Integrated minions into game systems:
+  - Spawn 8 Gnolls, 4 Satyrs, 2 Dryads, 1 Minotaur (15 total, 71 MP)
+  - RenderSystem renders minions with direction indicators
+  - AISystem handles archetype-specific AI behavior
+  - Minion projectiles and damage handling
+- **Deliverables**:
+  - lib/models/monster_ontology.dart (~200 lines)
+  - lib/models/monster.dart (~250 lines)
+  - lib/game3d/data/monsters/minion_definitions.dart (~450 lines)
+  - Updated lib/game3d/state/game_state.dart (minion spawning)
+  - Updated lib/game3d/systems/render_system.dart (minion rendering)
+  - Updated lib/game3d/systems/ai_system.dart (~300 lines minion AI)
+
 #### WoW-Style Terrain Texturing (Completed 2026-01-31)
 **Task**: Implement WoW-style tile terrain with texture splatting
 - ✅ Created TextureManager class for procedural terrain texture generation

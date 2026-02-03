@@ -84,6 +84,23 @@ class RenderSystem {
       }
     }
 
+    // Render minions
+    for (final minion in gameState.aliveMinions) {
+      // Render minion mesh
+      renderer.render(minion.mesh, minion.transform, camera);
+
+      // Render minion direction indicator
+      if (minion.directionIndicatorTransform != null) {
+        final indicator = gameState.getMinionDirectionIndicator(minion.definition);
+        renderer.render(indicator, minion.directionIndicatorTransform!, camera);
+      }
+
+      // Render minion projectiles
+      for (final projectile in minion.projectiles) {
+        renderer.render(projectile.mesh, projectile.transform, camera);
+      }
+    }
+
     // Render ability effects
     // Render player sword attack
     if (gameState.ability1Active && gameState.swordMesh != null && gameState.swordTransform != null) {

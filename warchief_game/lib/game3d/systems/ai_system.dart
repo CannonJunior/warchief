@@ -6,6 +6,8 @@ import '../state/game_config.dart';
 import '../state/abilities_config.dart';
 import '../../models/ally.dart';
 import '../../models/ai_chat_message.dart';
+import '../../models/monster.dart';
+import '../../models/monster_ontology.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
@@ -69,8 +71,11 @@ class AISystem {
     updateMonsterSword(dt, gameState);
     updateAllyMovement(dt, gameState); // Smooth ally movement
     updateAllyAI(dt, gameState);
+    updateMinionMovement(dt, gameState); // Minion movement
+    updateMinionAI(dt, gameState); // Minion AI
     updateMonsterProjectiles(dt, gameState);
     updateAllyProjectiles(dt, gameState);
+    updateMinionProjectiles(dt, gameState); // Minion projectiles
   }
 
   /// Updates all ability cooldowns for monster and allies
@@ -725,6 +730,397 @@ class AISystem {
       if (gameState.monsterAIChat.length > 50) {
         gameState.monsterAIChat.removeAt(0);
       }
+    }
+  }
+
+  // ==================== MINION AI ====================
+
+  /// Updates minion movement toward their targets
+  ///
+  /// Parameters:
+  /// - dt: Time elapsed since last frame (in seconds)
+  /// - gameState: Current game state to update
+  static void updateMinionMovement(double dt, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+
+    for (final minion in gameState.aliveMinions) {
+      // Move toward target position if set
+      if (minion.targetPosition != null) {
+        final toTarget = minion.targetPosition! - minion.transform.position;
+        toTarget.y = 0; // Horizontal movement only
+        final distance = toTarget.length;
+
+        if (distance > 0.5) {
+          // Move toward target
+          final direction = toTarget.normalized();
+          final moveAmount = minion.definition.moveSpeed * dt;
+          minion.transform.position.x += direction.x * moveAmount;
+          minion.transform.position.z += direction.z * moveAmount;
+
+          // Update rotation to face movement direction
+          minion.rotation = math.atan2(-direction.x, -direction.z) * (180 / math.pi);
+          if (minion.directionIndicatorTransform != null) {
+            minion.directionIndicatorTransform!.rotation.y = minion.rotation + 180;
+          }
+        } else {
+          // Reached target
+          minion.targetPosition = null;
+        }
+      }
+
+      // Apply terrain height
+      _applyTerrainHeight(gameState, minion.transform);
+
+      // Update direction indicator position
+      if (minion.directionIndicatorTransform != null) {
+        minion.directionIndicatorTransform!.position.x = minion.transform.position.x;
+        minion.directionIndicatorTransform!.position.y =
+            minion.transform.position.y + minion.definition.effectiveScale * 0.6;
+        minion.directionIndicatorTransform!.position.z = minion.transform.position.z;
+      }
+    }
+  }
+
+  /// Updates minion AI decisions
+  ///
+  /// Each minion archetype has different behavior:
+  /// - DPS: Aggressive, attacks player/allies directly
+  /// - Support: Stays back, buffs allies, debuffs enemies
+  /// - Healer: Stays back, heals wounded allies
+  /// - Tank: Engages player, protects other minions
+  ///
+  /// Parameters:
+  /// - dt: Time elapsed since last frame (in seconds)
+  /// - gameState: Current game state to update
+  static void updateMinionAI(double dt, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+
+    final playerPos = gameState.playerTransform!.position;
+
+    for (final minion in gameState.aliveMinions) {
+      // Update timers
+      minion.updateTimers(dt);
+
+      // Skip if dead
+      if (!minion.isAlive) continue;
+
+      // AI decision on interval
+      if (minion.aiTimer >= minion.aiInterval) {
+        minion.aiTimer = 0.0;
+
+        // Get distance to player
+        final distanceToPlayer = minion.distanceTo(playerPos);
+
+        // Check if in aggro range
+        if (distanceToPlayer <= minion.definition.aggroRange) {
+          minion.isInCombat = true;
+
+          // Execute archetype-specific behavior
+          switch (minion.definition.archetype) {
+            case MonsterArchetype.dps:
+              _executeDPSMinionAI(minion, gameState, playerPos);
+              break;
+            case MonsterArchetype.support:
+              _executeSupportMinionAI(minion, gameState, playerPos);
+              break;
+            case MonsterArchetype.healer:
+              _executeHealerMinionAI(minion, gameState, playerPos);
+              break;
+            case MonsterArchetype.tank:
+              _executeTankMinionAI(minion, gameState, playerPos);
+              break;
+            case MonsterArchetype.boss:
+              // Boss uses separate AI
+              break;
+          }
+        } else {
+          // Out of aggro range - idle
+          minion.aiState = MonsterAIState.idle;
+          minion.isInCombat = false;
+        }
+
+        // Check for flee condition
+        if (minion.definition.canFlee && minion.isLowHealth) {
+          _executeFleeAI(minion, gameState, playerPos);
+        }
+      }
+    }
+  }
+
+  /// DPS minion AI - aggressive damage dealer
+  static void _executeDPSMinionAI(Monster minion, GameState gameState, Vector3 playerPos) {
+    final distanceToPlayer = minion.distanceTo(playerPos);
+
+    // Find nearest target (player or ally)
+    Vector3 targetPos = playerPos;
+    double nearestDist = distanceToPlayer;
+
+    // Check if any ally is closer
+    for (final ally in gameState.allies) {
+      if (ally.health <= 0) continue;
+      final dist = minion.distanceTo(ally.transform.position);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        targetPos = ally.transform.position;
+      }
+    }
+
+    if (nearestDist <= minion.definition.attackRange) {
+      // In range - attack
+      minion.aiState = MonsterAIState.attacking;
+      _minionAttack(minion, gameState, targetPos, 0); // Use primary ability
+    } else {
+      // Move toward target
+      minion.aiState = MonsterAIState.pursuing;
+      minion.targetPosition = targetPos.clone();
+    }
+  }
+
+  /// Support minion AI - buffs allies, debuffs enemies
+  static void _executeSupportMinionAI(Monster minion, GameState gameState, Vector3 playerPos) {
+    final distanceToPlayer = minion.distanceTo(playerPos);
+
+    // Find wounded allies to buff
+    Monster? woundedAlly;
+    for (final ally in gameState.aliveMinions) {
+      if (ally == minion) continue;
+      if (ally.health < ally.maxHealth * 0.7) {
+        woundedAlly = ally;
+        break;
+      }
+    }
+
+    // Priority 1: Buff allies if available
+    if (woundedAlly != null && minion.isAbilityReady(0)) {
+      minion.aiState = MonsterAIState.supporting;
+      // Apply buff (Bloodlust - damage increase)
+      woundedAlly.applyBuff(damageMultiplier: 1.5, duration: 8.0);
+      minion.useAbility(0);
+    }
+    // Priority 2: Debuff player if in range
+    else if (distanceToPlayer <= minion.definition.attackRange && minion.isAbilityReady(1)) {
+      minion.aiState = MonsterAIState.casting;
+      // Apply debuff (Curse of Weakness)
+      // For now, just deal minor damage
+      _minionAttack(minion, gameState, playerPos, 2);
+    }
+    // Priority 3: Stay at medium range
+    else {
+      minion.aiState = MonsterAIState.supporting;
+      final optimalRange = 7.0;
+      if (distanceToPlayer < optimalRange - 1) {
+        // Too close - back up
+        final awayFromPlayer = (minion.transform.position - playerPos).normalized();
+        minion.targetPosition = minion.transform.position + awayFromPlayer * 2.0;
+      } else if (distanceToPlayer > optimalRange + 1) {
+        // Too far - move closer
+        final toPlayer = (playerPos - minion.transform.position).normalized();
+        minion.targetPosition = minion.transform.position + toPlayer * 2.0;
+      }
+    }
+  }
+
+  /// Healer minion AI - heals wounded allies
+  static void _executeHealerMinionAI(Monster minion, GameState gameState, Vector3 playerPos) {
+    final distanceToPlayer = minion.distanceTo(playerPos);
+
+    // Find most wounded ally
+    Monster? mostWounded;
+    double lowestHealthPercent = 1.0;
+
+    for (final ally in gameState.aliveMinions) {
+      if (ally == minion) continue;
+      final healthPercent = ally.health / ally.maxHealth;
+      if (healthPercent < lowestHealthPercent) {
+        lowestHealthPercent = healthPercent;
+        mostWounded = ally;
+      }
+    }
+
+    // Also check boss monster
+    final bossHealthPercent = gameState.monsterHealth / gameState.monsterMaxHealth;
+    if (bossHealthPercent < lowestHealthPercent) {
+      lowestHealthPercent = bossHealthPercent;
+      mostWounded = null; // Signal to heal boss
+    }
+
+    // Priority 1: Heal most wounded ally
+    if (lowestHealthPercent < 0.7 && minion.isAbilityReady(0)) {
+      minion.aiState = MonsterAIState.supporting;
+      if (mostWounded != null) {
+        // Heal minion ally
+        final healAmount = minion.definition.abilities[0].healing;
+        mostWounded.heal(healAmount);
+        minion.useAbility(0);
+      } else {
+        // Heal boss
+        final healAmount = minion.definition.abilities[0].healing;
+        gameState.monsterHealth = math.min(
+          gameState.monsterMaxHealth.toDouble(),
+          gameState.monsterHealth + healAmount,
+        );
+        minion.useAbility(0);
+      }
+    }
+    // Priority 2: Mass heal if multiple wounded
+    else if (minion.isAbilityReady(2)) {
+      int woundedCount = 0;
+      for (final ally in gameState.aliveMinions) {
+        if (ally.health < ally.maxHealth * 0.8) woundedCount++;
+      }
+      if (woundedCount >= 2) {
+        minion.aiState = MonsterAIState.casting;
+        // Mass heal
+        final healAmount = minion.definition.abilities[2].healing;
+        for (final ally in gameState.aliveMinions) {
+          ally.heal(healAmount);
+        }
+        // Also heal boss
+        gameState.monsterHealth = math.min(
+          gameState.monsterMaxHealth.toDouble(),
+          gameState.monsterHealth + healAmount,
+        );
+        minion.useAbility(2);
+      }
+    }
+    // Priority 3: Stay far from combat
+    else {
+      minion.aiState = MonsterAIState.supporting;
+      final safeRange = 10.0;
+      if (distanceToPlayer < safeRange) {
+        // Too close - run away
+        final awayFromPlayer = (minion.transform.position - playerPos).normalized();
+        minion.targetPosition = minion.transform.position + awayFromPlayer * 3.0;
+      }
+    }
+  }
+
+  /// Tank minion AI - engages player, protects allies
+  static void _executeTankMinionAI(Monster minion, GameState gameState, Vector3 playerPos) {
+    final distanceToPlayer = minion.distanceTo(playerPos);
+
+    // Priority 1: Taunt if off cooldown
+    if (minion.isAbilityReady(1)) {
+      minion.aiState = MonsterAIState.attacking;
+      minion.useAbility(1);
+      // Taunt doesn't deal damage, just draws attention
+    }
+    // Priority 2: Use defensive ability if taking damage
+    else if (minion.isInCombat && minion.health < minion.maxHealth * 0.5 && minion.isAbilityReady(2)) {
+      minion.aiState = MonsterAIState.casting;
+      minion.applyBuff(damageReduction: 0.5, duration: 8.0);
+      minion.useAbility(2);
+    }
+    // Priority 3: Attack if in range
+    else if (distanceToPlayer <= minion.definition.attackRange) {
+      if (minion.isAbilityReady(0)) {
+        // Shield Bash
+        minion.aiState = MonsterAIState.attacking;
+        _minionAttack(minion, gameState, playerPos, 0);
+      } else if (minion.isAbilityReady(3)) {
+        // Cleave (AoE)
+        minion.aiState = MonsterAIState.attacking;
+        _minionAttack(minion, gameState, playerPos, 3);
+      }
+    }
+    // Priority 4: Move to intercept player
+    else {
+      minion.aiState = MonsterAIState.pursuing;
+      minion.targetPosition = playerPos.clone();
+    }
+  }
+
+  /// Flee AI - run away when low health
+  static void _executeFleeAI(Monster minion, GameState gameState, Vector3 playerPos) {
+    minion.aiState = MonsterAIState.fleeing;
+    final awayFromPlayer = (minion.transform.position - playerPos).normalized();
+    minion.targetPosition = minion.transform.position + awayFromPlayer * 5.0;
+  }
+
+  /// Execute minion attack
+  static void _minionAttack(Monster minion, GameState gameState, Vector3 targetPos, int abilityIndex) {
+    if (abilityIndex >= minion.definition.abilities.length) return;
+    if (!minion.isAbilityReady(abilityIndex)) return;
+
+    final ability = minion.definition.abilities[abilityIndex];
+    minion.useAbility(abilityIndex);
+
+    if (ability.isProjectile) {
+      // Create projectile
+      final direction = (targetPos - minion.transform.position).normalized();
+      final projectileMesh = Mesh.cube(
+        size: 0.3,
+        color: Vector3(
+          ability.effectColor.r / 255,
+          ability.effectColor.g / 255,
+          ability.effectColor.b / 255,
+        ),
+      );
+      final projectileTransform = Transform3d(
+        position: minion.transform.position.clone() + Vector3(0, 0.5, 0),
+        scale: Vector3(1, 1, 1),
+      );
+
+      minion.projectiles.add(Projectile(
+        mesh: projectileMesh,
+        transform: projectileTransform,
+        velocity: direction * (ability.projectileSpeed ?? 8.0),
+        lifetime: 5.0,
+      ));
+    } else {
+      // Melee attack - check range and deal damage
+      final distToTarget = minion.distanceTo(targetPos);
+      if (distToTarget <= ability.range) {
+        // Damage player
+        if ((targetPos - gameState.playerTransform!.position).length < 1.0) {
+          gameState.playerHealth = math.max(0, gameState.playerHealth - ability.damage);
+        }
+        // Damage allies in AoE
+        if (ability.targetType == AbilityTargetType.areaOfEffect) {
+          for (final ally in gameState.allies) {
+            if (ally.health <= 0) continue;
+            final distToAlly = (ally.transform.position - minion.transform.position).length;
+            if (distToAlly <= ability.range) {
+              ally.health = math.max(0, ally.health - ability.damage);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /// Update minion projectiles
+  static void updateMinionProjectiles(double dt, GameState gameState) {
+    for (final minion in gameState.aliveMinions) {
+      minion.projectiles.removeWhere((projectile) {
+        projectile.transform.position += projectile.velocity * dt;
+        projectile.lifetime -= dt;
+
+        // Check collision with player
+        if (gameState.playerTransform != null) {
+          final distToPlayer = (projectile.transform.position - gameState.playerTransform!.position).length;
+          if (distToPlayer < 1.0) {
+            // Hit player
+            final damage = minion.definition.effectiveDamage;
+            gameState.playerHealth = math.max(0, gameState.playerHealth - damage);
+            return true;
+          }
+        }
+
+        // Check collision with allies
+        for (final ally in gameState.allies) {
+          if (ally.health <= 0) continue;
+          final distToAlly = (projectile.transform.position - ally.transform.position).length;
+          if (distToAlly < 0.8) {
+            // Hit ally
+            final damage = minion.definition.effectiveDamage;
+            ally.health = math.max(0, ally.health - damage);
+            return true;
+          }
+        }
+
+        return projectile.lifetime <= 0;
+      });
     }
   }
 }
