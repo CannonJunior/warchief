@@ -189,6 +189,17 @@ class InterfaceConfigManager {
       position: const Offset(0, 0),
       defaultPosition: const Offset(0, 0),
     );
+
+    // Minion Frames (not used separately, part of combat_hud)
+    _interfaces['minion_frames'] = InterfaceConfig(
+      id: 'minion_frames',
+      name: 'Minion Frames',
+      description: 'Adversary minion health and status (part of Combat HUD)',
+      icon: Icons.pest_control,
+      isVisible: true,
+      position: const Offset(0, 0),
+      defaultPosition: const Offset(0, 0),
+    );
   }
 
   /// Get all interface configs

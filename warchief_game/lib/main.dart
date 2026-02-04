@@ -52,17 +52,30 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   bool _showSettingsPanel = false;
+  bool _configUpdatePending = false;
 
   @override
   void initState() {
     super.initState();
-    // Initialize global config manager with callback to refresh UI
+    // Initialize global config manager with debounced callback to refresh UI
+    // This prevents excessive rebuilds during drag operations
     globalInterfaceConfig = InterfaceConfigManager(
-      onConfigChanged: () {
-        if (mounted) setState(() {});
-      },
+      onConfigChanged: _scheduleConfigUpdate,
     );
     globalInterfaceConfig!.loadConfig();
+  }
+
+  /// Debounced config update - schedules a single setState per frame
+  void _scheduleConfigUpdate() {
+    if (_configUpdatePending || !mounted) return;
+    _configUpdatePending = true;
+    // Schedule update for next frame to batch multiple config changes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _configUpdatePending = false;
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -72,7 +85,7 @@ class _GameScreenState extends State<GameScreen> {
       body: Stack(
         children: [
           // 3D WebGL Game
-          Game3D(),
+          const Game3D(),
 
           // Version info and settings button (top-right corner)
           Positioned(

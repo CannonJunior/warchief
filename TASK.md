@@ -73,6 +73,24 @@
   - Updated lib/game3d/systems/ai_system.dart (enemy targetId tracking)
   - Updated lib/game3d/game3d_widget.dart (Tab input, dynamic UI)
 
+#### Bug Fix: Startup Script & Performance (Completed 2026-02-04)
+**Task**: Fix project startup crash caused by script issues and excessive UI rebuilds
+- ✅ Fixed start.sh script to correctly locate Flutter project
+  - Was checking for pubspec.yaml in `/warchief/` instead of `/warchief/warchief_game/`
+  - This caused `flutter create` to run on every startup, interfering with build cache
+  - Updated script to properly detect GAME_DIR before checking for pubspec.yaml
+- ✅ Made Game3D widget const in main.dart
+  - Prevents unnecessary widget recreation during parent rebuilds
+  - Changed `Game3D()` to `const Game3D()`
+- ✅ Added debouncing to interface config updates
+  - `onConfigChanged` was triggering setState on every drag frame (~60x/second)
+  - Added `_scheduleConfigUpdate()` that batches updates using `addPostFrameCallback`
+  - Reduces rebuild frequency to once per animation frame maximum
+- **Root Cause**: Every panel drag caused excessive GameScreen rebuilds due to direct setState in onConfigChanged callback, combined with script running `flutter create` on every startup
+- **Deliverables**:
+  - Updated start.sh (correct project detection)
+  - Updated lib/main.dart (const Game3D, debounced callbacks)
+
 #### Minion Frames UI (Completed 2026-02-03)
 **Task**: Add minion frames display symmetric to party frames
 - ✅ Created MinionFrames widget mirroring PartyFrames design

@@ -549,6 +549,11 @@ class _Game3DState extends State<Game3D> {
   bool _shiftHoldWasPressed = false;
   bool _shiftFormationWasPressed = false;
 
+  /// Drag state tracking for panels - used to prevent micro-drags from interfering with taps
+  final Map<String, bool> _isDragging = {};
+  final Map<String, Offset> _dragStartPos = {};
+  static const double _dragThreshold = 5.0; // Pixels before drag activates
+
   /// Check if an interface is visible (defaults to true if config not available)
   bool _isVisible(String id) {
     return globalInterfaceConfig?.isVisible(id) ?? true;
@@ -573,9 +578,42 @@ class _Game3DState extends State<Game3D> {
     return Positioned(
       left: pos.dx,
       top: pos.dy,
-      child: GestureDetector(
-        onPanUpdate: (details) {
-          _updatePos(id, details.delta, MediaQuery.of(context).size, Size(width, height));
+      // Use Listener for drag to avoid gesture arena conflicts with child buttons
+      child: Listener(
+        behavior: HitTestBehavior.translucent, // Allow children to also receive hit tests
+        onPointerDown: (event) {
+          // Record drag start position
+          _isDragging[id] = false;
+          _dragStartPos[id] = event.position;
+        },
+        onPointerMove: (event) {
+          // Only process drag when primary button (left mouse) is pressed
+          if (event.buttons == 1) {
+            final startPos = _dragStartPos[id];
+            if (startPos != null) {
+              // Check if we've exceeded the drag threshold
+              if (!(_isDragging[id] ?? false)) {
+                final distance = (event.position - startPos).distance;
+                if (distance >= _dragThreshold) {
+                  _isDragging[id] = true;
+                }
+              }
+              // Only apply movement if we're in drag mode
+              if (_isDragging[id] ?? false) {
+                _updatePos(id, event.delta, MediaQuery.of(context).size, Size(width, height));
+              }
+            }
+          }
+        },
+        onPointerUp: (event) {
+          // Reset drag state
+          _isDragging[id] = false;
+          _dragStartPos.remove(id);
+        },
+        onPointerCancel: (event) {
+          // Reset drag state
+          _isDragging[id] = false;
+          _dragStartPos.remove(id);
         },
         child: MouseRegion(
           cursor: SystemMouseCursors.move,
@@ -815,6 +853,7 @@ class _Game3DState extends State<Game3D> {
 
   /// Add a new ally with a random ability
   void _addAlly() {
+    debugPrint('_addAlly called! Current allies: ${gameState.allies.length}');
     setState(() {
       // Generate random ability (0, 1, or 2)
       final random = math.Random();
@@ -913,51 +952,62 @@ class _Game3DState extends State<Game3D> {
 
             // ========== NEW WOW-STYLE UNIT FRAMES (All Draggable) ==========
 
-            // Combat HUD with Party frames (draggable)
+            // Combat HUD (draggable) - Row with fixed-width side panels
             if (_isVisible('combat_hud'))
               _draggable('combat_hud',
                 Row(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.end, // Bottom-align all
                   children: [
-                    // Party/Ally frames and controls (left of Warchief frame)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (gameState.allies.isNotEmpty)
-                            PartyFrames(
-                              allies: gameState.allies,
-                              onAllySelected: (index) {
-                                print('Ally $index selected');
-                              },
-                              onAllyAbilityActivate: _activateAllyAbility,
+                    // Party section - fixed width container so CombatHUD doesn't shift
+                    if (_isVisible('party_frames'))
+                      SizedBox(
+                        width: 172, // Fixed width: buttons (~160) + padding (12)
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          verticalDirection: VerticalDirection.up, // Grow upward
+                          children: [
+                            // Bottom: Ally control buttons (always at bottom-right of this section)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildAllyControlButton(
+                                    icon: Icons.add,
+                                    label: '+Ally',
+                                    color: const Color(0xFF4CAF50),
+                                    onPressed: _addAlly,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  _buildAllyControlButton(
+                                    icon: Icons.remove,
+                                    label: '-Ally',
+                                    color: const Color(0xFFEF5350),
+                                    onPressed: _removeAlly,
+                                  ),
+                                ],
+                              ),
                             ),
-                          if (gameState.allies.isNotEmpty)
-                            const SizedBox(height: 6),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildAllyControlButton(
-                                icon: Icons.add,
-                                label: '+Ally',
-                                color: const Color(0xFF4CAF50),
-                                onPressed: _addAlly,
+                            // Party frames above buttons (grows upward)
+                            if (gameState.allies.isNotEmpty)
+                              const SizedBox(height: 6),
+                            if (gameState.allies.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: PartyFrames(
+                                  allies: gameState.allies,
+                                  onAllySelected: (index) {
+                                    print('Ally $index selected');
+                                  },
+                                  onAllyAbilityActivate: _activateAllyAbility,
+                                ),
                               ),
-                              const SizedBox(width: 6),
-                              _buildAllyControlButton(
-                                icon: Icons.remove,
-                                label: '-Ally',
-                                color: const Color(0xFFEF5350),
-                                onPressed: _removeAlly,
-                              ),
-                            ],
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+                    // CombatHUD - center anchor
                     CombatHUD(
                       playerName: 'Warchief',
                       playerHealth: gameState.playerHealth,
@@ -993,9 +1043,32 @@ class _Game3DState extends State<Game3D> {
                       onAbility3Pressed: _activateAbility3,
                       onAbility4Pressed: _activateAbility4,
                     ),
+                    // Minion section - fixed width container
+                    if (_isVisible('minion_frames'))
+                      SizedBox(
+                        width: 172, // Fixed width to match party section
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          verticalDirection: VerticalDirection.up, // Grow upward
+                          children: [
+                            // Minion frames (grows upward from bottom)
+                            if (gameState.minions.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 12),
+                                child: MinionFrames(
+                                  minions: gameState.minions,
+                                  onMinionSelected: (index) {
+                                    print('Minion $index selected');
+                                  },
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
-                width: 700, height: 200,
+                width: 400, height: 180,
               ),
 
             // Boss/Target abilities panel (draggable)
@@ -1134,29 +1207,36 @@ class _Game3DState extends State<Game3D> {
     required Color color,
     required VoidCallback onPressed,
   }) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: color, width: 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 14),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          debugPrint('Button "$label" tapped!');
+          onPressed();
+        },
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: color, width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 14),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

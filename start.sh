@@ -42,25 +42,25 @@ flutter --version | head -n 1
 
 echo ""
 
-# Check if we're in a Flutter project
-if [ ! -f "$PROJECT_DIR/pubspec.yaml" ]; then
-    echo "⚠️  No Flutter project found in $PROJECT_DIR"
-    echo "Creating new Flutter project..."
-    cd "$PROJECT_DIR"
-    flutter create --platforms=web --org=com.warchief warchief_game
-    cd warchief_game
-    PROJECT_DIR="$PROJECT_DIR/warchief_game"
-fi
-
-cd "$PROJECT_DIR"
-
-# Generate source tree for Settings panel
-echo "Generating source tree..."
+# Determine the actual game directory
 GAME_DIR="$PROJECT_DIR"
-# Check if we're in parent directory (warchief/) or game directory (warchief_game/)
 if [ -d "$PROJECT_DIR/warchief_game" ]; then
     GAME_DIR="$PROJECT_DIR/warchief_game"
 fi
+
+# Check if we have a Flutter project
+if [ ! -f "$GAME_DIR/pubspec.yaml" ]; then
+    echo "⚠️  No Flutter project found in $GAME_DIR"
+    echo "Creating new Flutter project..."
+    cd "$PROJECT_DIR"
+    flutter create --platforms=web --org=com.warchief warchief_game
+    GAME_DIR="$PROJECT_DIR/warchief_game"
+fi
+
+cd "$GAME_DIR"
+
+# Generate source tree for Settings panel
+echo "Generating source tree..."
 if [ -f "$GAME_DIR/scripts/generate_source_tree.py" ]; then
     python3 "$GAME_DIR/scripts/generate_source_tree.py" \
         --root "$GAME_DIR" \
