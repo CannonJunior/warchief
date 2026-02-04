@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-04T14:09:44.950848",
+  "generated_at": "2026-02-04T14:34:10.725343",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
     "files": 114,
     "directories": 31,
-    "lines": 27543,
-    "size": 923783
+    "lines": 27795,
+    "size": 931911
   },
   "tree": {
     "name": "warchief_game",
@@ -410,10 +410,10 @@
                     "name": "game_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state.dart",
-                    "size": 17800,
+                    "size": 17869,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 529
+                    "lines": 530
                   }
                 ]
               },
@@ -471,10 +471,10 @@
                     "name": "render_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/render_system.dart",
-                    "size": 6743,
+                    "size": 6991,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 193
+                    "lines": 199
                   }
                 ]
               },
@@ -535,19 +535,19 @@
                         "name": "combat_hud.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/unit_frames/combat_hud.dart",
-                        "size": 20402,
+                        "size": 20851,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 647
+                        "lines": 658
                       },
                       {
                         "name": "minion_frames.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/unit_frames/minion_frames.dart",
-                        "size": 12251,
+                        "size": 12857,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 387
+                        "lines": 404
                       },
                       {
                         "name": "party_frames.dart",
@@ -735,10 +735,10 @@
                 "name": "game3d_widget.dart",
                 "type": "file",
                 "path": "warchief_game/lib/game3d/game3d_widget.dart",
-                "size": 48829,
+                "size": 55059,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 1316
+                "lines": 1516
               }
             ]
           },
@@ -769,10 +769,10 @@
                 "name": "game_action.dart",
                 "type": "file",
                 "path": "warchief_game/lib/models/game_action.dart",
-                "size": 6602,
+                "size": 7128,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 221
+                "lines": 238
               },
               {
                 "name": "impact_effect.dart",

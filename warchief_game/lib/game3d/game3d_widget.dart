@@ -18,6 +18,8 @@ import '../ai/ollama_client.dart';
 import '../models/projectile.dart';
 import '../models/ally.dart';
 import '../models/ai_chat_message.dart';
+import '../models/monster.dart';
+import '../models/monster_ontology.dart';
 import 'ai/ally_strategy.dart';
 import 'ai/tactical_positioning.dart';
 import 'state/game_config.dart';
@@ -477,11 +479,40 @@ class _Game3DState extends State<Game3D> {
       return;
     }
 
-    // Handle Escape key to close any open modal/panel
+    // Handle Tab/Shift+Tab for target cycling (WoW-style)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.tab) {
+      final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+      final playerX = gameState.playerTransform?.position.x ?? 0.0;
+      final playerZ = gameState.playerTransform?.position.z ?? 0.0;
+      final playerRotation = gameState.playerTransform?.rotation.y ?? 0.0;
+
+      setState(() {
+        gameState.tabToNextTarget(playerX, playerZ, playerRotation, reverse: isShiftPressed);
+        final target = gameState.getCurrentTarget();
+        if (target != null) {
+          final name = target['type'] == 'boss' ? 'Boss Monster' :
+            (target['entity'] as Monster?)?.definition.name ?? 'Unknown';
+          debugPrint('Tab target: $name (${isShiftPressed ? "reverse" : "forward"})');
+        } else {
+          debugPrint('No targets available');
+        }
+      });
+      return;
+    }
+
+    // Handle Escape key to close any open modal/panel or clear target
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
       if (gameState.abilitiesModalOpen) {
         setState(() {
           gameState.abilitiesModalOpen = false;
+        });
+        return;
+      }
+      // Clear target if no modal is open
+      if (gameState.currentTargetId != null) {
+        setState(() {
+          gameState.clearTarget();
+          debugPrint('Target cleared');
         });
         return;
       }
@@ -1008,41 +1039,7 @@ class _Game3DState extends State<Game3D> {
                         ),
                       ),
                     // CombatHUD - center anchor
-                    CombatHUD(
-                      playerName: 'Warchief',
-                      playerHealth: gameState.playerHealth,
-                      playerMaxHealth: gameState.playerMaxHealth,
-                      playerLevel: 10,
-                      playerPortraitWidget: const CubePortrait(
-                        color: Color(0xFF4D80CC),
-                        size: 36,
-                        hasDirectionIndicator: true,
-                        indicatorColor: Colors.red,
-                      ),
-                      targetName: 'Boss Monster',
-                      targetHealth: gameState.monsterHealth,
-                      targetMaxHealth: gameState.monsterMaxHealth.toDouble(),
-                      targetLevel: 15,
-                      hasTarget: true,
-                      targetPortraitWidget: const CubePortrait(
-                        color: Color(0xFF9933CC),
-                        size: 36,
-                        hasDirectionIndicator: true,
-                        indicatorColor: Colors.green,
-                      ),
-                      ability1Cooldown: gameState.ability1Cooldown,
-                      ability1CooldownMax: gameState.ability1CooldownMax,
-                      ability2Cooldown: gameState.ability2Cooldown,
-                      ability2CooldownMax: gameState.ability2CooldownMax,
-                      ability3Cooldown: gameState.ability3Cooldown,
-                      ability3CooldownMax: gameState.ability3CooldownMax,
-                      ability4Cooldown: gameState.ability4Cooldown,
-                      ability4CooldownMax: gameState.ability4CooldownMax,
-                      onAbility1Pressed: _activateAbility1,
-                      onAbility2Pressed: _activateAbility2,
-                      onAbility3Pressed: _activateAbility3,
-                      onAbility4Pressed: _activateAbility4,
-                    ),
+                    _buildCombatHUD(),
                     // Minion section - fixed width container
                     if (_isVisible('minion_frames'))
                       SizedBox(
@@ -1058,8 +1055,16 @@ class _Game3DState extends State<Game3D> {
                                 padding: const EdgeInsets.only(left: 12),
                                 child: MinionFrames(
                                   minions: gameState.minions,
+                                  targetedMinionId: gameState.currentTargetId,
                                   onMinionSelected: (index) {
-                                    print('Minion $index selected');
+                                    // Set the clicked minion as current target
+                                    if (index < gameState.minions.length) {
+                                      final minion = gameState.minions[index];
+                                      setState(() {
+                                        gameState.setTarget(minion.instanceId);
+                                        debugPrint('Targeted minion: ${minion.definition.name}');
+                                      });
+                                    }
                                   },
                                 ),
                               ),
@@ -1081,12 +1086,19 @@ class _Game3DState extends State<Game3D> {
                   level: 15,
                   subtitle: 'Elite',
                   isPaused: gameState.monsterPaused,
+                  isTargeted: gameState.currentTargetId == 'boss',
                   portraitWidget: const CubePortrait(
                     color: Color(0xFF9933CC),
                     size: 24,
                     hasDirectionIndicator: true,
                     indicatorColor: Colors.green,
                   ),
+                  onTap: () {
+                    setState(() {
+                      gameState.setTarget('boss');
+                      debugPrint('Targeted: Boss Monster');
+                    });
+                  },
                   onPauseToggle: () {
                     setState(() {
                       gameState.monsterPaused = !gameState.monsterPaused;
@@ -1196,6 +1208,194 @@ class _Game3DState extends State<Game3D> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Get target data for current target (for CombatHUD)
+  Map<String, dynamic> _getTargetData() {
+    final target = gameState.getCurrentTarget();
+
+    if (target == null) {
+      // No target selected
+      return {
+        'hasTarget': false,
+        'name': null,
+        'health': 0.0,
+        'maxHealth': 1.0,
+        'level': null,
+        'color': const Color(0xFF666666),
+      };
+    }
+
+    if (target['type'] == 'boss') {
+      return {
+        'hasTarget': true,
+        'name': 'Boss Monster',
+        'health': gameState.monsterHealth,
+        'maxHealth': gameState.monsterMaxHealth.toDouble(),
+        'level': 15,
+        'color': const Color(0xFF9933CC), // Purple for boss
+      };
+    } else {
+      final minion = target['entity'] as Monster?;
+      if (minion == null) {
+        return {
+          'hasTarget': false,
+          'name': null,
+          'health': 0.0,
+          'maxHealth': 1.0,
+          'level': null,
+          'color': const Color(0xFF666666),
+        };
+      }
+
+      // Get color based on archetype
+      Color archetypeColor;
+      switch (minion.definition.archetype) {
+        case MonsterArchetype.dps:
+          archetypeColor = const Color(0xFFFF6B6B); // Red
+          break;
+        case MonsterArchetype.support:
+          archetypeColor = const Color(0xFF9933FF); // Purple
+          break;
+        case MonsterArchetype.healer:
+          archetypeColor = const Color(0xFF66CC66); // Green
+          break;
+        case MonsterArchetype.tank:
+          archetypeColor = const Color(0xFFFFAA33); // Orange
+          break;
+        case MonsterArchetype.boss:
+          archetypeColor = const Color(0xFFFF0000); // Bright red
+          break;
+      }
+
+      return {
+        'hasTarget': true,
+        'name': minion.definition.name,
+        'health': minion.health,
+        'maxHealth': minion.maxHealth,
+        'level': minion.definition.monsterPower,
+        'color': archetypeColor,
+      };
+    }
+  }
+
+  /// Get target-of-target info
+  String? _getTargetOfTargetInfo() {
+    final tot = gameState.getTargetOfTarget();
+    if (tot == null) return null;
+
+    if (tot == 'player') return 'You';
+    if (tot == 'none') return null;
+
+    // Check if it's an ally (allies are identified by index like "ally_0", "ally_1")
+    if (tot.startsWith('ally_')) {
+      final index = int.tryParse(tot.substring(5));
+      if (index != null && index < gameState.allies.length) {
+        return 'Ally ${index + 1}';
+      }
+    }
+
+    // Check if it's a minion
+    final minion = gameState.minions.where((m) => m.instanceId == tot).firstOrNull;
+    if (minion != null) return minion.definition.name;
+
+    return tot;
+  }
+
+  /// Build Combat HUD with current target data
+  Widget _buildCombatHUD() {
+    final targetData = _getTargetData();
+    final totInfo = _getTargetOfTargetInfo();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CombatHUD(
+          playerName: 'Warchief',
+          playerHealth: gameState.playerHealth,
+          playerMaxHealth: gameState.playerMaxHealth,
+          playerLevel: 10,
+          playerPortraitWidget: const CubePortrait(
+            color: Color(0xFF4D80CC),
+            size: 36,
+            hasDirectionIndicator: true,
+            indicatorColor: Colors.red,
+          ),
+          targetName: targetData['name'] as String?,
+          targetHealth: targetData['health'] as double,
+          targetMaxHealth: targetData['maxHealth'] as double,
+          targetLevel: targetData['level'] as int?,
+          hasTarget: targetData['hasTarget'] as bool,
+          targetPortraitWidget: targetData['hasTarget'] as bool
+              ? CubePortrait(
+                  color: targetData['color'] as Color,
+                  size: 36,
+                  hasDirectionIndicator: true,
+                  indicatorColor: Colors.green,
+                )
+              : null,
+          ability1Cooldown: gameState.ability1Cooldown,
+          ability1CooldownMax: gameState.ability1CooldownMax,
+          ability2Cooldown: gameState.ability2Cooldown,
+          ability2CooldownMax: gameState.ability2CooldownMax,
+          ability3Cooldown: gameState.ability3Cooldown,
+          ability3CooldownMax: gameState.ability3CooldownMax,
+          ability4Cooldown: gameState.ability4Cooldown,
+          ability4CooldownMax: gameState.ability4CooldownMax,
+          onAbility1Pressed: _activateAbility1,
+          onAbility2Pressed: _activateAbility2,
+          onAbility3Pressed: _activateAbility3,
+          onAbility4Pressed: _activateAbility4,
+        ),
+        // Target of Target display
+        if (targetData['hasTarget'] as bool && totInfo != null)
+          _buildTargetOfTarget(totInfo),
+      ],
+    );
+  }
+
+  /// Build Target of Target (ToT) display
+  Widget _buildTargetOfTarget(String totName) {
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1a1a2e).withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: const Color(0xFF252542),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.arrow_forward,
+            size: 12,
+            color: Color(0xFF888888),
+          ),
+          const SizedBox(width: 4),
+          const Text(
+            'Target:',
+            style: TextStyle(
+              color: Color(0xFF888888),
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            totName,
+            style: TextStyle(
+              color: totName == 'You' ? const Color(0xFFFF6B6B) : const Color(0xFFCCCCCC),
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

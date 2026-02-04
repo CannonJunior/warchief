@@ -7,12 +7,14 @@ import '../../../models/monster_ontology.dart';
 class MinionFrames extends StatelessWidget {
   final List<Monster> minions;
   final int? selectedIndex;
+  final String? targetedMinionId; // Currently targeted minion (yellow border)
   final void Function(int index)? onMinionSelected;
 
   const MinionFrames({
     Key? key,
     required this.minions,
     this.selectedIndex,
+    this.targetedMinionId,
     this.onMinionSelected,
   }) : super(key: key);
 
@@ -159,8 +161,23 @@ class MinionFrames extends StatelessWidget {
 
   Widget _buildMinionFrame(Monster monster, int index) {
     final isSelected = selectedIndex == index;
+    final isTargeted = targetedMinionId == monster.instanceId;
     final isDead = !monster.isAlive;
     final archetypeColor = _getArchetypeColor(monster.definition.archetype);
+
+    // Targeted minion gets yellow border, selected gets archetype color
+    Color borderColor;
+    int borderWidth;
+    if (isTargeted) {
+      borderColor = const Color(0xFFFFD700); // Gold/yellow for target
+      borderWidth = 2;
+    } else if (isSelected) {
+      borderColor = archetypeColor;
+      borderWidth = 2;
+    } else {
+      borderColor = const Color(0xFF403030);
+      borderWidth = 1;
+    }
 
     return GestureDetector(
       onTap: () => onMinionSelected?.call(index),
@@ -171,15 +188,15 @@ class MinionFrames extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 4),
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: isSelected
-                ? archetypeColor.withValues(alpha: 0.2)
-                : const Color(0xFF2a2020).withValues(alpha: 0.5),
+            color: isTargeted
+                ? const Color(0xFF3D3D00).withValues(alpha: 0.3)
+                : isSelected
+                    ? archetypeColor.withValues(alpha: 0.2)
+                    : const Color(0xFF2a2020).withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
-              color: isSelected
-                  ? archetypeColor
-                  : const Color(0xFF403030),
-              width: isSelected ? 2 : 1,
+              color: borderColor,
+              width: borderWidth.toDouble(),
             ),
           ),
           child: Row(

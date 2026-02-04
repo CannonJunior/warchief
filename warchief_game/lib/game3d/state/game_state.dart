@@ -239,6 +239,7 @@ class GameState {
   /// Target indicator mesh (yellow dashed rectangle)
   Mesh? targetIndicatorMesh;
   Transform3d? targetIndicatorTransform;
+  double lastTargetIndicatorSize = 0.0; // Track size for recreation
 
   /// Index for tab targeting cycle
   int _tabTargetIndex = -1;

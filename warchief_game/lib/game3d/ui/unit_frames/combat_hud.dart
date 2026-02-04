@@ -279,7 +279,9 @@ class TargetFrame extends StatelessWidget {
   final String? subtitle;
   final List<AbilityButtonData>? abilities;
   final VoidCallback? onPauseToggle;
+  final VoidCallback? onTap; // Click to target
   final bool isPaused;
+  final bool isTargeted; // Whether this is the current target
   final Widget? portraitWidget; // Custom portrait widget (e.g., 3D cube)
 
   const TargetFrame({
@@ -291,22 +293,30 @@ class TargetFrame extends StatelessWidget {
     this.subtitle,
     this.abilities,
     this.onPauseToggle,
+    this.onTap,
     this.isPaused = false,
+    this.isTargeted = false,
     this.portraitWidget,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 220,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1a1a2e),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: const Color(0xFFFF6B6B),
-          width: 2,
-        ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 220,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isTargeted
+              ? const Color(0xFF2a2a1e) // Yellowish tint when targeted
+              : const Color(0xFF1a1a2e),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isTargeted
+                ? const Color(0xFFFFD700) // Gold border when targeted
+                : const Color(0xFFFF6B6B),
+            width: isTargeted ? 3 : 2,
+          ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.5),
@@ -436,6 +446,7 @@ class TargetFrame extends StatelessWidget {
             ),
           ],
         ],
+      ),
       ),
     );
   }

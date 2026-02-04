@@ -48,6 +48,11 @@ enum GameAction {
   petAggressive,
   cycleFormation,
 
+  // Targeting
+  tabTarget,
+  tabTargetReverse,
+  clearTarget,
+
   // UI
   toggleSettings,
   toggleInventory,
@@ -128,6 +133,12 @@ extension GameActionExtension on GameAction {
         return 'Pet Aggressive';
       case GameAction.cycleFormation:
         return 'Cycle Formation';
+      case GameAction.tabTarget:
+        return 'Tab Target';
+      case GameAction.tabTargetReverse:
+        return 'Previous Target';
+      case GameAction.clearTarget:
+        return 'Clear Target';
       case GameAction.toggleSettings:
         return 'Toggle Settings';
       case GameAction.toggleInventory:
@@ -210,6 +221,12 @@ extension GameActionExtension on GameAction {
         return LogicalKeyboardKey.keyK;
       case GameAction.cycleFormation:
         return LogicalKeyboardKey.keyR;
+      case GameAction.tabTarget:
+        return LogicalKeyboardKey.tab;
+      case GameAction.tabTargetReverse:
+        return LogicalKeyboardKey.tab; // Shift+Tab handled separately
+      case GameAction.clearTarget:
+        return LogicalKeyboardKey.escape;
       case GameAction.toggleSettings:
         return LogicalKeyboardKey.escape;
       case GameAction.toggleInventory:

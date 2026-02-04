@@ -168,12 +168,18 @@ class RenderSystem {
 
     if (targetPosition == null) return;
 
-    // Create or update target indicator mesh
-    gameState.targetIndicatorMesh ??= Mesh.targetIndicator(
-      size: targetSize,
-      lineWidth: 0.06,
-      color: Vector3(1.0, 0.9, 0.0), // Yellow
-    );
+    // Check if target changed and we need to recreate the mesh with new size
+    final needsNewMesh = gameState.targetIndicatorMesh == null ||
+        gameState.lastTargetIndicatorSize != targetSize;
+
+    if (needsNewMesh) {
+      gameState.targetIndicatorMesh = Mesh.targetIndicator(
+        size: targetSize,
+        lineWidth: 0.06,
+        color: Vector3(1.0, 0.9, 0.0), // Yellow
+      );
+      gameState.lastTargetIndicatorSize = targetSize;
+    }
 
     // Update transform position
     gameState.targetIndicatorTransform ??= Transform3d();
