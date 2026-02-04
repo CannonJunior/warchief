@@ -39,6 +39,121 @@
   - README.md (project overview)
   - Working game skeleton running on http://localhost:8008
 
+#### Tab Targeting System (Completed 2026-02-03)
+**Task**: Implement WoW-style targeting system with visual indicators
+- ✅ Core targeting system in GameState
+  - Tab cycles through enemies (cone-based, prioritizing facing direction)
+  - Shift+Tab cycles backwards
+  - ESC clears current target
+  - Target validation (auto-clear when target dies)
+  - Sorted by angle from player facing (60° cone priority) then distance
+- ✅ Visual target indicator (yellow dashed rectangle)
+  - Created Mesh.targetIndicator factory (8 dashes, 1/3 side length each)
+  - Rendered at base of targeted enemy
+  - Size scales with target's size
+- ✅ Dynamic UI based on current target
+  - CombatHUD shows current target's info (name, health, level)
+  - Target Frame panel shows detailed target info with abilities
+  - Portrait color matches target type (boss=purple, minion archetype colors)
+- ✅ Target-of-Target display
+  - Shows who the current target is targeting
+  - Warning indicator when target is targeting the player
+- ✅ Enemy targeting system
+  - Minions track their targets via targetId property
+  - DPS, Support, Healer, Tank AI all set appropriate targets
+  - Boss always targets player
+- **Keybinds**:
+  - Tab: Cycle to next enemy target
+  - Shift+Tab: Cycle to previous enemy target
+  - ESC: Clear target (if no modals open)
+- **Deliverables**:
+  - Updated lib/game3d/state/game_state.dart (targeting state + methods)
+  - Updated lib/rendering3d/mesh.dart (targetIndicator factory)
+  - Updated lib/game3d/systems/render_system.dart (target indicator rendering)
+  - Updated lib/game3d/systems/ai_system.dart (enemy targetId tracking)
+  - Updated lib/game3d/game3d_widget.dart (Tab input, dynamic UI)
+
+#### Minion Frames UI (Completed 2026-02-03)
+**Task**: Add minion frames display symmetric to party frames
+- ✅ Created MinionFrames widget mirroring PartyFrames design
+  - Displays all enemy minions grouped by archetype
+  - Shows minion name, health bar, ability cooldown dots
+  - AI state indicator (attacking, pursuing, supporting, etc.)
+  - Archetype color coding (DPS=red, Support=purple, Healer=green, Tank=orange)
+  - Dead minions shown with reduced opacity
+  - Alive/total count display in header
+- ✅ Positioned symmetrically to party frames
+  - Party frames: left of player frame
+  - Minion frames: right of boss frame
+- ✅ Integrated with interface configuration system
+  - Toggleable via Settings > Interfaces
+  - Persists visibility state
+- **Deliverables**:
+  - lib/game3d/ui/unit_frames/minion_frames.dart (~330 lines)
+  - Updated lib/game3d/ui/unit_frames/unit_frames.dart (export)
+  - Updated lib/game3d/game3d_widget.dart (MinionFrames placement)
+  - Updated lib/game3d/ui/settings/interface_config.dart (minion_frames config)
+
+#### Drag-and-Drop Action Bar (Completed 2026-02-03)
+**Task**: Implement drag-and-drop ability customization for the action bar
+- ✅ Created ActionBarConfig state manager
+  - Tracks which abilities are assigned to each action bar slot (1-4)
+  - Persists configuration via SharedPreferences
+  - Provides slot color lookup from ability data
+- ✅ Added draggable ability icons to Abilities Codex
+  - Icons match action bar button size (60x60 pixels)
+  - Drag feedback shows yellow glow border
+  - Hint text "Drag icons to action bar" in header
+  - Ability type icons (melee, ranged, heal, buff, etc.)
+- ✅ Made action bar buttons accept ability drops
+  - DragTarget widgets on each action bar slot
+  - Visual feedback when dragging over slot (yellow highlight)
+  - Slot color updates to match dropped ability
+- ✅ Dynamic ability execution based on slot configuration
+  - AbilitySystem.executeSlotAbility() looks up configured ability
+  - Support for all ability categories (Player, Warrior, Mage, Rogue, Healer, Nature, Necromancer, Elemental, Utility)
+  - Generic handlers for melee, projectile, AoE, and heal abilities
+  - Cooldowns properly tracked per slot
+- **Usage**:
+  - Press P to open Abilities Codex
+  - Drag any ability icon to action bar slot
+  - Click ability or press hotkey (1-4) to use new ability
+- **Deliverables**:
+  - lib/game3d/state/action_bar_config.dart (~120 lines)
+  - Updated lib/game3d/ui/abilities_modal.dart (draggable icons)
+  - Updated lib/game3d/ui/unit_frames/combat_hud.dart (DragTarget slots)
+  - Updated lib/game3d/systems/ability_system.dart (~640 lines, dynamic execution)
+  - Updated lib/main.dart (ActionBarConfig initialization)
+  - Updated lib/game3d/game3d_widget.dart (drop handler integration)
+
+#### Interface Settings System (Completed 2026-02-03)
+**Task**: Add UI interface configuration with persistent visibility settings
+- ✅ Created InterfaceConfigManager for centralized UI panel configuration
+  - Stores visibility states and positions for all toggleable interfaces
+  - Supports save/load configuration via SharedPreferences
+  - JSON serialization for persistence
+  - Callback system for real-time UI updates
+- ✅ Added Interfaces tab to Settings panel
+  - Expandable list of all configurable interfaces
+  - Toggle switches for visibility control
+  - Position display and reset functionality
+  - "Save Layout" and "Reset All" action buttons
+  - Quick action chips: "Show All" and "Hide Optional"
+- ✅ Integrated with Game3D widget
+  - Visibility controlled by InterfaceConfigManager
+  - Local panel state synced with global config
+  - All panels (Instructions, AI Chat, Monster Abilities, Party Frames, Command Panels) respect config
+  - SHIFT+key toggles update both local state and global config
+  - Auto-save on visibility change
+- ✅ Configurable interfaces:
+  - Combat HUD, Party Frames, Boss Abilities, AI Chat, Instructions
+  - Formation Panel, Attack Panel, Hold Panel, Follow Panel
+- **Deliverables**:
+  - lib/game3d/ui/settings/interface_config.dart (~313 lines)
+  - Updated lib/game3d/ui/settings/settings_panel.dart (Interfaces tab)
+  - Updated lib/main.dart (InterfaceConfigManager integration)
+  - Updated lib/game3d/game3d_widget.dart (visibility checks)
+
 #### Monster Ontology & Minion System (Completed 2026-02-02)
 **Task**: Create monster type system with 4 minion archetypes (Ancient Wilds Faction)
 - ✅ Created MonsterOntology with comprehensive type definitions

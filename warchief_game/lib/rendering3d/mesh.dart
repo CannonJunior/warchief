@@ -332,6 +332,104 @@ class Mesh {
     );
   }
 
+  /// Create a dashed rectangle target indicator mesh
+  ///
+  /// Creates a rectangular indicator with dashed lines (gaps in each side).
+  /// Each side has a dash-gap-dash pattern (1/3 dash, 1/3 gap, 1/3 dash).
+  /// The rectangle lies flat on the ground (Y plane) with slight height offset.
+  ///
+  /// Parameters:
+  /// - size: Width and depth of the rectangle
+  /// - lineWidth: Thickness of the dash lines
+  /// - color: Color of the dashes (defaults to yellow)
+  factory Mesh.targetIndicator({
+    double size = 1.5,
+    double lineWidth = 0.05,
+    Vector3? color,
+  }) {
+    color ??= Vector3(1.0, 0.9, 0.0); // Default yellow
+
+    final halfSize = size / 2;
+    final dashLength = size / 3; // Each dash is 1/3 of side length
+    final halfLine = lineWidth / 2;
+    final y = 0.02; // Slight offset above ground to prevent z-fighting
+
+    // We need 8 dashes total (2 per side, with gap in middle)
+    // Each dash is a thin rectangle
+    final allVertices = <double>[];
+    final allIndices = <int>[];
+    final allNormals = <double>[];
+    final allColors = <double>[];
+
+    int vertexOffset = 0;
+
+    void addDash(double x1, double z1, double x2, double z2) {
+      // Calculate perpendicular direction for line width
+      final dx = x2 - x1;
+      final dz = z2 - z1;
+      final len = _sqrt(dx * dx + dz * dz);
+      if (len < 0.001) return;
+
+      final perpX = -dz / len * halfLine;
+      final perpZ = dx / len * halfLine;
+
+      // Four corners of the dash rectangle
+      // Top face
+      allVertices.addAll([
+        x1 + perpX, y, z1 + perpZ, // 0
+        x1 - perpX, y, z1 - perpZ, // 1
+        x2 - perpX, y, z2 - perpZ, // 2
+        x2 + perpX, y, z2 + perpZ, // 3
+      ]);
+
+      // Indices for two triangles
+      allIndices.addAll([
+        vertexOffset + 0, vertexOffset + 1, vertexOffset + 2,
+        vertexOffset + 0, vertexOffset + 2, vertexOffset + 3,
+      ]);
+
+      // Normals (pointing up)
+      for (int i = 0; i < 4; i++) {
+        allNormals.addAll([0, 1, 0]);
+        allColors.addAll([color!.x, color.y, color.z, 1.0]);
+      }
+
+      vertexOffset += 4;
+    }
+
+    // Front side (positive Z): two dashes with gap in middle
+    addDash(-halfSize, halfSize, -halfSize + dashLength, halfSize);
+    addDash(halfSize - dashLength, halfSize, halfSize, halfSize);
+
+    // Back side (negative Z): two dashes with gap in middle
+    addDash(-halfSize, -halfSize, -halfSize + dashLength, -halfSize);
+    addDash(halfSize - dashLength, -halfSize, halfSize, -halfSize);
+
+    // Left side (negative X): two dashes with gap in middle
+    addDash(-halfSize, -halfSize, -halfSize, -halfSize + dashLength);
+    addDash(-halfSize, halfSize - dashLength, -halfSize, halfSize);
+
+    // Right side (positive X): two dashes with gap in middle
+    addDash(halfSize, -halfSize, halfSize, -halfSize + dashLength);
+    addDash(halfSize, halfSize - dashLength, halfSize, halfSize);
+
+    return Mesh(
+      vertices: Float32List.fromList(allVertices),
+      indices: Uint16List.fromList(allIndices),
+      normals: Float32List.fromList(allNormals),
+      colors: Float32List.fromList(allColors),
+    );
+  }
+
+  static double _sqrt(double x) {
+    if (x <= 0) return 0;
+    double guess = x / 2;
+    for (int i = 0; i < 10; i++) {
+      guess = (guess + x / guess) / 2;
+    }
+    return guess;
+  }
+
   @override
   String toString() {
     return 'Mesh(vertices: $vertexCount, triangles: $triangleCount)';

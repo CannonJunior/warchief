@@ -4,18 +4,19 @@ import 'dart:math' as math;
 import '../state/game_state.dart';
 import '../state/game_config.dart';
 import '../state/abilities_config.dart';
+import '../state/action_bar_config.dart' show globalActionBarConfig;
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
+import '../../models/impact_effect.dart';
 import 'combat_system.dart';
 
 /// Ability System - Handles all player ability logic
 ///
 /// Manages player abilities including:
 /// - Ability cooldown updates
-/// - Ability 1: Sword (melee attack with animation)
-/// - Ability 2: Fireball (ranged projectile with collision)
-/// - Ability 3: Heal (self-heal with visual effect)
+/// - Dynamic ability execution based on ActionBarConfig
+/// - Ability implementations: Sword, Fireball, Heal, Dash Attack, and more
 /// - Impact effects (visual feedback for hits)
 class AbilitySystem {
   AbilitySystem._(); // Private constructor to prevent instantiation
@@ -51,35 +52,618 @@ class AbilitySystem {
     if (gameState.ability4Cooldown > 0) gameState.ability4Cooldown -= dt;
   }
 
+  // ==================== DYNAMIC ABILITY EXECUTION ====================
+
+  /// Execute ability in slot based on configured ability name
+  ///
+  /// This method looks up the ability configured for the slot and
+  /// executes the appropriate ability logic.
+  static void executeSlotAbility(int slotIndex, GameState gameState) {
+    final config = globalActionBarConfig;
+    if (config == null) {
+      // Fallback to default behavior
+      _executeDefaultSlotAbility(slotIndex, gameState);
+      return;
+    }
+
+    final abilityName = config.getSlotAbility(slotIndex);
+    _executeAbilityByName(abilityName, slotIndex, gameState);
+  }
+
+  /// Execute ability by name
+  static void _executeAbilityByName(String abilityName, int slotIndex, GameState gameState) {
+    // Get cooldown for this slot
+    final cooldown = _getCooldownForSlot(slotIndex, gameState);
+    if (cooldown > 0) return;
+
+    // Map ability names to their execution logic
+    switch (abilityName) {
+      // Player abilities
+      case 'Sword':
+        _executeSword(slotIndex, gameState);
+        break;
+      case 'Fireball':
+        _executeFireball(slotIndex, gameState);
+        break;
+      case 'Heal':
+        _executeHeal(slotIndex, gameState);
+        break;
+      case 'Dash Attack':
+        _executeDashAttack(slotIndex, gameState);
+        break;
+
+      // Warrior abilities
+      case 'Shield Bash':
+        _executeShieldBash(slotIndex, gameState);
+        break;
+      case 'Whirlwind':
+        _executeWhirlwind(slotIndex, gameState);
+        break;
+      case 'Charge':
+        _executeCharge(slotIndex, gameState);
+        break;
+      case 'Taunt':
+        _executeTaunt(slotIndex, gameState);
+        break;
+      case 'Fortify':
+        _executeFortify(slotIndex, gameState);
+        break;
+
+      // Mage abilities
+      case 'Frost Bolt':
+        _executeFrostBolt(slotIndex, gameState);
+        break;
+      case 'Blizzard':
+        _executeBlizzard(slotIndex, gameState);
+        break;
+      case 'Lightning Bolt':
+        _executeLightningBolt(slotIndex, gameState);
+        break;
+      case 'Chain Lightning':
+        _executeChainLightning(slotIndex, gameState);
+        break;
+      case 'Meteor':
+        _executeMeteor(slotIndex, gameState);
+        break;
+      case 'Arcane Shield':
+        _executeArcaneShield(slotIndex, gameState);
+        break;
+      case 'Teleport':
+        _executeTeleport(slotIndex, gameState);
+        break;
+
+      // Rogue abilities
+      case 'Backstab':
+        _executeBackstab(slotIndex, gameState);
+        break;
+      case 'Poison Blade':
+        _executePoisonBlade(slotIndex, gameState);
+        break;
+      case 'Smoke Bomb':
+        _executeSmokeBomb(slotIndex, gameState);
+        break;
+      case 'Fan of Knives':
+        _executeFanOfKnives(slotIndex, gameState);
+        break;
+      case 'Shadow Step':
+        _executeShadowStep(slotIndex, gameState);
+        break;
+
+      // Healer abilities
+      case 'Holy Light':
+        _executeHolyLight(slotIndex, gameState);
+        break;
+      case 'Rejuvenation':
+        _executeRejuvenation(slotIndex, gameState);
+        break;
+      case 'Circle of Healing':
+        _executeCircleOfHealing(slotIndex, gameState);
+        break;
+      case 'Blessing of Strength':
+        _executeBlessingOfStrength(slotIndex, gameState);
+        break;
+      case 'Purify':
+        _executePurify(slotIndex, gameState);
+        break;
+
+      // Nature abilities
+      case 'Entangling Roots':
+        _executeEntanglingRoots(slotIndex, gameState);
+        break;
+      case 'Thorns':
+        _executeThorns(slotIndex, gameState);
+        break;
+      case 'Nature\'s Wrath':
+        _executeNaturesWrath(slotIndex, gameState);
+        break;
+
+      // Necromancer abilities
+      case 'Life Drain':
+        _executeLifeDrain(slotIndex, gameState);
+        break;
+      case 'Curse of Weakness':
+        _executeCurseOfWeakness(slotIndex, gameState);
+        break;
+      case 'Fear':
+        _executeFear(slotIndex, gameState);
+        break;
+      case 'Summon Skeleton':
+        _executeSummonSkeleton(slotIndex, gameState);
+        break;
+
+      // Elemental abilities
+      case 'Ice Lance':
+        _executeIceLance(slotIndex, gameState);
+        break;
+      case 'Flame Wave':
+        _executeFlameWave(slotIndex, gameState);
+        break;
+      case 'Earthquake':
+        _executeEarthquake(slotIndex, gameState);
+        break;
+
+      // Utility abilities
+      case 'Sprint':
+        _executeSprint(slotIndex, gameState);
+        break;
+      case 'Battle Shout':
+        _executeBattleShout(slotIndex, gameState);
+        break;
+
+      default:
+        print('[ABILITY] Unknown ability: $abilityName');
+        _executeDefaultSlotAbility(slotIndex, gameState);
+    }
+  }
+
+  /// Execute default ability for slot (fallback)
+  static void _executeDefaultSlotAbility(int slotIndex, GameState gameState) {
+    switch (slotIndex) {
+      case 0:
+        _executeSword(slotIndex, gameState);
+        break;
+      case 1:
+        _executeFireball(slotIndex, gameState);
+        break;
+      case 2:
+        _executeHeal(slotIndex, gameState);
+        break;
+      case 3:
+        _executeDashAttack(slotIndex, gameState);
+        break;
+    }
+  }
+
+  /// Get cooldown for a slot
+  static double _getCooldownForSlot(int slotIndex, GameState gameState) {
+    switch (slotIndex) {
+      case 0: return gameState.ability1Cooldown;
+      case 1: return gameState.ability2Cooldown;
+      case 2: return gameState.ability3Cooldown;
+      case 3: return gameState.ability4Cooldown;
+      default: return 0;
+    }
+  }
+
+  /// Set cooldown for a slot
+  static void _setCooldownForSlot(int slotIndex, double cooldown, GameState gameState) {
+    switch (slotIndex) {
+      case 0:
+        gameState.ability1Cooldown = cooldown;
+        break;
+      case 1:
+        gameState.ability2Cooldown = cooldown;
+        break;
+      case 2:
+        gameState.ability3Cooldown = cooldown;
+        break;
+      case 3:
+        gameState.ability4Cooldown = cooldown;
+        break;
+    }
+  }
+
+  // ==================== ABILITY IMPLEMENTATIONS ====================
+
+  /// Execute Sword (melee attack)
+  static void _executeSword(int slotIndex, GameState gameState) {
+    if (gameState.ability1Active) return; // Prevent if already active
+
+    gameState.ability1Active = true;
+    gameState.ability1ActiveTime = 0.0;
+    _setCooldownForSlot(slotIndex, AbilitiesConfig.playerSword.cooldown, gameState);
+    gameState.ability1HitRegistered = false;
+    print('Sword attack activated!');
+  }
+
+  /// Execute Fireball (ranged projectile)
+  static void _executeFireball(int slotIndex, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+
+    final fireball = AbilitiesConfig.playerFireball;
+    final forward = Vector3(
+      -math.sin(_radians(gameState.playerRotation)),
+      0,
+      -math.cos(_radians(gameState.playerRotation)),
+    );
+
+    final fireballMesh = Mesh.cube(
+      size: fireball.projectileSize,
+      color: fireball.color,
+    );
+
+    final startPos = gameState.playerTransform!.position.clone() + forward * 1.0;
+    startPos.y = gameState.playerTransform!.position.y;
+
+    final fireballTransform = Transform3d(
+      position: startPos,
+      scale: Vector3(1, 1, 1),
+    );
+
+    gameState.fireballs.add(Projectile(
+      mesh: fireballMesh,
+      transform: fireballTransform,
+      velocity: forward * fireball.projectileSpeed,
+    ));
+
+    _setCooldownForSlot(slotIndex, fireball.cooldown, gameState);
+    print('${fireball.name} launched!');
+  }
+
+  /// Execute Heal (self heal)
+  static void _executeHeal(int slotIndex, GameState gameState) {
+    if (gameState.ability3Active) return;
+
+    gameState.ability3Active = true;
+    gameState.ability3ActiveTime = 0.0;
+
+    final healAbility = AbilitiesConfig.playerHeal;
+    final oldHealth = gameState.playerHealth;
+    gameState.playerHealth = math.min(gameState.playerMaxHealth, gameState.playerHealth + healAbility.healAmount);
+    final healedAmount = gameState.playerHealth - oldHealth;
+
+    _setCooldownForSlot(slotIndex, healAbility.cooldown, gameState);
+    print('[HEAL] Player heal activated! Restored ${healedAmount.toStringAsFixed(1)} HP');
+  }
+
+  /// Execute Dash Attack (movement + damage)
+  static void _executeDashAttack(int slotIndex, GameState gameState) {
+    if (gameState.ability4Active) return;
+
+    gameState.ability4Active = true;
+    gameState.ability4ActiveTime = 0.0;
+    _setCooldownForSlot(slotIndex, AbilitiesConfig.playerDashAttack.cooldown, gameState);
+    gameState.ability4HitRegistered = false;
+    print('Dash Attack activated!');
+  }
+
+  // ==================== WARRIOR ABILITIES ====================
+
+  static void _executeShieldBash(int slotIndex, GameState gameState) {
+    final ability = WarriorAbilities.shieldBash;
+    _executeGenericMelee(slotIndex, gameState, ability, 'Shield Bash activated!');
+  }
+
+  static void _executeWhirlwind(int slotIndex, GameState gameState) {
+    final ability = WarriorAbilities.whirlwind;
+    _executeGenericAoE(slotIndex, gameState, ability, 'Whirlwind activated!');
+  }
+
+  static void _executeCharge(int slotIndex, GameState gameState) {
+    // Similar to dash attack
+    if (gameState.ability4Active) return;
+    gameState.ability4Active = true;
+    gameState.ability4ActiveTime = 0.0;
+    _setCooldownForSlot(slotIndex, WarriorAbilities.charge.cooldown, gameState);
+    gameState.ability4HitRegistered = false;
+    print('Charge activated!');
+  }
+
+  static void _executeTaunt(int slotIndex, GameState gameState) {
+    final ability = WarriorAbilities.taunt;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Taunt activated! Enemies now focus you.');
+  }
+
+  static void _executeFortify(int slotIndex, GameState gameState) {
+    final ability = WarriorAbilities.fortify;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Fortify activated! Defense increased.');
+  }
+
+  // ==================== MAGE ABILITIES ====================
+
+  static void _executeFrostBolt(int slotIndex, GameState gameState) {
+    final ability = MageAbilities.frostBolt;
+    _executeGenericProjectile(slotIndex, gameState, ability, 'Frost Bolt launched!');
+  }
+
+  static void _executeBlizzard(int slotIndex, GameState gameState) {
+    final ability = MageAbilities.blizzard;
+    _executeGenericAoE(slotIndex, gameState, ability, 'Blizzard activated!');
+  }
+
+  static void _executeLightningBolt(int slotIndex, GameState gameState) {
+    final ability = MageAbilities.lightningBolt;
+    _executeGenericProjectile(slotIndex, gameState, ability, 'Lightning Bolt launched!');
+  }
+
+  static void _executeChainLightning(int slotIndex, GameState gameState) {
+    final ability = MageAbilities.chainLightning;
+    _executeGenericProjectile(slotIndex, gameState, ability, 'Chain Lightning launched!');
+  }
+
+  static void _executeMeteor(int slotIndex, GameState gameState) {
+    final ability = MageAbilities.meteor;
+    _executeGenericAoE(slotIndex, gameState, ability, 'Meteor incoming!');
+  }
+
+  static void _executeArcaneShield(int slotIndex, GameState gameState) {
+    final ability = MageAbilities.arcaneShield;
+    gameState.ability3Active = true;
+    gameState.ability3ActiveTime = 0.0;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Arcane Shield activated!');
+  }
+
+  static void _executeTeleport(int slotIndex, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+    final ability = MageAbilities.teleport;
+
+    // Teleport forward
+    final forward = Vector3(
+      -math.sin(_radians(gameState.playerRotation)),
+      0,
+      -math.cos(_radians(gameState.playerRotation)),
+    );
+    gameState.playerTransform!.position += forward * ability.range;
+
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Teleport!');
+  }
+
+  // ==================== ROGUE ABILITIES ====================
+
+  static void _executeBackstab(int slotIndex, GameState gameState) {
+    final ability = RogueAbilities.backstab;
+    _executeGenericMelee(slotIndex, gameState, ability, 'Backstab!');
+  }
+
+  static void _executePoisonBlade(int slotIndex, GameState gameState) {
+    final ability = RogueAbilities.poisonBlade;
+    _executeGenericMelee(slotIndex, gameState, ability, 'Poison Blade!');
+  }
+
+  static void _executeSmokeBomb(int slotIndex, GameState gameState) {
+    final ability = RogueAbilities.smokeBomb;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Smoke Bomb deployed!');
+  }
+
+  static void _executeFanOfKnives(int slotIndex, GameState gameState) {
+    final ability = RogueAbilities.fanOfKnives;
+    _executeGenericAoE(slotIndex, gameState, ability, 'Fan of Knives!');
+  }
+
+  static void _executeShadowStep(int slotIndex, GameState gameState) {
+    _executeTeleport(slotIndex, gameState);
+    print('Shadow Step!');
+  }
+
+  // ==================== HEALER ABILITIES ====================
+
+  static void _executeHolyLight(int slotIndex, GameState gameState) {
+    final ability = HealerAbilities.holyLight;
+    _executeGenericHeal(slotIndex, gameState, ability, 'Holy Light!');
+  }
+
+  static void _executeRejuvenation(int slotIndex, GameState gameState) {
+    final ability = HealerAbilities.rejuvenation;
+    _executeGenericHeal(slotIndex, gameState, ability, 'Rejuvenation!');
+  }
+
+  static void _executeCircleOfHealing(int slotIndex, GameState gameState) {
+    final ability = HealerAbilities.circleOfHealing;
+    _executeGenericHeal(slotIndex, gameState, ability, 'Circle of Healing!');
+  }
+
+  static void _executeBlessingOfStrength(int slotIndex, GameState gameState) {
+    final ability = HealerAbilities.blessingOfStrength;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Blessing of Strength! Damage increased.');
+  }
+
+  static void _executePurify(int slotIndex, GameState gameState) {
+    final ability = HealerAbilities.purify;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Purify! Debuffs removed.');
+  }
+
+  // ==================== NATURE ABILITIES ====================
+
+  static void _executeEntanglingRoots(int slotIndex, GameState gameState) {
+    final ability = NatureAbilities.entanglingRoots;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Entangling Roots! Enemy immobilized.');
+  }
+
+  static void _executeThorns(int slotIndex, GameState gameState) {
+    final ability = NatureAbilities.thorns;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Thorns activated! Attackers take damage.');
+  }
+
+  static void _executeNaturesWrath(int slotIndex, GameState gameState) {
+    final ability = NatureAbilities.naturesWrath;
+    _executeGenericProjectile(slotIndex, gameState, ability, 'Nature\'s Wrath!');
+  }
+
+  // ==================== NECROMANCER ABILITIES ====================
+
+  static void _executeLifeDrain(int slotIndex, GameState gameState) {
+    final ability = NecromancerAbilities.lifeDrain;
+    // Damage enemy and heal self
+    _executeGenericProjectile(slotIndex, gameState, ability, 'Life Drain!');
+    gameState.playerHealth = math.min(gameState.playerMaxHealth, gameState.playerHealth + ability.healAmount);
+  }
+
+  static void _executeCurseOfWeakness(int slotIndex, GameState gameState) {
+    final ability = NecromancerAbilities.curseOfWeakness;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Curse of Weakness! Enemy damage reduced.');
+  }
+
+  static void _executeFear(int slotIndex, GameState gameState) {
+    final ability = NecromancerAbilities.fear;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Fear! Enemy flees.');
+  }
+
+  static void _executeSummonSkeleton(int slotIndex, GameState gameState) {
+    final ability = NecromancerAbilities.summonSkeleton;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Summon Skeleton! A skeleton rises to aid you.');
+  }
+
+  // ==================== ELEMENTAL ABILITIES ====================
+
+  static void _executeIceLance(int slotIndex, GameState gameState) {
+    final ability = ElementalAbilities.iceLance;
+    _executeGenericProjectile(slotIndex, gameState, ability, 'Ice Lance!');
+  }
+
+  static void _executeFlameWave(int slotIndex, GameState gameState) {
+    final ability = ElementalAbilities.flameWave;
+    _executeGenericAoE(slotIndex, gameState, ability, 'Flame Wave!');
+  }
+
+  static void _executeEarthquake(int slotIndex, GameState gameState) {
+    final ability = ElementalAbilities.earthquake;
+    _executeGenericAoE(slotIndex, gameState, ability, 'Earthquake!');
+  }
+
+  // ==================== UTILITY ABILITIES ====================
+
+  static void _executeSprint(int slotIndex, GameState gameState) {
+    final ability = UtilityAbilities.sprint;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Sprint! Movement speed increased.');
+  }
+
+  static void _executeBattleShout(int slotIndex, GameState gameState) {
+    final ability = UtilityAbilities.battleShout;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Battle Shout! Allies empowered.');
+  }
+
+  // ==================== GENERIC ABILITY HELPERS ====================
+
+  /// Generic melee attack execution
+  static void _executeGenericMelee(int slotIndex, GameState gameState, AbilityData ability, String message) {
+    if (gameState.ability1Active) return;
+
+    gameState.ability1Active = true;
+    gameState.ability1ActiveTime = 0.0;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    gameState.ability1HitRegistered = false;
+    print(message);
+  }
+
+  /// Generic projectile attack execution
+  static void _executeGenericProjectile(int slotIndex, GameState gameState, AbilityData ability, String message) {
+    if (gameState.playerTransform == null) return;
+
+    final forward = Vector3(
+      -math.sin(_radians(gameState.playerRotation)),
+      0,
+      -math.cos(_radians(gameState.playerRotation)),
+    );
+
+    final projectileMesh = Mesh.cube(
+      size: ability.projectileSize > 0 ? ability.projectileSize : 0.4,
+      color: ability.color,
+    );
+
+    final startPos = gameState.playerTransform!.position.clone() + forward * 1.0;
+    startPos.y = gameState.playerTransform!.position.y;
+
+    final projectileTransform = Transform3d(
+      position: startPos,
+      scale: Vector3(1, 1, 1),
+    );
+
+    gameState.fireballs.add(Projectile(
+      mesh: projectileMesh,
+      transform: projectileTransform,
+      velocity: forward * (ability.projectileSpeed > 0 ? ability.projectileSpeed : 10.0),
+    ));
+
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print(message);
+  }
+
+  /// Generic AoE attack execution
+  static void _executeGenericAoE(int slotIndex, GameState gameState, AbilityData ability, String message) {
+    if (gameState.playerTransform == null) return;
+
+    // Create impact effect at player location
+    final impactMesh = Mesh.cube(
+      size: ability.aoeRadius > 0 ? ability.aoeRadius : 2.0,
+      color: ability.color,
+    );
+    final impactTransform = Transform3d(
+      position: gameState.playerTransform!.position.clone(),
+      scale: Vector3(1, 1, 1),
+    );
+    gameState.impactEffects.add(ImpactEffect(
+      mesh: impactMesh,
+      transform: impactTransform,
+      lifetime: 0.5,
+    ));
+
+    // Damage nearby enemies
+    CombatSystem.checkAndDamageMonster(
+      gameState,
+      attackerPosition: gameState.playerTransform!.position,
+      damage: ability.damage,
+      attackType: ability.name,
+      impactColor: ability.impactColor,
+      impactSize: ability.impactSize,
+    );
+
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print(message);
+  }
+
+  /// Generic heal execution
+  static void _executeGenericHeal(int slotIndex, GameState gameState, AbilityData ability, String message) {
+    if (gameState.ability3Active) return;
+
+    gameState.ability3Active = true;
+    gameState.ability3ActiveTime = 0.0;
+
+    final oldHealth = gameState.playerHealth;
+    gameState.playerHealth = math.min(gameState.playerMaxHealth, gameState.playerHealth + ability.healAmount);
+    final healedAmount = gameState.playerHealth - oldHealth;
+
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('$message Restored ${healedAmount.toStringAsFixed(1)} HP');
+  }
+
   // ==================== ABILITY 1: SWORD ====================
 
   /// Handles Ability 1 (Sword) input
   ///
   /// Activates the sword attack if cooldown is ready and ability is not already active.
-  ///
-  /// Parameters:
-  /// - ability1KeyPressed: Whether the ability 1 key is currently pressed
-  /// - gameState: Current game state to update
   static void handleAbility1Input(bool ability1KeyPressed, GameState gameState) {
     if (ability1KeyPressed &&
         gameState.ability1Cooldown <= 0 &&
         !gameState.ability1Active) {
-      gameState.ability1Active = true;
-      gameState.ability1ActiveTime = 0.0;
-      gameState.ability1Cooldown = gameState.ability1CooldownMax;
-      gameState.ability1HitRegistered = false; // Reset hit tracker for new swing
-      print('Sword attack activated!');
+      executeSlotAbility(0, gameState);
     }
   }
 
   /// Updates Ability 1 (Sword) animation and collision detection
-  ///
-  /// Updates the sword position and swing animation during the active duration.
-  /// Checks for collision with the monster and applies damage.
-  ///
-  /// Parameters:
-  /// - dt: Time elapsed since last frame (in seconds)
-  /// - gameState: Current game state to update
   static void updateAbility1(double dt, GameState gameState) {
     if (!gameState.ability1Active) return;
 
@@ -125,57 +709,15 @@ class AbilitySystem {
   // ==================== ABILITY 2: FIREBALL ====================
 
   /// Handles Ability 2 (Fireball) input
-  ///
-  /// Creates a new fireball projectile if cooldown is ready.
-  ///
-  /// Parameters:
-  /// - ability2KeyPressed: Whether the ability 2 key is currently pressed
-  /// - gameState: Current game state to update
   static void handleAbility2Input(bool ability2KeyPressed, GameState gameState) {
     if (ability2KeyPressed &&
         gameState.ability2Cooldown <= 0 &&
         gameState.playerTransform != null) {
-      final fireball = AbilitiesConfig.playerFireball;
-
-      // Create fireball projectile
-      final forward = Vector3(
-        -math.sin(_radians(gameState.playerRotation)),
-        0,
-        -math.cos(_radians(gameState.playerRotation)),
-      );
-
-      final fireballMesh = Mesh.cube(
-        size: fireball.projectileSize,
-        color: fireball.color,
-      );
-
-      final startPos = gameState.playerTransform!.position.clone() + forward * 1.0;
-      startPos.y = gameState.playerTransform!.position.y;
-
-      final fireballTransform = Transform3d(
-        position: startPos,
-        scale: Vector3(1, 1, 1),
-      );
-
-      gameState.fireballs.add(Projectile(
-        mesh: fireballMesh,
-        transform: fireballTransform,
-        velocity: forward * fireball.projectileSpeed,
-      ));
-
-      gameState.ability2Cooldown = gameState.ability2CooldownMax;
-      print('${fireball.name} launched!');
+      executeSlotAbility(1, gameState);
     }
   }
 
   /// Updates Ability 2 (Fireball) projectiles and collision detection
-  ///
-  /// Moves all active fireballs, checks for collisions with the monster,
-  /// and creates impact effects on hit.
-  ///
-  /// Parameters:
-  /// - dt: Time elapsed since last frame (in seconds)
-  /// - gameState: Current game state to update
   static void updateAbility2(double dt, GameState gameState) {
     final fireballConfig = AbilitiesConfig.playerFireball;
 
@@ -204,38 +746,15 @@ class AbilitySystem {
   // ==================== ABILITY 3: HEAL ====================
 
   /// Handles Ability 3 (Heal) input
-  ///
-  /// Activates the heal effect if cooldown is ready and ability is not already active.
-  /// Immediately restores health to the player.
-  ///
-  /// Parameters:
-  /// - ability3KeyPressed: Whether the ability 3 key is currently pressed
-  /// - gameState: Current game state to update
   static void handleAbility3Input(bool ability3KeyPressed, GameState gameState) {
     if (ability3KeyPressed &&
         gameState.ability3Cooldown <= 0 &&
         !gameState.ability3Active) {
-      gameState.ability3Active = true;
-      gameState.ability3ActiveTime = 0.0;
-      gameState.ability3Cooldown = gameState.ability3CooldownMax;
-
-      // Actually heal the player
-      final healAbility = AbilitiesConfig.playerHeal;
-      final oldHealth = gameState.playerHealth;
-      gameState.playerHealth = math.min(gameState.playerMaxHealth, gameState.playerHealth + healAbility.healAmount);
-      final healedAmount = gameState.playerHealth - oldHealth;
-
-      print('[HEAL] Player heal activated! Restored ${healedAmount.toStringAsFixed(1)} HP (${gameState.playerHealth.toStringAsFixed(0)}/${gameState.playerMaxHealth})');
+      executeSlotAbility(2, gameState);
     }
   }
 
   /// Updates Ability 3 (Heal) visual effect
-  ///
-  /// Updates the heal effect position and pulsing animation during the active duration.
-  ///
-  /// Parameters:
-  /// - dt: Time elapsed since last frame (in seconds)
-  /// - gameState: Current game state to update
   static void updateAbility3(double dt, GameState gameState) {
     if (!gameState.ability3Active) return;
 
@@ -254,33 +773,15 @@ class AbilitySystem {
   // ==================== ABILITY 4: DASH ATTACK ====================
 
   /// Handles Ability 4 (Dash Attack) input
-  ///
-  /// Activates the dash attack if cooldown is ready and ability is not already active.
-  /// The player will dash forward and damage enemies in their path.
-  ///
-  /// Parameters:
-  /// - ability4KeyPressed: Whether the ability 4 key is currently pressed
-  /// - gameState: Current game state to update
   static void handleAbility4Input(bool ability4KeyPressed, GameState gameState) {
     if (ability4KeyPressed &&
         gameState.ability4Cooldown <= 0 &&
         !gameState.ability4Active) {
-      gameState.ability4Active = true;
-      gameState.ability4ActiveTime = 0.0;
-      gameState.ability4Cooldown = gameState.ability4CooldownMax;
-      gameState.ability4HitRegistered = false; // Reset hit tracker for new dash
-      print('Dash Attack activated!');
+      executeSlotAbility(3, gameState);
     }
   }
 
   /// Updates Ability 4 (Dash Attack) movement and collision detection
-  ///
-  /// Moves the player forward rapidly during the dash duration and checks
-  /// for collision with enemies, applying damage on hit.
-  ///
-  /// Parameters:
-  /// - dt: Time elapsed since last frame (in seconds)
-  /// - gameState: Current game state to update
   static void updateAbility4(double dt, GameState gameState) {
     if (!gameState.ability4Active) return;
 
@@ -344,13 +845,6 @@ class AbilitySystem {
   // ==================== VISUAL EFFECTS ====================
 
   /// Updates all impact effects
-  ///
-  /// Handles the lifecycle and animation of visual impact effects,
-  /// including scaling and removal when expired.
-  ///
-  /// Parameters:
-  /// - dt: Time elapsed since last frame (in seconds)
-  /// - gameState: Current game state to update
   static void updateImpactEffects(double dt, GameState gameState) {
     gameState.impactEffects.removeWhere((impact) {
       impact.lifetime -= dt;
@@ -366,11 +860,5 @@ class AbilitySystem {
   // ==================== UTILITY FUNCTIONS ====================
 
   /// Converts degrees to radians
-  ///
-  /// Parameters:
-  /// - degrees: Angle in degrees
-  ///
-  /// Returns:
-  /// - Angle in radians
   static double _radians(double degrees) => degrees * (math.pi / 180);
 }

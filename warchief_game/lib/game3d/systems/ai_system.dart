@@ -854,16 +854,22 @@ class AISystem {
     // Find nearest target (player or ally)
     Vector3 targetPos = playerPos;
     double nearestDist = distanceToPlayer;
+    String targetId = 'player'; // Track who we're targeting
 
     // Check if any ally is closer
-    for (final ally in gameState.allies) {
+    for (int i = 0; i < gameState.allies.length; i++) {
+      final ally = gameState.allies[i];
       if (ally.health <= 0) continue;
       final dist = minion.distanceTo(ally.transform.position);
       if (dist < nearestDist) {
         nearestDist = dist;
         targetPos = ally.transform.position;
+        targetId = 'ally_$i';
       }
     }
+
+    // Update minion's target tracking
+    minion.targetId = targetId;
 
     if (nearestDist <= minion.definition.attackRange) {
       // In range - attack
@@ -880,6 +886,9 @@ class AISystem {
   static void _executeSupportMinionAI(Monster minion, GameState gameState, Vector3 playerPos) {
     final distanceToPlayer = minion.distanceTo(playerPos);
 
+    // Default to targeting player
+    minion.targetId = 'player';
+
     // Find wounded allies to buff
     Monster? woundedAlly;
     for (final ally in gameState.aliveMinions) {
@@ -893,6 +902,7 @@ class AISystem {
     // Priority 1: Buff allies if available
     if (woundedAlly != null && minion.isAbilityReady(0)) {
       minion.aiState = MonsterAIState.supporting;
+      minion.targetId = woundedAlly.instanceId; // Targeting ally minion
       // Apply buff (Bloodlust - damage increase)
       woundedAlly.applyBuff(damageMultiplier: 1.5, duration: 8.0);
       minion.useAbility(0);
@@ -900,6 +910,7 @@ class AISystem {
     // Priority 2: Debuff player if in range
     else if (distanceToPlayer <= minion.definition.attackRange && minion.isAbilityReady(1)) {
       minion.aiState = MonsterAIState.casting;
+      minion.targetId = 'player';
       // Apply debuff (Curse of Weakness)
       // For now, just deal minor damage
       _minionAttack(minion, gameState, playerPos, 2);
@@ -949,11 +960,13 @@ class AISystem {
       minion.aiState = MonsterAIState.supporting;
       if (mostWounded != null) {
         // Heal minion ally
+        minion.targetId = mostWounded.instanceId; // Targeting ally minion
         final healAmount = minion.definition.abilities[0].healing;
         mostWounded.heal(healAmount);
         minion.useAbility(0);
       } else {
         // Heal boss
+        minion.targetId = 'boss'; // Targeting boss
         final healAmount = minion.definition.abilities[0].healing;
         gameState.monsterHealth = math.min(
           gameState.monsterMaxHealth.toDouble(),
@@ -970,6 +983,7 @@ class AISystem {
       }
       if (woundedCount >= 2) {
         minion.aiState = MonsterAIState.casting;
+        minion.targetId = 'allies'; // Targeting group
         // Mass heal
         final healAmount = minion.definition.abilities[2].healing;
         for (final ally in gameState.aliveMinions) {
@@ -986,6 +1000,7 @@ class AISystem {
     // Priority 3: Stay far from combat
     else {
       minion.aiState = MonsterAIState.supporting;
+      minion.targetId = 'none'; // No target while retreating
       final safeRange = 10.0;
       if (distanceToPlayer < safeRange) {
         // Too close - run away
@@ -998,6 +1013,9 @@ class AISystem {
   /// Tank minion AI - engages player, protects allies
   static void _executeTankMinionAI(Monster minion, GameState gameState, Vector3 playerPos) {
     final distanceToPlayer = minion.distanceTo(playerPos);
+
+    // Tank always targets player
+    minion.targetId = 'player';
 
     // Priority 1: Taunt if off cooldown
     if (minion.isAbilityReady(1)) {
@@ -1033,6 +1051,7 @@ class AISystem {
   /// Flee AI - run away when low health
   static void _executeFleeAI(Monster minion, GameState gameState, Vector3 playerPos) {
     minion.aiState = MonsterAIState.fleeing;
+    minion.targetId = 'none'; // No target while fleeing
     final awayFromPlayer = (minion.transform.position - playerPos).normalized();
     minion.targetPosition = minion.transform.position + awayFromPlayer * 5.0;
   }

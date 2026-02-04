@@ -1,7 +1,9 @@
+import 'package:vector_math/vector_math.dart' hide Colors;
 import '../state/game_state.dart';
 import '../../rendering3d/webgl_renderer.dart';
 import '../../rendering3d/camera3d.dart';
 import '../../rendering3d/math/transform3d.dart';
+import '../../rendering3d/mesh.dart';
 
 /// Render System - Handles 3D scene rendering
 ///
@@ -52,6 +54,9 @@ class RenderSystem {
     if (gameState.shadowMesh != null && gameState.shadowTransform != null) {
       renderer.render(gameState.shadowMesh!, gameState.shadowTransform!, camera);
     }
+
+    // Render target indicator (yellow dashed rectangle around target's base)
+    _renderTargetIndicator(renderer, camera, gameState);
 
     // Render player
     if (gameState.playerMesh != null && gameState.playerTransform != null) {
@@ -131,5 +136,58 @@ class RenderSystem {
     if (gameState.ability3Active && gameState.healEffectMesh != null && gameState.healEffectTransform != null) {
       renderer.render(gameState.healEffectMesh!, gameState.healEffectTransform!, camera);
     }
+  }
+
+  /// Render target indicator around the current target
+  static void _renderTargetIndicator(
+    WebGLRenderer renderer,
+    Camera3D camera,
+    GameState gameState,
+  ) {
+    if (gameState.currentTargetId == null) return;
+
+    // Get target position and size
+    Vector3? targetPosition;
+    double targetSize = 1.5; // Default size
+
+    if (gameState.currentTargetId == 'boss') {
+      if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
+        targetPosition = gameState.monsterTransform!.position;
+        targetSize = 1.8; // Boss is larger
+      }
+    } else {
+      // Find minion by instance ID
+      for (final minion in gameState.aliveMinions) {
+        if (minion.instanceId == gameState.currentTargetId) {
+          targetPosition = minion.transform.position;
+          targetSize = minion.definition.effectiveScale * 1.5;
+          break;
+        }
+      }
+    }
+
+    if (targetPosition == null) return;
+
+    // Create or update target indicator mesh
+    gameState.targetIndicatorMesh ??= Mesh.targetIndicator(
+      size: targetSize,
+      lineWidth: 0.06,
+      color: Vector3(1.0, 0.9, 0.0), // Yellow
+    );
+
+    // Update transform position
+    gameState.targetIndicatorTransform ??= Transform3d();
+    gameState.targetIndicatorTransform!.position = Vector3(
+      targetPosition.x,
+      targetPosition.y + 0.02, // Slightly above ground
+      targetPosition.z,
+    );
+
+    // Render the indicator
+    renderer.render(
+      gameState.targetIndicatorMesh!,
+      gameState.targetIndicatorTransform!,
+      camera,
+    );
   }
 }

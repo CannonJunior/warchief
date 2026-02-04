@@ -54,6 +54,18 @@ class _GameScreenState extends State<GameScreen> {
   bool _showSettingsPanel = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Initialize global config manager with callback to refresh UI
+    globalInterfaceConfig = InterfaceConfigManager(
+      onConfigChanged: () {
+        if (mounted) setState(() {});
+      },
+    );
+    globalInterfaceConfig!.loadConfig();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent, // Make background transparent for canvas
@@ -141,6 +153,7 @@ class _GameScreenState extends State<GameScreen> {
                   _showSettingsPanel = false;
                 });
               },
+              interfaceConfig: globalInterfaceConfig,
             ),
         ],
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../ability_button.dart';
 import 'unit_frame.dart';
 import 'vs_indicator.dart';
+import '../../state/action_bar_config.dart';
 
 /// Main combat HUD with player frame, target frame, VS indicator, and action bars
 /// Positioned at bottom-center of screen
@@ -39,6 +40,10 @@ class CombatHUD extends StatelessWidget {
   final VoidCallback onAbility3Pressed;
   final VoidCallback? onAbility4Pressed;
 
+  // Action bar configuration (for drag-and-drop)
+  final ActionBarConfig? actionBarConfig;
+  final Function(int slotIndex, String abilityName)? onAbilityDropped;
+
   const CombatHUD({
     Key? key,
     required this.playerName,
@@ -66,6 +71,8 @@ class CombatHUD extends StatelessWidget {
     required this.onAbility2Pressed,
     required this.onAbility3Pressed,
     this.onAbility4Pressed,
+    this.actionBarConfig,
+    this.onAbilityDropped,
   }) : super(key: key);
 
   @override
@@ -124,6 +131,12 @@ class CombatHUD extends StatelessWidget {
   }
 
   Widget _buildActionBar() {
+    // Get colors from action bar config if available
+    final slot1Color = actionBarConfig?.getSlotColor(0) ?? const Color(0xFFB3B3CC);
+    final slot2Color = actionBarConfig?.getSlotColor(1) ?? const Color(0xFFFF6600);
+    final slot3Color = actionBarConfig?.getSlotColor(2) ?? const Color(0xFF80FF4D);
+    final slot4Color = actionBarConfig?.getSlotColor(3) ?? const Color(0xFFE6B333);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -144,34 +157,38 @@ class CombatHUD extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AbilityButton(
+          _buildDraggableSlot(
+            slotIndex: 0,
             label: '1',
-            color: const Color(0xFFB3B3CC), // Gray (sword)
+            color: slot1Color,
             cooldown: ability1Cooldown,
             maxCooldown: ability1CooldownMax,
             onPressed: onAbility1Pressed,
           ),
           const SizedBox(width: 6),
-          AbilityButton(
+          _buildDraggableSlot(
+            slotIndex: 1,
             label: '2',
-            color: const Color(0xFFFF6600), // Orange (fireball)
+            color: slot2Color,
             cooldown: ability2Cooldown,
             maxCooldown: ability2CooldownMax,
             onPressed: onAbility2Pressed,
           ),
           const SizedBox(width: 6),
-          AbilityButton(
+          _buildDraggableSlot(
+            slotIndex: 2,
             label: '3',
-            color: const Color(0xFF80FF4D), // Green (heal)
+            color: slot3Color,
             cooldown: ability3Cooldown,
             maxCooldown: ability3CooldownMax,
             onPressed: onAbility3Pressed,
           ),
           if (onAbility4Pressed != null) ...[
             const SizedBox(width: 6),
-            AbilityButton(
+            _buildDraggableSlot(
+              slotIndex: 3,
               label: '4',
-              color: const Color(0xFFE6B333), // Gold (dash attack)
+              color: slot4Color,
               cooldown: ability4Cooldown,
               maxCooldown: ability4CooldownMax,
               onPressed: onAbility4Pressed!,
@@ -179,6 +196,76 @@ class CombatHUD extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+
+  /// Build an action bar slot that accepts ability drops
+  Widget _buildDraggableSlot({
+    required int slotIndex,
+    required String label,
+    required Color color,
+    required double cooldown,
+    required double maxCooldown,
+    required VoidCallback onPressed,
+  }) {
+    // If no drag support, just show normal button
+    if (onAbilityDropped == null) {
+      return AbilityButton(
+        label: label,
+        color: color,
+        cooldown: cooldown,
+        maxCooldown: maxCooldown,
+        onPressed: onPressed,
+      );
+    }
+
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (details) => true,
+      onAcceptWithDetails: (details) {
+        onAbilityDropped!(slotIndex, details.data);
+      },
+      builder: (context, candidateData, rejectedData) {
+        final isHovering = candidateData.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: isHovering
+                ? [
+                    BoxShadow(
+                      color: Colors.yellow.withValues(alpha: 0.8),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Stack(
+            children: [
+              AbilityButton(
+                label: label,
+                color: isHovering ? Colors.yellow.shade700 : color,
+                cooldown: cooldown,
+                maxCooldown: maxCooldown,
+                onPressed: onPressed,
+              ),
+              // Drop indicator overlay
+              if (isHovering)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.yellow,
+                        width: 3,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

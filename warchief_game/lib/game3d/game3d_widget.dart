@@ -39,6 +39,7 @@ import 'ui/ally_command_panels.dart';
 import 'ui/ui_config.dart';
 import 'ui/abilities_modal.dart';
 import 'ui/unit_frames/unit_frames.dart';
+import '../main.dart' show globalInterfaceConfig;
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -530,17 +531,81 @@ class _Game3DState extends State<Game3D> {
   bool _showHoldPanel = false;
   bool _showFormationPanel = true; // Shown by default
 
-  /// Panel positions (for draggable panels)
-  Offset _attackPanelPosition = Offset(20, 200);
-  Offset _followPanelPosition = Offset(170, 200);
-  Offset _holdPanelPosition = Offset(320, 200);
-  Offset _formationPanelPosition = Offset(0, 0); // Will be set in build
+  /// Panel positions (for draggable panels) - using left/top like AbilitiesModal
+  Offset _instructionsPos = const Offset(10, 10);
+  Offset _combatHudPos = const Offset(300, 500); // Will be adjusted on first build
+  Offset _monsterAbilitiesPos = const Offset(10, 300);
+  Offset _aiChatPos = const Offset(10, 450);
+  Offset _formationPanelPos = const Offset(800, 150);
+  Offset _attackPanelPos = const Offset(800, 260);
+  Offset _holdPanelPos = const Offset(800, 370);
+  Offset _followPanelPos = const Offset(800, 480);
+  bool _positionsInitialized = false;
 
   /// Track SHIFT+key states for panel toggling
   bool _shiftFollowWasPressed = false;
   bool _shiftAttackWasPressed = false;
   bool _shiftHoldWasPressed = false;
   bool _shiftFormationWasPressed = false;
+
+  /// Check if an interface is visible (defaults to true if config not available)
+  bool _isVisible(String id) {
+    return globalInterfaceConfig?.isVisible(id) ?? true;
+  }
+
+  /// Get position for an interface
+  Offset _getPos(String id) {
+    switch (id) {
+      case 'instructions': return _instructionsPos;
+      case 'combat_hud': return _combatHudPos;
+      case 'monster_abilities': return _monsterAbilitiesPos;
+      case 'ai_chat': return _aiChatPos;
+      case 'formation_panel': return _formationPanelPos;
+      case 'attack_panel': return _attackPanelPos;
+      case 'hold_panel': return _holdPanelPos;
+      case 'follow_panel': return _followPanelPos;
+      default: return Offset.zero;
+    }
+  }
+
+  /// Update position for an interface
+  void _updatePos(String id, Offset delta, Size screenSize, Size widgetSize) {
+    setState(() {
+      Offset current = _getPos(id);
+      double newX = (current.dx + delta.dx).clamp(0.0, screenSize.width - widgetSize.width);
+      double newY = (current.dy + delta.dy).clamp(0.0, screenSize.height - widgetSize.height);
+      Offset newPos = Offset(newX, newY);
+
+      switch (id) {
+        case 'instructions': _instructionsPos = newPos; break;
+        case 'combat_hud': _combatHudPos = newPos; break;
+        case 'monster_abilities': _monsterAbilitiesPos = newPos; break;
+        case 'ai_chat': _aiChatPos = newPos; break;
+        case 'formation_panel': _formationPanelPos = newPos; break;
+        case 'attack_panel': _attackPanelPos = newPos; break;
+        case 'hold_panel': _holdPanelPos = newPos; break;
+        case 'follow_panel': _followPanelPos = newPos; break;
+      }
+    });
+  }
+
+  /// Build a draggable panel (like AbilitiesModal pattern)
+  Widget _draggable(String id, Widget child, {double width = 200, double height = 100}) {
+    final pos = _getPos(id);
+    return Positioned(
+      left: pos.dx,
+      top: pos.dy,
+      child: GestureDetector(
+        onPanUpdate: (details) {
+          _updatePos(id, details.delta, MediaQuery.of(context).size, Size(width, height));
+        },
+        child: MouseRegion(
+          cursor: SystemMouseCursors.move,
+          child: child,
+        ),
+      ),
+    );
+  }
 
   /// Handle ally command input (F=Follow, G=Attack, H=Hold)
   void _handleAllyCommands() {
@@ -858,34 +923,32 @@ class _Game3DState extends State<Game3D> {
             // Canvas will be created and appended to body in initState
             SizedBox.expand(),
 
-            // Instructions overlay (top-left)
-            InstructionsOverlay(
-              camera: camera,
-              gameState: gameState,
-            ),
+            // Instructions overlay (draggable)
+            if (_isVisible('instructions'))
+              _draggable('instructions',
+                InstructionsOverlay(
+                  camera: camera,
+                  gameState: gameState,
+                ),
+                width: 220, height: 200,
+              ),
 
-            // ========== NEW WOW-STYLE UNIT FRAMES ==========
+            // ========== NEW WOW-STYLE UNIT FRAMES (All Draggable) ==========
 
-            // Combat HUD with Party frames (bottom-center)
-            // Party frames positioned to the LEFT of the Warchief frame
-            Positioned(
-              bottom: 20,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Row(
+            // Combat HUD with Party frames (draggable)
+            if (_isVisible('combat_hud'))
+              _draggable('combat_hud',
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     // Party/Ally frames and controls (left of Warchief frame)
-                    // Always show the control buttons, only show party frames if allies exist
                     Padding(
                       padding: const EdgeInsets.only(right: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Party frames (only if allies exist)
                           if (gameState.allies.isNotEmpty)
                             PartyFrames(
                               allies: gameState.allies,
@@ -896,7 +959,6 @@ class _Game3DState extends State<Game3D> {
                             ),
                           if (gameState.allies.isNotEmpty)
                             const SizedBox(height: 6),
-                          // Add/Remove ally buttons (ALWAYS visible)
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -918,34 +980,28 @@ class _Game3DState extends State<Game3D> {
                         ],
                       ),
                     ),
-                    // Main Combat HUD (Warchief frame, VS, Target frame, Action bar)
                     CombatHUD(
-                      // Player data
                       playerName: 'Warchief',
                       playerHealth: gameState.playerHealth,
                       playerMaxHealth: gameState.playerMaxHealth,
                       playerLevel: 10,
-                      // Player portrait: Blue cube (matching in-game character)
                       playerPortraitWidget: const CubePortrait(
-                        color: Color(0xFF4D80CC), // Blue cube color (0.3, 0.5, 0.8)
+                        color: Color(0xFF4D80CC),
                         size: 36,
                         hasDirectionIndicator: true,
                         indicatorColor: Colors.red,
                       ),
-                      // Target data
                       targetName: 'Boss Monster',
                       targetHealth: gameState.monsterHealth,
                       targetMaxHealth: gameState.monsterMaxHealth.toDouble(),
                       targetLevel: 15,
                       hasTarget: true,
-                      // Target portrait: Purple cube (matching in-game monster)
                       targetPortraitWidget: const CubePortrait(
-                        color: Color(0xFF9933CC), // Purple cube color (0.6, 0.2, 0.8)
+                        color: Color(0xFF9933CC),
                         size: 36,
                         hasDirectionIndicator: true,
                         indicatorColor: Colors.green,
                       ),
-                      // Ability cooldowns
                       ability1Cooldown: gameState.ability1Cooldown,
                       ability1CooldownMax: gameState.ability1CooldownMax,
                       ability2Cooldown: gameState.ability2Cooldown,
@@ -954,7 +1010,6 @@ class _Game3DState extends State<Game3D> {
                       ability3CooldownMax: gameState.ability3CooldownMax,
                       ability4Cooldown: gameState.ability4Cooldown,
                       ability4CooldownMax: gameState.ability4CooldownMax,
-                      // Callbacks
                       onAbility1Pressed: _activateAbility1,
                       onAbility2Pressed: _activateAbility2,
                       onAbility3Pressed: _activateAbility3,
@@ -962,130 +1017,121 @@ class _Game3DState extends State<Game3D> {
                     ),
                   ],
                 ),
+                width: 700, height: 200,
               ),
-            ),
 
-            // Boss/Target abilities panel (bottom-left above chat)
-            Positioned(
-              left: 10,
-              bottom: 140,
-              child: TargetFrame(
-                name: 'Boss Monster',
-                health: gameState.monsterHealth,
-                maxHealth: gameState.monsterMaxHealth.toDouble(),
-                level: 15,
-                subtitle: 'Elite',
-                isPaused: gameState.monsterPaused,
-                // Monster portrait: Purple cube (matching in-game monster)
-                portraitWidget: const CubePortrait(
-                  color: Color(0xFF9933CC), // Purple cube color
-                  size: 24,
-                  hasDirectionIndicator: true,
-                  indicatorColor: Colors.green,
-                ),
-                onPauseToggle: () {
-                  setState(() {
-                    gameState.monsterPaused = !gameState.monsterPaused;
-                  });
-                  print('Monster AI ${gameState.monsterPaused ? 'paused' : 'resumed'}');
-                },
-                abilities: [
-                  AbilityButtonData(
-                    label: 'M1',
-                    color: const Color(0xFF8B4513),
-                    cooldown: gameState.monsterAbility1Cooldown,
-                    maxCooldown: gameState.monsterAbility1CooldownMax,
-                    onPressed: _activateMonsterAbility1,
+            // Boss/Target abilities panel (draggable)
+            if (_isVisible('monster_abilities'))
+              _draggable('monster_abilities',
+                TargetFrame(
+                  name: 'Boss Monster',
+                  health: gameState.monsterHealth,
+                  maxHealth: gameState.monsterMaxHealth.toDouble(),
+                  level: 15,
+                  subtitle: 'Elite',
+                  isPaused: gameState.monsterPaused,
+                  portraitWidget: const CubePortrait(
+                    color: Color(0xFF9933CC),
+                    size: 24,
+                    hasDirectionIndicator: true,
+                    indicatorColor: Colors.green,
                   ),
-                  AbilityButtonData(
-                    label: 'M2',
-                    color: const Color(0xFF4B0082),
-                    cooldown: gameState.monsterAbility2Cooldown,
-                    maxCooldown: gameState.monsterAbility2CooldownMax,
-                    onPressed: _activateMonsterAbility2,
-                  ),
-                  AbilityButtonData(
-                    label: 'M3',
-                    color: const Color(0xFF006400),
-                    cooldown: gameState.monsterAbility3Cooldown,
-                    maxCooldown: gameState.monsterAbility3CooldownMax,
-                    onPressed: _activateMonsterAbility3,
-                  ),
-                ],
-              ),
-            ),
-
-            // AI Chat Panel (bottom-left corner)
-            AIChatPanel(
-              messages: gameState.monsterAIChat,
-            ),
-
-            // ========== ALLY COMMAND PANELS (Adjacent, Formation on top) ==========
-            // Positioned at top-right of screen, stacked vertically
-            if (gameState.allies.isNotEmpty && (_showFormationPanel || _showAttackPanel || _showHoldPanel || _showFollowPanel))
-              Positioned(
-                right: 10,
-                top: 150,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Formation Panel (on top) - SHIFT+R to toggle
-                    if (_showFormationPanel)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 4),
-                        child: _buildCommandPanelWithClose(
-                          child: FormationSelector(
-                            currentFormation: gameState.currentFormation,
-                            onFormationChanged: _changeFormation,
-                          ),
-                          onClose: () => setState(() => _showFormationPanel = false),
-                        ),
-                      ),
-                    // Attack, Hold, Follow panels in a row
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Attack Panel - SHIFT+T to toggle
-                        if (_showAttackPanel)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: _buildCommandPanelWithClose(
-                              child: AttackCommandPanel(
-                                currentCommand: _getCurrentAllyCommand(),
-                                onActivate: () => _setAllyCommand(AllyCommand.attack),
-                                allyCount: gameState.allies.length,
-                              ),
-                              onClose: () => setState(() => _showAttackPanel = false),
-                            ),
-                          ),
-                        // Hold Panel - SHIFT+G to toggle
-                        if (_showHoldPanel)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: _buildCommandPanelWithClose(
-                              child: HoldCommandPanel(
-                                currentCommand: _getCurrentAllyCommand(),
-                                onActivate: () => _setAllyCommand(AllyCommand.hold),
-                                allyCount: gameState.allies.length,
-                              ),
-                              onClose: () => setState(() => _showHoldPanel = false),
-                            ),
-                          ),
-                        // Follow Panel - SHIFT+F to toggle
-                        if (_showFollowPanel)
-                          _buildCommandPanelWithClose(
-                            child: FollowCommandPanel(
-                              currentCommand: _getCurrentAllyCommand(),
-                              onActivate: () => _setAllyCommand(AllyCommand.follow),
-                              allyCount: gameState.allies.length,
-                            ),
-                            onClose: () => setState(() => _showFollowPanel = false),
-                          ),
-                      ],
+                  onPauseToggle: () {
+                    setState(() {
+                      gameState.monsterPaused = !gameState.monsterPaused;
+                    });
+                    print('Monster AI ${gameState.monsterPaused ? 'paused' : 'resumed'}');
+                  },
+                  abilities: [
+                    AbilityButtonData(
+                      label: 'M1',
+                      color: const Color(0xFF8B4513),
+                      cooldown: gameState.monsterAbility1Cooldown,
+                      maxCooldown: gameState.monsterAbility1CooldownMax,
+                      onPressed: _activateMonsterAbility1,
+                    ),
+                    AbilityButtonData(
+                      label: 'M2',
+                      color: const Color(0xFF4B0082),
+                      cooldown: gameState.monsterAbility2Cooldown,
+                      maxCooldown: gameState.monsterAbility2CooldownMax,
+                      onPressed: _activateMonsterAbility2,
+                    ),
+                    AbilityButtonData(
+                      label: 'M3',
+                      color: const Color(0xFF006400),
+                      cooldown: gameState.monsterAbility3Cooldown,
+                      maxCooldown: gameState.monsterAbility3CooldownMax,
+                      onPressed: _activateMonsterAbility3,
                     ),
                   ],
                 ),
+                width: 200, height: 120,
+              ),
+
+            // AI Chat Panel (draggable)
+            if (_isVisible('ai_chat'))
+              _draggable('ai_chat',
+                AIChatPanel(
+                  messages: gameState.monsterAIChat,
+                ),
+                width: 300, height: 200,
+              ),
+
+            // ========== ALLY COMMAND PANELS (Each Draggable) ==========
+            // Formation Panel (draggable)
+            if (gameState.allies.isNotEmpty && _isVisible('formation_panel'))
+              _draggable('formation_panel',
+                _buildCommandPanelWithClose(
+                  child: FormationSelector(
+                    currentFormation: gameState.currentFormation,
+                    onFormationChanged: _changeFormation,
+                  ),
+                  onClose: () => globalInterfaceConfig?.setVisibility('formation_panel', false),
+                ),
+                width: 180, height: 100,
+              ),
+
+            // Attack Panel (draggable)
+            if (gameState.allies.isNotEmpty && _isVisible('attack_panel'))
+              _draggable('attack_panel',
+                _buildCommandPanelWithClose(
+                  child: AttackCommandPanel(
+                    currentCommand: _getCurrentAllyCommand(),
+                    onActivate: () => _setAllyCommand(AllyCommand.attack),
+                    allyCount: gameState.allies.length,
+                  ),
+                  onClose: () => globalInterfaceConfig?.setVisibility('attack_panel', false),
+                ),
+                width: 140, height: 80,
+              ),
+
+            // Hold Panel (draggable)
+            if (gameState.allies.isNotEmpty && _isVisible('hold_panel'))
+              _draggable('hold_panel',
+                _buildCommandPanelWithClose(
+                  child: HoldCommandPanel(
+                    currentCommand: _getCurrentAllyCommand(),
+                    onActivate: () => _setAllyCommand(AllyCommand.hold),
+                    allyCount: gameState.allies.length,
+                  ),
+                  onClose: () => globalInterfaceConfig?.setVisibility('hold_panel', false),
+                ),
+                width: 140, height: 80,
+              ),
+
+            // Follow Panel (draggable)
+            if (gameState.allies.isNotEmpty && _isVisible('follow_panel'))
+              _draggable('follow_panel',
+                _buildCommandPanelWithClose(
+                  child: FollowCommandPanel(
+                    currentCommand: _getCurrentAllyCommand(),
+                    onActivate: () => _setAllyCommand(AllyCommand.follow),
+                    allyCount: gameState.allies.length,
+                  ),
+                  onClose: () => globalInterfaceConfig?.setVisibility('follow_panel', false),
+                ),
+                width: 140, height: 80,
               ),
 
             // Abilities Modal (Press P to toggle)
