@@ -449,9 +449,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
                   Switch(
                     value: iface.isVisible,
                     onChanged: (value) {
-                      setState(() {
-                        iface.isVisible = value;
-                      });
+                      // Use config manager to trigger rebuild
+                      widget.interfaceConfig?.setVisibility(iface.id, value);
+                      setState(() {});
                       widget.onInterfaceVisibilityChanged?.call(iface.id, value);
                     },
                     activeColor: const Color(0xFF4cc9f0),
@@ -499,9 +499,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
                       // Reset position button
                       GestureDetector(
                         onTap: () {
-                          setState(() {
-                            iface.resetPosition();
-                          });
+                          // Use config manager to trigger rebuild
+                          widget.interfaceConfig?.resetPosition(iface.id);
+                          setState(() {});
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(

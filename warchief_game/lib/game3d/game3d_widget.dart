@@ -531,16 +531,17 @@ class _Game3DState extends State<Game3D> {
   bool _showHoldPanel = false;
   bool _showFormationPanel = true; // Shown by default
 
-  /// Panel positions (for draggable panels) - using left/top like AbilitiesModal
-  Offset _instructionsPos = const Offset(10, 10);
-  Offset _combatHudPos = const Offset(300, 500); // Will be adjusted on first build
-  Offset _monsterAbilitiesPos = const Offset(10, 300);
-  Offset _aiChatPos = const Offset(10, 450);
-  Offset _formationPanelPos = const Offset(800, 150);
-  Offset _attackPanelPos = const Offset(800, 260);
-  Offset _holdPanelPos = const Offset(800, 370);
-  Offset _followPanelPos = const Offset(800, 480);
-  bool _positionsInitialized = false;
+  /// Default positions for draggable panels (used if config not available)
+  static const Map<String, Offset> _defaultPositions = {
+    'instructions': Offset(10, 10),
+    'combat_hud': Offset(300, 500),
+    'monster_abilities': Offset(10, 300),
+    'ai_chat': Offset(10, 450),
+    'formation_panel': Offset(800, 150),
+    'attack_panel': Offset(800, 260),
+    'hold_panel': Offset(800, 370),
+    'follow_panel': Offset(800, 480),
+  };
 
   /// Track SHIFT+key states for panel toggling
   bool _shiftFollowWasPressed = false;
@@ -553,40 +554,17 @@ class _Game3DState extends State<Game3D> {
     return globalInterfaceConfig?.isVisible(id) ?? true;
   }
 
-  /// Get position for an interface
+  /// Get position for an interface (from config manager or defaults)
   Offset _getPos(String id) {
-    switch (id) {
-      case 'instructions': return _instructionsPos;
-      case 'combat_hud': return _combatHudPos;
-      case 'monster_abilities': return _monsterAbilitiesPos;
-      case 'ai_chat': return _aiChatPos;
-      case 'formation_panel': return _formationPanelPos;
-      case 'attack_panel': return _attackPanelPos;
-      case 'hold_panel': return _holdPanelPos;
-      case 'follow_panel': return _followPanelPos;
-      default: return Offset.zero;
-    }
+    return globalInterfaceConfig?.getPosition(id) ?? _defaultPositions[id] ?? Offset.zero;
   }
 
-  /// Update position for an interface
+  /// Update position for an interface (saves to config manager)
   void _updatePos(String id, Offset delta, Size screenSize, Size widgetSize) {
-    setState(() {
-      Offset current = _getPos(id);
-      double newX = (current.dx + delta.dx).clamp(0.0, screenSize.width - widgetSize.width);
-      double newY = (current.dy + delta.dy).clamp(0.0, screenSize.height - widgetSize.height);
-      Offset newPos = Offset(newX, newY);
-
-      switch (id) {
-        case 'instructions': _instructionsPos = newPos; break;
-        case 'combat_hud': _combatHudPos = newPos; break;
-        case 'monster_abilities': _monsterAbilitiesPos = newPos; break;
-        case 'ai_chat': _aiChatPos = newPos; break;
-        case 'formation_panel': _formationPanelPos = newPos; break;
-        case 'attack_panel': _attackPanelPos = newPos; break;
-        case 'hold_panel': _holdPanelPos = newPos; break;
-        case 'follow_panel': _followPanelPos = newPos; break;
-      }
-    });
+    Offset current = _getPos(id);
+    double newX = (current.dx + delta.dx).clamp(0.0, screenSize.width - widgetSize.width);
+    double newY = (current.dy + delta.dy).clamp(0.0, screenSize.height - widgetSize.height);
+    globalInterfaceConfig?.setPosition(id, Offset(newX, newY));
   }
 
   /// Build a draggable panel (like AbilitiesModal pattern)

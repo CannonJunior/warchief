@@ -91,103 +91,103 @@ class InterfaceConfigManager {
 
   /// Initialize default interface configurations
   void _initializeDefaults() {
-    // Combat HUD (always visible, not toggleable)
-    _interfaces['combat_hud'] = InterfaceConfig(
-      id: 'combat_hud',
-      name: 'Combat HUD',
-      description: 'Player and target frames with action bar',
-      icon: Icons.sports_martial_arts,
-      isVisible: true,
-      position: const Offset(0, 0), // Centered at bottom
-      defaultPosition: const Offset(0, 0),
-    );
-
-    // Party Frames
-    _interfaces['party_frames'] = InterfaceConfig(
-      id: 'party_frames',
-      name: 'Party Frames',
-      description: 'Allied unit health and status',
-      icon: Icons.group,
-      isVisible: true,
-      position: const Offset(0, 0), // Left of combat HUD
-      defaultPosition: const Offset(0, 0),
-    );
-
-    // Monster Abilities Panel (Boss frame)
-    _interfaces['monster_abilities'] = InterfaceConfig(
-      id: 'monster_abilities',
-      name: 'Boss Abilities',
-      description: 'Boss monster health and abilities',
-      icon: Icons.dangerous,
-      isVisible: true,
-      position: const Offset(10, 140), // Bottom-left
-      defaultPosition: const Offset(10, 140),
-    );
-
-    // AI Chat Panel
-    _interfaces['ai_chat'] = InterfaceConfig(
-      id: 'ai_chat',
-      name: 'AI Chat',
-      description: 'Monster AI decision log',
-      icon: Icons.chat,
-      isVisible: true,
-      position: const Offset(10, 10), // Bottom-left corner
-      defaultPosition: const Offset(10, 10),
-    );
-
-    // Formation Panel
-    _interfaces['formation_panel'] = InterfaceConfig(
-      id: 'formation_panel',
-      name: 'Formation Panel',
-      description: 'Ally formation selector (SHIFT+R)',
-      icon: Icons.grid_view,
-      isVisible: true,
-      position: const Offset(-200, 260), // Right side (negative = from right)
-      defaultPosition: const Offset(-200, 260),
-    );
-
-    // Attack Command Panel
-    _interfaces['attack_panel'] = InterfaceConfig(
-      id: 'attack_panel',
-      name: 'Attack Panel',
-      description: 'Ally attack command (SHIFT+T)',
-      icon: Icons.flash_on,
-      isVisible: false,
-      position: const Offset(-200, 350),
-      defaultPosition: const Offset(-200, 350),
-    );
-
-    // Hold Command Panel
-    _interfaces['hold_panel'] = InterfaceConfig(
-      id: 'hold_panel',
-      name: 'Hold Panel',
-      description: 'Ally hold command (SHIFT+G)',
-      icon: Icons.pan_tool,
-      isVisible: false,
-      position: const Offset(-350, 350),
-      defaultPosition: const Offset(-350, 350),
-    );
-
-    // Follow Command Panel
-    _interfaces['follow_panel'] = InterfaceConfig(
-      id: 'follow_panel',
-      name: 'Follow Panel',
-      description: 'Ally follow command (SHIFT+F)',
-      icon: Icons.directions_walk,
-      isVisible: false,
-      position: const Offset(-500, 350),
-      defaultPosition: const Offset(-500, 350),
-    );
-
-    // Instructions Overlay
+    // Instructions Overlay (top-left)
     _interfaces['instructions'] = InterfaceConfig(
       id: 'instructions',
       name: 'Instructions',
       description: 'Control hints and camera info',
       icon: Icons.help_outline,
       isVisible: true,
-      position: const Offset(10, 10), // Top-left
+      position: const Offset(10, 10),
       defaultPosition: const Offset(10, 10),
+    );
+
+    // Combat HUD (bottom-center area)
+    _interfaces['combat_hud'] = InterfaceConfig(
+      id: 'combat_hud',
+      name: 'Combat HUD',
+      description: 'Player and target frames with action bar',
+      icon: Icons.sports_martial_arts,
+      isVisible: true,
+      position: const Offset(300, 500),
+      defaultPosition: const Offset(300, 500),
+    );
+
+    // Monster Abilities Panel (left side)
+    _interfaces['monster_abilities'] = InterfaceConfig(
+      id: 'monster_abilities',
+      name: 'Boss Abilities',
+      description: 'Boss monster health and abilities',
+      icon: Icons.dangerous,
+      isVisible: true,
+      position: const Offset(10, 300),
+      defaultPosition: const Offset(10, 300),
+    );
+
+    // AI Chat Panel (left side below monster)
+    _interfaces['ai_chat'] = InterfaceConfig(
+      id: 'ai_chat',
+      name: 'AI Chat',
+      description: 'Monster AI decision log',
+      icon: Icons.chat,
+      isVisible: true,
+      position: const Offset(10, 450),
+      defaultPosition: const Offset(10, 450),
+    );
+
+    // Formation Panel (right side)
+    _interfaces['formation_panel'] = InterfaceConfig(
+      id: 'formation_panel',
+      name: 'Formation Panel',
+      description: 'Ally formation selector (SHIFT+R)',
+      icon: Icons.grid_view,
+      isVisible: true,
+      position: const Offset(800, 150),
+      defaultPosition: const Offset(800, 150),
+    );
+
+    // Attack Command Panel (right side)
+    _interfaces['attack_panel'] = InterfaceConfig(
+      id: 'attack_panel',
+      name: 'Attack Panel',
+      description: 'Ally attack command (SHIFT+T)',
+      icon: Icons.flash_on,
+      isVisible: false,
+      position: const Offset(800, 260),
+      defaultPosition: const Offset(800, 260),
+    );
+
+    // Hold Command Panel (right side)
+    _interfaces['hold_panel'] = InterfaceConfig(
+      id: 'hold_panel',
+      name: 'Hold Panel',
+      description: 'Ally hold command (SHIFT+G)',
+      icon: Icons.pan_tool,
+      isVisible: false,
+      position: const Offset(800, 370),
+      defaultPosition: const Offset(800, 370),
+    );
+
+    // Follow Command Panel (right side)
+    _interfaces['follow_panel'] = InterfaceConfig(
+      id: 'follow_panel',
+      name: 'Follow Panel',
+      description: 'Ally follow command (SHIFT+F)',
+      icon: Icons.directions_walk,
+      isVisible: false,
+      position: const Offset(800, 480),
+      defaultPosition: const Offset(800, 480),
+    );
+
+    // Party Frames (not used separately, part of combat_hud)
+    _interfaces['party_frames'] = InterfaceConfig(
+      id: 'party_frames',
+      name: 'Party Frames',
+      description: 'Allied unit health and status (part of Combat HUD)',
+      icon: Icons.group,
+      isVisible: true,
+      position: const Offset(0, 0),
+      defaultPosition: const Offset(0, 0),
     );
   }
 

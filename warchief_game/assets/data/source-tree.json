@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-03T23:21:43.941955",
+  "generated_at": "2026-02-04T09:43:23.196584",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
     "files": 114,
     "directories": 31,
-    "lines": 27402,
-    "size": 918383
+    "lines": 27439,
+    "size": 919008
   },
   "tree": {
     "name": "warchief_game",
@@ -492,7 +492,7 @@
                         "name": "interface_config.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/settings/interface_config.dart",
-                        "size": 8900,
+                        "size": 8910,
                         "extension": ".dart",
                         "icon": "🎯",
                         "lines": 313
@@ -501,7 +501,7 @@
                         "name": "settings_panel.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/settings/settings_panel.dart",
-                        "size": 25020,
+                        "size": 25153,
                         "extension": ".dart",
                         "icon": "🎯",
                         "lines": 847
@@ -735,10 +735,10 @@
                 "name": "game3d_widget.dart",
                 "type": "file",
                 "path": "warchief_game/lib/game3d/game3d_widget.dart",
-                "size": 44825,
+                "size": 44949,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 1212
+                "lines": 1236
               }
             ]
           },
@@ -981,10 +981,10 @@
             "name": "main.dart",
             "type": "file",
             "path": "warchief_game/lib/main.dart",
-            "size": 4632,
+            "size": 4990,
             "extension": ".dart",
             "icon": "🎯",
-            "lines": 149
+            "lines": 162
           }
         ]
       },
