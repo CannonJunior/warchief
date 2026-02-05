@@ -42,6 +42,7 @@ import 'ui/ui_config.dart';
 import 'ui/abilities_modal.dart';
 import 'ui/unit_frames/unit_frames.dart';
 import '../main.dart' show globalInterfaceConfig;
+import 'state/action_bar_config.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -88,8 +89,17 @@ class _Game3DState extends State<Game3D> {
     // Initialize Ollama client for AI
     ollamaClient = OllamaClient();
 
+    // Initialize action bar config for ability slot assignments
+    _initializeActionBarConfig();
+
     // Create canvas element immediately
     _initializeGame();
+  }
+
+  /// Initialize the global action bar configuration
+  void _initializeActionBarConfig() {
+    globalActionBarConfig ??= ActionBarConfig();
+    globalActionBarConfig!.loadConfig();
   }
 
   void _initializeGame() {
@@ -307,6 +317,9 @@ class _Game3DState extends State<Game3D> {
   ///
   /// Called after terrain and units are initialized to ensure units
   /// start at the correct elevation instead of floating or buried.
+  /// Small buffer to ensure units are visually above terrain surface
+  static const double _terrainBuffer = 0.15;
+
   void _adjustStartingPositionsToTerrain() {
     if (gameState.infiniteTerrainManager == null) return;
 
@@ -317,29 +330,30 @@ class _Game3DState extends State<Game3D> {
       gameState.infiniteTerrainManager!.update(playerPos, playerPos);
     }
 
-    // Adjust player Y to terrain height
+    // Adjust player Y to terrain height (add half size + buffer so bottom sits above terrain)
     if (gameState.playerTransform != null) {
       final terrainHeight = gameState.infiniteTerrainManager!.getTerrainHeight(
         gameState.playerTransform!.position.x,
         gameState.playerTransform!.position.z,
       );
-      gameState.playerTransform!.position.y = terrainHeight;
-      print('[Game3D] Player starting height adjusted to terrain: $terrainHeight');
+      gameState.playerTransform!.position.y = terrainHeight + GameConfig.playerSize / 2 + _terrainBuffer;
+      print('[Game3D] Player starting height adjusted to terrain: $terrainHeight (mesh Y: ${gameState.playerTransform!.position.y})');
     }
 
-    // Adjust monster Y to terrain height
+    // Adjust monster Y to terrain height (add half size + buffer so bottom sits above terrain)
     if (gameState.monsterTransform != null) {
       final terrainHeight = gameState.infiniteTerrainManager!.getTerrainHeight(
         gameState.monsterTransform!.position.x,
         gameState.monsterTransform!.position.z,
       );
-      gameState.monsterTransform!.position.y = terrainHeight;
+      gameState.monsterTransform!.position.y = terrainHeight + GameConfig.monsterSize / 2 + _terrainBuffer;
 
-      // Also adjust monster direction indicator
+      // Direction indicator sits on top of the monster mesh
       if (gameState.monsterDirectionIndicatorTransform != null) {
-        gameState.monsterDirectionIndicatorTransform!.position.y = terrainHeight + 0.7;
+        gameState.monsterDirectionIndicatorTransform!.position.y =
+            gameState.monsterTransform!.position.y + GameConfig.monsterSize / 2 + 0.1;
       }
-      print('[Game3D] Monster starting height adjusted to terrain: $terrainHeight');
+      print('[Game3D] Monster starting height adjusted to terrain: $terrainHeight (mesh Y: ${gameState.monsterTransform!.position.y})');
     }
   }
 
@@ -400,7 +414,9 @@ class _Game3DState extends State<Game3D> {
     // Update direction indicator position and rotation to match player
     if (gameState.directionIndicatorTransform != null && gameState.playerTransform != null) {
       gameState.directionIndicatorTransform!.position.x = gameState.playerTransform!.position.x;
-      gameState.directionIndicatorTransform!.position.y = gameState.playerTransform!.position.y + 0.5; // Flush with top of cube
+      // Direction indicator sits on top of the player mesh (position.y is already at mesh center)
+      gameState.directionIndicatorTransform!.position.y =
+          gameState.playerTransform!.position.y + GameConfig.playerSize / 2 + 0.1;
       gameState.directionIndicatorTransform!.position.z = gameState.playerTransform!.position.z;
       gameState.directionIndicatorTransform!.rotation.y = gameState.playerRotation + 180; // Rotate 180 degrees
     }
@@ -546,6 +562,16 @@ class _Game3DState extends State<Game3D> {
     setState(() {
       AbilitySystem.handleAbility4Input(true, gameState);
     });
+  }
+
+  /// Handle ability dropped from Abilities Codex onto action bar slot
+  void _handleAbilityDropped(int slotIndex, String abilityName) {
+    final config = globalActionBarConfig;
+    if (config != null) {
+      config.setSlotAbility(slotIndex, abilityName);
+      print('[ActionBar] Assigned "$abilityName" to slot ${slotIndex + 1}');
+      setState(() {}); // Refresh UI to show new ability
+    }
   }
 
   // ===== ALLY COMMAND METHODS =====
@@ -910,10 +936,12 @@ class _Game3DState extends State<Game3D> {
           ? gameState.playerTransform!.position.z + offsetZ
           : 2.0 + offsetZ;
 
-      // Get terrain height at ally position
-      double allyY = 0.4;
+      // Get terrain height at ally position (add half size so bottom sits on terrain)
+      const double allySize = 0.8;
+      double allyY = 0.4 + allySize / 2 + _terrainBuffer; // Default fallback
       if (gameState.infiniteTerrainManager != null) {
-        allyY = gameState.infiniteTerrainManager!.getTerrainHeight(allyX, allyZ);
+        final terrainHeight = gameState.infiniteTerrainManager!.getTerrainHeight(allyX, allyZ);
+        allyY = terrainHeight + allySize / 2 + _terrainBuffer;
       }
 
       final allyPosition = Vector3(allyX, allyY, allyZ);
@@ -1348,6 +1376,8 @@ class _Game3DState extends State<Game3D> {
           onAbility2Pressed: _activateAbility2,
           onAbility3Pressed: _activateAbility3,
           onAbility4Pressed: _activateAbility4,
+          actionBarConfig: globalActionBarConfig,
+          onAbilityDropped: _handleAbilityDropped,
         ),
         // Target of Target display
         if (targetData['hasTarget'] as bool && totInfo != null)

@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-04T14:34:10.725343",
+  "generated_at": "2026-02-04T21:43:20.823826",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
     "files": 114,
     "directories": 31,
-    "lines": 27795,
-    "size": 931911
+    "lines": 28175,
+    "size": 945978
   },
   "tree": {
     "name": "warchief_game",
@@ -410,10 +410,10 @@
                     "name": "game_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state.dart",
-                    "size": 17869,
+                    "size": 18169,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 530
+                    "lines": 533
                   }
                 ]
               },
@@ -435,19 +435,19 @@
                     "name": "ai_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/ai_system.dart",
-                    "size": 44122,
+                    "size": 44809,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 1145
+                    "lines": 1153
                   },
                   {
                     "name": "combat_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/combat_system.dart",
-                    "size": 10007,
+                    "size": 14524,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 298
+                    "lines": 436
                   },
                   {
                     "name": "input_system.dart",
@@ -462,16 +462,16 @@
                     "name": "physics_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/physics_system.dart",
-                    "size": 3802,
+                    "size": 4104,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 110
+                    "lines": 117
                   },
                   {
                     "name": "render_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/render_system.dart",
-                    "size": 6991,
+                    "size": 7047,
                     "extension": ".dart",
                     "icon": "🎯",
                     "lines": 199
@@ -544,10 +544,10 @@
                         "name": "minion_frames.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/unit_frames/minion_frames.dart",
-                        "size": 12857,
+                        "size": 18282,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 404
+                        "lines": 573
                       },
                       {
                         "name": "party_frames.dart",
@@ -591,7 +591,7 @@
                     "name": "abilities_modal.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/abilities_modal.dart",
-                    "size": 19018,
+                    "size": 19017,
                     "extension": ".dart",
                     "icon": "🎯",
                     "lines": 560
@@ -699,10 +699,10 @@
                     "name": "ui_config.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/ui_config.dart",
-                    "size": 2319,
+                    "size": 2511,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 71
+                    "lines": 75
                   }
                 ]
               },
@@ -735,10 +735,10 @@
                 "name": "game3d_widget.dart",
                 "type": "file",
                 "path": "warchief_game/lib/game3d/game3d_widget.dart",
-                "size": 55059,
+                "size": 56701,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 1516
+                "lines": 1546
               }
             ]
           },
@@ -787,10 +787,10 @@
                 "name": "monster.dart",
                 "type": "file",
                 "path": "warchief_game/lib/models/monster.dart",
-                "size": 9630,
+                "size": 9782,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 334
+                "lines": 338
               },
               {
                 "name": "monster_ontology.dart",
@@ -898,10 +898,10 @@
                 "name": "mesh.dart",
                 "type": "file",
                 "path": "warchief_game/lib/rendering3d/mesh.dart",
-                "size": 12906,
+                "size": 13701,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 437
+                "lines": 454
               },
               {
                 "name": "player_mesh.dart",

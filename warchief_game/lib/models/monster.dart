@@ -40,6 +40,8 @@ class Monster {
   /// Current stats
   double health;
   double maxHealth;
+  double mana;      // Resource for abilities (casters use this)
+  double maxMana;
 
   /// Ability cooldowns (indexed by ability definition order)
   List<double> abilityCooldowns;
@@ -79,6 +81,8 @@ class Monster {
     double? initialHealth,
   })  : health = initialHealth ?? definition.effectiveHealth,
         maxHealth = definition.effectiveHealth,
+        mana = 100.0,  // Default mana pool
+        maxMana = 100.0,
         abilityCooldowns = List.filled(definition.abilities.length, 0.0),
         aiState = MonsterAIState.idle,
         aiTimer = 0.0,

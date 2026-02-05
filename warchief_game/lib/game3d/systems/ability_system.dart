@@ -622,7 +622,7 @@ class AbilitySystem {
     ));
 
     // Damage nearby enemies
-    CombatSystem.checkAndDamageMonster(
+    CombatSystem.checkAndDamageEnemies(
       gameState,
       attackerPosition: gameState.playerTransform!.position,
       damage: ability.damage,
@@ -690,7 +690,7 @@ class AbilitySystem {
         final sword = AbilitiesConfig.playerSword;
         final swordTipPosition = gameState.playerTransform!.position + forward * sword.range;
 
-        final hitRegistered = CombatSystem.checkAndDamageMonster(
+        final hitRegistered = CombatSystem.checkAndDamageEnemies(
           gameState,
           attackerPosition: swordTipPosition,
           damage: sword.damage,
@@ -727,7 +727,7 @@ class AbilitySystem {
       fireball.lifetime -= dt;
 
       // Check collision with monster using unified combat system
-      final hitRegistered = CombatSystem.checkAndDamageMonster(
+      final hitRegistered = CombatSystem.checkAndDamageEnemies(
         gameState,
         attackerPosition: fireball.transform.position,
         damage: fireballConfig.damage,
@@ -816,7 +816,7 @@ class AbilitySystem {
 
       // Check collision with monster during dash
       if (!gameState.ability4HitRegistered) {
-        final hitRegistered = CombatSystem.checkAndDamageMonster(
+        final hitRegistered = CombatSystem.checkAndDamageEnemies(
           gameState,
           attackerPosition: gameState.playerTransform!.position,
           damage: dashConfig.damage,

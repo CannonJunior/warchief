@@ -35,14 +35,19 @@ class AISystem {
     return gameState.groundLevel;
   }
 
+  /// Small buffer to ensure units are visually above terrain surface
+  static const double _terrainBuffer = 0.15;
+
   /// Apply terrain height to a unit's Y position
-  static void _applyTerrainHeight(GameState gameState, Transform3d transform) {
+  /// The unitSize parameter is the size of the cube mesh (units are centered)
+  static void _applyTerrainHeight(GameState gameState, Transform3d transform, {double unitSize = 0.8}) {
     final terrainHeight = _getTerrainHeight(
       gameState,
       transform.position.x,
       transform.position.z,
     );
-    transform.position.y = terrainHeight;
+    // Add half the unit size + buffer so the bottom of the mesh sits above terrain
+    transform.position.y = terrainHeight + unitSize / 2 + _terrainBuffer;
   }
 
   /// Updates all AI systems
@@ -128,7 +133,7 @@ class AISystem {
 
     // Set monster Y to terrain height (terrain following)
     if (gameState.monsterTransform != null) {
-      _applyTerrainHeight(gameState, gameState.monsterTransform!);
+      _applyTerrainHeight(gameState, gameState.monsterTransform!, unitSize: GameConfig.monsterSize);
     }
   }
 
@@ -143,11 +148,13 @@ class AISystem {
     for (final ally in gameState.allies) {
       if (ally.health <= 0) continue;
 
+      const double allySize = 0.8; // Ally mesh size
+
       // Handle different movement modes
       switch (ally.movementMode) {
         case AllyMovementMode.stationary:
           // Still apply terrain height even when stationary
-          _applyTerrainHeight(gameState, ally.transform);
+          _applyTerrainHeight(gameState, ally.transform, unitSize: allySize);
           break;
 
         case AllyMovementMode.followPlayer:
@@ -177,7 +184,7 @@ class AISystem {
             }
           }
           // Apply terrain height
-          _applyTerrainHeight(gameState, ally.transform);
+          _applyTerrainHeight(gameState, ally.transform, unitSize: allySize);
           break;
       }
     }
@@ -248,8 +255,8 @@ class AISystem {
       }
     }
 
-    // Apply terrain height
-    _applyTerrainHeight(gameState, ally.transform);
+    // Apply terrain height (ally size is 0.8)
+    _applyTerrainHeight(gameState, ally.transform, unitSize: 0.8);
   }
 
   // ==================== MONSTER AI ====================
@@ -554,8 +561,8 @@ class AISystem {
       final moveDirection = toMonster.normalized();
       ally.transform.position.x += moveDirection.x * 0.3;
       ally.transform.position.z += moveDirection.z * 0.3;
-      // Apply terrain height
-      _applyTerrainHeight(gameState, ally.transform);
+      // Apply terrain height (ally size is 0.8)
+      _applyTerrainHeight(gameState, ally.transform, unitSize: 0.8);
       print('Ally moving toward monster');
     } else if (decision == 'ATTACK' && ally.abilityCooldown <= 0) {
       // Use ability based on ally's ability index
@@ -768,14 +775,15 @@ class AISystem {
         }
       }
 
-      // Apply terrain height
-      _applyTerrainHeight(gameState, minion.transform);
+      // Apply terrain height (minion size varies by definition)
+      _applyTerrainHeight(gameState, minion.transform, unitSize: minion.definition.effectiveScale);
 
-      // Update direction indicator position
+      // Update direction indicator position (on top of mesh)
       if (minion.directionIndicatorTransform != null) {
         minion.directionIndicatorTransform!.position.x = minion.transform.position.x;
+        // Direction indicator sits on top of the mesh
         minion.directionIndicatorTransform!.position.y =
-            minion.transform.position.y + minion.definition.effectiveScale * 0.6;
+            minion.transform.position.y + minion.definition.effectiveScale / 2 + 0.1;
         minion.directionIndicatorTransform!.position.z = minion.transform.position.z;
       }
     }

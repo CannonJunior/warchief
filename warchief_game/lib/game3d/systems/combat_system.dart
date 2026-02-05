@@ -5,9 +5,10 @@ import '../state/game_config.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/impact_effect.dart';
+import '../../models/monster.dart';
 
 /// Target types for damage application
-enum DamageTarget { player, monster, ally }
+enum DamageTarget { player, monster, ally, minion }
 
 /// Combat System - Unified damage and collision handling
 ///
@@ -60,8 +61,9 @@ class CombatSystem {
   /// - attackType: Description of the attack (for logging)
   /// - impactColor: Color of the impact effect
   /// - impactSize: Size of the impact effect
-  /// - targetType: Type of target (player, monster, or ally)
+  /// - targetType: Type of target (player, monster, ally, or minion)
   /// - allyIndex: Index of the ally if targetType is ally (optional)
+  /// - minionInstanceId: Instance ID of the minion if targetType is minion (optional)
   ///
   /// Returns:
   /// - true if hit was registered, false otherwise
@@ -76,6 +78,7 @@ class CombatSystem {
     required double impactSize,
     required DamageTarget targetType,
     int? allyIndex,
+    String? minionInstanceId,
   }) {
     final distance = (attackerPosition - targetPosition).length;
 
@@ -110,6 +113,19 @@ class CombatSystem {
             ally.health = (ally.health - damage).clamp(0.0, ally.maxHealth);
             print('$attackType hit ally ${allyIndex + 1} for $damage damage! '
                   'Ally health: ${ally.health.toStringAsFixed(1)}');
+          }
+          break;
+
+        case DamageTarget.minion:
+          if (minionInstanceId != null) {
+            final minion = gameState.minions.where(
+              (m) => m.instanceId == minionInstanceId && m.isAlive
+            ).firstOrNull;
+            if (minion != null) {
+              minion.takeDamage(damage);
+              print('$attackType hit ${minion.definition.name} for $damage damage! '
+                    'Minion health: ${minion.health.toStringAsFixed(1)}/${minion.maxHealth}');
+            }
           }
           break;
       }
@@ -294,5 +310,127 @@ class CombatSystem {
       impactSize: impactSize,
       collisionThreshold: collisionThreshold,
     );
+  }
+
+  /// Checks collision with all minions and applies damage to the first hit
+  ///
+  /// Parameters:
+  /// - gameState: Current game state to update
+  /// - attackerPosition: Position of the attacking projectile/melee hit
+  /// - damage: Amount of damage to apply
+  /// - attackType: Description of the attack (for logging)
+  /// - impactColor: Color of the impact effect
+  /// - impactSize: Size of the impact effect
+  /// - collisionThreshold: Distance threshold (defaults to GameConfig value)
+  ///
+  /// Returns:
+  /// - true if any minion was hit, false otherwise
+  /// Minimum collision threshold for minions to ensure they can be hit
+  static const double _minMinionCollisionThreshold = 0.8;
+
+  static bool checkAndDamageMinions(
+    GameState gameState, {
+    required Vector3 attackerPosition,
+    required double damage,
+    required String attackType,
+    required Vector3 impactColor,
+    required double impactSize,
+    double? collisionThreshold,
+  }) {
+    for (final minion in gameState.aliveMinions) {
+      // Use larger of: provided threshold, scale-based threshold, or minimum threshold
+      // This ensures even small minions can be reliably hit
+      final scaleBasedThreshold = minion.definition.effectiveScale * 0.8;
+      final effectiveThreshold = collisionThreshold ??
+          (scaleBasedThreshold > _minMinionCollisionThreshold
+              ? scaleBasedThreshold
+              : _minMinionCollisionThreshold);
+
+      final hit = checkAndApplyDamage(
+        gameState,
+        attackerPosition: attackerPosition,
+        targetPosition: minion.transform.position,
+        collisionThreshold: effectiveThreshold,
+        damage: damage,
+        attackType: attackType,
+        impactColor: impactColor,
+        impactSize: impactSize,
+        targetType: DamageTarget.minion,
+        minionInstanceId: minion.instanceId,
+      );
+
+      if (hit) return true;
+    }
+
+    return false;
+  }
+
+  /// Checks collision with monster and all minions, applying damage to the first hit
+  ///
+  /// Used for player/ally attacks that should hit any enemy.
+  ///
+  /// Returns:
+  /// - true if any enemy was hit, false otherwise
+  static bool checkAndDamageEnemies(
+    GameState gameState, {
+    required Vector3 attackerPosition,
+    required double damage,
+    required String attackType,
+    required Vector3 impactColor,
+    required double impactSize,
+    double? collisionThreshold,
+  }) {
+    // Check boss monster first
+    if (checkAndDamageMonster(
+      gameState,
+      attackerPosition: attackerPosition,
+      damage: damage,
+      attackType: attackType,
+      impactColor: impactColor,
+      impactSize: impactSize,
+      collisionThreshold: collisionThreshold,
+    )) {
+      return true;
+    }
+
+    // Then check minions
+    return checkAndDamageMinions(
+      gameState,
+      attackerPosition: attackerPosition,
+      damage: damage,
+      attackType: attackType,
+      impactColor: impactColor,
+      impactSize: impactSize,
+      collisionThreshold: collisionThreshold,
+    );
+  }
+
+  /// Damage a specific minion by instance ID (for targeted attacks)
+  static bool damageMinion(
+    GameState gameState, {
+    required String minionInstanceId,
+    required double damage,
+    required String attackType,
+    required Vector3 impactColor,
+    required double impactSize,
+  }) {
+    final minion = gameState.minions.where(
+      (m) => m.instanceId == minionInstanceId && m.isAlive
+    ).firstOrNull;
+
+    if (minion == null) return false;
+
+    createImpactEffect(
+      gameState,
+      position: minion.transform.position,
+      color: impactColor,
+      size: impactSize,
+    );
+
+    minion.takeDamage(damage);
+    print('$attackType hit ${minion.definition.name} for $damage damage! '
+          'Health: ${minion.health.toStringAsFixed(1)}/${minion.maxHealth}');
+
+    return true;
   }
 }

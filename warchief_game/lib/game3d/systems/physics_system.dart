@@ -1,4 +1,5 @@
 import '../state/game_state.dart';
+import '../state/game_config.dart';
 
 /// Physics System - Handles gravity, jumping, and vertical movement
 ///
@@ -72,6 +73,9 @@ class PhysicsSystem {
   ///
   /// Parameters:
   /// - gameState: Current game state to update
+  /// Small buffer to ensure units are visually above terrain surface
+  static const double _terrainBuffer = 0.15;
+
   static void _checkGroundCollision(GameState gameState) {
     if (gameState.playerTransform == null) return;
 
@@ -82,8 +86,11 @@ class PhysicsSystem {
       gameState.playerTransform!.position.z,
     );
 
-    if (gameState.playerTransform!.position.y <= terrainHeight) {
-      gameState.playerTransform!.position.y = terrainHeight;
+    // Player mesh is centered, so add half height + buffer to sit above terrain
+    final groundY = terrainHeight + GameConfig.playerSize / 2 + _terrainBuffer;
+
+    if (gameState.playerTransform!.position.y <= groundY) {
+      gameState.playerTransform!.position.y = groundY;
       gameState.verticalVelocity = 0.0;
       gameState.isJumping = false;
       gameState.isGrounded = true;

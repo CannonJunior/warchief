@@ -175,17 +175,17 @@ class RenderSystem {
     if (needsNewMesh) {
       gameState.targetIndicatorMesh = Mesh.targetIndicator(
         size: targetSize,
-        lineWidth: 0.06,
-        color: Vector3(1.0, 0.9, 0.0), // Yellow
+        lineWidth: 0.10,
+        color: Vector3(1.0, 0.2, 0.2), // Red crosshairs
       );
       gameState.lastTargetIndicatorSize = targetSize;
     }
 
-    // Update transform position
+    // Update transform position - place at unit's center height for visibility
     gameState.targetIndicatorTransform ??= Transform3d();
     gameState.targetIndicatorTransform!.position = Vector3(
       targetPosition.x,
-      targetPosition.y + 0.02, // Slightly above ground
+      targetPosition.y, // At unit's center (halfway up)
       targetPosition.z,
     );
 

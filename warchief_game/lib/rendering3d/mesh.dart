@@ -347,10 +347,10 @@ class Mesh {
     double lineWidth = 0.05,
     Vector3? color,
   }) {
-    color ??= Vector3(1.0, 0.9, 0.0); // Default yellow
+    color ??= Vector3(1.0, 0.2, 0.2); // Default red (crosshairs style)
 
     final halfSize = size / 2;
-    final dashLength = size / 3; // Each dash is 1/3 of side length
+    final dashLength = size / 5; // Each dash is 1/5 of side length for larger gaps
     final halfLine = lineWidth / 2;
     final y = 0.02; // Slight offset above ground to prevent z-fighting
 
@@ -373,28 +373,45 @@ class Mesh {
       final perpX = -dz / len * halfLine;
       final perpZ = dx / len * halfLine;
 
-      // Four corners of the dash rectangle
-      // Top face
+      // Double-sided dash: 8 vertices (4 for top face, 4 for bottom face)
+      // Top face vertices
       allVertices.addAll([
         x1 + perpX, y, z1 + perpZ, // 0
         x1 - perpX, y, z1 - perpZ, // 1
         x2 - perpX, y, z2 - perpZ, // 2
         x2 + perpX, y, z2 + perpZ, // 3
       ]);
+      // Bottom face vertices (same positions)
+      allVertices.addAll([
+        x1 + perpX, y, z1 + perpZ, // 4
+        x1 - perpX, y, z1 - perpZ, // 5
+        x2 - perpX, y, z2 - perpZ, // 6
+        x2 + perpX, y, z2 + perpZ, // 7
+      ]);
 
-      // Indices for two triangles
+      // Indices for top face (counter-clockwise when viewed from above)
       allIndices.addAll([
         vertexOffset + 0, vertexOffset + 1, vertexOffset + 2,
         vertexOffset + 0, vertexOffset + 2, vertexOffset + 3,
       ]);
+      // Indices for bottom face (reversed winding for viewing from below)
+      allIndices.addAll([
+        vertexOffset + 4, vertexOffset + 6, vertexOffset + 5,
+        vertexOffset + 4, vertexOffset + 7, vertexOffset + 6,
+      ]);
 
-      // Normals (pointing up)
+      // Normals for top face (pointing up)
       for (int i = 0; i < 4; i++) {
         allNormals.addAll([0, 1, 0]);
         allColors.addAll([color!.x, color.y, color.z, 1.0]);
       }
+      // Normals for bottom face (pointing down)
+      for (int i = 0; i < 4; i++) {
+        allNormals.addAll([0, -1, 0]);
+        allColors.addAll([color!.x, color.y, color.z, 1.0]);
+      }
 
-      vertexOffset += 4;
+      vertexOffset += 8;
     }
 
     // Front side (positive Z): two dashes with gap in middle

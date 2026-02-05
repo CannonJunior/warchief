@@ -164,6 +164,8 @@ class MinionFrames extends StatelessWidget {
     final isTargeted = targetedMinionId == monster.instanceId;
     final isDead = !monster.isAlive;
     final archetypeColor = _getArchetypeColor(monster.definition.archetype);
+    final isCaster = monster.definition.archetype == MonsterArchetype.healer ||
+                     monster.definition.archetype == MonsterArchetype.support;
 
     // Targeted minion gets yellow border, selected gets archetype color
     Color borderColor;
@@ -184,7 +186,7 @@ class MinionFrames extends StatelessWidget {
       child: Opacity(
         opacity: isDead ? 0.4 : 1.0,
         child: Container(
-          width: 140, // Slightly narrower than party frames
+          width: 150, // Slightly wider for more info
           margin: const EdgeInsets.only(bottom: 4),
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
@@ -199,25 +201,26 @@ class MinionFrames extends StatelessWidget {
               width: borderWidth.toDouble(),
             ),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Archetype color bar
-              Container(
-                width: 3,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: isDead ? Colors.grey : archetypeColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 4),
-              // Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Name (truncated if too long)
-                    Text(
+              // Top row: Name + AI State + Buffs
+              Row(
+                children: [
+                  // Archetype color bar
+                  Container(
+                    width: 3,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: isDead ? Colors.grey : archetypeColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  // Name
+                  Expanded(
+                    child: Text(
                       monster.definition.name,
                       style: TextStyle(
                         color: isDead ? Colors.grey : Colors.white,
@@ -227,20 +230,175 @@ class MinionFrames extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
-                    // Health bar
-                    _buildHealthBar(monster.health, monster.maxHealth, archetypeColor),
-                    const SizedBox(height: 2),
-                    // Ability cooldown indicator (dots for each ability)
-                    _buildAbilityCooldowns(monster),
-                  ],
-                ),
+                  ),
+                  // Buff/Debuff indicators
+                  _buildBuffIndicators(monster),
+                  const SizedBox(width: 2),
+                  // AI state indicator
+                  _buildAIStateIndicator(monster.aiState),
+                ],
               ),
-              // AI state indicator
-              _buildAIStateIndicator(monster.aiState),
+              const SizedBox(height: 3),
+              // Health bar with numbers
+              _buildHealthBar(monster.health, monster.maxHealth, archetypeColor),
+              // Mana bar for casters
+              if (isCaster) ...[
+                const SizedBox(height: 2),
+                _buildManaBar(monster.mana, monster.maxMana),
+              ],
+              // Cast bar if casting
+              if (monster.isAbilityActive && monster.activeAbilityIndex >= 0) ...[
+                const SizedBox(height: 2),
+                _buildCastBar(monster),
+              ],
+              const SizedBox(height: 2),
+              // Bottom row: Ability cooldowns + Combat status
+              Row(
+                children: [
+                  _buildAbilityCooldowns(monster),
+                  const Spacer(),
+                  if (monster.isInCombat)
+                    _buildCombatIndicator(),
+                ],
+              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildBuffIndicators(Monster monster) {
+    final buffs = <Widget>[];
+
+    // Damage buff indicator
+    if (monster.damageMultiplier > 1.0) {
+      buffs.add(_buildBuffIcon(Icons.arrow_upward, const Color(0xFF4CAF50), 'DMG+'));
+    } else if (monster.damageMultiplier < 1.0) {
+      buffs.add(_buildBuffIcon(Icons.arrow_downward, const Color(0xFFEF5350), 'DMG-'));
+    }
+
+    // Damage reduction (shield) indicator
+    if (monster.damageReduction > 0) {
+      buffs.add(_buildBuffIcon(Icons.shield, const Color(0xFF2196F3), 'DEF'));
+    }
+
+    if (buffs.isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: buffs,
+    );
+  }
+
+  Widget _buildBuffIcon(IconData icon, Color color, String tooltip) {
+    return Container(
+      width: 12,
+      height: 12,
+      margin: const EdgeInsets.only(left: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(2),
+        border: Border.all(color: color, width: 0.5),
+      ),
+      child: Icon(icon, color: color, size: 8),
+    );
+  }
+
+  Widget _buildManaBar(double mana, double maxMana) {
+    final fraction = (mana / maxMana).clamp(0.0, 1.0);
+
+    return Container(
+      height: 4,
+      decoration: BoxDecoration(
+        color: const Color(0xFF0d0d0d),
+        borderRadius: BorderRadius.circular(1),
+      ),
+      child: Stack(
+        children: [
+          FractionallySizedBox(
+            widthFactor: fraction,
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF2196F3), // Blue for mana
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCastBar(Monster monster) {
+    // Get ability being cast
+    final abilityIndex = monster.activeAbilityIndex;
+    if (abilityIndex < 0 || abilityIndex >= monster.definition.abilities.length) {
+      return const SizedBox.shrink();
+    }
+
+    final ability = monster.definition.abilities[abilityIndex];
+    final castProgress = ability.castTime > 0
+        ? (monster.abilityActiveTime / ability.castTime).clamp(0.0, 1.0)
+        : 1.0;
+
+    return Container(
+      height: 6,
+      decoration: BoxDecoration(
+        color: const Color(0xFF0d0d0d),
+        borderRadius: BorderRadius.circular(2),
+        border: Border.all(color: const Color(0xFF9933FF), width: 0.5),
+      ),
+      child: Stack(
+        children: [
+          FractionallySizedBox(
+            widthFactor: castProgress,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF9933FF), Color(0xFFCC66FF)],
+                ),
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+          ),
+          Center(
+            child: Text(
+              ability.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 5,
+                fontWeight: FontWeight.bold,
+                shadows: [Shadow(color: Colors.black, blurRadius: 2)],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCombatIndicator() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF4444).withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.local_fire_department, color: Color(0xFFFF4444), size: 8),
+          SizedBox(width: 1),
+          Text(
+            'COMBAT',
+            style: TextStyle(
+              color: Color(0xFFFF4444),
+              fontSize: 6,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -251,31 +409,42 @@ class MinionFrames extends StatelessWidget {
     if (fraction > 0.5) {
       barColor = archetypeColor;
     } else if (fraction > 0.25) {
-      barColor = const Color(0xFFFFA726);
+      barColor = const Color(0xFFFFA726); // Orange for medium
     } else {
-      barColor = const Color(0xFFEF5350);
+      barColor = const Color(0xFFEF5350); // Red for low
     }
 
     return Container(
-      height: 6,
+      height: 8,
       decoration: BoxDecoration(
         color: const Color(0xFF0d0d0d),
         borderRadius: BorderRadius.circular(2),
+        border: Border.all(color: const Color(0xFF333333), width: 0.5),
       ),
       child: Stack(
         children: [
+          // Health fill
           FractionallySizedBox(
             widthFactor: fraction,
             child: Container(
               decoration: BoxDecoration(
-                color: barColor,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    barColor.withValues(alpha: 0.9),
+                    barColor,
+                    barColor.withValues(alpha: 0.7),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(1),
               ),
             ),
           ),
+          // HP text
           Center(
             child: Text(
-              '${health.toStringAsFixed(0)}',
+              '${health.toStringAsFixed(0)} / ${maxHealth.toStringAsFixed(0)}',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 6,

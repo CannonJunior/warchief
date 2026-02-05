@@ -175,17 +175,20 @@ class GameState {
         spreadRadius: spawnConfig.spreadRadius,
       );
 
-      // Adjust Y positions to terrain height
+      // Adjust Y positions to terrain height (add half size so bottom sits on terrain)
       for (final monster in monsters) {
         if (terrainManager != null) {
           final terrainY = terrainManager.getTerrainHeight(
             monster.transform.position.x,
             monster.transform.position.z,
           );
-          monster.transform.position.y = terrainY;
+          // Add half the minion size + buffer so bottom of mesh sits above terrain
+          const double terrainBuffer = 0.15;
+          monster.transform.position.y = terrainY + definition.effectiveScale / 2 + terrainBuffer;
+          // Direction indicator sits on top of the mesh
           if (monster.directionIndicatorTransform != null) {
             monster.directionIndicatorTransform!.position.y =
-                terrainY + definition.effectiveScale * 0.6;
+                monster.transform.position.y + definition.effectiveScale / 2 + 0.1;
           }
         }
       }

@@ -68,4 +68,8 @@ class UIConfig {
 
   /// Ally ability button size (smaller)
   static const double allyAbilityButtonSize = 40.0;
+
+  /// Action bar ability button size (matches AbilityButton default)
+  /// Used by both the action bar hotkeys and the Abilities Codex icons
+  static const double actionBarButtonSize = 60.0;
 }

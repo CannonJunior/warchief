@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../state/abilities_config.dart';
-import '../state/action_bar_config.dart';
+import 'ui_config.dart';
 
 /// Abilities Panel - Draggable panel displaying all available abilities in the game
 ///
@@ -346,9 +346,9 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
     );
   }
 
-  /// Build a draggable ability icon that matches action bar button size (60x60)
+  /// Build a draggable ability icon that matches action bar button size
   Widget _buildDraggableAbilityIcon(AbilityData ability, Color abilityColor) {
-    const double iconSize = 60.0;
+    const double iconSize = UIConfig.actionBarButtonSize;
 
     final iconWidget = Container(
       width: iconSize,
