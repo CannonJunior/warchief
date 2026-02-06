@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-04T21:43:20.823826",
+  "generated_at": "2026-02-04T23:09:05.373735",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
-    "files": 114,
+    "files": 115,
     "directories": 31,
-    "lines": 28175,
-    "size": 945978
+    "lines": 28843,
+    "size": 966673
   },
   "tree": {
     "name": "warchief_game",
@@ -410,10 +410,10 @@
                     "name": "game_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state.dart",
-                    "size": 18169,
+                    "size": 18257,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 533
+                    "lines": 536
                   }
                 ]
               },
@@ -426,10 +426,10 @@
                     "name": "ability_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/ability_system.dart",
-                    "size": 30133,
+                    "size": 34393,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 864
+                    "lines": 979
                   },
                   {
                     "name": "ai_system.dart",
@@ -633,6 +633,15 @@
                     "lines": 451
                   },
                   {
+                    "name": "character_panel.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/ui/character_panel.dart",
+                    "size": 14894,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 496
+                  },
+                  {
                     "name": "cooldown_clock_painter.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/cooldown_clock_painter.dart",
@@ -735,10 +744,10 @@
                 "name": "game3d_widget.dart",
                 "type": "file",
                 "path": "warchief_game/lib/game3d/game3d_widget.dart",
-                "size": 56701,
+                "size": 57459,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 1546
+                "lines": 1572
               }
             ]
           },
@@ -805,10 +814,10 @@
                 "name": "projectile.dart",
                 "type": "file",
                 "path": "warchief_game/lib/models/projectile.dart",
-                "size": 446,
+                "size": 1141,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 18
+                "lines": 46
               }
             ]
           },

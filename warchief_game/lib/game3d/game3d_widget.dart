@@ -40,6 +40,8 @@ import 'ui/draggable_panel.dart';
 import 'ui/ally_command_panels.dart';
 import 'ui/ui_config.dart';
 import 'ui/abilities_modal.dart';
+import 'ui/character_panel.dart';
+import 'ui/bag_panel.dart';
 import 'ui/unit_frames/unit_frames.dart';
 import '../main.dart' show globalInterfaceConfig;
 import 'state/action_bar_config.dart';
@@ -92,6 +94,9 @@ class _Game3DState extends State<Game3D> {
     // Initialize action bar config for ability slot assignments
     _initializeActionBarConfig();
 
+    // Initialize player inventory with sample items
+    _initializeInventory();
+
     // Create canvas element immediately
     _initializeGame();
   }
@@ -100,6 +105,15 @@ class _Game3DState extends State<Game3D> {
   void _initializeActionBarConfig() {
     globalActionBarConfig ??= ActionBarConfig();
     globalActionBarConfig!.loadConfig();
+  }
+
+  /// Initialize player inventory with sample items from database
+  void _initializeInventory() {
+    gameState.initializeInventory().then((_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   void _initializeGame() {
@@ -487,10 +501,27 @@ class _Game3DState extends State<Game3D> {
   void _onKeyEvent(KeyEvent event) {
     // Handle P key for abilities modal (only on key down, not repeat)
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyP) {
-      print('P key detected! Toggling modal. Current state: ${gameState.abilitiesModalOpen}');
+      print('P key detected! Toggling abilities modal.');
       setState(() {
         gameState.abilitiesModalOpen = !gameState.abilitiesModalOpen;
-        print('Modal now: ${gameState.abilitiesModalOpen}');
+      });
+      return;
+    }
+
+    // Handle C key for character panel (only on key down, not repeat)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyC) {
+      print('C key detected! Toggling character panel.');
+      setState(() {
+        gameState.characterPanelOpen = !gameState.characterPanelOpen;
+      });
+      return;
+    }
+
+    // Handle B key for bag panel (only on key down, not repeat)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyB) {
+      print('B key detected! Toggling bag panel.');
+      setState(() {
+        gameState.bagPanelOpen = !gameState.bagPanelOpen;
       });
       return;
     }
@@ -521,6 +552,18 @@ class _Game3DState extends State<Game3D> {
       if (gameState.abilitiesModalOpen) {
         setState(() {
           gameState.abilitiesModalOpen = false;
+        });
+        return;
+      }
+      if (gameState.characterPanelOpen) {
+        setState(() {
+          gameState.characterPanelOpen = false;
+        });
+        return;
+      }
+      if (gameState.bagPanelOpen) {
+        setState(() {
+          gameState.bagPanelOpen = false;
         });
         return;
       }
@@ -1232,6 +1275,34 @@ class _Game3DState extends State<Game3D> {
                   setState(() {
                     gameState.abilitiesModalOpen = false;
                   });
+                },
+              ),
+
+            // Character Panel (Press C to toggle)
+            if (gameState.characterPanelOpen)
+              CharacterPanel(
+                gameState: gameState,
+                onClose: () {
+                  setState(() {
+                    gameState.characterPanelOpen = false;
+                  });
+                },
+              ),
+
+            // Bag Panel (Press B to toggle)
+            if (gameState.bagPanelOpen)
+              BagPanel(
+                inventory: gameState.playerInventory,
+                onClose: () {
+                  setState(() {
+                    gameState.bagPanelOpen = false;
+                  });
+                },
+                onItemClick: (index, item) {
+                  if (item != null) {
+                    print('[Bag] Clicked item at slot $index: ${item.name}');
+                    // TODO: Implement item use/equip functionality
+                  }
                 },
               ),
           ],

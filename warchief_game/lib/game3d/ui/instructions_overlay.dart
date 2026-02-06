@@ -88,9 +88,15 @@ class InstructionsOverlay extends StatelessWidget {
               'SHIFT+key = Show/Hide panel (draggable)',
               style: TextStyle(color: Colors.white60, fontSize: 9),
             ),
+            SizedBox(height: 4),
             Text(
-              'O = Settings | ESC = Close panels',
-              style: TextStyle(color: Colors.white60, fontSize: 9),
+              'UI Panels:',
+              style: TextStyle(color: Colors.cyan, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 2),
+            Text(
+              'C=Character | B=Bag | P=Abilities | ESC=Close',
+              style: TextStyle(color: Colors.white, fontSize: 10),
             ),
             SizedBox(height: 4),
             Text(

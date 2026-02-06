@@ -10,6 +10,9 @@ import '../../models/ally.dart';
 import '../../models/ai_chat_message.dart';
 import '../../models/monster.dart';
 import '../../models/monster_ontology.dart';
+import '../../models/inventory.dart';
+import '../../models/item.dart';
+import '../../data/item_database.dart';
 import 'game_config.dart';
 import '../utils/movement_prediction.dart';
 import '../utils/bezier_path.dart';
@@ -456,6 +459,78 @@ class GameState {
 
   /// Whether the abilities modal is currently open
   bool abilitiesModalOpen = false;
+
+  /// Whether the character panel is currently open
+  bool characterPanelOpen = false;
+
+  /// Whether the bag/inventory panel is currently open
+  bool bagPanelOpen = false;
+
+  // ==================== INVENTORY STATE ====================
+
+  /// Player inventory (equipment and bag)
+  final Inventory playerInventory = Inventory();
+
+  /// Whether the inventory has been initialized with items
+  bool inventoryInitialized = false;
+
+  /// Initialize player inventory with sample items from database
+  Future<void> initializeInventory() async {
+    if (inventoryInitialized) return;
+
+    // Load the item database
+    await ItemDatabase.instance.load();
+
+    // Add sample items to bag
+    final sampleItems = [
+      'health_potion',
+      'health_potion',
+      'mana_potion',
+      'iron_sword',
+      'chainmail_armor',
+      'iron_helm',
+      'leather_boots',
+      'leather_gloves',
+      'iron_greaves',
+      'travelers_cloak',
+      'wooden_shield',
+      'ring_of_strength',
+      'iron_ore',
+      'gold_coin',
+      'dragon_scale',
+    ];
+
+    for (final itemId in sampleItems) {
+      final item = ItemDatabase.instance.createItem(itemId);
+      if (item != null) {
+        playerInventory.addToBag(item);
+      }
+    }
+
+    // Pre-equip some items on the player
+    final startingEquipment = [
+      'steel_plate',
+      'steel_helm',
+      'war_axe',
+      'tower_shield',
+      'boots_of_swiftness',
+      'gauntlets_of_might',
+      'legplates_of_valor',
+      'cloak_of_shadows',
+      'signet_of_the_warchief',
+      'band_of_protection',
+    ];
+
+    for (final itemId in startingEquipment) {
+      final item = ItemDatabase.instance.createItem(itemId);
+      if (item != null && item.isEquippable) {
+        playerInventory.equip(item);
+      }
+    }
+
+    inventoryInitialized = true;
+    print('[GameState] Inventory initialized with ${playerInventory.usedBagSlots} bag items and equipment');
+  }
 
   // ==================== JUMP/PHYSICS STATE ====================
 

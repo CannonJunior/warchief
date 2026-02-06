@@ -281,19 +281,36 @@ class AbilitySystem {
     if (gameState.playerTransform == null) return;
 
     final fireball = AbilitiesConfig.playerFireball;
-    final forward = Vector3(
-      -math.sin(_radians(gameState.playerRotation)),
-      0,
-      -math.cos(_radians(gameState.playerRotation)),
-    );
+    final playerPos = gameState.playerTransform!.position;
+
+    // Get target position for homing
+    Vector3? targetPos;
+    String? targetId = gameState.currentTargetId;
+
+    if (targetId != null) {
+      targetPos = _getTargetPosition(gameState, targetId);
+    }
+
+    // Calculate initial direction - toward target if available, otherwise forward
+    Vector3 direction;
+    if (targetPos != null) {
+      direction = (targetPos - playerPos).normalized();
+    } else {
+      // Fallback to player facing direction
+      direction = Vector3(
+        -math.sin(_radians(gameState.playerRotation)),
+        0,
+        -math.cos(_radians(gameState.playerRotation)),
+      );
+    }
 
     final fireballMesh = Mesh.cube(
       size: fireball.projectileSize,
       color: fireball.color,
     );
 
-    final startPos = gameState.playerTransform!.position.clone() + forward * 1.0;
-    startPos.y = gameState.playerTransform!.position.y;
+    final startPos = playerPos.clone() + direction * 1.0;
+    startPos.y = playerPos.y;
 
     final fireballTransform = Transform3d(
       position: startPos,
@@ -303,11 +320,35 @@ class AbilitySystem {
     gameState.fireballs.add(Projectile(
       mesh: fireballMesh,
       transform: fireballTransform,
-      velocity: forward * fireball.projectileSpeed,
+      velocity: direction * fireball.projectileSpeed,
+      targetId: targetId,
+      speed: fireball.projectileSpeed,
+      isHoming: targetId != null, // Only home if we have a target
+      damage: fireball.damage,
+      abilityName: fireball.name,
+      impactColor: fireball.impactColor,
+      impactSize: fireball.impactSize,
     ));
 
     _setCooldownForSlot(slotIndex, fireball.cooldown, gameState);
-    print('${fireball.name} launched!');
+    print('${fireball.name} launched${targetId != null ? " at $targetId" : ""}!');
+  }
+
+  /// Get position of a target by ID
+  static Vector3? _getTargetPosition(GameState gameState, String targetId) {
+    if (targetId == 'boss') {
+      if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
+        return gameState.monsterTransform!.position;
+      }
+    } else {
+      // Find minion by instance ID
+      for (final minion in gameState.aliveMinions) {
+        if (minion.instanceId == targetId) {
+          return minion.transform.position;
+        }
+      }
+    }
+    return null;
   }
 
   /// Execute Heal (self heal)
@@ -569,23 +610,41 @@ class AbilitySystem {
     print(message);
   }
 
-  /// Generic projectile attack execution
+  /// Generic projectile attack execution (with homing toward current target)
   static void _executeGenericProjectile(int slotIndex, GameState gameState, AbilityData ability, String message) {
     if (gameState.playerTransform == null) return;
 
-    final forward = Vector3(
-      -math.sin(_radians(gameState.playerRotation)),
-      0,
-      -math.cos(_radians(gameState.playerRotation)),
-    );
+    final playerPos = gameState.playerTransform!.position;
+    final projectileSpeed = ability.projectileSpeed > 0 ? ability.projectileSpeed : 10.0;
+
+    // Get target position for homing
+    Vector3? targetPos;
+    String? targetId = gameState.currentTargetId;
+
+    if (targetId != null) {
+      targetPos = _getTargetPosition(gameState, targetId);
+    }
+
+    // Calculate initial direction - toward target if available, otherwise forward
+    Vector3 direction;
+    if (targetPos != null) {
+      direction = (targetPos - playerPos).normalized();
+    } else {
+      // Fallback to player facing direction
+      direction = Vector3(
+        -math.sin(_radians(gameState.playerRotation)),
+        0,
+        -math.cos(_radians(gameState.playerRotation)),
+      );
+    }
 
     final projectileMesh = Mesh.cube(
       size: ability.projectileSize > 0 ? ability.projectileSize : 0.4,
       color: ability.color,
     );
 
-    final startPos = gameState.playerTransform!.position.clone() + forward * 1.0;
-    startPos.y = gameState.playerTransform!.position.y;
+    final startPos = playerPos.clone() + direction * 1.0;
+    startPos.y = playerPos.y;
 
     final projectileTransform = Transform3d(
       position: startPos,
@@ -595,11 +654,18 @@ class AbilitySystem {
     gameState.fireballs.add(Projectile(
       mesh: projectileMesh,
       transform: projectileTransform,
-      velocity: forward * (ability.projectileSpeed > 0 ? ability.projectileSpeed : 10.0),
+      velocity: direction * projectileSpeed,
+      targetId: targetId,
+      speed: projectileSpeed,
+      isHoming: targetId != null, // Only home if we have a target
+      damage: ability.damage,
+      abilityName: ability.name,
+      impactColor: ability.impactColor,
+      impactSize: ability.impactSize,
     ));
 
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-    print(message);
+    print('$message${targetId != null ? " (targeting $targetId)" : ""}');
   }
 
   /// Generic AoE attack execution
@@ -717,30 +783,79 @@ class AbilitySystem {
     }
   }
 
-  /// Updates Ability 2 (Fireball) projectiles and collision detection
+  /// Updates all ranged projectiles (fireballs, frost bolts, etc.) with homing and collision
   static void updateAbility2(double dt, GameState gameState) {
-    final fireballConfig = AbilitiesConfig.playerFireball;
+    gameState.fireballs.removeWhere((projectile) {
+      // Update homing behavior if projectile is tracking a target
+      if (projectile.isHoming && projectile.targetId != null) {
+        final targetPos = _getTargetPosition(gameState, projectile.targetId!);
+        if (targetPos != null) {
+          // Recalculate velocity toward target
+          final direction = (targetPos - projectile.transform.position).normalized();
+          projectile.velocity = direction * projectile.speed;
+        } else {
+          // Target is dead/gone - stop homing, continue in current direction
+          projectile.isHoming = false;
+        }
+      }
 
-    gameState.fireballs.removeWhere((fireball) {
-      // Move fireball
-      fireball.transform.position += fireball.velocity * dt;
-      fireball.lifetime -= dt;
+      // Move projectile
+      projectile.transform.position += projectile.velocity * dt;
+      projectile.lifetime -= dt;
 
-      // Check collision with monster using unified combat system
+      // Check collision with the specific target first (for homing projectiles)
+      if (projectile.targetId != null) {
+        final targetPos = _getTargetPosition(gameState, projectile.targetId!);
+        if (targetPos != null) {
+          final distance = (projectile.transform.position - targetPos).length;
+          // Use a generous collision threshold for homing projectiles
+          if (distance < 1.0) {
+            // Direct hit on target - use projectile's stored damage data
+            _damageTargetWithProjectile(gameState, projectile.targetId!, projectile);
+            return true;
+          }
+        }
+      }
+
+      // Also check collision with any enemy (in case projectile passes near others)
       final hitRegistered = CombatSystem.checkAndDamageEnemies(
         gameState,
-        attackerPosition: fireball.transform.position,
-        damage: fireballConfig.damage,
-        attackType: fireballConfig.name,
-        impactColor: fireballConfig.impactColor,
-        impactSize: fireballConfig.impactSize,
+        attackerPosition: projectile.transform.position,
+        damage: projectile.damage,
+        attackType: projectile.abilityName,
+        impactColor: projectile.impactColor,
+        impactSize: projectile.impactSize,
       );
 
       if (hitRegistered) return true;
 
       // Remove if lifetime expired
-      return fireball.lifetime <= 0;
+      return projectile.lifetime <= 0;
     });
+  }
+
+  /// Apply damage to a specific target by ID using projectile's damage data
+  static void _damageTargetWithProjectile(GameState gameState, String targetId, Projectile projectile) {
+    if (targetId == 'boss') {
+      CombatSystem.checkAndDamageMonster(
+        gameState,
+        attackerPosition: gameState.monsterTransform!.position,
+        damage: projectile.damage,
+        attackType: projectile.abilityName,
+        impactColor: projectile.impactColor,
+        impactSize: projectile.impactSize,
+        collisionThreshold: 2.0, // Guaranteed hit
+      );
+    } else {
+      CombatSystem.damageMinion(
+        gameState,
+        minionInstanceId: targetId,
+        damage: projectile.damage,
+        attackType: projectile.abilityName,
+        impactColor: projectile.impactColor,
+        impactSize: projectile.impactSize,
+      );
+    }
   }
 
   // ==================== ABILITY 3: HEAL ====================

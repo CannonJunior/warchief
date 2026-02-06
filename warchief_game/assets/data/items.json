@@ -1,0 +1,410 @@
+{
+  "items": [
+    {
+      "id": "iron_helm",
+      "name": "Iron Helm",
+      "description": "A sturdy helm forged from iron. Provides basic protection.",
+      "type": "armor",
+      "rarity": "common",
+      "slot": "helm",
+      "stats": {
+        "armor": 15,
+        "stamina": 3
+      },
+      "iconName": "helm_iron",
+      "sellValue": 25,
+      "levelRequirement": 1
+    },
+    {
+      "id": "steel_helm",
+      "name": "Steel Helm",
+      "description": "A well-crafted steel helm with reinforced plating.",
+      "type": "armor",
+      "rarity": "uncommon",
+      "slot": "helm",
+      "stats": {
+        "armor": 28,
+        "stamina": 5,
+        "strength": 2
+      },
+      "iconName": "helm_steel",
+      "sellValue": 75,
+      "levelRequirement": 5
+    },
+    {
+      "id": "chainmail_armor",
+      "name": "Chainmail Armor",
+      "description": "Interlocking metal rings provide flexible protection.",
+      "type": "armor",
+      "rarity": "common",
+      "slot": "armor",
+      "stats": {
+        "armor": 35,
+        "stamina": 5
+      },
+      "iconName": "armor_chain",
+      "sellValue": 50,
+      "levelRequirement": 1
+    },
+    {
+      "id": "steel_plate",
+      "name": "Steel Plate Armor",
+      "description": "Heavy plate armor that offers excellent protection.",
+      "type": "armor",
+      "rarity": "rare",
+      "slot": "armor",
+      "stats": {
+        "armor": 65,
+        "stamina": 10,
+        "strength": 5
+      },
+      "iconName": "armor_plate",
+      "sellValue": 200,
+      "levelRequirement": 8
+    },
+    {
+      "id": "travelers_cloak",
+      "name": "Traveler's Cloak",
+      "description": "A simple cloak that keeps the elements at bay.",
+      "type": "armor",
+      "rarity": "common",
+      "slot": "back",
+      "stats": {
+        "agility": 2,
+        "spirit": 1
+      },
+      "iconName": "cloak_travel",
+      "sellValue": 15,
+      "levelRequirement": 1
+    },
+    {
+      "id": "cloak_of_shadows",
+      "name": "Cloak of Shadows",
+      "description": "A dark cloak that seems to absorb light around it.",
+      "type": "armor",
+      "rarity": "epic",
+      "slot": "back",
+      "stats": {
+        "agility": 12,
+        "critChance": 3,
+        "spirit": 5
+      },
+      "iconName": "cloak_shadow",
+      "sellValue": 350,
+      "levelRequirement": 10
+    },
+    {
+      "id": "leather_gloves",
+      "name": "Leather Gloves",
+      "description": "Simple leather gloves offering grip and minor protection.",
+      "type": "armor",
+      "rarity": "common",
+      "slot": "gloves",
+      "stats": {
+        "armor": 8,
+        "agility": 2
+      },
+      "iconName": "gloves_leather",
+      "sellValue": 12,
+      "levelRequirement": 1
+    },
+    {
+      "id": "gauntlets_of_might",
+      "name": "Gauntlets of Might",
+      "description": "Heavy gauntlets that enhance striking power.",
+      "type": "armor",
+      "rarity": "rare",
+      "slot": "gloves",
+      "stats": {
+        "armor": 22,
+        "strength": 8,
+        "damage": 5
+      },
+      "iconName": "gloves_might",
+      "sellValue": 180,
+      "levelRequirement": 7
+    },
+    {
+      "id": "iron_greaves",
+      "name": "Iron Greaves",
+      "description": "Basic leg armor made from iron plates.",
+      "type": "armor",
+      "rarity": "common",
+      "slot": "legs",
+      "stats": {
+        "armor": 20,
+        "stamina": 3
+      },
+      "iconName": "legs_iron",
+      "sellValue": 30,
+      "levelRequirement": 1
+    },
+    {
+      "id": "legplates_of_valor",
+      "name": "Legplates of Valor",
+      "description": "Ornate legplates worn by champions of the realm.",
+      "type": "armor",
+      "rarity": "epic",
+      "slot": "legs",
+      "stats": {
+        "armor": 48,
+        "stamina": 12,
+        "strength": 6,
+        "health": 25
+      },
+      "iconName": "legs_valor",
+      "sellValue": 400,
+      "levelRequirement": 10
+    },
+    {
+      "id": "leather_boots",
+      "name": "Leather Boots",
+      "description": "Comfortable boots suitable for long journeys.",
+      "type": "armor",
+      "rarity": "common",
+      "slot": "boots",
+      "stats": {
+        "armor": 10,
+        "agility": 3
+      },
+      "iconName": "boots_leather",
+      "sellValue": 18,
+      "levelRequirement": 1
+    },
+    {
+      "id": "boots_of_swiftness",
+      "name": "Boots of Swiftness",
+      "description": "Enchanted boots that make the wearer feel lighter.",
+      "type": "armor",
+      "rarity": "rare",
+      "slot": "boots",
+      "stats": {
+        "armor": 18,
+        "agility": 10,
+        "spirit": 3
+      },
+      "iconName": "boots_swift",
+      "sellValue": 150,
+      "levelRequirement": 6
+    },
+    {
+      "id": "iron_sword",
+      "name": "Iron Sword",
+      "description": "A basic sword forged from iron. Reliable but unremarkable.",
+      "type": "weapon",
+      "rarity": "common",
+      "slot": "mainHand",
+      "stats": {
+        "damage": 12,
+        "strength": 2
+      },
+      "iconName": "sword_iron",
+      "sellValue": 35,
+      "levelRequirement": 1
+    },
+    {
+      "id": "war_axe",
+      "name": "War Axe",
+      "description": "A fearsome axe designed for battle.",
+      "type": "weapon",
+      "rarity": "uncommon",
+      "slot": "mainHand",
+      "stats": {
+        "damage": 22,
+        "strength": 5,
+        "critChance": 2
+      },
+      "iconName": "axe_war",
+      "sellValue": 120,
+      "levelRequirement": 5
+    },
+    {
+      "id": "flaming_greatsword",
+      "name": "Flaming Greatsword",
+      "description": "A massive sword wreathed in magical flames.",
+      "type": "weapon",
+      "rarity": "epic",
+      "slot": "mainHand",
+      "stats": {
+        "damage": 45,
+        "strength": 12,
+        "critChance": 5,
+        "intelligence": 3
+      },
+      "iconName": "sword_flame",
+      "sellValue": 500,
+      "levelRequirement": 10
+    },
+    {
+      "id": "wooden_shield",
+      "name": "Wooden Shield",
+      "description": "A simple wooden shield bound with iron.",
+      "type": "armor",
+      "rarity": "common",
+      "slot": "offHand",
+      "stats": {
+        "armor": 25,
+        "stamina": 2
+      },
+      "iconName": "shield_wood",
+      "sellValue": 20,
+      "levelRequirement": 1
+    },
+    {
+      "id": "tower_shield",
+      "name": "Tower Shield",
+      "description": "A massive shield that can protect the entire body.",
+      "type": "armor",
+      "rarity": "rare",
+      "slot": "offHand",
+      "stats": {
+        "armor": 55,
+        "stamina": 8,
+        "health": 15
+      },
+      "iconName": "shield_tower",
+      "sellValue": 175,
+      "levelRequirement": 7
+    },
+    {
+      "id": "orb_of_power",
+      "name": "Orb of Power",
+      "description": "A glowing orb that channels magical energy.",
+      "type": "weapon",
+      "rarity": "rare",
+      "slot": "offHand",
+      "stats": {
+        "intelligence": 10,
+        "mana": 20,
+        "spirit": 5
+      },
+      "iconName": "orb_power",
+      "sellValue": 160,
+      "levelRequirement": 6
+    },
+    {
+      "id": "ring_of_strength",
+      "name": "Ring of Strength",
+      "description": "A simple band that enhances physical power.",
+      "type": "accessory",
+      "rarity": "uncommon",
+      "slot": "ring1",
+      "stats": {
+        "strength": 5,
+        "damage": 3
+      },
+      "iconName": "ring_str",
+      "sellValue": 60,
+      "levelRequirement": 3
+    },
+    {
+      "id": "ring_of_wisdom",
+      "name": "Ring of Wisdom",
+      "description": "A band inscribed with ancient runes.",
+      "type": "accessory",
+      "rarity": "uncommon",
+      "slot": "ring1",
+      "stats": {
+        "intelligence": 5,
+        "mana": 15,
+        "spirit": 2
+      },
+      "iconName": "ring_int",
+      "sellValue": 60,
+      "levelRequirement": 3
+    },
+    {
+      "id": "signet_of_the_warchief",
+      "name": "Signet of the Warchief",
+      "description": "A legendary ring worn by warchiefs of old. Its power is unmistakable.",
+      "type": "accessory",
+      "rarity": "legendary",
+      "slot": "ring1",
+      "stats": {
+        "strength": 10,
+        "stamina": 10,
+        "critChance": 5,
+        "health": 50
+      },
+      "iconName": "ring_warchief",
+      "sellValue": 1000,
+      "levelRequirement": 10
+    },
+    {
+      "id": "band_of_protection",
+      "name": "Band of Protection",
+      "description": "This ring creates a faint protective aura.",
+      "type": "accessory",
+      "rarity": "rare",
+      "slot": "ring2",
+      "stats": {
+        "armor": 15,
+        "stamina": 6,
+        "health": 20
+      },
+      "iconName": "ring_prot",
+      "sellValue": 140,
+      "levelRequirement": 5
+    },
+    {
+      "id": "health_potion",
+      "name": "Health Potion",
+      "description": "Restores 50 health when consumed.",
+      "type": "consumable",
+      "rarity": "common",
+      "maxStack": 20,
+      "stackSize": 5,
+      "iconName": "potion_health",
+      "sellValue": 5,
+      "levelRequirement": 1
+    },
+    {
+      "id": "mana_potion",
+      "name": "Mana Potion",
+      "description": "Restores 50 mana when consumed.",
+      "type": "consumable",
+      "rarity": "common",
+      "maxStack": 20,
+      "stackSize": 3,
+      "iconName": "potion_mana",
+      "sellValue": 5,
+      "levelRequirement": 1
+    },
+    {
+      "id": "iron_ore",
+      "name": "Iron Ore",
+      "description": "Raw iron ore that can be smelted.",
+      "type": "material",
+      "rarity": "common",
+      "maxStack": 50,
+      "stackSize": 12,
+      "iconName": "ore_iron",
+      "sellValue": 2,
+      "levelRequirement": 1
+    },
+    {
+      "id": "gold_coin",
+      "name": "Ancient Gold Coin",
+      "description": "A valuable coin from a forgotten empire.",
+      "type": "material",
+      "rarity": "uncommon",
+      "maxStack": 100,
+      "stackSize": 25,
+      "iconName": "coin_gold",
+      "sellValue": 10,
+      "levelRequirement": 1
+    },
+    {
+      "id": "dragon_scale",
+      "name": "Dragon Scale",
+      "description": "A shimmering scale from a powerful dragon.",
+      "type": "material",
+      "rarity": "epic",
+      "maxStack": 10,
+      "stackSize": 2,
+      "iconName": "scale_dragon",
+      "sellValue": 100,
+      "levelRequirement": 1
+    }
+  ]
+}
