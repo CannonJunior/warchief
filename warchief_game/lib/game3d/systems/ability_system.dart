@@ -5,11 +5,15 @@ import '../state/game_state.dart';
 import '../state/game_config.dart';
 import '../state/abilities_config.dart';
 import '../state/action_bar_config.dart' show globalActionBarConfig;
+import '../state/ability_override_manager.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
 import '../../models/impact_effect.dart';
 import 'combat_system.dart';
+
+/// Mana type enumeration for abilities
+enum _ManaType { none, blue, red }
 
 /// Ability System - Handles all player ability logic
 ///
@@ -31,11 +35,118 @@ class AbilitySystem {
   /// - gameState: Current game state to update
   static void update(double dt, GameState gameState) {
     updateCooldowns(dt, gameState);
+    updateCastingState(dt, gameState);
+    updateWindupState(dt, gameState);
     updateAbility1(dt, gameState);
     updateAbility2(dt, gameState);
     updateAbility3(dt, gameState);
     updateAbility4(dt, gameState);
     updateImpactEffects(dt, gameState);
+  }
+
+  /// Updates the casting state for abilities with cast time
+  static void updateCastingState(double dt, GameState gameState) {
+    if (!gameState.isCasting) return;
+
+    gameState.castProgress += dt;
+
+    // Check if cast is complete
+    if (gameState.castProgress >= gameState.currentCastTime) {
+      // Cast complete - execute the ability
+      final slotIndex = gameState.castingSlotIndex;
+      final abilityName = gameState.castingAbilityName;
+
+      // Reset casting state
+      gameState.isCasting = false;
+      gameState.castProgress = 0.0;
+      gameState.currentCastTime = 0.0;
+      gameState.castingSlotIndex = null;
+      gameState.castingAbilityName = '';
+
+      // Execute the ability now
+      print('[CAST] $abilityName cast complete!');
+      if (slotIndex != null) {
+        _finishCastTimeAbility(slotIndex, gameState);
+      }
+    }
+  }
+
+  /// Updates the windup state for melee abilities with windup
+  static void updateWindupState(double dt, GameState gameState) {
+    if (!gameState.isWindingUp) return;
+
+    gameState.windupProgress += dt;
+
+    // Check if windup is complete
+    if (gameState.windupProgress >= gameState.currentWindupTime) {
+      // Windup complete - execute the ability
+      final slotIndex = gameState.windupSlotIndex;
+      final abilityName = gameState.windupAbilityName;
+
+      // Reset windup state
+      gameState.isWindingUp = false;
+      gameState.windupProgress = 0.0;
+      gameState.currentWindupTime = 0.0;
+      gameState.windupSlotIndex = null;
+      gameState.windupAbilityName = '';
+      gameState.windupMovementSpeedModifier = 1.0;
+
+      // Execute the ability now
+      print('[WINDUP] $abilityName windup complete!');
+      if (slotIndex != null) {
+        _finishWindupAbility(slotIndex, gameState);
+      }
+    }
+  }
+
+  /// Finish executing a cast-time ability after the cast completes
+  static void _finishCastTimeAbility(int slotIndex, GameState gameState) {
+    final config = globalActionBarConfig;
+    final abilityName = config?.getSlotAbility(slotIndex) ?? '';
+
+    // Execute the ability's effect (projectile launch, damage, etc.)
+    switch (abilityName) {
+      case 'Lightning Bolt':
+        _launchLightningBolt(slotIndex, gameState);
+        break;
+      case 'Pyroblast':
+        _launchPyroblast(slotIndex, gameState);
+        break;
+      case 'Arcane Missile':
+        _launchArcaneMissile(slotIndex, gameState);
+        break;
+      case 'Frost Nova':
+        _executeFrostNovaEffect(slotIndex, gameState);
+        break;
+      case 'Greater Heal':
+        _executeGreaterHealEffect(slotIndex, gameState);
+        break;
+      default:
+        // Fall back to generic projectile for other cast-time abilities
+        _executeGenericProjectileFromAbility(slotIndex, gameState, abilityName);
+    }
+  }
+
+  /// Finish executing a windup ability after the windup completes
+  static void _finishWindupAbility(int slotIndex, GameState gameState) {
+    final config = globalActionBarConfig;
+    final abilityName = config?.getSlotAbility(slotIndex) ?? '';
+
+    // Execute the ability's effect (damage in area, etc.)
+    switch (abilityName) {
+      case 'Heavy Strike':
+        _executeHeavyStrikeEffect(slotIndex, gameState);
+        break;
+      case 'Whirlwind':
+        _executeWhirlwindEffect(slotIndex, gameState);
+        break;
+      case 'Crushing Blow':
+        _executeCrushingBlowEffect(slotIndex, gameState);
+        break;
+      default:
+        // Fall back to generic melee for other windup abilities
+        _executeGenericWindupMelee(slotIndex, gameState, abilityName);
+    }
   }
 
   /// Updates all ability cooldowns
@@ -50,6 +161,12 @@ class AbilitySystem {
     if (gameState.ability2Cooldown > 0) gameState.ability2Cooldown -= dt;
     if (gameState.ability3Cooldown > 0) gameState.ability3Cooldown -= dt;
     if (gameState.ability4Cooldown > 0) gameState.ability4Cooldown -= dt;
+    if (gameState.ability5Cooldown > 0) gameState.ability5Cooldown -= dt;
+    if (gameState.ability6Cooldown > 0) gameState.ability6Cooldown -= dt;
+    if (gameState.ability7Cooldown > 0) gameState.ability7Cooldown -= dt;
+    if (gameState.ability8Cooldown > 0) gameState.ability8Cooldown -= dt;
+    if (gameState.ability9Cooldown > 0) gameState.ability9Cooldown -= dt;
+    if (gameState.ability10Cooldown > 0) gameState.ability10Cooldown -= dt;
   }
 
   // ==================== DYNAMIC ABILITY EXECUTION ====================
@@ -75,6 +192,71 @@ class AbilitySystem {
     // Get cooldown for this slot
     final cooldown = _getCooldownForSlot(slotIndex, gameState);
     if (cooldown > 0) return;
+
+    // Check if already casting or winding up
+    if (gameState.isCasting || gameState.isWindingUp) return;
+
+    // Range check: prevent firing if target is out of range
+    final abilityData = globalActionBarConfig?.getSlotAbilityData(slotIndex);
+    if (abilityData != null &&
+        !abilityData.isSelfCast &&
+        abilityData.range > 0 &&
+        gameState.currentTargetId != null) {
+      final distance = gameState.getDistanceToCurrentTarget();
+      if (distance != null && distance > abilityData.range) {
+        print('[RANGE] $abilityName out of range (${distance.toStringAsFixed(1)} > ${abilityData.range})');
+        return;
+      }
+    }
+
+    // Check mana cost (blue or red) for abilities
+    final (manaCost, manaType) = _getManaCostAndType(abilityName);
+    if (manaCost > 0) {
+      if (manaType == _ManaType.blue) {
+        if (!gameState.hasBlueMana(manaCost)) {
+          print('[MANA] Not enough blue mana for $abilityName (need $manaCost, have ${gameState.blueMana.toStringAsFixed(0)})');
+          return;
+        }
+      } else if (manaType == _ManaType.red) {
+        if (!gameState.hasRedMana(manaCost)) {
+          print('[MANA] Not enough red mana for $abilityName (need $manaCost, have ${gameState.redMana.toStringAsFixed(0)})');
+          return;
+        }
+      }
+    }
+
+    // Check for cast-time abilities (must be stationary)
+    if (_isCastTimeAbility(abilityName)) {
+      // Spend mana at start of cast
+      if (manaCost > 0 && manaType == _ManaType.blue) {
+        gameState.spendBlueMana(manaCost);
+        print('[MANA] Spent $manaCost blue mana for $abilityName');
+      }
+      _startCastTimeAbility(abilityName, slotIndex, gameState);
+      return;
+    }
+
+    // Check for windup abilities (reduced movement, red mana)
+    if (_isWindupAbility(abilityName)) {
+      // Spend red mana at start of windup
+      if (manaCost > 0 && manaType == _ManaType.red) {
+        gameState.spendRedMana(manaCost);
+        print('[MANA] Spent $manaCost red mana for $abilityName');
+      }
+      _startWindupAbility(abilityName, slotIndex, gameState);
+      return;
+    }
+
+    // Spend mana for instant abilities
+    if (manaCost > 0) {
+      if (manaType == _ManaType.blue) {
+        gameState.spendBlueMana(manaCost);
+        print('[MANA] Spent $manaCost blue mana for $abilityName');
+      } else if (manaType == _ManaType.red) {
+        gameState.spendRedMana(manaCost);
+        print('[MANA] Spent $manaCost red mana for $abilityName');
+      }
+    }
 
     // Map ability names to their execution logic
     switch (abilityName) {
@@ -241,6 +423,12 @@ class AbilitySystem {
       case 1: return gameState.ability2Cooldown;
       case 2: return gameState.ability3Cooldown;
       case 3: return gameState.ability4Cooldown;
+      case 4: return gameState.ability5Cooldown;
+      case 5: return gameState.ability6Cooldown;
+      case 6: return gameState.ability7Cooldown;
+      case 7: return gameState.ability8Cooldown;
+      case 8: return gameState.ability9Cooldown;
+      case 9: return gameState.ability10Cooldown;
       default: return 0;
     }
   }
@@ -260,7 +448,561 @@ class AbilitySystem {
       case 3:
         gameState.ability4Cooldown = cooldown;
         break;
+      case 4:
+        gameState.ability5Cooldown = cooldown;
+        break;
+      case 5:
+        gameState.ability6Cooldown = cooldown;
+        break;
+      case 6:
+        gameState.ability7Cooldown = cooldown;
+        break;
+      case 7:
+        gameState.ability8Cooldown = cooldown;
+        break;
+      case 8:
+        gameState.ability9Cooldown = cooldown;
+        break;
+      case 9:
+        gameState.ability10Cooldown = cooldown;
+        break;
     }
+  }
+
+  // ==================== CAST TIME / WINDUP HANDLING ====================
+
+  /// Check if an ability has a cast time that requires stationary casting
+  static bool _isCastTimeAbility(String abilityName) {
+    const castTimeAbilities = [
+      'Lightning Bolt',
+      'Pyroblast',
+      'Arcane Missile',
+      'Frost Nova',
+      'Greater Heal',
+      'Meteor', // Mage ability
+    ];
+    return castTimeAbilities.contains(abilityName);
+  }
+
+  /// Check if an ability has a windup time (reduced movement melee)
+  static bool _isWindupAbility(String abilityName) {
+    const windupAbilities = [
+      'Heavy Strike',
+      'Whirlwind',
+      'Crushing Blow',
+    ];
+    return windupAbilities.contains(abilityName);
+  }
+
+  /// Get the cast time for a cast-time ability
+  static double _getCastTime(String abilityName) {
+    switch (abilityName) {
+      case 'Lightning Bolt': return 1.5;
+      case 'Pyroblast': return 2.5;
+      case 'Arcane Missile': return 1.0;
+      case 'Frost Nova': return 1.8;
+      case 'Greater Heal': return 2.0;
+      case 'Meteor': return 2.0;
+      default: return 0.0;
+    }
+  }
+
+  /// Get the windup time for a windup ability
+  static double _getWindupTime(String abilityName) {
+    switch (abilityName) {
+      case 'Heavy Strike': return 1.2;
+      case 'Whirlwind': return 0.8;
+      case 'Crushing Blow': return 2.0;
+      default: return 0.0;
+    }
+  }
+
+  /// Get the movement speed modifier during windup
+  static double _getWindupMovementSpeed(String abilityName) {
+    switch (abilityName) {
+      case 'Heavy Strike': return 0.3; // 30% movement
+      case 'Whirlwind': return 0.2; // 20% movement
+      case 'Crushing Blow': return 0.15; // 15% movement
+      default: return 1.0;
+    }
+  }
+
+  /// Start a cast-time ability
+  static void _startCastTimeAbility(String abilityName, int slotIndex, GameState gameState) {
+    final castTime = _getCastTime(abilityName);
+
+    gameState.isCasting = true;
+    gameState.castProgress = 0.0;
+    gameState.currentCastTime = castTime;
+    gameState.castingSlotIndex = slotIndex;
+    gameState.castingAbilityName = abilityName;
+
+    // Set cooldown immediately (so you can't spam cast attempts)
+    _setCooldownForSlot(slotIndex, _getAbilityCooldown(abilityName), gameState);
+
+    print('[CAST] Starting $abilityName (${castTime}s cast time)');
+  }
+
+  /// Start a windup ability
+  static void _startWindupAbility(String abilityName, int slotIndex, GameState gameState) {
+    final windupTime = _getWindupTime(abilityName);
+    final movementSpeed = _getWindupMovementSpeed(abilityName);
+
+    gameState.isWindingUp = true;
+    gameState.windupProgress = 0.0;
+    gameState.currentWindupTime = windupTime;
+    gameState.windupSlotIndex = slotIndex;
+    gameState.windupAbilityName = abilityName;
+    gameState.windupMovementSpeedModifier = movementSpeed;
+
+    // Set cooldown immediately
+    _setCooldownForSlot(slotIndex, _getAbilityCooldown(abilityName), gameState);
+
+    print('[WINDUP] Starting $abilityName (${windupTime}s windup, ${(movementSpeed * 100).toInt()}% movement)');
+  }
+
+  /// Get the cooldown for an ability by name
+  static double _getAbilityCooldown(String abilityName) {
+    switch (abilityName) {
+      case 'Lightning Bolt': return 5.0;
+      case 'Pyroblast': return 12.0;
+      case 'Arcane Missile': return 3.5;
+      case 'Frost Nova': return 15.0;
+      case 'Greater Heal': return 15.0;
+      case 'Meteor': return 30.0;
+      case 'Heavy Strike': return 4.0;
+      case 'Whirlwind': return 8.0;
+      case 'Crushing Blow': return 10.0;
+      default: return 5.0;
+    }
+  }
+
+  /// Get the mana cost and type for an ability by name
+  /// Returns (cost, type) tuple where type indicates which mana pool
+  static (double, _ManaType) _getManaCostAndType(String abilityName) {
+    switch (abilityName) {
+      // Instant ranged (blue mana)
+      case 'Fireball': return (15.0, _ManaType.blue);
+      case 'Ice Shard': return (10.0, _ManaType.blue);
+      case 'Frost Bolt': return (12.0, _ManaType.blue);
+
+      // Cast-time ranged (blue mana)
+      case 'Lightning Bolt': return (35.0, _ManaType.blue);
+      case 'Pyroblast': return (60.0, _ManaType.blue);
+      case 'Arcane Missile': return (25.0, _ManaType.blue);
+      case 'Meteor': return (80.0, _ManaType.blue);
+      case 'Chain Lightning': return (40.0, _ManaType.blue);
+      case 'Blizzard': return (50.0, _ManaType.blue);
+
+      // AOE (blue mana)
+      case 'Frost Nova': return (40.0, _ManaType.blue);
+      case 'Flame Wave': return (35.0, _ManaType.blue);
+      case 'Earthquake': return (45.0, _ManaType.blue);
+
+      // Healing (blue mana)
+      case 'Heal': return (20.0, _ManaType.blue);
+      case 'Greater Heal': return (45.0, _ManaType.blue);
+      case 'Holy Light': return (30.0, _ManaType.blue);
+      case 'Rejuvenation': return (25.0, _ManaType.blue);
+      case 'Circle of Healing': return (55.0, _ManaType.blue);
+
+      // Magical melee (blue mana)
+      case 'Arcane Strike': return (12.0, _ManaType.blue);
+      case 'Frost Strike': return (18.0, _ManaType.blue);
+      case 'Life Drain': return (25.0, _ManaType.blue);
+
+      // Buffs/Debuffs (blue mana)
+      case 'Arcane Shield': return (30.0, _ManaType.blue);
+      case 'Blessing of Strength': return (20.0, _ManaType.blue);
+      case 'Curse of Weakness': return (20.0, _ManaType.blue);
+      case 'Thorns': return (15.0, _ManaType.blue);
+      case 'Fear': return (35.0, _ManaType.blue);
+      case 'Purify': return (15.0, _ManaType.blue);
+
+      // Utility (blue mana)
+      case 'Teleport': return (25.0, _ManaType.blue);
+      case 'Shadow Step': return (20.0, _ManaType.blue);
+      case 'Summon Skeleton': return (50.0, _ManaType.blue);
+
+      // Windup melee (RED mana)
+      case 'Heavy Strike': return (20.0, _ManaType.red);
+      case 'Whirlwind': return (30.0, _ManaType.red);
+      case 'Crushing Blow': return (45.0, _ManaType.red);
+
+      // Physical abilities - no mana cost
+      case 'Sword':
+      case 'Dash Attack':
+      case 'Shield Bash':
+      case 'Charge':
+      case 'Backstab':
+      case 'Poison Blade':
+      case 'Fan of Knives':
+      case 'Taunt':
+      case 'Fortify':
+      case 'Sprint':
+      case 'Battle Shout':
+      case 'Smoke Bomb':
+      case 'Entangling Roots':
+      case 'Nature\'s Wrath':
+        return (0.0, _ManaType.none);
+
+      default: return (0.0, _ManaType.none);
+    }
+  }
+
+  /// Legacy method for backward compatibility - returns blue mana cost only
+  static double _getManaCost(String abilityName) {
+    final (cost, type) = _getManaCostAndType(abilityName);
+    return type == _ManaType.blue ? cost : 0.0;
+  }
+
+  /// Get red mana cost for an ability
+  static double _getRedManaCost(String abilityName) {
+    final (cost, type) = _getManaCostAndType(abilityName);
+    return type == _ManaType.red ? cost : 0.0;
+  }
+
+  // ==================== CAST TIME ABILITY EFFECTS ====================
+
+  /// Launch Lightning Bolt after cast completes
+  static void _launchLightningBolt(int slotIndex, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+
+    final playerPos = gameState.playerTransform!.position;
+    final targetPos = _getTargetPositionOrForward(gameState, playerPos);
+    final direction = (targetPos - playerPos).normalized();
+
+    final projectileMesh = Mesh.cube(
+      size: 0.3,
+      color: Vector3(0.8, 0.8, 1.0),
+    );
+
+    final startPos = playerPos.clone() + direction * 1.0;
+    startPos.y = playerPos.y;
+
+    final projectileTransform = Transform3d(
+      position: startPos,
+      scale: Vector3(1, 1, 1),
+    );
+
+    gameState.fireballs.add(Projectile(
+      mesh: projectileMesh,
+      transform: projectileTransform,
+      velocity: direction * 25.0, // Very fast
+      targetId: gameState.currentTargetId,
+      speed: 25.0,
+      isHoming: gameState.currentTargetId != null,
+      damage: 40.0,
+      abilityName: 'Lightning Bolt',
+      impactColor: Vector3(0.9, 0.9, 1.0),
+      impactSize: 0.8,
+    ));
+
+    print('Lightning Bolt launched!');
+  }
+
+  /// Launch Pyroblast after cast completes
+  static void _launchPyroblast(int slotIndex, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+
+    final playerPos = gameState.playerTransform!.position;
+    final targetPos = _getTargetPositionOrForward(gameState, playerPos);
+    final direction = (targetPos - playerPos).normalized();
+
+    final projectileMesh = Mesh.cube(
+      size: 0.8,
+      color: Vector3(1.0, 0.3, 0.0),
+    );
+
+    final startPos = playerPos.clone() + direction * 1.0;
+    startPos.y = playerPos.y;
+
+    final projectileTransform = Transform3d(
+      position: startPos,
+      scale: Vector3(1, 1, 1),
+    );
+
+    gameState.fireballs.add(Projectile(
+      mesh: projectileMesh,
+      transform: projectileTransform,
+      velocity: direction * 8.0, // Slow but powerful
+      targetId: gameState.currentTargetId,
+      speed: 8.0,
+      isHoming: gameState.currentTargetId != null,
+      damage: 75.0,
+      abilityName: 'Pyroblast',
+      impactColor: Vector3(1.0, 0.5, 0.1),
+      impactSize: 1.5,
+    ));
+
+    print('Pyroblast launched!');
+  }
+
+  /// Launch Arcane Missile after cast completes
+  static void _launchArcaneMissile(int slotIndex, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+
+    final playerPos = gameState.playerTransform!.position;
+    final targetPos = _getTargetPositionOrForward(gameState, playerPos);
+    final direction = (targetPos - playerPos).normalized();
+
+    final projectileMesh = Mesh.cube(
+      size: 0.4,
+      color: Vector3(0.7, 0.3, 1.0),
+    );
+
+    final startPos = playerPos.clone() + direction * 1.0;
+    startPos.y = playerPos.y;
+
+    final projectileTransform = Transform3d(
+      position: startPos,
+      scale: Vector3(1, 1, 1),
+    );
+
+    gameState.fireballs.add(Projectile(
+      mesh: projectileMesh,
+      transform: projectileTransform,
+      velocity: direction * 18.0,
+      targetId: gameState.currentTargetId,
+      speed: 18.0,
+      isHoming: gameState.currentTargetId != null,
+      damage: 28.0,
+      abilityName: 'Arcane Missile',
+      impactColor: Vector3(0.8, 0.4, 1.0),
+      impactSize: 0.7,
+    ));
+
+    print('Arcane Missile launched!');
+  }
+
+  /// Execute Frost Nova effect after cast completes
+  static void _executeFrostNovaEffect(int slotIndex, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+
+    // Create impact effect around player
+    final impactMesh = Mesh.cube(
+      size: 8.0,
+      color: Vector3(0.4, 0.7, 1.0),
+    );
+    final impactTransform = Transform3d(
+      position: gameState.playerTransform!.position.clone(),
+      scale: Vector3(1, 1, 1),
+    );
+    gameState.impactEffects.add(ImpactEffect(
+      mesh: impactMesh,
+      transform: impactTransform,
+      lifetime: 0.5,
+    ));
+
+    // Damage nearby enemies
+    CombatSystem.checkAndDamageEnemies(
+      gameState,
+      attackerPosition: gameState.playerTransform!.position,
+      damage: 20.0,
+      attackType: 'Frost Nova',
+      impactColor: Vector3(0.5, 0.8, 1.0),
+      impactSize: 0.5,
+      collisionThreshold: 8.0,
+    );
+
+    print('Frost Nova released!');
+  }
+
+  /// Execute Greater Heal effect after cast completes
+  static void _executeGreaterHealEffect(int slotIndex, GameState gameState) {
+    final oldHealth = gameState.playerHealth;
+    gameState.playerHealth = math.min(gameState.playerMaxHealth, gameState.playerHealth + 50.0);
+    final healedAmount = gameState.playerHealth - oldHealth;
+
+    gameState.ability3Active = true;
+    gameState.ability3ActiveTime = 0.0;
+
+    print('Greater Heal! Restored ${healedAmount.toStringAsFixed(1)} HP');
+  }
+
+  /// Generic projectile launch for unknown cast-time abilities
+  static void _executeGenericProjectileFromAbility(int slotIndex, GameState gameState, String abilityName) {
+    if (gameState.playerTransform == null) return;
+
+    final playerPos = gameState.playerTransform!.position;
+    final targetPos = _getTargetPositionOrForward(gameState, playerPos);
+    final direction = (targetPos - playerPos).normalized();
+
+    final projectileMesh = Mesh.cube(
+      size: 0.4,
+      color: Vector3(1.0, 1.0, 1.0),
+    );
+
+    final startPos = playerPos.clone() + direction * 1.0;
+    startPos.y = playerPos.y;
+
+    final projectileTransform = Transform3d(
+      position: startPos,
+      scale: Vector3(1, 1, 1),
+    );
+
+    gameState.fireballs.add(Projectile(
+      mesh: projectileMesh,
+      transform: projectileTransform,
+      velocity: direction * 12.0,
+      targetId: gameState.currentTargetId,
+      speed: 12.0,
+      isHoming: gameState.currentTargetId != null,
+      damage: 30.0,
+      abilityName: abilityName,
+      impactColor: Vector3(1.0, 1.0, 1.0),
+      impactSize: 0.6,
+    ));
+
+    print('$abilityName launched!');
+  }
+
+  // ==================== WINDUP ABILITY EFFECTS ====================
+
+  /// Execute Heavy Strike effect after windup completes
+  static void _executeHeavyStrikeEffect(int slotIndex, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+
+    final forward = Vector3(
+      -math.sin(_radians(gameState.playerRotation)),
+      0,
+      -math.cos(_radians(gameState.playerRotation)),
+    );
+    final strikePosition = gameState.playerTransform!.position + forward * 2.5;
+
+    // Large hit radius
+    final hitRegistered = CombatSystem.checkAndDamageEnemies(
+      gameState,
+      attackerPosition: strikePosition,
+      damage: 75.0,
+      attackType: 'Heavy Strike',
+      impactColor: Vector3(1.0, 0.4, 0.2),
+      impactSize: 1.0,
+      collisionThreshold: 4.0, // Large hit radius
+      isMeleeDamage: true, // Generate red mana
+    );
+
+    if (hitRegistered) {
+      print('Heavy Strike hit!');
+    }
+  }
+
+  /// Execute Whirlwind effect after windup completes
+  static void _executeWhirlwindEffect(int slotIndex, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+
+    // Create spinning visual effect
+    final impactMesh = Mesh.cube(
+      size: 5.0,
+      color: Vector3(0.6, 0.6, 0.7),
+    );
+    final impactTransform = Transform3d(
+      position: gameState.playerTransform!.position.clone(),
+      scale: Vector3(1, 1, 1),
+    );
+    gameState.impactEffects.add(ImpactEffect(
+      mesh: impactMesh,
+      transform: impactTransform,
+      lifetime: 0.8,
+    ));
+
+    // Damage all nearby enemies with large radius
+    CombatSystem.checkAndDamageEnemies(
+      gameState,
+      attackerPosition: gameState.playerTransform!.position,
+      damage: 48.0,
+      attackType: 'Whirlwind',
+      impactColor: Vector3(0.7, 0.7, 0.8),
+      impactSize: 0.6,
+      collisionThreshold: 5.0, // Wide AOE
+      isMeleeDamage: true, // Generate red mana
+    );
+
+    print('Whirlwind!');
+  }
+
+  /// Execute Crushing Blow effect after windup completes
+  static void _executeCrushingBlowEffect(int slotIndex, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+
+    final forward = Vector3(
+      -math.sin(_radians(gameState.playerRotation)),
+      0,
+      -math.cos(_radians(gameState.playerRotation)),
+    );
+    final strikePosition = gameState.playerTransform!.position + forward * 2.0;
+
+    // Create powerful impact visual
+    final impactMesh = Mesh.cube(
+      size: 1.2,
+      color: Vector3(0.7, 0.3, 0.1),
+    );
+    final impactTransform = Transform3d(
+      position: strikePosition,
+      scale: Vector3(1, 1, 1),
+    );
+    gameState.impactEffects.add(ImpactEffect(
+      mesh: impactMesh,
+      transform: impactTransform,
+      lifetime: 0.5,
+    ));
+
+    // Heavy damage with moderate hit radius
+    final hitRegistered = CombatSystem.checkAndDamageEnemies(
+      gameState,
+      attackerPosition: strikePosition,
+      damage: 110.0,
+      attackType: 'Crushing Blow',
+      impactColor: Vector3(0.7, 0.3, 0.1),
+      impactSize: 1.2,
+      collisionThreshold: 3.5, // Moderate hit radius
+      isMeleeDamage: true, // Generate red mana
+    );
+
+    if (hitRegistered) {
+      print('Crushing Blow devastates the target!');
+    }
+  }
+
+  /// Generic windup melee for unknown windup abilities
+  static void _executeGenericWindupMelee(int slotIndex, GameState gameState, String abilityName) {
+    if (gameState.playerTransform == null) return;
+
+    final forward = Vector3(
+      -math.sin(_radians(gameState.playerRotation)),
+      0,
+      -math.cos(_radians(gameState.playerRotation)),
+    );
+    final strikePosition = gameState.playerTransform!.position + forward * 2.5;
+
+    CombatSystem.checkAndDamageEnemies(
+      gameState,
+      attackerPosition: strikePosition,
+      damage: 40.0,
+      attackType: abilityName,
+      impactColor: Vector3(0.8, 0.8, 0.8),
+      impactSize: 0.8,
+      collisionThreshold: 3.5,
+    );
+
+    print('$abilityName!');
+  }
+
+  /// Get target position or a position forward from player
+  static Vector3 _getTargetPositionOrForward(GameState gameState, Vector3 playerPos) {
+    // Try to get target position
+    if (gameState.currentTargetId != null) {
+      final targetPos = _getTargetPosition(gameState, gameState.currentTargetId!);
+      if (targetPos != null) return targetPos;
+    }
+
+    // Fall back to position ahead of player
+    final forward = Vector3(
+      -math.sin(_radians(gameState.playerRotation)),
+      0,
+      -math.cos(_radians(gameState.playerRotation)),
+    );
+    return playerPos + forward * 30.0;
   }
 
   // ==================== ABILITY IMPLEMENTATIONS ====================
@@ -271,7 +1013,7 @@ class AbilitySystem {
 
     gameState.ability1Active = true;
     gameState.ability1ActiveTime = 0.0;
-    _setCooldownForSlot(slotIndex, AbilitiesConfig.playerSword.cooldown, gameState);
+    _setCooldownForSlot(slotIndex, _effective(AbilitiesConfig.playerSword).cooldown, gameState);
     gameState.ability1HitRegistered = false;
     print('Sword attack activated!');
   }
@@ -280,7 +1022,7 @@ class AbilitySystem {
   static void _executeFireball(int slotIndex, GameState gameState) {
     if (gameState.playerTransform == null) return;
 
-    final fireball = AbilitiesConfig.playerFireball;
+    final fireball = _effective(AbilitiesConfig.playerFireball);
     final playerPos = gameState.playerTransform!.position;
 
     // Get target position for homing
@@ -358,7 +1100,7 @@ class AbilitySystem {
     gameState.ability3Active = true;
     gameState.ability3ActiveTime = 0.0;
 
-    final healAbility = AbilitiesConfig.playerHeal;
+    final healAbility = _effective(AbilitiesConfig.playerHeal);
     final oldHealth = gameState.playerHealth;
     gameState.playerHealth = math.min(gameState.playerMaxHealth, gameState.playerHealth + healAbility.healAmount);
     final healedAmount = gameState.playerHealth - oldHealth;
@@ -373,7 +1115,7 @@ class AbilitySystem {
 
     gameState.ability4Active = true;
     gameState.ability4ActiveTime = 0.0;
-    _setCooldownForSlot(slotIndex, AbilitiesConfig.playerDashAttack.cooldown, gameState);
+    _setCooldownForSlot(slotIndex, _effective(AbilitiesConfig.playerDashAttack).cooldown, gameState);
     gameState.ability4HitRegistered = false;
     print('Dash Attack activated!');
   }
@@ -753,7 +1495,7 @@ class AbilitySystem {
 
       // Check collision with monster (only once per swing)
       if (!gameState.ability1HitRegistered) {
-        final sword = AbilitiesConfig.playerSword;
+        final sword = _effective(AbilitiesConfig.playerSword);
         final swordTipPosition = gameState.playerTransform!.position + forward * sword.range;
 
         final hitRegistered = CombatSystem.checkAndDamageEnemies(
@@ -763,6 +1505,7 @@ class AbilitySystem {
           attackType: sword.name,
           impactColor: sword.impactColor,
           impactSize: sword.impactSize,
+          isMeleeDamage: true, // Generate red mana from sword attacks
         );
 
         if (hitRegistered) {
@@ -905,7 +1648,7 @@ class AbilitySystem {
     if (gameState.ability4ActiveTime >= gameState.ability4Duration) {
       gameState.ability4Active = false;
     } else if (gameState.playerTransform != null) {
-      final dashConfig = AbilitiesConfig.playerDashAttack;
+      final dashConfig = _effective(AbilitiesConfig.playerDashAttack);
 
       // Calculate forward direction based on player rotation
       final forward = Vector3(
@@ -938,6 +1681,7 @@ class AbilitySystem {
           attackType: dashConfig.name,
           impactColor: dashConfig.impactColor,
           impactSize: dashConfig.impactSize,
+          isMeleeDamage: true, // Generate red mana from dash attack
         );
 
         if (hitRegistered) {
@@ -954,6 +1698,50 @@ class AbilitySystem {
         gameState.dashTrailTransform!.position = gameState.playerTransform!.position.clone();
         gameState.dashTrailTransform!.rotation.y = gameState.playerRotation;
       }
+    }
+  }
+
+  // ==================== ABILITIES 5-10 INPUT HANDLERS ====================
+
+  /// Handles Ability 5 input
+  static void handleAbility5Input(bool keyPressed, GameState gameState) {
+    if (keyPressed && gameState.ability5Cooldown <= 0) {
+      executeSlotAbility(4, gameState);
+    }
+  }
+
+  /// Handles Ability 6 input
+  static void handleAbility6Input(bool keyPressed, GameState gameState) {
+    if (keyPressed && gameState.ability6Cooldown <= 0) {
+      executeSlotAbility(5, gameState);
+    }
+  }
+
+  /// Handles Ability 7 input
+  static void handleAbility7Input(bool keyPressed, GameState gameState) {
+    if (keyPressed && gameState.ability7Cooldown <= 0) {
+      executeSlotAbility(6, gameState);
+    }
+  }
+
+  /// Handles Ability 8 input
+  static void handleAbility8Input(bool keyPressed, GameState gameState) {
+    if (keyPressed && gameState.ability8Cooldown <= 0) {
+      executeSlotAbility(7, gameState);
+    }
+  }
+
+  /// Handles Ability 9 input
+  static void handleAbility9Input(bool keyPressed, GameState gameState) {
+    if (keyPressed && gameState.ability9Cooldown <= 0) {
+      executeSlotAbility(8, gameState);
+    }
+  }
+
+  /// Handles Ability 10 input
+  static void handleAbility10Input(bool keyPressed, GameState gameState) {
+    if (keyPressed && gameState.ability10Cooldown <= 0) {
+      executeSlotAbility(9, gameState);
     }
   }
 
@@ -976,4 +1764,9 @@ class AbilitySystem {
 
   /// Converts degrees to radians
   static double _radians(double degrees) => degrees * (math.pi / 180);
+
+  /// Returns the effective ability with user overrides applied
+  static AbilityData _effective(AbilityData original) {
+    return globalAbilityOverrideManager?.getEffectiveAbility(original) ?? original;
+  }
 }

@@ -61,19 +61,80 @@ class InstructionsOverlay extends StatelessWidget {
               ),
             ),
             Text(
-              '2: Fireball ${gameState.ability2Cooldown > 0 ? "(${gameState.ability2Cooldown.toStringAsFixed(1)}s)" : "READY"}',
+              '2: Fireball ${gameState.ability2Cooldown > 0 ? "(${gameState.ability2Cooldown.toStringAsFixed(1)}s)" : "READY"} [15 mana]',
               style: TextStyle(
                 color: gameState.ability2Cooldown > 0 ? Colors.red : Colors.green,
                 fontSize: 10,
               ),
             ),
             Text(
-              '3: Heal ${gameState.ability3Cooldown > 0 ? "(${gameState.ability3Cooldown.toStringAsFixed(1)}s)" : "READY"}',
+              '3: Heal ${gameState.ability3Cooldown > 0 ? "(${gameState.ability3Cooldown.toStringAsFixed(1)}s)" : "READY"} [20 mana]',
               style: TextStyle(
                 color: gameState.ability3Cooldown > 0 ? Colors.red : Colors.green,
                 fontSize: 10,
               ),
             ),
+            SizedBox(height: 4),
+            // Mana status
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Color(0xFF4080FF),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                SizedBox(width: 4),
+                Text(
+                  'Mana: ${gameState.blueMana.toInt()}/${gameState.maxBlueMana.toInt()}',
+                  style: TextStyle(
+                    color: Color(0xFF80B0FF),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (gameState.currentManaRegenRate > 0)
+                  Text(
+                    ' (+${gameState.currentManaRegenRate.toStringAsFixed(1)}/s)',
+                    style: TextStyle(
+                      color: Color(0xFF60FF60),
+                      fontSize: 9,
+                    ),
+                  ),
+              ],
+            ),
+            if (gameState.currentLeyLineInfo != null && gameState.currentLeyLineInfo!.isInRange)
+              Text(
+                'Near Ley Line (${gameState.currentLeyLineInfo!.distance.toStringAsFixed(1)}m)',
+                style: TextStyle(
+                  color: Color(0xFF4080FF),
+                  fontSize: 9,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            SizedBox(height: 4),
+            // Casting/Windup status
+            if (gameState.isCasting)
+              Text(
+                'Casting: ${gameState.castingAbilityName} (${(gameState.currentCastTime - gameState.castProgress).toStringAsFixed(1)}s)',
+                style: TextStyle(
+                  color: Color(0xFF4A90D9),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            if (gameState.isWindingUp)
+              Text(
+                'Windup: ${gameState.windupAbilityName} (${(gameState.currentWindupTime - gameState.windupProgress).toStringAsFixed(1)}s)',
+                style: TextStyle(
+                  color: Color(0xFFD97B4A),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             SizedBox(height: 8),
             Text(
               'Ally Commands:',
@@ -97,6 +158,10 @@ class InstructionsOverlay extends StatelessWidget {
             Text(
               'C=Character | B=Bag | P=Abilities | ESC=Close',
               style: TextStyle(color: Colors.white, fontSize: 10),
+            ),
+            Text(
+              'SHIFT+D = DPS Testing (Target Dummy)',
+              style: TextStyle(color: Color(0xFFFF6B35), fontSize: 10),
             ),
             SizedBox(height: 4),
             Text(

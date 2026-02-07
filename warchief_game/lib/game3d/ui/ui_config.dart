@@ -71,5 +71,5 @@ class UIConfig {
 
   /// Action bar ability button size (matches AbilityButton default)
   /// Used by both the action bar hotkeys and the Abilities Codex icons
-  static const double actionBarButtonSize = 60.0;
+  static const double actionBarButtonSize = 48.0;
 }

@@ -1,0 +1,17 @@
+{
+  "blue_mana": {
+    "max": 100.0,
+    "ley_line_max_regen_distance": 8.0,
+    "ley_line_optimal_distance": 2.0,
+    "base_regen_rate": 0.0,
+    "max_regen_rate": 15.0,
+    "power_node_radius": 3.0,
+    "power_node_fraction": 0.33
+  },
+  "red_mana": {
+    "max": 100.0,
+    "mana_per_damage": 0.2,
+    "decay_rate": 3.0,
+    "decay_delay": 5.0
+  }
+}

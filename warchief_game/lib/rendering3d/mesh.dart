@@ -61,6 +61,54 @@ class Mesh {
   /// Get number of triangles
   int get triangleCount => indices.length ~/ 3;
 
+  /// Create a mesh from raw vertex and index data with vertex colors
+  ///
+  /// Useful for procedurally generated geometry like Ley Lines.
+  /// Vertex data format: [x, y, z, r, g, b, x, y, z, r, g, b, ...]
+  /// where r, g, b are color components in 0.0-1.0 range.
+  factory Mesh.fromVerticesAndIndices({
+    required List<double> vertices,
+    required List<int> indices,
+    int vertexStride = 6, // x, y, z, r, g, b
+  }) {
+    final numVertices = vertices.length ~/ vertexStride;
+
+    // Extract positions
+    final positions = Float32List(numVertices * 3);
+    for (int i = 0; i < numVertices; i++) {
+      positions[i * 3 + 0] = vertices[i * vertexStride + 0]; // x
+      positions[i * 3 + 1] = vertices[i * vertexStride + 1]; // y
+      positions[i * 3 + 2] = vertices[i * vertexStride + 2]; // z
+    }
+
+    // Extract colors (RGBA, adding A=1.0)
+    final colors = Float32List(numVertices * 4);
+    for (int i = 0; i < numVertices; i++) {
+      colors[i * 4 + 0] = vertices[i * vertexStride + 3]; // r
+      colors[i * 4 + 1] = vertices[i * vertexStride + 4]; // g
+      colors[i * 4 + 2] = vertices[i * vertexStride + 5]; // b
+      colors[i * 4 + 3] = 1.0; // a
+    }
+
+    // Convert indices
+    final indexList = Uint16List.fromList(indices.map((i) => i).toList());
+
+    // Generate simple up-facing normals
+    final normals = Float32List(numVertices * 3);
+    for (int i = 0; i < numVertices; i++) {
+      normals[i * 3 + 0] = 0.0;
+      normals[i * 3 + 1] = 1.0;
+      normals[i * 3 + 2] = 0.0;
+    }
+
+    return Mesh(
+      vertices: positions,
+      indices: indexList,
+      normals: normals,
+      colors: colors,
+    );
+  }
+
   /// Create a plane mesh (quad made of 2 triangles)
   ///
   /// Useful for terrain tiles, floors, walls, etc.

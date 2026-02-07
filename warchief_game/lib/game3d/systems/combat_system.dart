@@ -1,14 +1,14 @@
-import 'package:vector_math/vector_math.dart';
+import 'package:flutter/material.dart';
+import 'package:vector_math/vector_math.dart' hide Colors;
 
 import '../state/game_state.dart';
 import '../state/game_config.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/impact_effect.dart';
-import '../../models/monster.dart';
 
 /// Target types for damage application
-enum DamageTarget { player, monster, ally, minion }
+enum DamageTarget { player, monster, ally, minion, dummy }
 
 /// Combat System - Unified damage and collision handling
 ///
@@ -126,6 +126,14 @@ class CombatSystem {
               print('$attackType hit ${minion.definition.name} for $damage damage! '
                     'Minion health: ${minion.health.toStringAsFixed(1)}/${minion.maxHealth}');
             }
+          }
+          break;
+
+        case DamageTarget.dummy:
+          if (gameState.targetDummy != null && gameState.targetDummy!.isSpawned) {
+            gameState.targetDummy!.takeDamage(damage);
+            print('$attackType hit Target Dummy for $damage damage! '
+                  'Total: ${gameState.targetDummy!.totalDamageTaken.toStringAsFixed(1)}');
           }
           break;
       }
@@ -368,6 +376,10 @@ class CombatSystem {
   /// Checks collision with monster and all minions, applying damage to the first hit
   ///
   /// Used for player/ally attacks that should hit any enemy.
+  /// Also checks the target dummy if it's spawned and targeted.
+  ///
+  /// Parameters:
+  /// - isMeleeDamage: If true, generates red mana for the player when damage is dealt
   ///
   /// Returns:
   /// - true if any enemy was hit, false otherwise
@@ -379,7 +391,32 @@ class CombatSystem {
     required Vector3 impactColor,
     required double impactSize,
     double? collisionThreshold,
+    Color? abilityColor, // For DPS tracking
+    bool isMeleeDamage = false, // For red mana generation
   }) {
+    // Check target dummy first if it's the current target
+    if (gameState.isTargetingDummy && gameState.targetDummy != null) {
+      final dummy = gameState.targetDummy!;
+      final threshold = collisionThreshold ?? 1.8;
+      final distance = (attackerPosition - dummy.position).length;
+
+      if (distance < threshold) {
+        // Use ability color if provided, otherwise derive from impact color
+        final trackingColor = abilityColor ?? _vectorToColor(impactColor);
+
+        return damageTargetDummy(
+          gameState,
+          damage: damage,
+          abilityName: attackType,
+          abilityColor: trackingColor,
+          impactColor: impactColor,
+          impactSize: impactSize,
+          isCritical: false, // TODO: Add crit calculation
+          isHit: true,
+        );
+      }
+    }
+
     // Check boss monster first
     if (checkAndDamageMonster(
       gameState,
@@ -390,11 +427,15 @@ class CombatSystem {
       impactSize: impactSize,
       collisionThreshold: collisionThreshold,
     )) {
+      // Generate red mana from melee damage
+      if (isMeleeDamage) {
+        gameState.generateRedManaFromMelee(damage);
+      }
       return true;
     }
 
     // Then check minions
-    return checkAndDamageMinions(
+    final minionHit = checkAndDamageMinions(
       gameState,
       attackerPosition: attackerPosition,
       damage: damage,
@@ -402,6 +443,23 @@ class CombatSystem {
       impactColor: impactColor,
       impactSize: impactSize,
       collisionThreshold: collisionThreshold,
+    );
+
+    // Generate red mana from melee damage to minions
+    if (minionHit && isMeleeDamage) {
+      gameState.generateRedManaFromMelee(damage);
+    }
+
+    return minionHit;
+  }
+
+  /// Convert Vector3 color to Flutter Color
+  static Color _vectorToColor(Vector3 v) {
+    return Color.fromRGBO(
+      (v.x * 255).clamp(0, 255).toInt(),
+      (v.y * 255).clamp(0, 255).toInt(),
+      (v.z * 255).clamp(0, 255).toInt(),
+      1.0,
     );
   }
 
@@ -432,5 +490,150 @@ class CombatSystem {
           'Health: ${minion.health.toStringAsFixed(1)}/${minion.maxHealth}');
 
     return true;
+  }
+
+  /// Damage the target dummy and record for DPS tracking
+  ///
+  /// This is the primary function for attacking the target dummy.
+  /// It handles damage application, impact effects, and DPS tracking.
+  ///
+  /// Parameters:
+  /// - gameState: Current game state
+  /// - damage: Amount of damage to apply
+  /// - abilityName: Name of the ability for DPS tracking
+  /// - abilityColor: Color for the DPS chart
+  /// - impactColor: Color of the impact effect
+  /// - impactSize: Size of the impact effect
+  /// - isCritical: Whether this is a critical hit
+  /// - isHit: Whether the attack hit (false for miss/dodge)
+  ///
+  /// Returns:
+  /// - true if damage was applied, false if dummy not available
+  static bool damageTargetDummy(
+    GameState gameState, {
+    required double damage,
+    required String abilityName,
+    required Color abilityColor,
+    required Vector3 impactColor,
+    required double impactSize,
+    bool isCritical = false,
+    bool isHit = true,
+  }) {
+    final dummy = gameState.targetDummy;
+    if (dummy == null || !dummy.isSpawned) return false;
+
+    // Record to DPS tracker (even misses for hit rate calculation)
+    gameState.dpsTracker.recordDamage(
+      abilityName: abilityName,
+      damage: isHit ? damage : 0,
+      isCritical: isCritical,
+      isHit: isHit,
+      abilityColor: abilityColor,
+    );
+
+    if (isHit) {
+      // Apply damage to dummy
+      dummy.takeDamage(damage);
+
+      // Create impact effect
+      createImpactEffect(
+        gameState,
+        position: dummy.position,
+        color: impactColor,
+        size: impactSize,
+      );
+
+      print('[DPS] $abilityName hit Target Dummy for $damage damage${isCritical ? " (CRIT!)" : ""}');
+    } else {
+      print('[DPS] $abilityName missed Target Dummy');
+    }
+
+    return true;
+  }
+
+  /// Check if current target is the dummy and apply damage with DPS tracking
+  ///
+  /// Convenience function that checks if the current target is the dummy
+  /// and routes damage appropriately.
+  ///
+  /// Returns:
+  /// - true if the target was the dummy and damage was applied
+  /// - false if the target is not the dummy
+  static bool checkAndDamageTargetDummy(
+    GameState gameState, {
+    required Vector3 attackerPosition,
+    required double damage,
+    required String abilityName,
+    required Color abilityColor,
+    required Vector3 impactColor,
+    required double impactSize,
+    double? collisionThreshold,
+    bool isCritical = false,
+  }) {
+    final dummy = gameState.targetDummy;
+    if (dummy == null || !dummy.isSpawned) return false;
+
+    final threshold = collisionThreshold ?? 1.5;
+    final distance = (attackerPosition - dummy.position).length;
+
+    if (distance < threshold) {
+      return damageTargetDummy(
+        gameState,
+        damage: damage,
+        abilityName: abilityName,
+        abilityColor: abilityColor,
+        impactColor: impactColor,
+        impactSize: impactSize,
+        isCritical: isCritical,
+        isHit: true,
+      );
+    }
+
+    return false;
+  }
+
+  /// Damage the current target (enemy or dummy) based on targeting
+  ///
+  /// This is the recommended function for player abilities that should
+  /// work against both real enemies and the target dummy.
+  ///
+  /// Returns:
+  /// - true if any target was hit
+  static bool damageCurrentTarget(
+    GameState gameState, {
+    required Vector3 attackerPosition,
+    required double damage,
+    required String abilityName,
+    required Color abilityColor,
+    required Vector3 impactColor,
+    required double impactSize,
+    double? collisionThreshold,
+    bool isCritical = false,
+  }) {
+    // Check if targeting the dummy
+    if (gameState.isTargetingDummy) {
+      return checkAndDamageTargetDummy(
+        gameState,
+        attackerPosition: attackerPosition,
+        damage: damage,
+        abilityName: abilityName,
+        abilityColor: abilityColor,
+        impactColor: impactColor,
+        impactSize: impactSize,
+        collisionThreshold: collisionThreshold,
+        isCritical: isCritical,
+      );
+    }
+
+    // Otherwise damage enemies normally
+    return checkAndDamageEnemies(
+      gameState,
+      attackerPosition: attackerPosition,
+      damage: damage,
+      attackType: abilityName,
+      impactColor: impactColor,
+      impactSize: impactSize,
+      collisionThreshold: collisionThreshold,
+    );
   }
 }

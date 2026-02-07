@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../state/abilities_config.dart';
+import '../state/ability_override_manager.dart';
+import 'ability_editor_panel.dart';
 import 'ui_config.dart';
 
 /// Abilities Panel - Draggable panel displaying all available abilities in the game
@@ -23,9 +25,13 @@ class AbilitiesModal extends StatefulWidget {
 class _AbilitiesModalState extends State<AbilitiesModal> {
   double _xPos = 50.0;
   double _yPos = 50.0;
+  AbilityData? _editingAbility;
 
   @override
   Widget build(BuildContext context) {
+    // Total width includes editor panel when open
+    final totalWidth = _editingAbility != null ? 750.0 + 8.0 + 320.0 : 750.0;
+
     return Positioned(
       left: _xPos,
       top: _yPos,
@@ -34,163 +40,211 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
           setState(() {
             _xPos += details.delta.dx;
             _yPos += details.delta.dy;
-            // Clamp position to screen bounds
-            _xPos = _xPos.clamp(0.0, MediaQuery.of(context).size.width - 750);
+            // Clamp position to screen bounds (account for editor panel width)
+            _xPos = _xPos.clamp(0.0, MediaQuery.of(context).size.width - totalWidth);
             _yPos = _yPos.clamp(0.0, MediaQuery.of(context).size.height - 600);
           });
         },
-        child: Container(
-          width: 750, // Wider to accommodate drag icons
-          height: 600,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade900,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.cyan, width: 3),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.5),
-                blurRadius: 10,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Header (draggable area)
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(10),
-                    topRight: Radius.circular(10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Main codex panel
+            Container(
+              width: 750, // Wider to accommodate drag icons
+              height: 600,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade900,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.cyan, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 10,
+                    spreadRadius: 2,
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Header (draggable area)
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(10),
+                        topRight: Radius.circular(10),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(Icons.drag_indicator, color: Colors.cyan, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'ABILITIES CODEX',
-                          style: TextStyle(
-                            color: Colors.cyan,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
-                          ),
+                        Row(
+                          children: [
+                            Icon(Icons.drag_indicator, color: Colors.cyan, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'ABILITIES CODEX',
+                              style: TextStyle(
+                                color: Colors.cyan,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            // Hint about double-click to edit
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.cyan.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.cyan, width: 1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.edit, color: Colors.cyan, size: 12),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Double-click to edit',
+                                    style: TextStyle(
+                                      color: Colors.cyan,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            // Hint about drag-and-drop
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.orange, width: 1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.touch_app, color: Colors.orange, size: 12),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Drag icons to action bar',
+                                    style: TextStyle(
+                                      color: Colors.orange,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Press P to close',
+                              style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: 11,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            IconButton(
+                              icon: Icon(Icons.close, color: Colors.red, size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints(),
+                              onPressed: widget.onClose,
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    Row(
-                      children: [
-                        // Hint about drag-and-drop
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.orange, width: 1),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.touch_app, color: Colors.orange, size: 12),
-                              SizedBox(width: 4),
-                              Text(
-                                'Drag icons to action bar',
-                                style: TextStyle(
-                                  color: Colors.orange,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                  ),
+
+                  // Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Currently Assigned Abilities
+                          _buildSection(
+                            'CURRENTLY ASSIGNED ABILITIES',
+                            Colors.green,
+                            [
+                              _buildCategoryHeader('Player Abilities', Colors.blue),
+                              ...AbilitiesConfig.playerAbilities.map((ability) =>
+                                _buildAbilityCard(ability, Colors.blue.shade900, draggable: true)),
+
+                              SizedBox(height: 16),
+                              _buildCategoryHeader('Monster Abilities', Colors.purple),
+                              ...AbilitiesConfig.monsterAbilities.map((ability) =>
+                                _buildAbilityCard(ability, Colors.purple.shade900, draggable: false)),
+
+                              SizedBox(height: 16),
+                              _buildCategoryHeader('Ally Abilities', Colors.cyan),
+                              ...AbilitiesConfig.allyAbilities.map((ability) =>
+                                _buildAbilityCard(ability, Colors.cyan.shade900, draggable: false)),
                             ],
                           ),
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'Press P to close',
-                          style: TextStyle(
-                            color: Colors.white54,
-                            fontSize: 11,
+
+                          SizedBox(height: 24),
+
+                          // Potential Future Abilities
+                          _buildSection(
+                            'POTENTIAL FUTURE ABILITIES',
+                            Colors.orange,
+                            [
+                              ...AbilitiesConfig.categories.map((category) {
+                                final abilities = AbilitiesConfig.getAbilitiesByCategory(category);
+                                if (abilities.isEmpty) return SizedBox.shrink();
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildCategoryHeader(
+                                      category.toUpperCase(),
+                                      _getCategoryColor(category),
+                                    ),
+                                    ...abilities.map((ability) =>
+                                      _buildAbilityCard(ability, _getCategoryColor(category).withOpacity(0.3), draggable: true)),
+                                    SizedBox(height: 16),
+                                  ],
+                                );
+                              }).toList(),
+                            ],
                           ),
-                        ),
-                        SizedBox(width: 12),
-                        IconButton(
-                          icon: Icon(Icons.close, color: Colors.red, size: 20),
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(),
-                          onPressed: widget.onClose,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
-
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Currently Assigned Abilities
-                      _buildSection(
-                        'CURRENTLY ASSIGNED ABILITIES',
-                        Colors.green,
-                        [
-                          _buildCategoryHeader('Player Abilities', Colors.blue),
-                          ...AbilitiesConfig.playerAbilities.map((ability) =>
-                            _buildAbilityCard(ability, Colors.blue.shade900, draggable: true)),
-
-                          SizedBox(height: 16),
-                          _buildCategoryHeader('Monster Abilities', Colors.purple),
-                          ...AbilitiesConfig.monsterAbilities.map((ability) =>
-                            _buildAbilityCard(ability, Colors.purple.shade900, draggable: false)),
-
-                          SizedBox(height: 16),
-                          _buildCategoryHeader('Ally Abilities', Colors.cyan),
-                          ...AbilitiesConfig.allyAbilities.map((ability) =>
-                            _buildAbilityCard(ability, Colors.cyan.shade900, draggable: false)),
-                        ],
-                      ),
-
-                      SizedBox(height: 24),
-
-                      // Potential Future Abilities
-                      _buildSection(
-                        'POTENTIAL FUTURE ABILITIES',
-                        Colors.orange,
-                        [
-                          ...AbilitiesConfig.categories.map((category) {
-                            final abilities = AbilitiesConfig.getAbilitiesByCategory(category);
-                            if (abilities.isEmpty) return SizedBox.shrink();
-
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildCategoryHeader(
-                                  category.toUpperCase(),
-                                  _getCategoryColor(category),
-                                ),
-                                ...abilities.map((ability) =>
-                                  _buildAbilityCard(ability, _getCategoryColor(category).withOpacity(0.3), draggable: true)),
-                                SizedBox(height: 16),
-                              ],
-                            );
-                          }).toList(),
-                        ],
-                      ),
-                    ],
                   ),
-                ),
+                ],
+              ),
+            ),
+            // Editor panel (side-by-side)
+            if (_editingAbility != null) ...[
+              SizedBox(width: 8),
+              AbilityEditorPanel(
+                ability: _editingAbility!,
+                onClose: () {
+                  setState(() {
+                    _editingAbility = null;
+                  });
+                },
+                onSaved: () {
+                  setState(() {
+                    // Refresh the codex to show updated values
+                  });
+                },
               ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -239,11 +293,16 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
   }
 
   Widget _buildAbilityCard(AbilityData ability, Color backgroundColor, {bool draggable = false}) {
+    // Use effective ability (with overrides) for display values
+    final effective = globalAbilityOverrideManager?.getEffectiveAbility(ability) ?? ability;
+    final hasOverrides = globalAbilityOverrideManager?.hasOverrides(ability.name) ?? false;
+    final isEditing = _editingAbility?.name == ability.name;
+
     // Convert Vector3 color to Flutter Color
     final abilityColor = Color.fromRGBO(
-      (ability.color.x * 255).round(),
-      (ability.color.y * 255).round(),
-      (ability.color.z * 255).round(),
+      (effective.color.x * 255).round(),
+      (effective.color.y * 255).round(),
+      (effective.color.z * 255).round(),
       1.0,
     );
 
@@ -258,86 +317,102 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
               padding: EdgeInsets.only(right: 12),
               child: _buildDraggableAbilityIcon(ability, abilityColor),
             ),
-          // Ability info card
+          // Ability info card - double-tap to open editor
           Expanded(
-            child: Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.white24, width: 1),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      // Ability name
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          ability.name,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-
-                      // Type badge
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getTypeColor(ability.type),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          ability.type.toString().split('.').last.toUpperCase(),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
+            child: GestureDetector(
+              onDoubleTap: () {
+                setState(() {
+                  _editingAbility = ability;
+                });
+              },
+              child: Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: isEditing ? Colors.cyan : (hasOverrides ? Colors.yellow.withOpacity(0.6) : Colors.white24),
+                    width: isEditing ? 2 : 1,
                   ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        // Override indicator
+                        if (hasOverrides)
+                          Padding(
+                            padding: EdgeInsets.only(right: 4),
+                            child: Icon(Icons.edit, color: Colors.yellow, size: 12),
+                          ),
+                        // Ability name
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            effective.name,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
 
-                  SizedBox(height: 6),
-
-                  // Description
-                  Text(
-                    ability.description,
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11,
+                        // Type badge
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _getTypeColor(effective.type),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            effective.type.toString().split('.').last.toUpperCase(),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
 
-                  SizedBox(height: 8),
+                    SizedBox(height: 6),
 
-                  // Stats row
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 4,
-                    children: [
-                      if (ability.damage > 0)
-                        _buildStat('DMG', ability.damage.toStringAsFixed(0), Colors.red.shade300),
-                      if (ability.healAmount > 0)
-                        _buildStat('HEAL', ability.healAmount.toStringAsFixed(0), Colors.green.shade300),
-                      _buildStat('CD', '${ability.cooldown.toStringAsFixed(1)}s', Colors.blue.shade300),
-                      if (ability.range > 0)
-                        _buildStat('RANGE', ability.range.toStringAsFixed(0), Colors.orange.shade300),
-                      if (ability.duration > 0)
-                        _buildStat('DUR', '${ability.duration.toStringAsFixed(1)}s', Colors.purple.shade300),
-                      if (ability.aoeRadius > 0)
-                        _buildStat('AOE', ability.aoeRadius.toStringAsFixed(0), Colors.yellow.shade300),
-                      if (ability.statusEffect != StatusEffect.none)
-                        _buildStat('FX', ability.statusEffect.toString().split('.').last.toUpperCase(), Colors.pink.shade300),
-                    ],
-                  ),
-                ],
+                    // Description
+                    Text(
+                      effective.description,
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                      ),
+                    ),
+
+                    SizedBox(height: 8),
+
+                    // Stats row
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      children: [
+                        if (effective.damage > 0)
+                          _buildStat('DMG', effective.damage.toStringAsFixed(0), Colors.red.shade300),
+                        if (effective.healAmount > 0)
+                          _buildStat('HEAL', effective.healAmount.toStringAsFixed(0), Colors.green.shade300),
+                        _buildStat('CD', '${effective.cooldown.toStringAsFixed(1)}s', Colors.blue.shade300),
+                        if (effective.range > 0)
+                          _buildStat('RANGE', effective.range.toStringAsFixed(0), Colors.orange.shade300),
+                        if (effective.duration > 0)
+                          _buildStat('DUR', '${effective.duration.toStringAsFixed(1)}s', Colors.purple.shade300),
+                        if (effective.aoeRadius > 0)
+                          _buildStat('AOE', effective.aoeRadius.toStringAsFixed(0), Colors.yellow.shade300),
+                        if (effective.statusEffect != StatusEffect.none)
+                          _buildStat('FX', effective.statusEffect.toString().split('.').last.toUpperCase(), Colors.pink.shade300),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -372,7 +447,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
             child: Icon(
               _getAbilityTypeIcon(ability.type),
               color: Colors.white.withOpacity(0.9),
-              size: 28,
+              size: 22,
             ),
           ),
           // Ability name (abbreviated)
@@ -433,7 +508,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                 child: Icon(
                   _getAbilityTypeIcon(ability.type),
                   color: Colors.white,
-                  size: 28,
+                  size: 22,
                 ),
               ),
             ),

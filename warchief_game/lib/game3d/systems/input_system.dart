@@ -97,6 +97,20 @@ class InputSystem {
   ) {
     if (gameState.playerTransform == null) return;
 
+    // Check if any movement key is pressed
+    final isMoving = inputManager.isActionPressed(GameAction.moveForward) ||
+        inputManager.isActionPressed(GameAction.moveBackward) ||
+        inputManager.isActionPressed(GameAction.strafeLeft) ||
+        inputManager.isActionPressed(GameAction.strafeRight);
+
+    // Cancel cast if moving during a stationary cast
+    if (isMoving && gameState.isCasting) {
+      gameState.cancelCast();
+    }
+
+    // Get effective speed (includes windup modifier if winding up)
+    final effectiveSpeed = gameState.effectivePlayerSpeed;
+
     // W = Forward
     if (inputManager.isActionPressed(GameAction.moveForward)) {
       final forward = Vector3(
@@ -104,7 +118,7 @@ class InputSystem {
         0,
         -math.cos(radians(gameState.playerRotation)),
       );
-      gameState.playerTransform!.position += forward * gameState.playerSpeed * dt;
+      gameState.playerTransform!.position += forward * effectiveSpeed * dt;
     }
 
     // S = Backward
@@ -114,16 +128,16 @@ class InputSystem {
         0,
         -math.cos(radians(gameState.playerRotation)),
       );
-      gameState.playerTransform!.position -= forward * gameState.playerSpeed * dt;
+      gameState.playerTransform!.position -= forward * effectiveSpeed * dt;
     }
 
-    // A = Rotate Right
+    // A = Rotate Right (rotation not affected by windup)
     if (inputManager.isActionPressed(GameAction.rotateLeft)) {
       gameState.playerRotation += 180 * dt; // A key - rotate right
       gameState.playerTransform!.rotation.y = gameState.playerRotation;
     }
 
-    // D = Rotate Left
+    // D = Rotate Left (rotation not affected by windup)
     if (inputManager.isActionPressed(GameAction.rotateRight)) {
       gameState.playerRotation -= 180 * dt; // D key - rotate left
       gameState.playerTransform!.rotation.y = gameState.playerRotation;
@@ -136,7 +150,7 @@ class InputSystem {
         0,
         -math.sin(radians(gameState.playerRotation)),
       );
-      gameState.playerTransform!.position -= right * gameState.playerSpeed * dt;
+      gameState.playerTransform!.position -= right * effectiveSpeed * dt;
     }
 
     // E = Strafe Right
@@ -146,7 +160,7 @@ class InputSystem {
         0,
         -math.sin(radians(gameState.playerRotation)),
       );
-      gameState.playerTransform!.position += right * gameState.playerSpeed * dt;
+      gameState.playerTransform!.position += right * effectiveSpeed * dt;
     }
   }
 }

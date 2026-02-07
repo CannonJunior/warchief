@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../data/abilities/abilities.dart';
+import 'ability_override_manager.dart';
 
 /// Configuration for the player's action bar slots
 ///
@@ -72,7 +73,8 @@ class ActionBarConfig extends ChangeNotifier {
 
     for (final ability in allAbilities) {
       if (ability.name == name) {
-        return ability;
+        // Apply any user overrides to the ability
+        return globalAbilityOverrideManager?.getEffectiveAbility(ability) ?? ability;
       }
     }
 

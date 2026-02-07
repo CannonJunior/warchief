@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../ability_button.dart';
+import '../mana_bar.dart';
 import 'unit_frame.dart';
 import 'vs_indicator.dart';
 import '../../state/action_bar_config.dart';
+import '../../state/game_state.dart';
+import '../../data/abilities/ability_types.dart';
 
 /// Main combat HUD with player frame, target frame, VS indicator, and action bars
 /// Positioned at bottom-center of screen
@@ -16,6 +19,9 @@ class CombatHUD extends StatelessWidget {
   final int playerLevel;
   final Widget? playerPortraitWidget; // Custom portrait widget (e.g., 3D cube)
 
+  // Mana data (for Ley Line-based mana system)
+  final GameState? gameState; // For mana bar display
+
   // Target data
   final String? targetName;
   final double targetHealth;
@@ -24,7 +30,7 @@ class CombatHUD extends StatelessWidget {
   final bool hasTarget;
   final Widget? targetPortraitWidget; // Custom portrait widget (e.g., 3D cube)
 
-  // Ability cooldowns
+  // Ability cooldowns (slots 1-10)
   final double ability1Cooldown;
   final double ability1CooldownMax;
   final double ability2Cooldown;
@@ -33,12 +39,30 @@ class CombatHUD extends StatelessWidget {
   final double ability3CooldownMax;
   final double ability4Cooldown;
   final double ability4CooldownMax;
+  final double ability5Cooldown;
+  final double ability5CooldownMax;
+  final double ability6Cooldown;
+  final double ability6CooldownMax;
+  final double ability7Cooldown;
+  final double ability7CooldownMax;
+  final double ability8Cooldown;
+  final double ability8CooldownMax;
+  final double ability9Cooldown;
+  final double ability9CooldownMax;
+  final double ability10Cooldown;
+  final double ability10CooldownMax;
 
   // Callbacks
   final VoidCallback onAbility1Pressed;
   final VoidCallback onAbility2Pressed;
   final VoidCallback onAbility3Pressed;
   final VoidCallback? onAbility4Pressed;
+  final VoidCallback? onAbility5Pressed;
+  final VoidCallback? onAbility6Pressed;
+  final VoidCallback? onAbility7Pressed;
+  final VoidCallback? onAbility8Pressed;
+  final VoidCallback? onAbility9Pressed;
+  final VoidCallback? onAbility10Pressed;
 
   // Action bar configuration (for drag-and-drop)
   final ActionBarConfig? actionBarConfig;
@@ -53,6 +77,7 @@ class CombatHUD extends StatelessWidget {
     this.playerMaxPower,
     this.playerLevel = 1,
     this.playerPortraitWidget,
+    this.gameState,
     this.targetName,
     required this.targetHealth,
     required this.targetMaxHealth,
@@ -67,10 +92,28 @@ class CombatHUD extends StatelessWidget {
     required this.ability3CooldownMax,
     required this.ability4Cooldown,
     required this.ability4CooldownMax,
+    this.ability5Cooldown = 0.0,
+    this.ability5CooldownMax = 5.0,
+    this.ability6Cooldown = 0.0,
+    this.ability6CooldownMax = 5.0,
+    this.ability7Cooldown = 0.0,
+    this.ability7CooldownMax = 5.0,
+    this.ability8Cooldown = 0.0,
+    this.ability8CooldownMax = 5.0,
+    this.ability9Cooldown = 0.0,
+    this.ability9CooldownMax = 5.0,
+    this.ability10Cooldown = 0.0,
+    this.ability10CooldownMax = 5.0,
     required this.onAbility1Pressed,
     required this.onAbility2Pressed,
     required this.onAbility3Pressed,
     this.onAbility4Pressed,
+    this.onAbility5Pressed,
+    this.onAbility6Pressed,
+    this.onAbility7Pressed,
+    this.onAbility8Pressed,
+    this.onAbility9Pressed,
+    this.onAbility10Pressed,
     this.actionBarConfig,
     this.onAbilityDropped,
   }) : super(key: key);
@@ -92,22 +135,38 @@ class CombatHUD extends StatelessWidget {
   Widget _buildUnitFramesRow() {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.end, // Align at bottom
       children: [
-        // Player frame (portrait on left)
-        UnitFrame(
-          name: playerName,
-          health: playerHealth,
-          maxHealth: playerMaxHealth,
-          power: playerPower,
-          maxPower: playerMaxPower,
-          isPlayer: true,
-          level: playerLevel,
-          portraitWidget: playerPortraitWidget,
-          borderColor: const Color(0xFF4cc9f0),
-          healthColor: const Color(0xFF4CAF50),
-          powerColor: const Color(0xFF2196F3),
-          width: 200,
+        // Player frame with mana bar below
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Player frame (portrait on left)
+            UnitFrame(
+              name: playerName,
+              health: playerHealth,
+              maxHealth: playerMaxHealth,
+              power: playerPower,
+              maxPower: playerMaxPower,
+              isPlayer: true,
+              level: playerLevel,
+              portraitWidget: playerPortraitWidget,
+              borderColor: const Color(0xFF4cc9f0),
+              healthColor: const Color(0xFF4CAF50),
+              powerColor: const Color(0xFF2196F3),
+              width: 200,
+            ),
+            // Mana bar below player frame (same width)
+            if (gameState != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: ManaBar(
+                  gameState: gameState!,
+                  width: 200,
+                  height: 14,
+                ),
+              ),
+          ],
         ),
         const SizedBox(width: 12),
         // VS indicator
@@ -130,15 +189,39 @@ class CombatHUD extends StatelessWidget {
     );
   }
 
+  /// Check if an ability in a slot is out of range of current target
+  bool _isSlotOutOfRange(int slotIndex, double? distanceToTarget) {
+    if (actionBarConfig == null || distanceToTarget == null) return false;
+    final abilityData = actionBarConfig!.getSlotAbilityData(slotIndex);
+    if (abilityData.isSelfCast) return false;
+    if (abilityData.range <= 0) return false;
+    return distanceToTarget > abilityData.range;
+  }
+
   Widget _buildActionBar() {
     // Get colors from action bar config if available
-    final slot1Color = actionBarConfig?.getSlotColor(0) ?? const Color(0xFFB3B3CC);
-    final slot2Color = actionBarConfig?.getSlotColor(1) ?? const Color(0xFFFF6600);
-    final slot3Color = actionBarConfig?.getSlotColor(2) ?? const Color(0xFF80FF4D);
-    final slot4Color = actionBarConfig?.getSlotColor(3) ?? const Color(0xFFE6B333);
+    final slotColors = List.generate(10, (i) =>
+      actionBarConfig?.getSlotColor(i) ?? const Color(0xFFB3B3CC));
+
+    // Compute distance to current target once for range checking
+    final distanceToTarget = gameState?.getDistanceToCurrentTarget();
+
+    // Define slot data for all 10 slots
+    final slots = [
+      (label: '1', cooldown: ability1Cooldown, maxCooldown: ability1CooldownMax, onPressed: onAbility1Pressed),
+      (label: '2', cooldown: ability2Cooldown, maxCooldown: ability2CooldownMax, onPressed: onAbility2Pressed),
+      (label: '3', cooldown: ability3Cooldown, maxCooldown: ability3CooldownMax, onPressed: onAbility3Pressed),
+      (label: '4', cooldown: ability4Cooldown, maxCooldown: ability4CooldownMax, onPressed: onAbility4Pressed),
+      (label: '5', cooldown: ability5Cooldown, maxCooldown: ability5CooldownMax, onPressed: onAbility5Pressed),
+      (label: '6', cooldown: ability6Cooldown, maxCooldown: ability6CooldownMax, onPressed: onAbility6Pressed),
+      (label: '7', cooldown: ability7Cooldown, maxCooldown: ability7CooldownMax, onPressed: onAbility7Pressed),
+      (label: '8', cooldown: ability8Cooldown, maxCooldown: ability8CooldownMax, onPressed: onAbility8Pressed),
+      (label: '9', cooldown: ability9Cooldown, maxCooldown: ability9CooldownMax, onPressed: onAbility9Pressed),
+      (label: '0', cooldown: ability10Cooldown, maxCooldown: ability10CooldownMax, onPressed: onAbility10Pressed),
+    ];
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xFF1a1a2e).withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(8),
@@ -154,46 +237,49 @@ class CombatHUD extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildDraggableSlot(
-            slotIndex: 0,
-            label: '1',
-            color: slot1Color,
-            cooldown: ability1Cooldown,
-            maxCooldown: ability1CooldownMax,
-            onPressed: onAbility1Pressed,
+          // Row 1: Slots 1-5
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(5, (i) {
+              final slot = slots[i];
+              return Padding(
+                padding: EdgeInsets.only(left: i > 0 ? 4 : 0),
+                child: _buildDraggableSlot(
+                  slotIndex: i,
+                  label: slot.label,
+                  color: slotColors[i],
+                  cooldown: slot.cooldown,
+                  maxCooldown: slot.maxCooldown,
+                  onPressed: slot.onPressed ?? () {},
+                  isOutOfRange: _isSlotOutOfRange(i, distanceToTarget),
+                ),
+              );
+            }),
           ),
-          const SizedBox(width: 6),
-          _buildDraggableSlot(
-            slotIndex: 1,
-            label: '2',
-            color: slot2Color,
-            cooldown: ability2Cooldown,
-            maxCooldown: ability2CooldownMax,
-            onPressed: onAbility2Pressed,
+          const SizedBox(height: 4),
+          // Row 2: Slots 6-10
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(5, (i) {
+              final slotIdx = i + 5;
+              final slot = slots[slotIdx];
+              return Padding(
+                padding: EdgeInsets.only(left: i > 0 ? 4 : 0),
+                child: _buildDraggableSlot(
+                  slotIndex: slotIdx,
+                  label: slot.label,
+                  color: slotColors[slotIdx],
+                  cooldown: slot.cooldown,
+                  maxCooldown: slot.maxCooldown,
+                  onPressed: slot.onPressed ?? () {},
+                  isOutOfRange: _isSlotOutOfRange(slotIdx, distanceToTarget),
+                ),
+              );
+            }),
           ),
-          const SizedBox(width: 6),
-          _buildDraggableSlot(
-            slotIndex: 2,
-            label: '3',
-            color: slot3Color,
-            cooldown: ability3Cooldown,
-            maxCooldown: ability3CooldownMax,
-            onPressed: onAbility3Pressed,
-          ),
-          if (onAbility4Pressed != null) ...[
-            const SizedBox(width: 6),
-            _buildDraggableSlot(
-              slotIndex: 3,
-              label: '4',
-              color: slot4Color,
-              cooldown: ability4Cooldown,
-              maxCooldown: ability4CooldownMax,
-              onPressed: onAbility4Pressed!,
-            ),
-          ],
         ],
       ),
     );
@@ -207,7 +293,11 @@ class CombatHUD extends StatelessWidget {
     required double cooldown,
     required double maxCooldown,
     required VoidCallback onPressed,
+    bool isOutOfRange = false,
   }) {
+    // Get the ability name for this slot's tooltip
+    final abilityName = actionBarConfig?.getSlotAbility(slotIndex);
+
     // If no drag support, just show normal button
     if (onAbilityDropped == null) {
       return AbilityButton(
@@ -216,6 +306,8 @@ class CombatHUD extends StatelessWidget {
         cooldown: cooldown,
         maxCooldown: maxCooldown,
         onPressed: onPressed,
+        isOutOfRange: isOutOfRange,
+        tooltipText: abilityName,
       );
     }
 
@@ -248,6 +340,8 @@ class CombatHUD extends StatelessWidget {
                 cooldown: cooldown,
                 maxCooldown: maxCooldown,
                 onPressed: onPressed,
+                isOutOfRange: isOutOfRange,
+                tooltipText: abilityName,
               ),
               // Drop indicator overlay
               if (isHovering)

@@ -42,9 +42,15 @@ import 'ui/ui_config.dart';
 import 'ui/abilities_modal.dart';
 import 'ui/character_panel.dart';
 import 'ui/bag_panel.dart';
+import 'ui/dps_panel.dart';
+import 'ui/cast_bar.dart';
+import 'ui/mana_bar.dart';
 import 'ui/unit_frames/unit_frames.dart';
+import '../models/target_dummy.dart';
 import '../main.dart' show globalInterfaceConfig;
 import 'state/action_bar_config.dart';
+import 'state/ability_override_manager.dart';
+import 'state/mana_config.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -94,6 +100,12 @@ class _Game3DState extends State<Game3D> {
     // Initialize action bar config for ability slot assignments
     _initializeActionBarConfig();
 
+    // Initialize ability override manager for custom ability edits
+    _initializeAbilityOverrides();
+
+    // Initialize mana config (JSON defaults + SharedPreferences overrides)
+    _initializeManaConfig();
+
     // Initialize player inventory with sample items
     _initializeInventory();
 
@@ -105,6 +117,18 @@ class _Game3DState extends State<Game3D> {
   void _initializeActionBarConfig() {
     globalActionBarConfig ??= ActionBarConfig();
     globalActionBarConfig!.loadConfig();
+  }
+
+  /// Initialize the global ability override manager
+  void _initializeAbilityOverrides() {
+    globalAbilityOverrideManager ??= AbilityOverrideManager();
+    globalAbilityOverrideManager!.loadOverrides();
+  }
+
+  /// Initialize the global mana configuration (JSON defaults + overrides)
+  void _initializeManaConfig() {
+    globalManaConfig ??= ManaConfig();
+    globalManaConfig!.initialize();
   }
 
   /// Initialize player inventory with sample items from database
@@ -261,6 +285,13 @@ class _Game3DState extends State<Game3D> {
       // Spawn minions (8 Goblin Rogues, 4 Orc Warlocks, 2 Cultist Priests, 1 Skeleton Champion)
       gameState.spawnMinions(gameState.infiniteTerrainManager);
 
+      // Initialize Ley Lines for mana regeneration
+      gameState.initializeLeyLines(
+        seed: 42,
+        worldSize: 300.0,
+        siteCount: 30,
+      );
+
       print('Game3D initialized successfully!');
 
       // Start game loop
@@ -405,6 +436,9 @@ class _Game3DState extends State<Game3D> {
     // Update player ability cooldowns and effects
     AbilitySystem.update(dt, gameState);
 
+    // Update mana regeneration based on Ley Line proximity
+    gameState.updateManaRegen(dt);
+
     // Update AI systems (monster AI, ally AI, projectiles)
     AISystem.update(
       dt,
@@ -415,11 +449,17 @@ class _Game3DState extends State<Game3D> {
       activateMonsterAbility3: _activateMonsterAbility3,
     );
 
-    // Handle player ability input
+    // Handle player ability input (slots 1-10)
     AbilitySystem.handleAbility1Input(inputManager!.isActionPressed(GameAction.actionBar1), gameState);
     AbilitySystem.handleAbility2Input(inputManager!.isActionPressed(GameAction.actionBar2), gameState);
     AbilitySystem.handleAbility3Input(inputManager!.isActionPressed(GameAction.actionBar3), gameState);
     AbilitySystem.handleAbility4Input(inputManager!.isActionPressed(GameAction.actionBar4), gameState);
+    AbilitySystem.handleAbility5Input(inputManager!.isActionPressed(GameAction.actionBar5), gameState);
+    AbilitySystem.handleAbility6Input(inputManager!.isActionPressed(GameAction.actionBar6), gameState);
+    AbilitySystem.handleAbility7Input(inputManager!.isActionPressed(GameAction.actionBar7), gameState);
+    AbilitySystem.handleAbility8Input(inputManager!.isActionPressed(GameAction.actionBar8), gameState);
+    AbilitySystem.handleAbility9Input(inputManager!.isActionPressed(GameAction.actionBar9), gameState);
+    AbilitySystem.handleAbility10Input(inputManager!.isActionPressed(GameAction.actionBar10), gameState);
     // ===== END ABILITY SYSTEM =====
 
     // ===== ALLY COMMAND SYSTEM =====
@@ -526,6 +566,31 @@ class _Game3DState extends State<Game3D> {
       return;
     }
 
+    // Handle SHIFT+D for DPS testing panel (only on key down, not repeat)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyD) {
+      final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+      if (isShiftPressed) {
+        print('SHIFT+D detected! Toggling DPS panel.');
+        setState(() {
+          gameState.dpsPanelOpen = !gameState.dpsPanelOpen;
+          if (gameState.dpsPanelOpen) {
+            // Spawn target dummy when opening DPS panel
+            gameState.spawnTargetDummy(gameState.infiniteTerrainManager);
+            // Auto-target the dummy
+            gameState.setTarget(TargetDummy.instanceId);
+          } else {
+            // Despawn target dummy when closing DPS panel
+            gameState.despawnTargetDummy();
+            // Clear target if it was the dummy
+            if (gameState.currentTargetId == TargetDummy.instanceId) {
+              gameState.clearTarget();
+            }
+          }
+        });
+        return;
+      }
+    }
+
     // Handle Tab/Shift+Tab for target cycling (WoW-style)
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.tab) {
       final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
@@ -567,6 +632,16 @@ class _Game3DState extends State<Game3D> {
         });
         return;
       }
+      if (gameState.dpsPanelOpen) {
+        setState(() {
+          gameState.dpsPanelOpen = false;
+          gameState.despawnTargetDummy();
+          if (gameState.currentTargetId == TargetDummy.instanceId) {
+            gameState.clearTarget();
+          }
+        });
+        return;
+      }
       // Clear target if no modal is open
       if (gameState.currentTargetId != null) {
         setState(() {
@@ -604,6 +679,42 @@ class _Game3DState extends State<Game3D> {
   void _activateAbility4() {
     setState(() {
       AbilitySystem.handleAbility4Input(true, gameState);
+    });
+  }
+
+  void _activateAbility5() {
+    setState(() {
+      AbilitySystem.handleAbility5Input(true, gameState);
+    });
+  }
+
+  void _activateAbility6() {
+    setState(() {
+      AbilitySystem.handleAbility6Input(true, gameState);
+    });
+  }
+
+  void _activateAbility7() {
+    setState(() {
+      AbilitySystem.handleAbility7Input(true, gameState);
+    });
+  }
+
+  void _activateAbility8() {
+    setState(() {
+      AbilitySystem.handleAbility8Input(true, gameState);
+    });
+  }
+
+  void _activateAbility9() {
+    setState(() {
+      AbilitySystem.handleAbility9Input(true, gameState);
+    });
+  }
+
+  void _activateAbility10() {
+    setState(() {
+      AbilitySystem.handleAbility10Input(true, gameState);
     });
   }
 
@@ -1305,6 +1416,24 @@ class _Game3DState extends State<Game3D> {
                   }
                 },
               ),
+
+            // DPS Panel (Press SHIFT+D to toggle)
+            if (gameState.dpsPanelOpen)
+              DpsPanel(
+                dpsTracker: gameState.dpsTracker,
+                onClose: () {
+                  setState(() {
+                    gameState.dpsPanelOpen = false;
+                    gameState.despawnTargetDummy();
+                    if (gameState.currentTargetId == TargetDummy.instanceId) {
+                      gameState.clearTarget();
+                    }
+                  });
+                },
+              ),
+
+            // Cast Bar (shows when casting or winding up)
+            CastBar(gameState: gameState),
           ],
         ),
       ),
@@ -1335,6 +1464,16 @@ class _Game3DState extends State<Game3D> {
         'maxHealth': gameState.monsterMaxHealth.toDouble(),
         'level': 15,
         'color': const Color(0xFF9933CC), // Purple for boss
+      };
+    } else if (target['type'] == 'dummy') {
+      final dummy = gameState.targetDummy;
+      return {
+        'hasTarget': true,
+        'name': 'Target Dummy',
+        'health': dummy?.displayHealth ?? 100000,
+        'maxHealth': dummy?.maxHealth ?? 100000,
+        'level': 0,
+        'color': const Color(0xFFC19A6B), // Burlywood/wooden color
       };
     } else {
       final minion = target['entity'] as Monster?;
@@ -1422,6 +1561,7 @@ class _Game3DState extends State<Game3D> {
             hasDirectionIndicator: true,
             indicatorColor: Colors.red,
           ),
+          gameState: gameState, // For mana bar display
           targetName: targetData['name'] as String?,
           targetHealth: targetData['health'] as double,
           targetMaxHealth: targetData['maxHealth'] as double,
@@ -1443,10 +1583,28 @@ class _Game3DState extends State<Game3D> {
           ability3CooldownMax: gameState.ability3CooldownMax,
           ability4Cooldown: gameState.ability4Cooldown,
           ability4CooldownMax: gameState.ability4CooldownMax,
+          ability5Cooldown: gameState.ability5Cooldown,
+          ability5CooldownMax: gameState.ability5CooldownMax,
+          ability6Cooldown: gameState.ability6Cooldown,
+          ability6CooldownMax: gameState.ability6CooldownMax,
+          ability7Cooldown: gameState.ability7Cooldown,
+          ability7CooldownMax: gameState.ability7CooldownMax,
+          ability8Cooldown: gameState.ability8Cooldown,
+          ability8CooldownMax: gameState.ability8CooldownMax,
+          ability9Cooldown: gameState.ability9Cooldown,
+          ability9CooldownMax: gameState.ability9CooldownMax,
+          ability10Cooldown: gameState.ability10Cooldown,
+          ability10CooldownMax: gameState.ability10CooldownMax,
           onAbility1Pressed: _activateAbility1,
           onAbility2Pressed: _activateAbility2,
           onAbility3Pressed: _activateAbility3,
           onAbility4Pressed: _activateAbility4,
+          onAbility5Pressed: _activateAbility5,
+          onAbility6Pressed: _activateAbility6,
+          onAbility7Pressed: _activateAbility7,
+          onAbility8Pressed: _activateAbility8,
+          onAbility9Pressed: _activateAbility9,
+          onAbility10Pressed: _activateAbility10,
           actionBarConfig: globalActionBarConfig,
           onAbilityDropped: _handleAbilityDropped,
         ),
