@@ -104,6 +104,12 @@ class AbilitySystem {
     final config = globalActionBarConfig;
     final abilityName = config?.getSlotAbility(slotIndex) ?? '';
 
+    // Spend the deferred mana now that the cast succeeded
+    _spendPendingMana(gameState, abilityName);
+
+    // Set cooldown now that the cast has successfully completed
+    _setCooldownForSlot(slotIndex, _getAbilityCooldown(abilityName), gameState);
+
     // Execute the ability's effect (projectile launch, damage, etc.)
     switch (abilityName) {
       case 'Lightning Bolt':
@@ -131,6 +137,12 @@ class AbilitySystem {
   static void _finishWindupAbility(int slotIndex, GameState gameState) {
     final config = globalActionBarConfig;
     final abilityName = config?.getSlotAbility(slotIndex) ?? '';
+
+    // Spend the deferred mana now that the windup succeeded
+    _spendPendingMana(gameState, abilityName);
+
+    // Set cooldown now that the windup has successfully completed
+    _setCooldownForSlot(slotIndex, _getAbilityCooldown(abilityName), gameState);
 
     // Execute the ability's effect (damage in area, etc.)
     switch (abilityName) {
@@ -227,22 +239,19 @@ class AbilitySystem {
 
     // Check for cast-time abilities (must be stationary)
     if (_isCastTimeAbility(abilityName)) {
-      // Spend mana at start of cast
-      if (manaCost > 0 && manaType == _ManaType.blue) {
-        gameState.spendBlueMana(manaCost);
-        print('[MANA] Spent $manaCost blue mana for $abilityName');
-      }
+      // Defer mana spending until the cast completes. If interrupted,
+      // the mana is never spent and the ability remains available.
+      gameState.pendingManaCost = manaCost;
+      gameState.pendingManaIsBlue = manaType == _ManaType.blue;
       _startCastTimeAbility(abilityName, slotIndex, gameState);
       return;
     }
 
     // Check for windup abilities (reduced movement, red mana)
     if (_isWindupAbility(abilityName)) {
-      // Spend red mana at start of windup
-      if (manaCost > 0 && manaType == _ManaType.red) {
-        gameState.spendRedMana(manaCost);
-        print('[MANA] Spent $manaCost red mana for $abilityName');
-      }
+      // Defer mana spending until the windup completes.
+      gameState.pendingManaCost = manaCost;
+      gameState.pendingManaIsBlue = manaType == _ManaType.blue;
       _startWindupAbility(abilityName, slotIndex, gameState);
       return;
     }
@@ -537,8 +546,9 @@ class AbilitySystem {
     gameState.castingSlotIndex = slotIndex;
     gameState.castingAbilityName = abilityName;
 
-    // Set cooldown immediately (so you can't spam cast attempts)
-    _setCooldownForSlot(slotIndex, _getAbilityCooldown(abilityName), gameState);
+    // Cooldown is NOT set here — it is set when the cast completes in
+    // _finishCastTimeAbility. If the cast is interrupted, the ability
+    // remains available.
 
     print('[CAST] Starting $abilityName (${castTime}s cast time)');
   }
@@ -555,8 +565,9 @@ class AbilitySystem {
     gameState.windupAbilityName = abilityName;
     gameState.windupMovementSpeedModifier = movementSpeed;
 
-    // Set cooldown immediately
-    _setCooldownForSlot(slotIndex, _getAbilityCooldown(abilityName), gameState);
+    // Cooldown is NOT set here — it is set when the windup completes in
+    // _finishWindupAbility. If the windup is interrupted, the ability
+    // remains available.
 
     print('[WINDUP] Starting $abilityName (${windupTime}s windup, ${(movementSpeed * 100).toInt()}% movement)');
   }
@@ -660,6 +671,21 @@ class AbilitySystem {
   static double _getRedManaCost(String abilityName) {
     final (cost, type) = _getManaCostAndType(abilityName);
     return type == _ManaType.red ? cost : 0.0;
+  }
+
+  /// Spend the pending mana stored in gameState (deferred from cast/windup start)
+  static void _spendPendingMana(GameState gameState, String abilityName) {
+    final cost = gameState.pendingManaCost;
+    if (cost <= 0) return;
+
+    if (gameState.pendingManaIsBlue) {
+      gameState.spendBlueMana(cost);
+      print('[MANA] Spent $cost blue mana for $abilityName');
+    } else {
+      gameState.spendRedMana(cost);
+      print('[MANA] Spent $cost red mana for $abilityName');
+    }
+    gameState.pendingManaCost = 0.0;
   }
 
   // ==================== CAST TIME ABILITY EFFECTS ====================
@@ -1588,6 +1614,7 @@ class AbilitySystem {
         impactColor: projectile.impactColor,
         impactSize: projectile.impactSize,
         collisionThreshold: 2.0, // Guaranteed hit
+        showDamageIndicator: true,
       );
     } else {
       CombatSystem.damageMinion(
@@ -1597,6 +1624,7 @@ class AbilitySystem {
         attackType: projectile.abilityName,
         impactColor: projectile.impactColor,
         impactSize: projectile.impactSize,
+        showDamageIndicator: true,
       );
     }
   }

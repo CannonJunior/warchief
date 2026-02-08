@@ -7,6 +7,7 @@ import '../../rendering3d/infinite_terrain_manager.dart';
 import '../../rendering3d/ley_lines.dart';
 import '../../models/projectile.dart';
 import '../../models/impact_effect.dart';
+import '../ui/damage_indicators.dart';
 import '../../models/ally.dart';
 import '../../models/ai_chat_message.dart';
 import '../../models/monster.dart';
@@ -816,31 +817,40 @@ class GameState {
   /// Movement speed modifier from windup (0.0 = stopped, 1.0 = full speed)
   double windupMovementSpeedModifier = 1.0;
 
+  /// Pending mana cost to spend when cast/windup completes.
+  /// If interrupted, cost is not spent.
+  double pendingManaCost = 0.0;
+
+  /// Whether the pending mana is blue (true) or red (false)
+  bool pendingManaIsBlue = true;
+
   /// Get the effective movement speed considering windup modifier
   double get effectivePlayerSpeed => playerSpeed * windupMovementSpeedModifier;
 
   /// Cancel any active cast (called when player moves during stationary cast)
   void cancelCast() {
     if (isCasting) {
-      print('[CAST] $castingAbilityName cast cancelled (moved)');
+      print('[CAST] $castingAbilityName cast cancelled — mana and cooldown preserved');
       isCasting = false;
       castProgress = 0.0;
       currentCastTime = 0.0;
       castingSlotIndex = null;
       castingAbilityName = '';
+      pendingManaCost = 0.0;
     }
   }
 
   /// Cancel any active windup
   void cancelWindup() {
     if (isWindingUp) {
-      print('[WINDUP] $windupAbilityName windup cancelled');
+      print('[WINDUP] $windupAbilityName windup cancelled — mana and cooldown preserved');
       isWindingUp = false;
       windupProgress = 0.0;
       currentWindupTime = 0.0;
       windupSlotIndex = null;
       windupAbilityName = '';
       windupMovementSpeedModifier = 1.0;
+      pendingManaCost = 0.0;
     }
   }
 
@@ -914,6 +924,7 @@ class GameState {
   // ==================== VISUAL EFFECTS ====================
 
   List<ImpactEffect> impactEffects = []; // List of active impact effects
+  List<DamageIndicator> damageIndicators = []; // Floating damage numbers
 
   // ==================== MOVEMENT TRACKING ====================
 

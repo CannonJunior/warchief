@@ -7,16 +7,22 @@ import 'custom_ability_manager.dart';
 
 /// Configuration for the player's action bar slots
 ///
-/// Tracks which abilities are assigned to which action bar slots (1-4).
+/// Tracks which abilities are assigned to which action bar slots (1-10).
 /// Supports persistence via SharedPreferences.
 class ActionBarConfig extends ChangeNotifier {
-  /// Current ability assignments by slot index (0-3)
+  /// Current ability assignments by slot index (0-9)
   /// Stores the ability name as the identifier
   List<String> _slotAssignments = [
     'Sword',       // Slot 1 (key 1)
     'Fireball',    // Slot 2 (key 2)
     'Heal',        // Slot 3 (key 3)
     'Dash Attack', // Slot 4 (key 4)
+    'Sword',       // Slot 5 (key 5)
+    'Sword',       // Slot 6 (key 6)
+    'Sword',       // Slot 7 (key 7)
+    'Sword',       // Slot 8 (key 8)
+    'Sword',       // Slot 9 (key 9)
+    'Sword',       // Slot 10 (key 0)
   ];
 
   /// Get the ability assigned to a slot (0-indexed)
@@ -104,7 +110,12 @@ class ActionBarConfig extends ChangeNotifier {
       final configJson = prefs.getString('action_bar_config');
       if (configJson != null) {
         final List<dynamic> loaded = jsonDecode(configJson);
-        _slotAssignments = loaded.cast<String>();
+        final assignments = loaded.cast<String>();
+        // Pad to 10 slots if saved config has fewer (upgrade from older versions)
+        while (assignments.length < 10) {
+          assignments.add('Sword');
+        }
+        _slotAssignments = assignments;
         notifyListeners();
       }
     } catch (e) {
@@ -119,6 +130,12 @@ class ActionBarConfig extends ChangeNotifier {
       'Fireball',
       'Heal',
       'Dash Attack',
+      'Sword',
+      'Sword',
+      'Sword',
+      'Sword',
+      'Sword',
+      'Sword',
     ];
     notifyListeners();
     _saveConfig();

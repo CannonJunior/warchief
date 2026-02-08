@@ -45,6 +45,7 @@ import 'ui/bag_panel.dart';
 import 'ui/dps_panel.dart';
 import 'ui/cast_bar.dart';
 import 'ui/mana_bar.dart';
+import 'ui/damage_indicators.dart';
 import 'ui/unit_frames/unit_frames.dart';
 import '../models/target_dummy.dart';
 import '../main.dart' show globalInterfaceConfig;
@@ -527,6 +528,9 @@ class _Game3DState extends State<Game3D> {
       gameState.shadowTransform!.scale = Vector3(scaleFactor, 1, scaleFactor);
     }
 
+    // Update floating damage indicators
+    updateDamageIndicators(gameState.damageIndicators, dt);
+
     // Update camera based on mode
     if (camera!.mode == CameraMode.thirdPerson) {
       // Third-person mode: Camera follows player from behind
@@ -777,12 +781,6 @@ class _Game3DState extends State<Game3D> {
   bool _holdKeyWasPressed = false;
   bool _formationKeyWasPressed = false;
 
-  /// Panel visibility states (toggled with SHIFT+key)
-  bool _showAttackPanel = false;
-  bool _showFollowPanel = false;
-  bool _showHoldPanel = false;
-  bool _showFormationPanel = true; // Shown by default
-
   /// Default positions for draggable panels (used if config not available)
   static const Map<String, Offset> _defaultPositions = {
     'instructions': Offset(10, 10),
@@ -888,36 +886,36 @@ class _Game3DState extends State<Game3D> {
     // SHIFT+F - Toggle Follow panel
     if (shiftPressed && followPressed && !_shiftFollowWasPressed) {
       setState(() {
-        _showFollowPanel = !_showFollowPanel;
+        globalInterfaceConfig?.toggleVisibility('follow_panel');
       });
-      print('[UI] Follow panel: ${_showFollowPanel ? "shown" : "hidden"}');
+      print('[UI] Follow panel: ${_isVisible('follow_panel') ? "shown" : "hidden"}');
     }
     _shiftFollowWasPressed = shiftPressed && followPressed;
 
     // SHIFT+T - Toggle Attack panel
     if (shiftPressed && attackPressed && !_shiftAttackWasPressed) {
       setState(() {
-        _showAttackPanel = !_showAttackPanel;
+        globalInterfaceConfig?.toggleVisibility('attack_panel');
       });
-      print('[UI] Attack panel: ${_showAttackPanel ? "shown" : "hidden"}');
+      print('[UI] Attack panel: ${_isVisible('attack_panel') ? "shown" : "hidden"}');
     }
     _shiftAttackWasPressed = shiftPressed && attackPressed;
 
     // SHIFT+G - Toggle Hold panel
     if (shiftPressed && holdPressed && !_shiftHoldWasPressed) {
       setState(() {
-        _showHoldPanel = !_showHoldPanel;
+        globalInterfaceConfig?.toggleVisibility('hold_panel');
       });
-      print('[UI] Hold panel: ${_showHoldPanel ? "shown" : "hidden"}');
+      print('[UI] Hold panel: ${_isVisible('hold_panel') ? "shown" : "hidden"}');
     }
     _shiftHoldWasPressed = shiftPressed && holdPressed;
 
     // SHIFT+R - Toggle Formation panel
     if (shiftPressed && formationPressed && !_shiftFormationWasPressed) {
       setState(() {
-        _showFormationPanel = !_showFormationPanel;
+        globalInterfaceConfig?.toggleVisibility('formation_panel');
       });
-      print('[UI] Formation panel: ${_showFormationPanel ? "shown" : "hidden"}');
+      print('[UI] Formation panel: ${_isVisible('formation_panel') ? "shown" : "hidden"}');
     }
     _shiftFormationWasPressed = shiftPressed && formationPressed;
 
@@ -1197,6 +1195,14 @@ class _Game3DState extends State<Game3D> {
           children: [
             // Canvas will be created and appended to body in initState
             SizedBox.expand(),
+
+            // Floating damage indicators (world-space positioned)
+            DamageIndicatorOverlay(
+              indicators: gameState.damageIndicators,
+              camera: camera,
+              canvasWidth: 1600,
+              canvasHeight: 900,
+            ),
 
             // Instructions overlay (draggable)
             if (_isVisible('instructions'))

@@ -3,6 +3,7 @@ import 'package:vector_math/vector_math.dart' hide Colors;
 
 import '../state/game_state.dart';
 import '../state/game_config.dart';
+import '../ui/damage_indicators.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/impact_effect.dart';
@@ -79,6 +80,8 @@ class CombatSystem {
     required DamageTarget targetType,
     int? allyIndex,
     String? minionInstanceId,
+    bool showDamageIndicator = false,
+    bool isMelee = false,
   }) {
     final distance = (attackerPosition - targetPosition).length;
 
@@ -90,6 +93,29 @@ class CombatSystem {
         color: impactColor,
         size: impactSize,
       );
+
+      // Track health before damage to detect killing blows
+      double healthBefore = 0.0;
+      if (showDamageIndicator) {
+        switch (targetType) {
+          case DamageTarget.monster:
+            healthBefore = gameState.monsterHealth;
+            break;
+          case DamageTarget.minion:
+            if (minionInstanceId != null) {
+              final m = gameState.minions.where(
+                (m) => m.instanceId == minionInstanceId && m.isAlive
+              ).firstOrNull;
+              healthBefore = m?.health ?? 0.0;
+            }
+            break;
+          case DamageTarget.dummy:
+            healthBefore = double.infinity; // Dummy can't die
+            break;
+          default:
+            break;
+        }
+      }
 
       // Apply damage based on target type
       switch (targetType) {
@@ -136,6 +162,30 @@ class CombatSystem {
                   'Total: ${gameState.targetDummy!.totalDamageTaken.toStringAsFixed(1)}');
           }
           break;
+      }
+
+      // Spawn floating damage indicator for player attacks on enemies
+      if (showDamageIndicator && damage > 0) {
+        bool isKill = false;
+        if (targetType == DamageTarget.monster) {
+          isKill = healthBefore > 0 && gameState.monsterHealth <= 0;
+        } else if (targetType == DamageTarget.minion && minionInstanceId != null) {
+          final m = gameState.minions.where(
+            (m) => m.instanceId == minionInstanceId
+          ).firstOrNull;
+          isKill = healthBefore > 0 && (m == null || !m.isAlive);
+        }
+
+        // Position the indicator above the target
+        final indicatorPos = targetPosition.clone();
+        indicatorPos.y += 2.0;
+
+        gameState.damageIndicators.add(DamageIndicator(
+          damage: damage,
+          worldPosition: indicatorPos,
+          isMelee: isMelee,
+          isKillingBlow: isKill,
+        ));
       }
 
       return true;
@@ -208,6 +258,8 @@ class CombatSystem {
     required Vector3 impactColor,
     required double impactSize,
     double? collisionThreshold,
+    bool showDamageIndicator = false,
+    bool isMelee = false,
   }) {
     if (gameState.monsterTransform == null || gameState.monsterHealth <= 0) {
       return false;
@@ -223,6 +275,8 @@ class CombatSystem {
       impactColor: impactColor,
       impactSize: impactSize,
       targetType: DamageTarget.monster,
+      showDamageIndicator: showDamageIndicator,
+      isMelee: isMelee,
     );
   }
 
@@ -344,6 +398,8 @@ class CombatSystem {
     required Vector3 impactColor,
     required double impactSize,
     double? collisionThreshold,
+    bool showDamageIndicator = false,
+    bool isMelee = false,
   }) {
     for (final minion in gameState.aliveMinions) {
       // Use larger of: provided threshold, scale-based threshold, or minimum threshold
@@ -365,6 +421,8 @@ class CombatSystem {
         impactSize: impactSize,
         targetType: DamageTarget.minion,
         minionInstanceId: minion.instanceId,
+        showDamageIndicator: showDamageIndicator,
+        isMelee: isMelee,
       );
 
       if (hit) return true;
@@ -404,16 +462,18 @@ class CombatSystem {
         // Use ability color if provided, otherwise derive from impact color
         final trackingColor = abilityColor ?? _vectorToColor(impactColor);
 
-        return damageTargetDummy(
+        final hit = damageTargetDummy(
           gameState,
           damage: damage,
           abilityName: attackType,
           abilityColor: trackingColor,
           impactColor: impactColor,
           impactSize: impactSize,
-          isCritical: false, // TODO: Add crit calculation
+          isCritical: false,
           isHit: true,
+          isMelee: isMeleeDamage,
         );
+        return hit;
       }
     }
 
@@ -426,6 +486,8 @@ class CombatSystem {
       impactColor: impactColor,
       impactSize: impactSize,
       collisionThreshold: collisionThreshold,
+      showDamageIndicator: true,
+      isMelee: isMeleeDamage,
     )) {
       // Generate red mana from melee damage
       if (isMeleeDamage) {
@@ -443,6 +505,8 @@ class CombatSystem {
       impactColor: impactColor,
       impactSize: impactSize,
       collisionThreshold: collisionThreshold,
+      showDamageIndicator: true,
+      isMelee: isMeleeDamage,
     );
 
     // Generate red mana from melee damage to minions
@@ -471,12 +535,16 @@ class CombatSystem {
     required String attackType,
     required Vector3 impactColor,
     required double impactSize,
+    bool showDamageIndicator = false,
+    bool isMelee = false,
   }) {
     final minion = gameState.minions.where(
       (m) => m.instanceId == minionInstanceId && m.isAlive
     ).firstOrNull;
 
     if (minion == null) return false;
+
+    final healthBefore = minion.health;
 
     createImpactEffect(
       gameState,
@@ -488,6 +556,17 @@ class CombatSystem {
     minion.takeDamage(damage);
     print('$attackType hit ${minion.definition.name} for $damage damage! '
           'Health: ${minion.health.toStringAsFixed(1)}/${minion.maxHealth}');
+
+    if (showDamageIndicator && damage > 0) {
+      final indicatorPos = minion.transform.position.clone();
+      indicatorPos.y += 2.0;
+      gameState.damageIndicators.add(DamageIndicator(
+        damage: damage,
+        worldPosition: indicatorPos,
+        isMelee: isMelee,
+        isKillingBlow: healthBefore > 0 && !minion.isAlive,
+      ));
+    }
 
     return true;
   }
@@ -518,6 +597,7 @@ class CombatSystem {
     required double impactSize,
     bool isCritical = false,
     bool isHit = true,
+    bool isMelee = false,
   }) {
     final dummy = gameState.targetDummy;
     if (dummy == null || !dummy.isSpawned) return false;
@@ -542,6 +622,18 @@ class CombatSystem {
         color: impactColor,
         size: impactSize,
       );
+
+      // Spawn floating damage indicator
+      if (damage > 0) {
+        final indicatorPos = dummy.position.clone();
+        indicatorPos.y += 2.0;
+        gameState.damageIndicators.add(DamageIndicator(
+          damage: damage,
+          worldPosition: indicatorPos,
+          isMelee: isMelee,
+          isKillingBlow: false, // Dummy can't die
+        ));
+      }
 
       print('[DPS] $abilityName hit Target Dummy for $damage damage${isCritical ? " (CRIT!)" : ""}');
     } else {
@@ -569,6 +661,7 @@ class CombatSystem {
     required double impactSize,
     double? collisionThreshold,
     bool isCritical = false,
+    bool isMelee = false,
   }) {
     final dummy = gameState.targetDummy;
     if (dummy == null || !dummy.isSpawned) return false;
@@ -586,6 +679,7 @@ class CombatSystem {
         impactSize: impactSize,
         isCritical: isCritical,
         isHit: true,
+        isMelee: isMelee,
       );
     }
 
