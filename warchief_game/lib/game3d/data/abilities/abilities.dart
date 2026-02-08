@@ -33,6 +33,7 @@ export 'elemental_abilities.dart';
 export 'utility_abilities.dart';
 
 import 'ability_types.dart';
+import '../../state/custom_ability_manager.dart';
 import 'player_abilities.dart';
 import 'monster_abilities.dart';
 import 'ally_abilities.dart';
@@ -102,7 +103,7 @@ class AbilityRegistry {
     return potentialAbilities.where((a) => a.type == type).toList();
   }
 
-  /// Find ability by name (case-insensitive)
+  /// Find ability by name (case-insensitive), searching built-in and custom
   static AbilityData? findByName(String name) {
     final lowerName = name.toLowerCase();
     for (final ability in potentialAbilities) {
@@ -110,7 +111,8 @@ class AbilityRegistry {
         return ability;
       }
     }
-    return null;
+    // Search custom abilities
+    return globalCustomAbilityManager?.findByName(name);
   }
 
   /// Get count of abilities per category

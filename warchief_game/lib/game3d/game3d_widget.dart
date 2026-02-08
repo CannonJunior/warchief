@@ -51,6 +51,8 @@ import '../main.dart' show globalInterfaceConfig;
 import 'state/action_bar_config.dart';
 import 'state/ability_override_manager.dart';
 import 'state/mana_config.dart';
+import 'state/custom_options_manager.dart';
+import 'state/custom_ability_manager.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -106,6 +108,12 @@ class _Game3DState extends State<Game3D> {
     // Initialize mana config (JSON defaults + SharedPreferences overrides)
     _initializeManaConfig();
 
+    // Initialize custom options manager (custom dropdown values + effect descriptions)
+    _initializeCustomOptions();
+
+    // Initialize custom ability manager (user-created abilities)
+    _initializeCustomAbilities();
+
     // Initialize player inventory with sample items
     _initializeInventory();
 
@@ -129,6 +137,18 @@ class _Game3DState extends State<Game3D> {
   void _initializeManaConfig() {
     globalManaConfig ??= ManaConfig();
     globalManaConfig!.initialize();
+  }
+
+  /// Initialize the global custom options manager (dropdown values + effect descriptions)
+  void _initializeCustomOptions() {
+    globalCustomOptionsManager ??= CustomOptionsManager();
+    globalCustomOptionsManager!.initialize();
+  }
+
+  /// Initialize the global custom ability manager (user-created abilities)
+  void _initializeCustomAbilities() {
+    globalCustomAbilityManager ??= CustomAbilityManager();
+    globalCustomAbilityManager!.loadAbilities();
   }
 
   /// Initialize player inventory with sample items from database
@@ -536,6 +556,27 @@ class _Game3DState extends State<Game3D> {
     }
 
     RenderSystem.render(renderer!, camera!, gameState);
+  }
+
+  /// Check if a text input field currently has focus.
+  /// EditableText is the inner widget that TextField/TextFormField use for input.
+  bool _isTextFieldFocused() {
+    final focus = FocusManager.instance.primaryFocus;
+    if (focus == null) return false;
+    final context = focus.context;
+    if (context == null) return false;
+    // The focused widget itself is EditableText when a TextField has focus
+    if (context.widget is EditableText) return true;
+    // Also check ancestors in case focus is on a child of EditableText
+    bool found = false;
+    context.visitAncestorElements((element) {
+      if (element.widget is EditableText) {
+        found = true;
+        return false;
+      }
+      return true;
+    });
+    return found;
   }
 
   void _onKeyEvent(KeyEvent event) {
@@ -1143,6 +1184,10 @@ class _Game3DState extends State<Game3D> {
     return Focus(
       autofocus: true,
       onKeyEvent: (node, event) {
+        // Let text fields handle their own input
+        if (_isTextFieldFocused()) {
+          return KeyEventResult.ignored;
+        }
         _onKeyEvent(event);
         return KeyEventResult.handled;
       },

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../data/abilities/abilities.dart';
 import 'ability_override_manager.dart';
+import 'custom_ability_manager.dart';
 
 /// Configuration for the player's action bar slots
 ///
@@ -56,9 +57,9 @@ class ActionBarConfig extends ChangeNotifier {
     );
   }
 
-  /// Get ability by name from all available abilities
+  /// Get ability by name from all available abilities (built-in + custom)
   AbilityData _getAbilityByName(String name) {
-    // Search through all ability categories
+    // Search through all built-in ability categories
     final allAbilities = [
       ...PlayerAbilities.all,
       ...WarriorAbilities.all,
@@ -77,6 +78,10 @@ class ActionBarConfig extends ChangeNotifier {
         return globalAbilityOverrideManager?.getEffectiveAbility(ability) ?? ability;
       }
     }
+
+    // Search custom abilities
+    final custom = globalCustomAbilityManager?.findByName(name);
+    if (custom != null) return custom;
 
     // Default fallback
     return PlayerAbilities.sword;
