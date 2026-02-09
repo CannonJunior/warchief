@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-08T10:56:25.234021",
+  "generated_at": "2026-02-08T21:13:50.978814",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
     "files": 134,
     "directories": 32,
-    "lines": 37785,
-    "size": 1268740
+    "lines": 37800,
+    "size": 1270974
   },
   "tree": {
     "name": "warchief_game",
@@ -480,10 +480,10 @@
                     "name": "game_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state.dart",
-                    "size": 31773,
+                    "size": 32060,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 948
+                    "lines": 952
                   },
                   {
                     "name": "mana_config.dart",
@@ -505,10 +505,10 @@
                     "name": "ability_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/ability_system.dart",
-                    "size": 62123,
+                    "size": 63445,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 1800
+                    "lines": 1803
                   },
                   {
                     "name": "ai_system.dart",
@@ -877,10 +877,10 @@
                 "name": "game3d_widget.dart",
                 "type": "file",
                 "path": "warchief_game/lib/game3d/game3d_widget.dart",
-                "size": 66580,
+                "size": 67205,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 1826
+                "lines": 1834
               }
             ]
           },

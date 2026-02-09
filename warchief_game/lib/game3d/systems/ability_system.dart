@@ -55,6 +55,8 @@ class AbilitySystem {
       // Cast complete - execute the ability
       final slotIndex = gameState.castingSlotIndex;
       final abilityName = gameState.castingAbilityName;
+      final configuredTime = gameState.currentCastTime;
+      final actualProgress = gameState.castProgress;
 
       // Reset casting state
       gameState.isCasting = false;
@@ -64,7 +66,7 @@ class AbilitySystem {
       gameState.castingAbilityName = '';
 
       // Execute the ability now
-      print('[CAST] $abilityName cast complete!');
+      print('[CAST] $abilityName cast complete! (configured: ${configuredTime.toStringAsFixed(2)}s, actual: ${actualProgress.toStringAsFixed(3)}s)');
       if (slotIndex != null) {
         _finishCastTimeAbility(slotIndex, gameState);
       }
@@ -82,6 +84,8 @@ class AbilitySystem {
       // Windup complete - execute the ability
       final slotIndex = gameState.windupSlotIndex;
       final abilityName = gameState.windupAbilityName;
+      final configuredTime = gameState.currentWindupTime;
+      final actualProgress = gameState.windupProgress;
 
       // Reset windup state
       gameState.isWindingUp = false;
@@ -92,7 +96,7 @@ class AbilitySystem {
       gameState.windupMovementSpeedModifier = 1.0;
 
       // Execute the ability now
-      print('[WINDUP] $abilityName windup complete!');
+      print('[WINDUP] $abilityName windup complete! (configured: ${configuredTime.toStringAsFixed(2)}s, actual: ${actualProgress.toStringAsFixed(3)}s)');
       if (slotIndex != null) {
         _finishWindupAbility(slotIndex, gameState);
       }
@@ -103,12 +107,13 @@ class AbilitySystem {
   static void _finishCastTimeAbility(int slotIndex, GameState gameState) {
     final config = globalActionBarConfig;
     final abilityName = config?.getSlotAbility(slotIndex) ?? '';
+    final abilityData = config?.getSlotAbilityData(slotIndex);
 
     // Spend the deferred mana now that the cast succeeded
     _spendPendingMana(gameState, abilityName);
 
     // Set cooldown now that the cast has successfully completed
-    _setCooldownForSlot(slotIndex, _getAbilityCooldown(abilityName), gameState);
+    _setCooldownForSlot(slotIndex, abilityData?.cooldown ?? _getAbilityCooldown(abilityName), gameState);
 
     // Execute the ability's effect (projectile launch, damage, etc.)
     switch (abilityName) {
@@ -137,12 +142,13 @@ class AbilitySystem {
   static void _finishWindupAbility(int slotIndex, GameState gameState) {
     final config = globalActionBarConfig;
     final abilityName = config?.getSlotAbility(slotIndex) ?? '';
+    final abilityData = config?.getSlotAbilityData(slotIndex);
 
     // Spend the deferred mana now that the windup succeeded
     _spendPendingMana(gameState, abilityName);
 
     // Set cooldown now that the windup has successfully completed
-    _setCooldownForSlot(slotIndex, _getAbilityCooldown(abilityName), gameState);
+    _setCooldownForSlot(slotIndex, abilityData?.cooldown ?? _getAbilityCooldown(abilityName), gameState);
 
     // Execute the ability's effect (damage in area, etc.)
     switch (abilityName) {
@@ -221,8 +227,21 @@ class AbilitySystem {
       }
     }
 
-    // Check mana cost (blue or red) for abilities
-    final (manaCost, manaType) = _getManaCostAndType(abilityName);
+    // Determine mana cost and type.  Prefer the AbilityData fields (works
+    // for custom abilities and respects overrides); fall back to the legacy
+    // hardcoded lookup only for built-in abilities that haven't been
+    // migrated to manaColor/manaCost fields yet.
+    double manaCost;
+    _ManaType manaType;
+    if (abilityData != null && abilityData.requiresMana) {
+      manaCost = abilityData.manaCost;
+      manaType = abilityData.manaColor == ManaColor.red
+          ? _ManaType.red
+          : _ManaType.blue;
+    } else {
+      (manaCost, manaType) = _getManaCostAndType(abilityName);
+    }
+
     if (manaCost > 0) {
       if (manaType == _ManaType.blue) {
         if (!gameState.hasBlueMana(manaCost)) {
@@ -238,21 +257,21 @@ class AbilitySystem {
     }
 
     // Check for cast-time abilities (must be stationary)
-    if (_isCastTimeAbility(abilityName)) {
+    if (abilityData != null && abilityData.hasCastTime) {
       // Defer mana spending until the cast completes. If interrupted,
       // the mana is never spent and the ability remains available.
       gameState.pendingManaCost = manaCost;
       gameState.pendingManaIsBlue = manaType == _ManaType.blue;
-      _startCastTimeAbility(abilityName, slotIndex, gameState);
+      _startCastTimeAbility(abilityData, slotIndex, gameState);
       return;
     }
 
     // Check for windup abilities (reduced movement, red mana)
-    if (_isWindupAbility(abilityName)) {
+    if (abilityData != null && abilityData.hasWindup) {
       // Defer mana spending until the windup completes.
       gameState.pendingManaCost = manaCost;
       gameState.pendingManaIsBlue = manaType == _ManaType.blue;
-      _startWindupAbility(abilityName, slotIndex, gameState);
+      _startWindupAbility(abilityData, slotIndex, gameState);
       return;
     }
 
@@ -402,8 +421,15 @@ class AbilitySystem {
         break;
 
       default:
-        print('[ABILITY] Unknown ability: $abilityName');
-        _executeDefaultSlotAbility(slotIndex, gameState);
+        // Generic data-driven execution for custom / unrecognized abilities.
+        // Dispatch based on AbilityType so user-created abilities work
+        // without a dedicated switch case.
+        if (abilityData != null) {
+          _executeGenericAbility(slotIndex, gameState, abilityData);
+        } else {
+          print('[ABILITY] Unknown ability with no data: $abilityName');
+          _executeDefaultSlotAbility(slotIndex, gameState);
+        }
     }
   }
 
@@ -480,96 +506,40 @@ class AbilitySystem {
 
   // ==================== CAST TIME / WINDUP HANDLING ====================
 
-  /// Check if an ability has a cast time that requires stationary casting
-  static bool _isCastTimeAbility(String abilityName) {
-    const castTimeAbilities = [
-      'Lightning Bolt',
-      'Pyroblast',
-      'Arcane Missile',
-      'Frost Nova',
-      'Greater Heal',
-      'Meteor', // Mage ability
-    ];
-    return castTimeAbilities.contains(abilityName);
-  }
-
-  /// Check if an ability has a windup time (reduced movement melee)
-  static bool _isWindupAbility(String abilityName) {
-    const windupAbilities = [
-      'Heavy Strike',
-      'Whirlwind',
-      'Crushing Blow',
-    ];
-    return windupAbilities.contains(abilityName);
-  }
-
-  /// Get the cast time for a cast-time ability
-  static double _getCastTime(String abilityName) {
-    switch (abilityName) {
-      case 'Lightning Bolt': return 1.5;
-      case 'Pyroblast': return 2.5;
-      case 'Arcane Missile': return 1.0;
-      case 'Frost Nova': return 1.8;
-      case 'Greater Heal': return 2.0;
-      case 'Meteor': return 2.0;
-      default: return 0.0;
-    }
-  }
-
-  /// Get the windup time for a windup ability
-  static double _getWindupTime(String abilityName) {
-    switch (abilityName) {
-      case 'Heavy Strike': return 1.2;
-      case 'Whirlwind': return 0.8;
-      case 'Crushing Blow': return 2.0;
-      default: return 0.0;
-    }
-  }
-
-  /// Get the movement speed modifier during windup
-  static double _getWindupMovementSpeed(String abilityName) {
-    switch (abilityName) {
-      case 'Heavy Strike': return 0.3; // 30% movement
-      case 'Whirlwind': return 0.2; // 20% movement
-      case 'Crushing Blow': return 0.15; // 15% movement
-      default: return 1.0;
-    }
-  }
-
-  /// Start a cast-time ability
-  static void _startCastTimeAbility(String abilityName, int slotIndex, GameState gameState) {
-    final castTime = _getCastTime(abilityName);
+  /// Start a cast-time ability — reads castTime from AbilityData (respects overrides)
+  static void _startCastTimeAbility(AbilityData abilityData, int slotIndex, GameState gameState) {
+    final castTime = abilityData.castTime;
 
     gameState.isCasting = true;
     gameState.castProgress = 0.0;
     gameState.currentCastTime = castTime;
     gameState.castingSlotIndex = slotIndex;
-    gameState.castingAbilityName = abilityName;
+    gameState.castingAbilityName = abilityData.name;
 
     // Cooldown is NOT set here — it is set when the cast completes in
     // _finishCastTimeAbility. If the cast is interrupted, the ability
     // remains available.
 
-    print('[CAST] Starting $abilityName (${castTime}s cast time)');
+    print('[CAST] Starting ${abilityData.name} (${castTime}s cast time)');
   }
 
-  /// Start a windup ability
-  static void _startWindupAbility(String abilityName, int slotIndex, GameState gameState) {
-    final windupTime = _getWindupTime(abilityName);
-    final movementSpeed = _getWindupMovementSpeed(abilityName);
+  /// Start a windup ability — reads windupTime/movementSpeed from AbilityData (respects overrides)
+  static void _startWindupAbility(AbilityData abilityData, int slotIndex, GameState gameState) {
+    final windupTime = abilityData.windupTime;
+    final movementSpeed = abilityData.windupMovementSpeed;
 
     gameState.isWindingUp = true;
     gameState.windupProgress = 0.0;
     gameState.currentWindupTime = windupTime;
     gameState.windupSlotIndex = slotIndex;
-    gameState.windupAbilityName = abilityName;
+    gameState.windupAbilityName = abilityData.name;
     gameState.windupMovementSpeedModifier = movementSpeed;
 
     // Cooldown is NOT set here — it is set when the windup completes in
     // _finishWindupAbility. If the windup is interrupted, the ability
     // remains available.
 
-    print('[WINDUP] Starting $abilityName (${windupTime}s windup, ${(movementSpeed * 100).toInt()}% movement)');
+    print('[WINDUP] Starting ${abilityData.name} (${windupTime}s windup, ${(movementSpeed * 100).toInt()}% movement)');
   }
 
   /// Get the cooldown for an ability by name
@@ -1482,6 +1452,39 @@ class AbilitySystem {
 
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('$message Restored ${healedAmount.toStringAsFixed(1)} HP');
+  }
+
+  /// Data-driven ability execution for custom and unrecognized abilities.
+  ///
+  /// Dispatches to the appropriate generic handler based on [AbilityData.type]
+  /// so that user-created abilities (from the ability editor) work without
+  /// a dedicated switch case.
+  static void _executeGenericAbility(int slotIndex, GameState gameState, AbilityData ability) {
+    switch (ability.type) {
+      case AbilityType.melee:
+        _executeGenericMelee(slotIndex, gameState, ability, '${ability.name}!');
+        break;
+      case AbilityType.ranged:
+      case AbilityType.dot:
+        // Ranged and DoT abilities both fire a projectile toward the target
+        _executeGenericProjectile(slotIndex, gameState, ability, '${ability.name}!');
+        break;
+      case AbilityType.heal:
+        _executeGenericHeal(slotIndex, gameState, ability, '${ability.name}!');
+        break;
+      case AbilityType.aoe:
+        _executeGenericAoE(slotIndex, gameState, ability, '${ability.name}!');
+        break;
+      case AbilityType.buff:
+      case AbilityType.debuff:
+      case AbilityType.utility:
+      case AbilityType.channeled:
+      case AbilityType.summon:
+        // For types without a projectile/melee effect, just apply cooldown
+        _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+        print('${ability.name} activated!');
+        break;
+    }
   }
 
   // ==================== ABILITY 1: SWORD ====================

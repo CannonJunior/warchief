@@ -934,7 +934,11 @@ class GameState {
   // ==================== GAME LOOP STATE ====================
 
   int? animationFrameId;
-  DateTime? lastFrameTime;
+  /// Last requestAnimationFrame timestamp in milliseconds (from performance.now()).
+  /// Using the rAF timestamp instead of DateTime.now() gives monotonic,
+  /// sub-millisecond precision that is synchronized with display refresh,
+  /// preventing timing drift in cast bars and windups.
+  double? lastTimestamp;
   int frameCount = 0;
 }
 

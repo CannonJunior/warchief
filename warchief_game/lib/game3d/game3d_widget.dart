@@ -345,17 +345,23 @@ class _Game3DState extends State<Game3D> {
   }
 
   void _startGameLoop() {
-    gameState.lastFrameTime = DateTime.now();
+    // lastTimestamp will be set on the first rAF callback
+    gameState.lastTimestamp = null;
     print('Starting game loop...');
 
     void gameLoop(num timestamp) {
       if (!mounted) return;
 
-      final now = DateTime.now();
-      final dt = gameState.lastFrameTime != null
-          ? (now.millisecondsSinceEpoch - gameState.lastFrameTime!.millisecondsSinceEpoch) / 1000.0
-          : 0.016; // Default to ~60fps
-      gameState.lastFrameTime = now;
+      // Use the requestAnimationFrame timestamp (DOMHighResTimeStamp from
+      // performance.now()) for dt calculation.  This is monotonic,
+      // sub-millisecond precision, and synchronized with the display refresh
+      // — unlike DateTime.now() which has only millisecond precision and can
+      // drift due to NTP sync, privacy coarsening, or system clock changes.
+      final tsMs = timestamp.toDouble();
+      final dt = gameState.lastTimestamp != null
+          ? ((tsMs - gameState.lastTimestamp!) / 1000.0).clamp(0.0, 0.1)
+          : 0.016; // Default to ~60fps on first frame
+      gameState.lastTimestamp = tsMs;
 
       gameState.frameCount++;
 
@@ -367,8 +373,10 @@ class _Game3DState extends State<Game3D> {
       _update(dt);
       _render();
 
-      // Update UI every 10 frames to show camera changes
-      if (gameState.frameCount % 10 == 0 && mounted) {
+      // Update UI — every frame during active casts/windups for smooth
+      // progress bars, otherwise every 10 frames to reduce rebuild overhead
+      final needsFrequentUiUpdate = gameState.isCasting || gameState.isWindingUp;
+      if (mounted && (needsFrequentUiUpdate || gameState.frameCount % 10 == 0)) {
         setState(() {});
       }
 
