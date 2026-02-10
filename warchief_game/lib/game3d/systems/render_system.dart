@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math.dart' hide Colors;
 import '../state/game_state.dart';
+import '../state/game_config.dart';
 import '../../rendering3d/webgl_renderer.dart';
 import '../../rendering3d/camera3d.dart';
 import '../../rendering3d/math/transform3d.dart';
@@ -161,9 +162,10 @@ class RenderSystem {
   ) {
     if (gameState.currentTargetId == null) return;
 
-    // Get target position and size
+    // Get target position, size, and indicator color
     Vector3? targetPosition;
     double targetSize = 1.5; // Default size
+    Vector3 indicatorColor = Vector3(1.0, 0.2, 0.2); // Red default (enemies)
 
     if (gameState.currentTargetId == 'boss') {
       if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
@@ -175,6 +177,14 @@ class RenderSystem {
       if (gameState.targetDummy != null && gameState.targetDummy!.isSpawned) {
         targetPosition = gameState.targetDummy!.position;
         targetSize = 1.5 * 1.5; // Dummy size * indicator scale
+      }
+    } else if (gameState.currentTargetId!.startsWith('ally_')) {
+      // Ally target - green indicator
+      final index = int.tryParse(gameState.currentTargetId!.substring(5));
+      if (index != null && index < gameState.allies.length && gameState.allies[index].health > 0) {
+        targetPosition = gameState.allies[index].transform.position;
+        targetSize = GameConfig.allySize * 1.5;
+        indicatorColor = Vector3(0.2, 1.0, 0.2); // Green for allies
       }
     } else {
       // Find minion by instance ID
@@ -189,17 +199,21 @@ class RenderSystem {
 
     if (targetPosition == null) return;
 
-    // Check if target changed and we need to recreate the mesh with new size
+    // Recreate mesh when target changes size or ID (color may differ)
+    // Reason: Ally targets use green, enemies use red, so we must regenerate
+    // when switching between entity types, not just sizes.
     final needsNewMesh = gameState.targetIndicatorMesh == null ||
-        gameState.lastTargetIndicatorSize != targetSize;
+        gameState.lastTargetIndicatorSize != targetSize ||
+        gameState.lastTargetIndicatorId != gameState.currentTargetId;
 
     if (needsNewMesh) {
       gameState.targetIndicatorMesh = Mesh.targetIndicator(
         size: targetSize,
         lineWidth: 0.10,
-        color: Vector3(1.0, 0.2, 0.2), // Red crosshairs
+        color: indicatorColor,
       );
       gameState.lastTargetIndicatorSize = targetSize;
+      gameState.lastTargetIndicatorId = gameState.currentTargetId;
     }
 
     // Update transform position - place at unit's center height for visibility

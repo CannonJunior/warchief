@@ -321,6 +321,40 @@
   - Updated lib/game/warchief_game.dart (fully integrated)
   - Fully playable game with WASD movement on isometric map!
 
+#### Click-to-Select Unit Targeting (Completed 2026-02-09)
+**Task**: Implement left-click targeting of all entity types in the 3D world
+- ✅ Extracted shared worldToScreen utility from damage_indicators.dart
+  - New file: lib/game3d/utils/screen_projection.dart
+  - DamageIndicatorOverlay now uses shared utility (no behavioral change)
+- ✅ Created EntityPickingSystem for screen-space entity picking
+  - Projects all entities (boss, minions, allies, target dummy) to screen coords
+  - Finds closest entity to click within configurable radius
+  - New file: lib/game3d/systems/entity_picking_system.dart
+- ✅ Added GameConfig.clickSelectionRadius = 60.0 pixels
+- ✅ Added ally targeting support to GameState
+  - getCurrentTarget() returns ally type with entity
+  - getDistanceToCurrentTarget() computes distance to ally
+  - getTargetOfTarget() returns 'player' for allies
+  - validateTarget() handles ally targets
+- ✅ Added click-to-select via Listener on game world SizedBox
+  - Left-click picks nearest entity within radius
+  - Click empty space deselects (clears target)
+  - Works alongside existing Tab targeting
+- ✅ Added ally target display in CombatHUD
+  - Shows ally name, health, green portrait color (0xFF66CC66)
+- ✅ Added green target indicator for allies in RenderSystem
+  - Ally indicator uses Vector3(0.2, 1.0, 0.2) green color
+  - Mesh regenerates on target ID change (for color switching)
+- **Keybinds**: Left-click to select, Tab still cycles enemies, ESC clears
+- **Deliverables**:
+  - lib/game3d/utils/screen_projection.dart (new shared utility)
+  - lib/game3d/systems/entity_picking_system.dart (new picking system)
+  - Updated lib/game3d/ui/damage_indicators.dart (uses shared utility)
+  - Updated lib/game3d/state/game_config.dart (clickSelectionRadius)
+  - Updated lib/game3d/state/game_state.dart (ally targeting in 4 methods)
+  - Updated lib/game3d/game3d_widget.dart (Listener + _handleWorldClick + ally UI)
+  - Updated lib/game3d/systems/render_system.dart (ally indicator + color tracking)
+
 ## Upcoming Tasks
 
 ### Phase 1: Core Infrastructure (Weeks 1-2) - ✅ COMPLETED

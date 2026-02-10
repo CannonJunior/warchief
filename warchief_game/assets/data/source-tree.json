@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-09T22:17:44.431938",
+  "generated_at": "2026-02-10T07:00:15.203590",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
-    "files": 137,
+    "files": 140,
     "directories": 32,
-    "lines": 38390,
-    "size": 1288093
+    "lines": 38920,
+    "size": 1304235
   },
   "tree": {
     "name": "warchief_game",
@@ -54,10 +54,10 @@
                 "name": "source-tree.json",
                 "type": "file",
                 "path": "warchief_game/assets/data/source-tree.json",
-                "size": 51316,
+                "size": 51678,
                 "extension": ".json",
                 "icon": "📋",
-                "lines": 1460
+                "lines": 1469
               }
             ]
           }
@@ -471,19 +471,19 @@
                     "name": "game_config.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_config.dart",
-                    "size": 7361,
+                    "size": 7571,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 201
+                    "lines": 206
                   },
                   {
                     "name": "game_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state.dart",
-                    "size": 32060,
+                    "size": 33475,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 952
+                    "lines": 990
                   },
                   {
                     "name": "mana_config.dart",
@@ -529,6 +529,15 @@
                     "lines": 733
                   },
                   {
+                    "name": "entity_picking_system.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/systems/entity_picking_system.dart",
+                    "size": 3983,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 144
+                  },
+                  {
                     "name": "input_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/input_system.dart",
@@ -550,10 +559,10 @@
                     "name": "render_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/render_system.dart",
-                    "size": 11795,
+                    "size": 12644,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 339
+                    "lines": 353
                   }
                 ]
               },
@@ -721,6 +730,15 @@
                     "lines": 451
                   },
                   {
+                    "name": "ally_commands_panel.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/ui/ally_commands_panel.dart",
+                    "size": 9753,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 311
+                  },
+                  {
                     "name": "bag_panel.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/bag_panel.dart",
@@ -778,10 +796,10 @@
                     "name": "damage_indicators.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/damage_indicators.dart",
-                    "size": 8954,
+                    "size": 8116,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 300
+                    "lines": 274
                   },
                   {
                     "name": "dps_panel.dart",
@@ -897,6 +915,15 @@
                     "extension": ".dart",
                     "icon": "🎯",
                     "lines": 230
+                  },
+                  {
+                    "name": "screen_projection.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/utils/screen_projection.dart",
+                    "size": 1275,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 40
                   }
                 ]
               },
@@ -904,10 +931,10 @@
                 "name": "game3d_widget.dart",
                 "type": "file",
                 "path": "warchief_game/lib/game3d/game3d_widget.dart",
-                "size": 67567,
+                "size": 66700,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 1846
+                "lines": 1841
               }
             ]
           },

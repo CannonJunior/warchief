@@ -368,6 +368,7 @@ class GameState {
   Mesh? targetIndicatorMesh;
   Transform3d? targetIndicatorTransform;
   double lastTargetIndicatorSize = 0.0; // Track size for recreation
+  String? lastTargetIndicatorId; // Track target for color change detection
 
   /// Index for tab targeting cycle
   int _tabTargetIndex = -1;
@@ -396,6 +397,21 @@ class GameState {
         'entity': targetDummy,
         'id': TargetDummy.instanceId,
       };
+    }
+
+    // Check for ally target
+    if (currentTargetId!.startsWith('ally_')) {
+      final index = int.tryParse(currentTargetId!.substring(5));
+      if (index != null && index < allies.length && allies[index].health > 0) {
+        return {
+          'type': 'ally',
+          'entity': allies[index],
+          'id': currentTargetId,
+        };
+      }
+      // Ally is dead or invalid, clear it
+      currentTargetId = null;
+      return null;
     }
 
     // Find minion by instance ID
@@ -437,6 +453,17 @@ class GameState {
       return targetDummy!.distanceToXZ(playerPos);
     }
 
+    // Check allies
+    if (currentTargetId!.startsWith('ally_')) {
+      final index = int.tryParse(currentTargetId!.substring(5));
+      if (index != null && index < allies.length && allies[index].health > 0) {
+        final dx = allies[index].transform.position.x - playerPos.x;
+        final dz = allies[index].transform.position.z - playerPos.z;
+        return sqrt(dx * dx + dz * dz);
+      }
+      return null;
+    }
+
     // Check minions
     for (final minion in aliveMinions) {
       if (minion.instanceId == currentTargetId) {
@@ -460,6 +487,9 @@ class GameState {
     } else if (target['type'] == 'minion') {
       final minion = target['entity'] as Monster;
       return minion.targetId ?? 'none';
+    } else if (target['type'] == 'ally') {
+      // Allies always "target" player for simplicity
+      return 'player';
     } else if (target['type'] == 'dummy') {
       // Dummy doesn't target anyone
       return 'none';
@@ -593,6 +623,11 @@ class GameState {
     } else if (currentTargetId == TargetDummy.instanceId) {
       // Target dummy is valid as long as it's spawned
       if (targetDummy == null || !targetDummy!.isSpawned) clearTarget();
+    } else if (currentTargetId!.startsWith('ally_')) {
+      final index = int.tryParse(currentTargetId!.substring(5));
+      if (index == null || index >= allies.length || allies[index].health <= 0) {
+        clearTarget();
+      }
     } else {
       final minion = minions.where((m) => m.instanceId == currentTargetId).firstOrNull;
       if (minion == null || !minion.isAlive) clearTarget();
@@ -646,6 +681,9 @@ class GameState {
 
   /// Whether the DPS testing panel is currently open
   bool dpsPanelOpen = false;
+
+  /// Whether the unified ally commands panel is currently open (F key)
+  bool allyCommandPanelOpen = false;
 
   // ==================== DPS TESTING STATE ====================
 

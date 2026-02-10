@@ -130,6 +130,11 @@ class GameConfig {
   /// Ally fireball size
   static const double allyFireballSize = 0.3;
 
+  // ==================== CLICK SELECTION CONFIGURATION ====================
+
+  /// Maximum pixel distance from click to entity screen position for selection
+  static const double clickSelectionRadius = 60.0;
+
   // ==================== PLAYER ABILITIES ====================
 
   /// Ability 1: Sword (Melee)

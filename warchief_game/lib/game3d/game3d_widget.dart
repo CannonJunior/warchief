@@ -38,6 +38,7 @@ import 'ui/allies_panel.dart';
 import 'ui/formation_panel.dart';
 import 'ui/draggable_panel.dart';
 import 'ui/ally_command_panels.dart';
+import 'ui/ally_commands_panel.dart';
 import 'ui/ui_config.dart';
 import 'ui/abilities_modal.dart';
 import 'ui/character_panel.dart';
@@ -54,6 +55,7 @@ import 'state/ability_override_manager.dart';
 import 'state/mana_config.dart';
 import 'state/custom_options_manager.dart';
 import 'state/custom_ability_manager.dart';
+import 'systems/entity_picking_system.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -619,6 +621,17 @@ class _Game3DState extends State<Game3D> {
       return;
     }
 
+    // Handle F key for ally commands panel (only on key down, not repeat)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyF) {
+      if (gameState.allies.isNotEmpty) {
+        print('F key detected! Toggling ally commands panel.');
+        setState(() {
+          gameState.allyCommandPanelOpen = !gameState.allyCommandPanelOpen;
+        });
+      }
+      return;
+    }
+
     // Handle SHIFT+D for DPS testing panel (only on key down, not repeat)
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyD) {
       final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
@@ -685,6 +698,12 @@ class _Game3DState extends State<Game3D> {
         });
         return;
       }
+      if (gameState.allyCommandPanelOpen) {
+        setState(() {
+          gameState.allyCommandPanelOpen = false;
+        });
+        return;
+      }
       if (gameState.dpsPanelOpen) {
         setState(() {
           gameState.dpsPanelOpen = false;
@@ -708,6 +727,38 @@ class _Game3DState extends State<Game3D> {
     if (inputManager != null) {
       inputManager!.handleKeyEvent(event);
     }
+  }
+
+  /// Handle left-click on the game world for entity picking (click-to-select).
+  ///
+  /// Projects all entity positions to screen space and selects the closest
+  /// entity to the click point within [GameConfig.clickSelectionRadius].
+  /// Clicking empty space clears the current target.
+  void _handleWorldClick(PointerDownEvent event) {
+    // Only process primary (left) mouse button
+    if (event.buttons != 1) return;
+    if (camera == null) return;
+
+    final clickPos = event.localPosition;
+    final viewMatrix = camera!.getViewMatrix();
+    final projMatrix = camera!.getProjectionMatrix();
+    final screenSize = MediaQuery.of(context).size;
+
+    final pickedId = EntityPickingSystem.pickEntity(
+      clickPos: clickPos,
+      viewMatrix: viewMatrix,
+      projMatrix: projMatrix,
+      screenSize: screenSize,
+      gameState: gameState,
+      selectionRadius: GameConfig.clickSelectionRadius,
+    );
+
+    setState(() {
+      gameState.setTarget(pickedId);
+      if (pickedId != null) {
+        debugPrint('Click-selected: $pickedId');
+      }
+    });
   }
 
   // Ability activation methods (for clickable buttons)
@@ -784,7 +835,6 @@ class _Game3DState extends State<Game3D> {
   // ===== ALLY COMMAND METHODS =====
 
   /// Track previous command key states to detect key press (not hold)
-  bool _followKeyWasPressed = false;
   bool _attackKeyWasPressed = false;
   bool _holdKeyWasPressed = false;
   bool _formationKeyWasPressed = false;
@@ -801,10 +851,7 @@ class _Game3DState extends State<Game3D> {
     'follow_panel': Offset(800, 480),
   };
 
-  /// Track SHIFT+key states for panel toggling
-  bool _shiftFollowWasPressed = false;
-  bool _shiftAttackWasPressed = false;
-  bool _shiftHoldWasPressed = false;
+  /// Track SHIFT+key state for formation panel toggling
   bool _shiftFormationWasPressed = false;
 
   /// Drag state tracking for panels - used to prevent micro-drags from interfering with taps
@@ -881,61 +928,19 @@ class _Game3DState extends State<Game3D> {
     );
   }
 
-  /// Handle ally command input (F=Follow, G=Attack, H=Hold)
+  /// Handle ally command input (T=Attack, G=Hold, R=Formation)
+  ///
+  /// F key now toggles the unified AllyCommandsPanel (handled in _onKeyEvent).
   void _handleAllyCommands() {
     if (inputManager == null) return;
 
     final shiftPressed = inputManager!.isShiftPressed();
-    final followPressed = inputManager!.isActionPressed(GameAction.petFollow);
     final attackPressed = inputManager!.isActionPressed(GameAction.petAttack);
     final holdPressed = inputManager!.isActionPressed(GameAction.petStay);
     final formationPressed = inputManager!.isActionPressed(GameAction.cycleFormation);
 
-    // SHIFT+F - Toggle Follow panel
-    if (shiftPressed && followPressed && !_shiftFollowWasPressed) {
-      setState(() {
-        globalInterfaceConfig?.toggleVisibility('follow_panel');
-      });
-      print('[UI] Follow panel: ${_isVisible('follow_panel') ? "shown" : "hidden"}');
-    }
-    _shiftFollowWasPressed = shiftPressed && followPressed;
-
-    // SHIFT+T - Toggle Attack panel
-    if (shiftPressed && attackPressed && !_shiftAttackWasPressed) {
-      setState(() {
-        globalInterfaceConfig?.toggleVisibility('attack_panel');
-      });
-      print('[UI] Attack panel: ${_isVisible('attack_panel') ? "shown" : "hidden"}');
-    }
-    _shiftAttackWasPressed = shiftPressed && attackPressed;
-
-    // SHIFT+G - Toggle Hold panel
-    if (shiftPressed && holdPressed && !_shiftHoldWasPressed) {
-      setState(() {
-        globalInterfaceConfig?.toggleVisibility('hold_panel');
-      });
-      print('[UI] Hold panel: ${_isVisible('hold_panel') ? "shown" : "hidden"}');
-    }
-    _shiftHoldWasPressed = shiftPressed && holdPressed;
-
-    // SHIFT+R - Toggle Formation panel
-    if (shiftPressed && formationPressed && !_shiftFormationWasPressed) {
-      setState(() {
-        globalInterfaceConfig?.toggleVisibility('formation_panel');
-      });
-      print('[UI] Formation panel: ${_isVisible('formation_panel') ? "shown" : "hidden"}');
-    }
-    _shiftFormationWasPressed = shiftPressed && formationPressed;
-
-    // Without SHIFT - execute commands
+    // Without SHIFT - execute commands directly
     if (!shiftPressed) {
-      // F key - Follow command (toggle)
-      if (followPressed && !_followKeyWasPressed) {
-        _setAllyCommand(AllyCommand.follow);
-        print('[ALLY CMD] All allies: FOLLOW');
-      }
-      _followKeyWasPressed = followPressed;
-
       // T key - Attack command (toggle)
       if (attackPressed && !_attackKeyWasPressed) {
         _setAllyCommand(AllyCommand.attack);
@@ -1202,7 +1207,12 @@ class _Game3DState extends State<Game3D> {
         child: Stack(
           children: [
             // Canvas will be created and appended to body in initState
-            SizedBox.expand(),
+            // Listener captures left-clicks for entity picking (click-to-select)
+            Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (event) => _handleWorldClick(event),
+              child: SizedBox.expand(),
+            ),
 
             // Floating damage indicators (world-space positioned)
             DamageIndicatorOverlay(
@@ -1382,60 +1392,31 @@ class _Game3DState extends State<Game3D> {
                 width: 300, height: 200,
               ),
 
-            // ========== ALLY COMMAND PANELS (Each Draggable) ==========
-            // Formation Panel (draggable)
-            if (gameState.allies.isNotEmpty && _isVisible('formation_panel'))
-              _draggable('formation_panel',
-                _buildCommandPanelWithClose(
-                  child: FormationSelector(
-                    currentFormation: gameState.currentFormation,
-                    onFormationChanged: _changeFormation,
-                  ),
-                  onClose: () => globalInterfaceConfig?.setVisibility('formation_panel', false),
-                ),
-                width: 180, height: 100,
+            // Character Panel (Press C to toggle)
+            // Reason: Rendered before command panels so they appear on top of the 750px-wide panel
+            if (gameState.characterPanelOpen)
+              CharacterPanel(
+                gameState: gameState,
+                onClose: () {
+                  setState(() {
+                    gameState.characterPanelOpen = false;
+                  });
+                },
               ),
 
-            // Attack Panel (draggable)
-            if (gameState.allies.isNotEmpty && _isVisible('attack_panel'))
-              _draggable('attack_panel',
-                _buildCommandPanelWithClose(
-                  child: AttackCommandPanel(
-                    currentCommand: _getCurrentAllyCommand(),
-                    onActivate: () => _setAllyCommand(AllyCommand.attack),
-                    allyCount: gameState.allies.length,
-                  ),
-                  onClose: () => globalInterfaceConfig?.setVisibility('attack_panel', false),
-                ),
-                width: 140, height: 80,
-              ),
-
-            // Hold Panel (draggable)
-            if (gameState.allies.isNotEmpty && _isVisible('hold_panel'))
-              _draggable('hold_panel',
-                _buildCommandPanelWithClose(
-                  child: HoldCommandPanel(
-                    currentCommand: _getCurrentAllyCommand(),
-                    onActivate: () => _setAllyCommand(AllyCommand.hold),
-                    allyCount: gameState.allies.length,
-                  ),
-                  onClose: () => globalInterfaceConfig?.setVisibility('hold_panel', false),
-                ),
-                width: 140, height: 80,
-              ),
-
-            // Follow Panel (draggable)
-            if (gameState.allies.isNotEmpty && _isVisible('follow_panel'))
-              _draggable('follow_panel',
-                _buildCommandPanelWithClose(
-                  child: FollowCommandPanel(
-                    currentCommand: _getCurrentAllyCommand(),
-                    onActivate: () => _setAllyCommand(AllyCommand.follow),
-                    allyCount: gameState.allies.length,
-                  ),
-                  onClose: () => globalInterfaceConfig?.setVisibility('follow_panel', false),
-                ),
-                width: 140, height: 80,
+            // ========== ALLY COMMANDS PANEL (Press F to toggle) ==========
+            if (gameState.allies.isNotEmpty && gameState.allyCommandPanelOpen)
+              AllyCommandsPanel(
+                onClose: () {
+                  setState(() {
+                    gameState.allyCommandPanelOpen = false;
+                  });
+                },
+                currentFormation: gameState.currentFormation,
+                onFormationChanged: _changeFormation,
+                currentCommand: _getCurrentAllyCommand(),
+                onCommandChanged: _setAllyCommand,
+                allyCount: gameState.allies.length,
               ),
 
             // Abilities Modal (Press P to toggle)
@@ -1444,17 +1425,6 @@ class _Game3DState extends State<Game3D> {
                 onClose: () {
                   setState(() {
                     gameState.abilitiesModalOpen = false;
-                  });
-                },
-              ),
-
-            // Character Panel (Press C to toggle)
-            if (gameState.characterPanelOpen)
-              CharacterPanel(
-                gameState: gameState,
-                onClose: () {
-                  setState(() {
-                    gameState.characterPanelOpen = false;
                   });
                 },
               ),
@@ -1539,6 +1509,31 @@ class _Game3DState extends State<Game3D> {
         'maxMana': 0.0,
         'level': 0,
         'color': const Color(0xFFC19A6B), // Burlywood/wooden color
+      };
+    } else if (target['type'] == 'ally') {
+      final ally = target['entity'] as Ally?;
+      if (ally == null) {
+        return {
+          'hasTarget': false,
+          'name': null,
+          'health': 0.0,
+          'maxHealth': 1.0,
+          'mana': 0.0,
+          'maxMana': 0.0,
+          'level': null,
+          'color': const Color(0xFF666666),
+        };
+      }
+      final allyIndex = int.tryParse((target['id'] as String).substring(5)) ?? 0;
+      return {
+        'hasTarget': true,
+        'name': 'Ally ${allyIndex + 1}',
+        'health': ally.health,
+        'maxHealth': ally.maxHealth,
+        'mana': 0.0,
+        'maxMana': 0.0,
+        'level': 10,
+        'color': const Color(0xFF66CC66), // Green for allies
       };
     } else {
       final minion = target['entity'] as Monster?;

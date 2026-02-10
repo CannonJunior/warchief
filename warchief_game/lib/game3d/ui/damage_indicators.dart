@@ -3,6 +3,7 @@ import 'package:flutter/material.dart' hide Matrix4;
 import 'package:vector_math/vector_math.dart' hide Colors;
 
 import '../../rendering3d/camera3d.dart';
+import '../utils/screen_projection.dart';
 
 /// A single floating damage number above a target
 class DamageIndicator {
@@ -67,7 +68,7 @@ class DamageIndicatorOverlay extends StatelessWidget {
     final children = <Widget>[];
 
     for (final indicator in indicators) {
-      final screenPos = _worldToScreen(
+      final screenPos = worldToScreen(
         indicator.worldPosition,
         viewMatrix,
         projMatrix,
@@ -87,33 +88,6 @@ class DamageIndicatorOverlay extends StatelessWidget {
         children: children,
       ),
     );
-  }
-
-  /// Convert a world position to screen coordinates
-  /// Returns null if the point is behind the camera
-  Offset? _worldToScreen(
-    Vector3 worldPos,
-    Matrix4 viewMatrix,
-    Matrix4 projMatrix,
-    Size screenSize,
-  ) {
-    // Transform world position to clip space
-    final worldVec = Vector4(worldPos.x, worldPos.y, worldPos.z, 1.0);
-    final viewVec = viewMatrix.transform(worldVec);
-    final clipVec = projMatrix.transform(viewVec);
-
-    // Behind camera check
-    if (clipVec.w <= 0.0) return null;
-
-    // Perspective divide to NDC (-1 to 1)
-    final ndcX = clipVec.x / clipVec.w;
-    final ndcY = clipVec.y / clipVec.w;
-
-    // NDC to screen pixels (Y is flipped: WebGL top=-1, Flutter top=0)
-    final screenX = ((ndcX + 1.0) / 2.0) * screenSize.width;
-    final screenY = ((1.0 - ndcY) / 2.0) * screenSize.height;
-
-    return Offset(screenX, screenY);
   }
 
   Widget _buildIndicatorWidget(
