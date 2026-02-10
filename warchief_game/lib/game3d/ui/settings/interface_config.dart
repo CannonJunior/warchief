@@ -152,7 +152,7 @@ class InterfaceConfigManager {
       name: 'Attack Panel',
       description: 'Ally attack command (SHIFT+T)',
       icon: Icons.flash_on,
-      isVisible: false,
+      isVisible: true,
       position: const Offset(800, 260),
       defaultPosition: const Offset(800, 260),
     );
@@ -163,7 +163,7 @@ class InterfaceConfigManager {
       name: 'Hold Panel',
       description: 'Ally hold command (SHIFT+G)',
       icon: Icons.pan_tool,
-      isVisible: false,
+      isVisible: true,
       position: const Offset(800, 370),
       defaultPosition: const Offset(800, 370),
     );
@@ -174,7 +174,7 @@ class InterfaceConfigManager {
       name: 'Follow Panel',
       description: 'Ally follow command (SHIFT+F)',
       icon: Icons.directions_walk,
-      isVisible: false,
+      isVisible: true,
       position: const Offset(800, 480),
       defaultPosition: const Offset(800, 480),
     );

@@ -1510,6 +1510,8 @@ class _Game3DState extends State<Game3D> {
         'name': null,
         'health': 0.0,
         'maxHealth': 1.0,
+        'mana': 0.0,
+        'maxMana': 0.0,
         'level': null,
         'color': const Color(0xFF666666),
       };
@@ -1521,6 +1523,8 @@ class _Game3DState extends State<Game3D> {
         'name': 'Boss Monster',
         'health': gameState.monsterHealth,
         'maxHealth': gameState.monsterMaxHealth.toDouble(),
+        'mana': 100.0,
+        'maxMana': 100.0,
         'level': 15,
         'color': const Color(0xFF9933CC), // Purple for boss
       };
@@ -1531,6 +1535,8 @@ class _Game3DState extends State<Game3D> {
         'name': 'Target Dummy',
         'health': dummy?.displayHealth ?? 100000,
         'maxHealth': dummy?.maxHealth ?? 100000,
+        'mana': 0.0,
+        'maxMana': 0.0,
         'level': 0,
         'color': const Color(0xFFC19A6B), // Burlywood/wooden color
       };
@@ -1542,6 +1548,8 @@ class _Game3DState extends State<Game3D> {
           'name': null,
           'health': 0.0,
           'maxHealth': 1.0,
+          'mana': 0.0,
+          'maxMana': 0.0,
           'level': null,
           'color': const Color(0xFF666666),
         };
@@ -1572,6 +1580,8 @@ class _Game3DState extends State<Game3D> {
         'name': minion.definition.name,
         'health': minion.health,
         'maxHealth': minion.maxHealth,
+        'mana': minion.mana,
+        'maxMana': minion.maxMana,
         'level': minion.definition.monsterPower,
         'color': archetypeColor,
       };
@@ -1624,6 +1634,8 @@ class _Game3DState extends State<Game3D> {
           targetName: targetData['name'] as String?,
           targetHealth: targetData['health'] as double,
           targetMaxHealth: targetData['maxHealth'] as double,
+          targetMana: targetData['mana'] as double,
+          targetMaxMana: targetData['maxMana'] as double,
           targetLevel: targetData['level'] as int?,
           hasTarget: targetData['hasTarget'] as bool,
           targetPortraitWidget: targetData['hasTarget'] as bool

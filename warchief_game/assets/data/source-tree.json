@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-08T21:13:50.978814",
+  "generated_at": "2026-02-09T22:17:44.431938",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
-    "files": 134,
+    "files": 137,
     "directories": 32,
-    "lines": 37800,
-    "size": 1270974
+    "lines": 38390,
+    "size": 1288093
   },
   "tree": {
     "name": "warchief_game",
@@ -54,10 +54,10 @@
                 "name": "source-tree.json",
                 "type": "file",
                 "path": "warchief_game/assets/data/source-tree.json",
-                "size": 50219,
+                "size": 51316,
                 "extension": ".json",
                 "icon": "📋",
-                "lines": 1433
+                "lines": 1460
               }
             ]
           }
@@ -571,7 +571,7 @@
                         "name": "interface_config.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/settings/interface_config.dart",
-                        "size": 9301,
+                        "size": 9298,
                         "extension": ".dart",
                         "icon": "🎯",
                         "lines": 324
@@ -614,10 +614,10 @@
                         "name": "combat_hud.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/unit_frames/combat_hud.dart",
-                        "size": 25064,
+                        "size": 27378,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 752
+                        "lines": 827
                       },
                       {
                         "name": "minion_frames.dart",
@@ -742,10 +742,28 @@
                     "name": "character_panel.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/character_panel.dart",
-                    "size": 26769,
+                    "size": 14062,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 818
+                    "lines": 424
+                  },
+                  {
+                    "name": "character_panel_columns.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/ui/character_panel_columns.dart",
+                    "size": 13839,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 461
+                  },
+                  {
+                    "name": "character_panel_stats.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/ui/character_panel_stats.dart",
+                    "size": 7525,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 261
                   },
                   {
                     "name": "cooldown_clock_painter.dart",
@@ -829,6 +847,15 @@
                     "lines": 143
                   },
                   {
+                    "name": "paper_doll_painter.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/ui/paper_doll_painter.dart",
+                    "size": 4692,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 148
+                  },
+                  {
                     "name": "player_hud.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/player_hud.dart",
@@ -877,10 +904,10 @@
                 "name": "game3d_widget.dart",
                 "type": "file",
                 "path": "warchief_game/lib/game3d/game3d_widget.dart",
-                "size": 67205,
+                "size": 67567,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 1834
+                "lines": 1846
               }
             ]
           },

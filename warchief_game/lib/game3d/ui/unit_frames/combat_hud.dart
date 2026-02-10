@@ -26,6 +26,8 @@ class CombatHUD extends StatelessWidget {
   final String? targetName;
   final double targetHealth;
   final double targetMaxHealth;
+  final double targetMana;
+  final double targetMaxMana;
   final int? targetLevel;
   final bool hasTarget;
   final Widget? targetPortraitWidget; // Custom portrait widget (e.g., 3D cube)
@@ -81,6 +83,8 @@ class CombatHUD extends StatelessWidget {
     this.targetName,
     required this.targetHealth,
     required this.targetMaxHealth,
+    this.targetMana = 0.0,
+    this.targetMaxMana = 0.0,
     this.targetLevel,
     this.hasTarget = true,
     this.targetPortraitWidget,
@@ -135,7 +139,7 @@ class CombatHUD extends StatelessWidget {
   Widget _buildUnitFramesRow() {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end, // Align at bottom
+      crossAxisAlignment: CrossAxisAlignment.start, // Align at top
       children: [
         // Player frame with mana bar below
         Column(
@@ -172,20 +176,91 @@ class CombatHUD extends StatelessWidget {
         // VS indicator
         if (hasTarget) const VSIndicator(inCombat: true),
         if (hasTarget) const SizedBox(width: 12),
-        // Target frame (portrait on right, mirrored)
+        // Target frame with mana bar below (mirrored layout)
         if (hasTarget)
-          UnitFrame(
-            name: targetName ?? 'Unknown',
-            health: targetHealth,
-            maxHealth: targetMaxHealth,
-            isPlayer: false,
-            level: targetLevel,
-            portraitWidget: targetPortraitWidget,
-            borderColor: const Color(0xFFFF6B6B),
-            healthColor: const Color(0xFFEF5350),
-            width: 200,
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              UnitFrame(
+                name: targetName ?? 'Unknown',
+                health: targetHealth,
+                maxHealth: targetMaxHealth,
+                isPlayer: false,
+                level: targetLevel,
+                portraitWidget: targetPortraitWidget,
+                borderColor: const Color(0xFFFF6B6B),
+                healthColor: const Color(0xFFEF5350),
+                width: 200,
+              ),
+              // Target mana bar below target frame (same width as player's)
+              if (targetMaxMana > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: _buildTargetManaBar(),
+                ),
+            ],
           ),
       ],
+    );
+  }
+
+  Widget _buildTargetManaBar() {
+    final manaPercent = targetMaxMana > 0
+        ? (targetMana / targetMaxMana).clamp(0.0, 1.0)
+        : 0.0;
+
+    return Container(
+      width: 200,
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A0A1A),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: const Color(0xFF1A1A3A),
+          width: 1,
+        ),
+      ),
+      child: Container(
+        height: 14,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: Stack(
+            children: [
+              // Background
+              Container(color: const Color(0xFF0A0A1A)),
+              // Mana fill
+              FractionallySizedBox(
+                widthFactor: manaPercent,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF2060CC),
+                        Color(0xFF4080FF),
+                        Color(0xFF60A0FF),
+                      ],
+                      stops: [0.0, 0.5, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+              // Text overlay
+              Center(
+                child: Text(
+                  '${targetMana.toInt()} / ${targetMaxMana.toInt()}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(color: Colors.black, blurRadius: 4),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
