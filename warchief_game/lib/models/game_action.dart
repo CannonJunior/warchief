@@ -13,6 +13,7 @@ enum GameAction {
   rotateLeft,
   rotateRight,
   jump,
+  sprint,
 
   // Camera Control
   cameraRotateLeft,
@@ -77,6 +78,8 @@ extension GameActionExtension on GameAction {
         return 'Rotate Right';
       case GameAction.jump:
         return 'Jump';
+      case GameAction.sprint:
+        return 'Sprint / Flight Boost';
       case GameAction.cameraRotateLeft:
         return 'Camera Rotate Left';
       case GameAction.cameraRotateRight:
@@ -165,6 +168,8 @@ extension GameActionExtension on GameAction {
         return LogicalKeyboardKey.keyD;
       case GameAction.jump:
         return LogicalKeyboardKey.space;
+      case GameAction.sprint:
+        return LogicalKeyboardKey.altLeft;
       case GameAction.cameraRotateLeft:
         return LogicalKeyboardKey.keyJ;
       case GameAction.cameraRotateRight:

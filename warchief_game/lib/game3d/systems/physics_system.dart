@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import '../state/game_state.dart';
 import '../state/game_config.dart';
+import '../state/wind_config.dart';
 
 /// Physics System - Handles gravity, jumping, and vertical movement
 ///
@@ -31,6 +34,12 @@ class PhysicsSystem {
   static void update(double dt, GameState gameState) {
     if (gameState.playerTransform == null) return;
 
+    // Flight mode — bypass normal gravity and ground collision
+    if (gameState.isFlying) {
+      _updateFlight(dt, gameState);
+      return;
+    }
+
     // Apply gravity
     gameState.verticalVelocity -= gameState.gravity * dt;
 
@@ -39,6 +48,43 @@ class PhysicsSystem {
 
     // Check ground collision
     _checkGroundCollision(gameState);
+  }
+
+  /// Handles flight physics: pitch-based altitude change, altitude tracking,
+  /// and ground collision ending flight.
+  static void _updateFlight(double dt, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+
+    final pitchRad = gameState.flightPitchAngle * (math.pi / 180.0);
+    final speed = gameState.flightSpeed;
+
+    // Vertical movement from pitch
+    final verticalDelta = speed * math.sin(pitchRad) * dt;
+    gameState.playerTransform!.position.y += verticalDelta;
+
+    // Reset vertical velocity so landing from flight doesn't carry momentum
+    gameState.verticalVelocity = 0.0;
+
+    // Compute altitude above terrain
+    final terrainHeight = _getTerrainHeight(
+      gameState,
+      gameState.playerTransform!.position.x,
+      gameState.playerTransform!.position.z,
+    );
+    final groundY = terrainHeight + GameConfig.playerSize / 2 + _terrainBuffer;
+    gameState.flightAltitude =
+        gameState.playerTransform!.position.y - terrainHeight;
+
+    // Ground collision ends flight
+    if (gameState.playerTransform!.position.y <= groundY) {
+      gameState.playerTransform!.position.y = groundY;
+      gameState.flightAltitude = 0.0;
+      gameState.endFlight();
+      // Restore grounded state
+      gameState.isJumping = false;
+      gameState.isGrounded = true;
+      gameState.jumpsRemaining = gameState.maxJumps;
+    }
   }
 
   /// Handles jump input from the player

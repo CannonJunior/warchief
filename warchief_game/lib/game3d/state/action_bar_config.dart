@@ -76,6 +76,7 @@ class ActionBarConfig extends ChangeNotifier {
       ...NecromancerAbilities.all,
       ...ElementalAbilities.all,
       ...UtilityAbilities.all,
+      ...WindWalkerAbilities.all,
     ];
 
     for (final ability in allAbilities) {

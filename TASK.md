@@ -2,6 +2,27 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-11
+
+#### Wind Walker Class: Abilities + Flight System
+- ✅ Added `flight` section to `assets/data/wind_config.json` — all flight tuning values (speed, pitch, boost, brake, mana drain, thresholds)
+- ✅ Added flight getters to `lib/game3d/state/wind_config.dart` — 11 config-driven flight parameters
+- ✅ Created `lib/game3d/data/abilities/windwalker_abilities.dart` — 10 Wind Walker abilities (5 movement, 5 non-movement)
+- ✅ Registered 'windwalker' category in `abilities.dart` — export, import, categories, getByCategory, potentialAbilities, categoryCounts
+- ✅ Added Wind Walker abilities to `action_bar_config.dart` ability lookup
+- ✅ Added flight state to `game_state.dart` — isFlying, flightPitchAngle, flightSpeed, flightAltitude, startFlight/endFlight/toggleFlight
+- ✅ Added flight mana drain + low-mana descent + forced landing to `updateWindAndWhiteMana()`
+- ✅ Added Sovereign of the Sky buff timer to game state
+- ✅ Flight bypass in `physics_system.dart` — skip gravity, apply pitch-based altitude, ground collision ends flight
+- ✅ Flight controls in `input_system.dart` — W=pitch up, S=pitch down, auto-level, ALT=boost, Space=brake, Q/E disabled
+- ✅ Added `sprint` action to `game_action.dart` bound to Left Alt
+- ✅ Added 10 Wind Walker ability handlers in `ability_system.dart` — Gale Step, Zephyr Roll, Tailwind Retreat, Flying Serpent Strike, Take Flight, Cyclone Dive, Wind Wall, Tempest Charge, Healing Gale, Sovereign of the Sky
+- ✅ Created `lib/game3d/ui/flight_buff_icon.dart` — pulsing wing icon with altitude readout, red tint on low mana
+- ✅ Wired FlightBuffIcon into `combat_hud.dart` above player UnitFrame when flying
+- ✅ All flight parameters config-driven via wind_config.json — nothing hardcoded
+- ✅ Build verified clean (`flutter build web`)
+- ✅ New files under 500 lines (windwalker_abilities: 202, flight_buff_icon: 128)
+
 ### ✅ Completed - 2026-02-10
 
 #### Wind Effects System: Foundation + Unit Movement

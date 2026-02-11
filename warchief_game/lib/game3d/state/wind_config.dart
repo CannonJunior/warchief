@@ -42,6 +42,21 @@ class WindConfig extends ChangeNotifier {
   double get windForceMultiplier =>
       _resolve('projectile.windForceMultiplier', 0.8);
 
+  // ==================== FLIGHT GETTERS ====================
+
+  double get flightSpeed => _resolve('flight.flightSpeed', 7.0);
+  double get pitchRate => _resolve('flight.pitchRate', 60.0);
+  double get maxPitchAngle => _resolve('flight.maxPitchAngle', 45.0);
+  double get boostMultiplier => _resolve('flight.boostMultiplier', 1.5);
+  double get brakeMultiplier => _resolve('flight.brakeMultiplier', 0.6);
+  double get brakeJumpForce => _resolve('flight.brakeJumpForce', 3.0);
+  double get flightManaDrainRate => _resolve('flight.manaDrainRate', 3.0);
+  double get lowManaThreshold => _resolve('flight.lowManaThreshold', 33.0);
+  double get lowManaDescentRate => _resolve('flight.lowManaDescentRate', 2.0);
+  double get minAltitudeForDescent =>
+      _resolve('flight.minAltitudeForDescent', 10.0);
+  double get initialManaCost => _resolve('flight.initialManaCost', 15.0);
+
   // ==================== PARTICLE GETTERS ====================
 
   int get particleCount => _resolveInt('particles.count', 60);

@@ -31,6 +31,7 @@ export 'nature_abilities.dart';
 export 'necromancer_abilities.dart';
 export 'elemental_abilities.dart';
 export 'utility_abilities.dart';
+export 'windwalker_abilities.dart';
 
 import 'ability_types.dart';
 import '../../state/custom_ability_manager.dart';
@@ -45,6 +46,7 @@ import 'nature_abilities.dart';
 import 'necromancer_abilities.dart';
 import 'elemental_abilities.dart';
 import 'utility_abilities.dart';
+import 'windwalker_abilities.dart';
 
 /// Ability Registry - Central access point for all abilities
 ///
@@ -66,6 +68,7 @@ class AbilityRegistry {
     'necromancer',
     'elemental',
     'utility',
+    'windwalker',
   ];
 
   /// Get all abilities for a category
@@ -82,6 +85,7 @@ class AbilityRegistry {
       case 'necromancer': return NecromancerAbilities.all;
       case 'elemental': return ElementalAbilities.all;
       case 'utility': return UtilityAbilities.all;
+      case 'windwalker': return WindWalkerAbilities.all;
       default: return [];
     }
   }
@@ -96,6 +100,7 @@ class AbilityRegistry {
     ...NecromancerAbilities.all,
     ...ElementalAbilities.all,
     ...UtilityAbilities.all,
+    ...WindWalkerAbilities.all,
   ];
 
   /// Get all abilities of a specific type
@@ -128,5 +133,6 @@ class AbilityRegistry {
     'necromancer': NecromancerAbilities.all.length,
     'elemental': ElementalAbilities.all.length,
     'utility': UtilityAbilities.all.length,
+    'windwalker': WindWalkerAbilities.all.length,
   };
 }

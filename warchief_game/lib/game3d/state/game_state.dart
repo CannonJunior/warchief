@@ -228,6 +228,37 @@ class GameState {
         whiteMana = (whiteMana - decay * dt).clamp(0.0, maxWhiteMana);
       }
     }
+
+    // Flight mana drain
+    if (isFlying) {
+      final drainRate = config?.flightManaDrainRate ?? 3.0;
+      whiteMana = (whiteMana - drainRate * dt).clamp(0.0, maxWhiteMana);
+
+      // Low mana descent — slowly lose altitude when mana is low
+      final lowThreshold = config?.lowManaThreshold ?? 33.0;
+      final minAlt = config?.minAltitudeForDescent ?? 10.0;
+      if (whiteMana < lowThreshold && flightAltitude >= minAlt) {
+        final descentRate = config?.lowManaDescentRate ?? 2.0;
+        if (playerTransform != null) {
+          playerTransform!.position.y -= descentRate * dt;
+        }
+      }
+
+      // Zero mana — forced landing
+      if (whiteMana <= 0) {
+        endFlight();
+      }
+    }
+
+    // Sovereign of the Sky buff timer
+    if (sovereignBuffActive) {
+      sovereignBuffTimer -= dt;
+      if (sovereignBuffTimer <= 0) {
+        sovereignBuffActive = false;
+        sovereignBuffTimer = 0.0;
+        print('[FLIGHT] Sovereign of the Sky buff expired');
+      }
+    }
   }
 
   // ==================== LEY LINES ====================
@@ -881,6 +912,63 @@ class GameState {
     inventoryInitialized = true;
     print('[GameState] Inventory initialized with ${playerInventory.usedBagSlots} bag items and equipment');
     print('[GameState] Player max health: $playerMaxHealth (base $basePlayerMaxHealth + ${playerInventory.totalEquippedStats.health} from gear)');
+  }
+
+  // ==================== FLIGHT STATE ====================
+
+  /// Whether the player is currently flying
+  bool isFlying = false;
+
+  /// Current pitch angle in degrees (-45 to +45). Positive = climb, negative = dive.
+  double flightPitchAngle = 0.0;
+
+  /// Current flight speed (modified by ALT boost / Space brake)
+  double flightSpeed = 7.0;
+
+  /// Current height above terrain (computed each frame by physics system)
+  double flightAltitude = 0.0;
+
+  /// Whether the Sovereign of the Sky buff is active
+  bool sovereignBuffActive = false;
+
+  /// Remaining time on Sovereign buff
+  double sovereignBuffTimer = 0.0;
+
+  /// Start flight if player has enough White Mana for initial cost.
+  ///
+  /// Spends the initial mana cost and sets isFlying = true.
+  void startFlight() {
+    final config = globalWindConfig;
+    final cost = config?.initialManaCost ?? 15.0;
+    if (!hasWhiteMana(cost)) {
+      print('[FLIGHT] Not enough White Mana to take flight (need $cost)');
+      return;
+    }
+    spendWhiteMana(cost);
+    isFlying = true;
+    flightPitchAngle = 0.0;
+    flightSpeed = config?.flightSpeed ?? 7.0;
+    // Cancel any cast/windup when entering flight
+    cancelCast();
+    cancelWindup();
+    print('[FLIGHT] Taking flight! (spent ${cost.toStringAsFixed(0)} White Mana)');
+  }
+
+  /// End flight — reset all flight state.
+  void endFlight() {
+    isFlying = false;
+    flightPitchAngle = 0.0;
+    flightSpeed = globalWindConfig?.flightSpeed ?? 7.0;
+    print('[FLIGHT] Flight ended');
+  }
+
+  /// Toggle flight on/off.
+  void toggleFlight() {
+    if (isFlying) {
+      endFlight();
+    } else {
+      startFlight();
+    }
   }
 
   // ==================== JUMP/PHYSICS STATE ====================

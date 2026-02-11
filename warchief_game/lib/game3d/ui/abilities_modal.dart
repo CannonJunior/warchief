@@ -4,6 +4,8 @@ import '../state/abilities_config.dart';
 import '../state/ability_override_manager.dart';
 import '../state/custom_options_manager.dart';
 import '../state/custom_ability_manager.dart';
+import '../state/action_bar_config.dart';
+import '../data/abilities/abilities.dart' show AbilityRegistry;
 import 'ability_editor_panel.dart';
 import 'ui_config.dart';
 
@@ -30,6 +32,9 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
   double _yPos = 50.0;
   AbilityData? _editingAbility;
   bool _isCreatingNew = false;
+
+  /// Currently selected class in the "Load Class" dropdown
+  String _selectedLoadClass = 'warrior';
 
   @override
   Widget build(BuildContext context) {
@@ -179,6 +184,11 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                         children: [
                           // "+ Add New Ability" button at the top
                           _buildAddNewAbilityButton(),
+
+                          SizedBox(height: 12),
+
+                          // "Load Class" dropdown + button
+                          _buildLoadClassRow(),
 
                           SizedBox(height: 16),
 
@@ -651,6 +661,8 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
         return Colors.orange;
       case 'utility':
         return Colors.yellow;
+      case 'windwalker':
+        return Colors.white;
       default:
         // Custom categories get a distinct teal color
         return Colors.tealAccent;
@@ -691,6 +703,126 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
         ),
       ),
     );
+  }
+
+  /// Build the "Load Class" row: dropdown of classes + Load button
+  Widget _buildLoadClassRow() {
+    // Reason: AbilityRegistry.categories includes built-in classes (warrior, mage, etc.)
+    // Filter to only classes that have abilities a player can equip (exclude player/monster/ally)
+    final loadableCategories = AbilityRegistry.categories
+        .where((c) => c != 'player' && c != 'monster' && c != 'ally')
+        .toList();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.cyan.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.cyan.withOpacity(0.4), width: 1),
+      ),
+      child: Row(
+        children: [
+          Text(
+            'Load Class:',
+            style: TextStyle(
+              color: Colors.cyan,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Dropdown
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.cyan.withOpacity(0.5), width: 1),
+            ),
+            child: DropdownButton<String>(
+              value: _selectedLoadClass,
+              dropdownColor: Colors.grey.shade900,
+              underline: const SizedBox.shrink(),
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+              iconEnabledColor: Colors.cyan,
+              isDense: true,
+              items: loadableCategories.map((category) {
+                final count = AbilityRegistry.getByCategory(category).length;
+                return DropdownMenuItem(
+                  value: category,
+                  child: Text(
+                    '${category[0].toUpperCase()}${category.substring(1)} ($count)',
+                    style: TextStyle(
+                      color: _getCategoryColor(category),
+                      fontSize: 12,
+                    ),
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _selectedLoadClass = value;
+                  });
+                }
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Load button
+          GestureDetector(
+            onTap: () => _loadClassToActionBar(_selectedLoadClass),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _getCategoryColor(_selectedLoadClass).withOpacity(0.3),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: _getCategoryColor(_selectedLoadClass),
+                  width: 2,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.download, color: Colors.white, size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Load to Action Bar',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Load the first 10 abilities from a class into the 10 action bar slots
+  void _loadClassToActionBar(String category) {
+    final config = globalActionBarConfig;
+    if (config == null) return;
+
+    final abilities = AbilityRegistry.getByCategory(category);
+    if (abilities.isEmpty) return;
+
+    for (int i = 0; i < 10; i++) {
+      if (i < abilities.length) {
+        config.setSlotAbility(i, abilities[i].name);
+      }
+    }
+
+    print('[CODEX] Loaded ${category} class abilities to action bar '
+        '(${abilities.length > 10 ? 10 : abilities.length} abilities)');
+
+    // Refresh UI
+    setState(() {});
   }
 
   /// Create a blank AbilityData template for the "create new" editor

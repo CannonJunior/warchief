@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-10T21:18:34.193516",
+  "generated_at": "2026-02-11T18:18:01.975373",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
-    "files": 151,
+    "files": 153,
     "directories": 33,
-    "lines": 41283,
-    "size": 1386762
+    "lines": 42239,
+    "size": 1419770
   },
   "tree": {
     "name": "warchief_game",
@@ -63,19 +63,19 @@
                 "name": "source-tree.json",
                 "type": "file",
                 "path": "warchief_game/assets/data/source-tree.json",
-                "size": 55499,
+                "size": 57194,
                 "extension": ".json",
                 "icon": "📋",
-                "lines": 1568
+                "lines": 1611
               },
               {
                 "name": "wind_config.json",
                 "type": "file",
                 "path": "warchief_game/assets/data/wind_config.json",
-                "size": 655,
+                "size": 981,
                 "extension": ".json",
                 "icon": "📋",
-                "lines": 33
+                "lines": 46
               }
             ]
           }
@@ -293,10 +293,10 @@
                         "name": "abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/abilities.dart",
-                        "size": 4621,
+                        "size": 4850,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 132
+                        "lines": 138
                       },
                       {
                         "name": "ability_types.dart",
@@ -405,6 +405,15 @@
                         "extension": ".dart",
                         "icon": "🎯",
                         "lines": 93
+                      },
+                      {
+                        "name": "windwalker_abilities.dart",
+                        "type": "file",
+                        "path": "warchief_game/lib/game3d/data/abilities/windwalker_abilities.dart",
+                        "size": 6204,
+                        "extension": ".dart",
+                        "icon": "🎯",
+                        "lines": 202
                       }
                     ]
                   },
@@ -478,10 +487,10 @@
                     "name": "action_bar_config.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/action_bar_config.dart",
-                    "size": 4453,
+                    "size": 4487,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 146
+                    "lines": 147
                   },
                   {
                     "name": "custom_ability_manager.dart",
@@ -523,10 +532,10 @@
                     "name": "game_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state.dart",
-                    "size": 36327,
+                    "size": 38968,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 1069
+                    "lines": 1157
                   },
                   {
                     "name": "item_config.dart",
@@ -550,10 +559,10 @@
                     "name": "wind_config.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/wind_config.dart",
-                    "size": 4137,
+                    "size": 5011,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 112
+                    "lines": 127
                   },
                   {
                     "name": "wind_state.dart",
@@ -575,10 +584,10 @@
                     "name": "ability_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/ability_system.dart",
-                    "size": 64724,
+                    "size": 71114,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 1831
+                    "lines": 2001
                   },
                   {
                     "name": "ai_system.dart",
@@ -611,19 +620,19 @@
                     "name": "input_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/input_system.dart",
-                    "size": 6114,
+                    "size": 9755,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 183
+                    "lines": 283
                   },
                   {
                     "name": "physics_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/physics_system.dart",
-                    "size": 4104,
+                    "size": 5695,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 117
+                    "lines": 163
                   },
                   {
                     "name": "render_system.dart",
@@ -693,10 +702,10 @@
                         "name": "combat_hud.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/unit_frames/combat_hud.dart",
-                        "size": 27378,
+                        "size": 27697,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 827
+                        "lines": 834
                       },
                       {
                         "name": "minion_frames.dart",
@@ -749,10 +758,10 @@
                     "name": "abilities_modal.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/abilities_modal.dart",
-                    "size": 34518,
+                    "size": 39245,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 942
+                    "lines": 1074
                   },
                   {
                     "name": "ability_button.dart",
@@ -897,6 +906,15 @@
                     "extension": ".dart",
                     "icon": "🎯",
                     "lines": 114
+                  },
+                  {
+                    "name": "flight_buff_icon.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/ui/flight_buff_icon.dart",
+                    "size": 4184,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 128
                   },
                   {
                     "name": "formation_panel.dart",
@@ -1080,10 +1098,10 @@
                 "name": "game_action.dart",
                 "type": "file",
                 "path": "warchief_game/lib/models/game_action.dart",
-                "size": 7128,
+                "size": 7281,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 238
+                "lines": 243
               },
               {
                 "name": "impact_effect.dart",

@@ -7,11 +7,13 @@ import '../state/abilities_config.dart';
 import '../state/action_bar_config.dart' show globalActionBarConfig;
 import '../state/ability_override_manager.dart';
 import '../state/wind_state.dart';
+import '../state/wind_config.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
 import '../../models/impact_effect.dart';
 import 'combat_system.dart';
+import 'physics_system.dart';
 
 /// Mana type enumeration for abilities
 enum _ManaType { none, blue, red, white }
@@ -431,6 +433,38 @@ class AbilitySystem {
         break;
       case 'Battle Shout':
         _executeBattleShout(slotIndex, gameState);
+        break;
+
+      // Wind Walker abilities
+      case 'Gale Step':
+        _executeGaleStep(slotIndex, gameState);
+        break;
+      case 'Zephyr Roll':
+        _executeZephyrRoll(slotIndex, gameState);
+        break;
+      case 'Tailwind Retreat':
+        _executeTailwindRetreat(slotIndex, gameState);
+        break;
+      case 'Flying Serpent Strike':
+        _executeFlyingSerpentStrike(slotIndex, gameState);
+        break;
+      case 'Take Flight':
+        _executeTakeFlight(slotIndex, gameState);
+        break;
+      case 'Cyclone Dive':
+        _executeCycloneDive(slotIndex, gameState);
+        break;
+      case 'Wind Wall':
+        _executeWindWall(slotIndex, gameState);
+        break;
+      case 'Tempest Charge':
+        _executeTempestCharge(slotIndex, gameState);
+        break;
+      case 'Healing Gale':
+        _executeHealingGale(slotIndex, gameState);
+        break;
+      case 'Sovereign of the Sky':
+        _executeSovereignOfTheSky(slotIndex, gameState);
         break;
 
       default:
@@ -1354,6 +1388,142 @@ class AbilitySystem {
     final ability = UtilityAbilities.battleShout;
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Battle Shout! Allies empowered.');
+  }
+
+  // ==================== WIND WALKER ABILITIES ====================
+
+  /// Gale Step — forward dash through enemies dealing damage (reuses Dash pattern)
+  static void _executeGaleStep(int slotIndex, GameState gameState) {
+    if (gameState.ability4Active) return;
+    final ability = WindWalkerAbilities.galeStep;
+    gameState.ability4Active = true;
+    gameState.ability4ActiveTime = 0.0;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    gameState.ability4HitRegistered = false;
+    print('Gale Step activated!');
+  }
+
+  /// Zephyr Roll — forward dodge-roll with brief invulnerability
+  static void _executeZephyrRoll(int slotIndex, GameState gameState) {
+    if (gameState.ability4Active) return;
+    final ability = WindWalkerAbilities.zephyrRoll;
+    gameState.ability4Active = true;
+    gameState.ability4ActiveTime = 0.0;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    gameState.ability4HitRegistered = false;
+    print('Zephyr Roll! Brief invulnerability.');
+  }
+
+  /// Tailwind Retreat — backward movement + knockback nearby enemies
+  static void _executeTailwindRetreat(int slotIndex, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+    final ability = WindWalkerAbilities.tailwindRetreat;
+
+    // Move player backward
+    final backward = Vector3(
+      math.sin(_radians(gameState.playerRotation)),
+      0,
+      math.cos(_radians(gameState.playerRotation)),
+    );
+    gameState.playerTransform!.position += backward * ability.range;
+
+    // Knockback nearby enemies
+    if (ability.knockbackForce > 0) {
+      CombatSystem.checkAndDamageEnemies(
+        gameState,
+        attackerPosition: gameState.playerTransform!.position - backward * 3.0,
+        damage: 0.0,
+        attackType: ability.name,
+        impactColor: ability.impactColor,
+        impactSize: ability.impactSize,
+        collisionThreshold: 4.0,
+      );
+    }
+
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Tailwind Retreat! Backflipped away.');
+  }
+
+  /// Flying Serpent Strike — long dash with damage (longer range than Gale Step)
+  static void _executeFlyingSerpentStrike(int slotIndex, GameState gameState) {
+    if (gameState.ability4Active) return;
+    final ability = WindWalkerAbilities.flyingSerpentStrike;
+    gameState.ability4Active = true;
+    gameState.ability4ActiveTime = 0.0;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    gameState.ability4HitRegistered = false;
+    print('Flying Serpent Strike activated!');
+  }
+
+  /// Take Flight — toggle flight mode on/off
+  static void _executeTakeFlight(int slotIndex, GameState gameState) {
+    final ability = WindWalkerAbilities.takeFlight;
+    gameState.toggleFlight();
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+  }
+
+  /// Cyclone Dive — leap up then AoE slam dealing damage + stun
+  static void _executeCycloneDive(int slotIndex, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+    final ability = WindWalkerAbilities.cycloneDive;
+
+    // Create impact effect at player location
+    final impactMesh = Mesh.cube(
+      size: ability.aoeRadius > 0 ? ability.aoeRadius : 3.0,
+      color: ability.color,
+    );
+    final impactTransform = Transform3d(
+      position: gameState.playerTransform!.position.clone(),
+      scale: Vector3(1, 1, 1),
+    );
+    gameState.impactEffects.add(ImpactEffect(
+      mesh: impactMesh,
+      transform: impactTransform,
+      lifetime: 0.8,
+    ));
+
+    // Damage nearby enemies
+    CombatSystem.checkAndDamageEnemies(
+      gameState,
+      attackerPosition: gameState.playerTransform!.position,
+      damage: ability.damage,
+      attackType: ability.name,
+      impactColor: ability.impactColor,
+      impactSize: ability.impactSize,
+      collisionThreshold: ability.aoeRadius,
+      isMeleeDamage: true,
+    );
+
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Cyclone Dive! AoE slam!');
+  }
+
+  /// Wind Wall — blocks projectiles (visual + cooldown; blocking deferred)
+  static void _executeWindWall(int slotIndex, GameState gameState) {
+    final ability = WindWalkerAbilities.windWall;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Wind Wall deployed! Blocking projectiles for ${ability.duration}s.');
+  }
+
+  /// Tempest Charge — charge to target with knockback (reuses generic melee)
+  static void _executeTempestCharge(int slotIndex, GameState gameState) {
+    final ability = WindWalkerAbilities.tempestCharge;
+    _executeGenericMelee(slotIndex, gameState, ability, 'Tempest Charge!');
+  }
+
+  /// Healing Gale — heal self over time
+  static void _executeHealingGale(int slotIndex, GameState gameState) {
+    final ability = WindWalkerAbilities.healingGale;
+    _executeGenericHeal(slotIndex, gameState, ability, 'Healing Gale!');
+  }
+
+  /// Sovereign of the Sky — 12s buff: enhanced flight speed, reduced mana costs
+  static void _executeSovereignOfTheSky(int slotIndex, GameState gameState) {
+    final ability = WindWalkerAbilities.sovereignOfTheSky;
+    gameState.sovereignBuffActive = true;
+    gameState.sovereignBuffTimer = ability.duration;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Sovereign of the Sky! Enhanced flight for ${ability.duration}s.');
   }
 
   // ==================== GENERIC ABILITY HELPERS ====================

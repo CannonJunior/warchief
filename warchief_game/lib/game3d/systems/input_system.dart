@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import '../state/game_state.dart';
 import '../state/wind_state.dart';
+import '../state/wind_config.dart';
 import '../../game/controllers/input_manager.dart';
 import '../../rendering3d/camera3d.dart';
 import '../../models/game_action.dart';
@@ -98,6 +99,12 @@ class InputSystem {
   ) {
     if (gameState.playerTransform == null) return;
 
+    // Flight mode — different control scheme
+    if (gameState.isFlying) {
+      _handleFlightMovement(dt, inputManager, gameState);
+      return;
+    }
+
     // Check if any movement key is pressed
     final isMoving = inputManager.isActionPressed(GameAction.moveForward) ||
         inputManager.isActionPressed(GameAction.moveBackward) ||
@@ -179,5 +186,98 @@ class InputSystem {
     if (inputManager.isActionPressed(GameAction.strafeRight)) {
       gameState.playerTransform!.position += right * effectiveSpeed * dt;
     }
+  }
+
+  /// Handles flight movement controls.
+  ///
+  /// W = pitch up (climb), S = pitch down (dive), neither = auto-level.
+  /// Constant forward movement at flightSpeed * cos(pitch).
+  /// Vertical: flightSpeed * sin(pitch) (handled in physics).
+  /// ALT = speed boost, Space = brake + small upward bump.
+  /// A/D rotation still works, Q/E strafe disabled.
+  static void _handleFlightMovement(
+    double dt,
+    InputManager inputManager,
+    GameState gameState,
+  ) {
+    if (gameState.playerTransform == null) return;
+
+    final config = globalWindConfig;
+    final pitchRate = config?.pitchRate ?? 60.0;
+    final maxPitch = config?.maxPitchAngle ?? 45.0;
+    final baseSpeed = config?.flightSpeed ?? 7.0;
+    final boostMult = config?.boostMultiplier ?? 1.5;
+    final brakeMult = config?.brakeMultiplier ?? 0.6;
+    final brakeJump = config?.brakeJumpForce ?? 3.0;
+
+    // Sovereign buff speed bonus
+    final sovereignSpeedMult = gameState.sovereignBuffActive ? 1.5 : 1.0;
+
+    // W = pitch up (climb)
+    if (inputManager.isActionPressed(GameAction.moveForward)) {
+      gameState.flightPitchAngle += pitchRate * dt;
+      if (gameState.flightPitchAngle > maxPitch) {
+        gameState.flightPitchAngle = maxPitch;
+      }
+    }
+    // S = pitch down (dive)
+    else if (inputManager.isActionPressed(GameAction.moveBackward)) {
+      gameState.flightPitchAngle -= pitchRate * dt;
+      if (gameState.flightPitchAngle < -maxPitch) {
+        gameState.flightPitchAngle = -maxPitch;
+      }
+    }
+    // Neither W nor S — auto-level toward 0
+    else {
+      // Reason: drift pitch toward 0 for stable level flight when keys released
+      final levelRate = pitchRate * 0.5 * dt;
+      if (gameState.flightPitchAngle > 0) {
+        gameState.flightPitchAngle =
+            (gameState.flightPitchAngle - levelRate).clamp(0.0, maxPitch);
+      } else if (gameState.flightPitchAngle < 0) {
+        gameState.flightPitchAngle =
+            (gameState.flightPitchAngle + levelRate).clamp(-maxPitch, 0.0);
+      }
+    }
+
+    // Calculate current speed with modifiers
+    double currentSpeed = baseSpeed * sovereignSpeedMult;
+
+    // ALT = speed boost
+    if (inputManager.isActionPressed(GameAction.sprint)) {
+      currentSpeed *= boostMult;
+    }
+
+    // Spacebar = air brake + small upward bump
+    if (inputManager.isActionPressed(GameAction.jump)) {
+      currentSpeed *= brakeMult;
+      gameState.playerTransform!.position.y += brakeJump * dt;
+    }
+
+    gameState.flightSpeed = currentSpeed;
+
+    // Forward direction in XZ plane
+    final fwd = Vector3(
+      -math.sin(radians(gameState.playerRotation)),
+      0,
+      -math.cos(radians(gameState.playerRotation)),
+    );
+
+    // Apply constant forward movement (XZ only; Y handled by physics)
+    final pitchRad = gameState.flightPitchAngle * (math.pi / 180.0);
+    final horizontalSpeed = currentSpeed * math.cos(pitchRad);
+    gameState.playerTransform!.position += fwd * horizontalSpeed * dt;
+
+    // A/D rotation still works during flight
+    if (inputManager.isActionPressed(GameAction.rotateLeft)) {
+      gameState.playerRotation += 180 * dt;
+      gameState.playerTransform!.rotation.y = gameState.playerRotation;
+    }
+    if (inputManager.isActionPressed(GameAction.rotateRight)) {
+      gameState.playerRotation -= 180 * dt;
+      gameState.playerTransform!.rotation.y = gameState.playerRotation;
+    }
+
+    // Q/E strafe disabled during flight (intentionally omitted)
   }
 }

@@ -6,6 +6,7 @@ import 'vs_indicator.dart';
 import '../../state/action_bar_config.dart';
 import '../../state/game_state.dart';
 import '../../data/abilities/ability_types.dart';
+import '../flight_buff_icon.dart';
 
 /// Main combat HUD with player frame, target frame, VS indicator, and action bars
 /// Positioned at bottom-center of screen
@@ -145,6 +146,12 @@ class CombatHUD extends StatelessWidget {
         Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Flight buff icon (above player frame when flying)
+            if (gameState != null && gameState!.isFlying)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: FlightBuffIcon(gameState: gameState!),
+              ),
             // Player frame (portrait on left)
             UnitFrame(
               name: playerName,

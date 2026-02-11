@@ -29,5 +29,18 @@
     "lifetime": 3.0,
     "fadeDistance": 15.0,
     "color": [1.0, 1.0, 1.0, 0.3]
+  },
+  "flight": {
+    "flightSpeed": 7.0,
+    "pitchRate": 60.0,
+    "maxPitchAngle": 45.0,
+    "boostMultiplier": 1.5,
+    "brakeMultiplier": 0.6,
+    "brakeJumpForce": 3.0,
+    "manaDrainRate": 3.0,
+    "lowManaThreshold": 33.0,
+    "lowManaDescentRate": 2.0,
+    "minAltitudeForDescent": 10.0,
+    "initialManaCost": 15.0
   }
 }
