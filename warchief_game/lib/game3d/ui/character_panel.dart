@@ -52,6 +52,61 @@ class _CharacterPanelState extends State<CharacterPanel> {
     return widget.gameState.allies[_currentIndex - 1];
   }
 
+  /// Handle equipping an item from the bag to a specific equipment slot.
+  ///
+  /// Removes the item from the bag, equips it to the target slot,
+  /// and returns any displaced item back to the bag.
+  /// Adjusts player health when equipment health bonuses change.
+  void _handleEquipFromBag(EquipmentSlot slot, Item item) {
+    setState(() {
+      final gs = widget.gameState;
+      final inventory = gs.playerInventory;
+      final oldMaxHealth = gs.playerMaxHealth;
+      final bag = inventory.bag;
+
+      // Find and remove the item from the bag
+      for (int i = 0; i < bag.length; i++) {
+        if (identical(bag[i], item)) {
+          inventory.removeFromBag(i);
+          break;
+        }
+      }
+
+      // Equip the item to the specific slot, get displaced item
+      final oldItem = inventory.equipToSlot(slot, item);
+
+      // If an old item was displaced, put it back in the bag
+      if (oldItem != null) {
+        inventory.addToBag(oldItem);
+      }
+
+      // Reason: adjust current health by the delta so equipping +30 HP
+      // adds 30 to current health, and unequipping removes it.
+      final healthDelta = gs.playerMaxHealth - oldMaxHealth;
+      gs.playerHealth =
+          (gs.playerHealth + healthDelta).clamp(0.0, gs.playerMaxHealth);
+    });
+  }
+
+  /// Handle unequipping an item from an equipment slot to the bag.
+  ///
+  /// Called when a player drags an equipped item onto the bag panel.
+  /// Adjusts player health when equipment health bonuses change.
+  void _handleUnequipToBag(EquipmentSlot slot, Item item) {
+    setState(() {
+      final gs = widget.gameState;
+      final inventory = gs.playerInventory;
+      final oldMaxHealth = gs.playerMaxHealth;
+
+      inventory.unequip(slot);
+      inventory.addToBag(item);
+
+      final healthDelta = gs.playerMaxHealth - oldMaxHealth;
+      gs.playerHealth =
+          (gs.playerHealth + healthDelta).clamp(0.0, gs.playerMaxHealth);
+    });
+  }
+
   void _previousCharacter() {
     setState(() {
       _currentIndex =
@@ -165,6 +220,12 @@ class _CharacterPanelState extends State<CharacterPanel> {
                             ? const Color(0xFF4D80CC)
                             : _getAllyColor(_currentIndex - 1),
                         inventory: widget.gameState.playerInventory,
+                        onEquipItem: _isViewingPlayer
+                            ? _handleEquipFromBag
+                            : null,
+                        onUnequipItem: _isViewingPlayer
+                            ? _handleUnequipToBag
+                            : null,
                       ),
                     ),
                   ),

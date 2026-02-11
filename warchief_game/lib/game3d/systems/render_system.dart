@@ -7,6 +7,7 @@ import '../../rendering3d/camera3d.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/ley_lines.dart';
+import '../rendering/wind_particles.dart';
 
 /// Render System - Handles 3D scene rendering
 ///
@@ -17,6 +18,9 @@ import '../../rendering3d/ley_lines.dart';
 /// 4. Effects (abilities, projectiles, impacts)
 class RenderSystem {
   RenderSystem._(); // Private constructor
+
+  /// Wind particle system (initialized on first use)
+  static final WindParticleSystem _windParticles = WindParticleSystem();
 
   /// Renders the entire 3D scene
   ///
@@ -152,6 +156,33 @@ class RenderSystem {
     if (gameState.ability3Active && gameState.healEffectMesh != null && gameState.healEffectTransform != null) {
       renderer.render(gameState.healEffectMesh!, gameState.healEffectTransform!, camera);
     }
+
+    // Render wind particles (Effects pass)
+    _renderWindParticles(renderer, camera, gameState);
+  }
+
+  /// Update and render wind particles.
+  static void _renderWindParticles(
+    WebGLRenderer renderer,
+    Camera3D camera,
+    GameState gameState,
+  ) {
+    if (gameState.playerTransform == null) return;
+
+    // Initialize on first call
+    if (!_windParticles.isInitialized) {
+      _windParticles.init();
+    }
+
+    // Update particle positions based on wind state
+    _windParticles.update(
+      0.016, // Approximate dt; actual dt is not passed to render
+      gameState.playerTransform!.position,
+      gameState.windState,
+    );
+
+    // Render as single batched mesh
+    _windParticles.render(renderer, camera);
   }
 
   /// Render target indicator around the current target

@@ -18,11 +18,15 @@ class ManaBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final blueManaPercent = gameState.blueMana / gameState.maxBlueMana;
     final redManaPercent = gameState.redMana / gameState.maxRedMana;
+    final whiteManaPercent = gameState.maxWhiteMana > 0
+        ? gameState.whiteMana / gameState.maxWhiteMana
+        : 0.0;
     final leyLineInfo = gameState.currentLeyLineInfo;
     final isNearLeyLine = leyLineInfo?.isInRange ?? false;
     final isOnPowerNode = gameState.isOnPowerNode;
     final blueRegenRate = gameState.currentManaRegenRate;
     final redRegenRate = gameState.currentRedManaRegenRate;
+    final whiteRegenRate = gameState.currentWhiteManaRegenRate;
 
     // Border color: purple for power node, blue for ley line, gray default
     final borderColor = isOnPowerNode
@@ -78,8 +82,19 @@ class ManaBar extends StatelessWidget {
             colors: const [Color(0xFFCC2020), Color(0xFFFF4040), Color(0xFFFF6060)],
             isRegenerating: redRegenRate > 0,
           ),
+          // White mana bar (wind-powered)
+          _buildManaBar(
+            percent: whiteManaPercent,
+            current: gameState.whiteMana,
+            max: gameState.maxWhiteMana,
+            colors: const [Color(0xFFA0A0B0), Color(0xFFE0E0E0), Color(0xFFF0F0FF)],
+            isRegenerating: whiteRegenRate > 0,
+          ),
+          // Wind exposure info (if white mana is regenerating)
+          if (whiteRegenRate > 0)
+            _buildWindInfo(whiteRegenRate)
           // Ley Line / Power Node info (if nearby)
-          if (isOnPowerNode)
+          else if (isOnPowerNode)
             _buildPowerNodeInfo(blueRegenRate, redRegenRate)
           else if (isNearLeyLine && leyLineInfo != null)
             _buildLeyLineInfo(leyLineInfo, blueRegenRate),
@@ -160,6 +175,50 @@ class ManaBar extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildWindInfo(double regenRate) {
+    final windStrength = gameState.windState.windStrengthPercent;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Wind icon (silver-white circle)
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0E0E0),
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFE0E0E0).withOpacity(0.6),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '+${regenRate.toStringAsFixed(1)}/s',
+            style: const TextStyle(
+              color: Color(0xFFD0D0E0),
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Wind (${windStrength.toStringAsFixed(0)}%)',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 8,
+            ),
+          ),
+        ],
       ),
     );
   }

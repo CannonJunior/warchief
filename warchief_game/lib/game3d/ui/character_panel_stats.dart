@@ -220,11 +220,13 @@ Widget _buildGearBonusSection(Inventory inventory) {
 /// Abbreviate stat names for compact gear bonus display.
 String _abbreviateStat(String stat) {
   switch (stat) {
-    case 'Strength': return 'Str';
-    case 'Agility': return 'Agi';
-    case 'Intelligence': return 'Int';
-    case 'Stamina': return 'Sta';
-    case 'Spirit': return 'Spi';
+    case 'Brawn': return 'Brn';
+    case 'Yar': return 'Yar';
+    case 'Auspice': return 'Aus';
+    case 'Valor': return 'Val';
+    case 'Chuff': return 'Chf';
+    case 'X': return 'X';
+    case 'Zeal': return 'Zl';
     case 'Armor': return 'Arm';
     case 'Damage': return 'Dmg';
     case 'Crit Chance': return 'Crit';

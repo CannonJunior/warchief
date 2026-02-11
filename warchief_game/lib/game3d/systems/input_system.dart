@@ -2,6 +2,7 @@ import 'package:vector_math/vector_math.dart';
 import 'dart:math' as math;
 
 import '../state/game_state.dart';
+import '../state/wind_state.dart';
 import '../../game/controllers/input_manager.dart';
 import '../../rendering3d/camera3d.dart';
 import '../../models/game_action.dart';
@@ -109,26 +110,52 @@ class InputSystem {
     }
 
     // Get effective speed (includes windup modifier if winding up)
-    final effectiveSpeed = gameState.effectivePlayerSpeed;
+    double effectiveSpeed = gameState.effectivePlayerSpeed;
+
+    // Compute combined movement direction for wind modifier
+    double moveDx = 0.0;
+    double moveDz = 0.0;
+
+    final fwd = Vector3(
+      -math.sin(radians(gameState.playerRotation)),
+      0,
+      -math.cos(radians(gameState.playerRotation)),
+    );
+    final right = Vector3(
+      math.cos(radians(gameState.playerRotation)),
+      0,
+      -math.sin(radians(gameState.playerRotation)),
+    );
+
+    if (inputManager.isActionPressed(GameAction.moveForward)) {
+      moveDx += fwd.x;
+      moveDz += fwd.z;
+    }
+    if (inputManager.isActionPressed(GameAction.moveBackward)) {
+      moveDx -= fwd.x;
+      moveDz -= fwd.z;
+    }
+    if (inputManager.isActionPressed(GameAction.strafeLeft)) {
+      moveDx -= right.x;
+      moveDz -= right.z;
+    }
+    if (inputManager.isActionPressed(GameAction.strafeRight)) {
+      moveDx += right.x;
+      moveDz += right.z;
+    }
+
+    // Reason: headwind slows player, tailwind speeds up
+    final windMod = globalWindState?.getMovementModifier(moveDx, moveDz) ?? 1.0;
+    effectiveSpeed *= windMod;
 
     // W = Forward
     if (inputManager.isActionPressed(GameAction.moveForward)) {
-      final forward = Vector3(
-        -math.sin(radians(gameState.playerRotation)),
-        0,
-        -math.cos(radians(gameState.playerRotation)),
-      );
-      gameState.playerTransform!.position += forward * effectiveSpeed * dt;
+      gameState.playerTransform!.position += fwd * effectiveSpeed * dt;
     }
 
     // S = Backward
     if (inputManager.isActionPressed(GameAction.moveBackward)) {
-      final forward = Vector3(
-        -math.sin(radians(gameState.playerRotation)),
-        0,
-        -math.cos(radians(gameState.playerRotation)),
-      );
-      gameState.playerTransform!.position -= forward * effectiveSpeed * dt;
+      gameState.playerTransform!.position -= fwd * effectiveSpeed * dt;
     }
 
     // A = Rotate Right (rotation not affected by windup)
@@ -145,21 +172,11 @@ class InputSystem {
 
     // Q = Strafe Left
     if (inputManager.isActionPressed(GameAction.strafeLeft)) {
-      final right = Vector3(
-        math.cos(radians(gameState.playerRotation)),
-        0,
-        -math.sin(radians(gameState.playerRotation)),
-      );
       gameState.playerTransform!.position -= right * effectiveSpeed * dt;
     }
 
     // E = Strafe Right
     if (inputManager.isActionPressed(GameAction.strafeRight)) {
-      final right = Vector3(
-        math.cos(radians(gameState.playerRotation)),
-        0,
-        -math.sin(radians(gameState.playerRotation)),
-      );
       gameState.playerTransform!.position += right * effectiveSpeed * dt;
     }
   }

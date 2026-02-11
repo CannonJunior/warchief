@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import '../state/game_state.dart';
 import '../state/game_config.dart';
 import '../state/abilities_config.dart';
+import '../state/wind_state.dart';
 import '../../models/ally.dart';
 import '../../models/ai_chat_message.dart';
 import '../../models/monster.dart';
@@ -165,7 +166,14 @@ class AISystem {
         case AllyMovementMode.tactical:
           // Follow current path if exists
           if (ally.currentPath != null) {
-            final distance = ally.moveSpeed * dt;
+            // Apply wind modifier to ally movement speed
+            double allySpeed = ally.moveSpeed;
+            if (globalWindState != null && ally.currentPath!.progress < 1.0) {
+              final tangent = ally.currentPath!.getTangentAt(ally.currentPath!.progress);
+              final windMod = globalWindState!.getMovementModifier(tangent.x, tangent.z);
+              allySpeed *= windMod;
+            }
+            final distance = allySpeed * dt;
             final newPos = ally.currentPath!.advance(distance);
 
             if (newPos != null) {
@@ -238,7 +246,14 @@ class AISystem {
 
     // Continue moving along existing path if one exists
     if (ally.currentPath != null) {
-      final distance = ally.moveSpeed * dt;
+      // Apply wind modifier to follow movement speed
+      double followSpeed = ally.moveSpeed;
+      if (globalWindState != null && ally.currentPath!.progress < 1.0) {
+        final tangent = ally.currentPath!.getTangentAt(ally.currentPath!.progress);
+        final windMod = globalWindState!.getMovementModifier(tangent.x, tangent.z);
+        followSpeed *= windMod;
+      }
+      final distance = followSpeed * dt;
       final newPos = ally.currentPath!.advance(distance);
 
       if (newPos != null) {
@@ -669,6 +684,12 @@ class AISystem {
     final shadowBolt = AbilitiesConfig.monsterShadowBolt;
 
     gameState.monsterProjectiles.removeWhere((projectile) {
+      // Apply wind force to projectile velocity
+      if (globalWindState != null) {
+        final windForce = globalWindState!.getProjectileForce();
+        projectile.velocity.x += windForce[0] * dt;
+        projectile.velocity.z += windForce[1] * dt;
+      }
       projectile.transform.position += projectile.velocity * dt;
       projectile.lifetime -= dt;
 
@@ -698,6 +719,12 @@ class AISystem {
 
     for (final ally in gameState.allies) {
       ally.projectiles.removeWhere((projectile) {
+        // Apply wind force to ally projectile velocity
+        if (globalWindState != null) {
+          final windForce = globalWindState!.getProjectileForce();
+          projectile.velocity.x += windForce[0] * dt;
+          projectile.velocity.z += windForce[1] * dt;
+        }
         projectile.transform.position += projectile.velocity * dt;
         projectile.lifetime -= dt;
 
@@ -758,9 +785,14 @@ class AISystem {
         final distance = toTarget.length;
 
         if (distance > 0.5) {
-          // Move toward target
+          // Move toward target with wind modifier
           final direction = toTarget.normalized();
-          final moveAmount = minion.definition.moveSpeed * dt;
+          double minionSpeed = minion.definition.moveSpeed;
+          if (globalWindState != null) {
+            final windMod = globalWindState!.getMovementModifier(direction.x, direction.z);
+            minionSpeed *= windMod;
+          }
+          final moveAmount = minionSpeed * dt;
           minion.transform.position.x += direction.x * moveAmount;
           minion.transform.position.z += direction.z * moveAmount;
 
@@ -1120,6 +1152,12 @@ class AISystem {
   static void updateMinionProjectiles(double dt, GameState gameState) {
     for (final minion in gameState.aliveMinions) {
       minion.projectiles.removeWhere((projectile) {
+        // Apply wind force to minion projectile velocity
+        if (globalWindState != null) {
+          final windForce = globalWindState!.getProjectileForce();
+          projectile.velocity.x += windForce[0] * dt;
+          projectile.velocity.z += windForce[1] * dt;
+        }
         projectile.transform.position += projectile.velocity * dt;
         projectile.lifetime -= dt;
 

@@ -9,7 +9,7 @@
       "slot": "helm",
       "stats": {
         "armor": 15,
-        "stamina": 3
+        "health": 3
       },
       "iconName": "helm_iron",
       "sellValue": 25,
@@ -24,8 +24,8 @@
       "slot": "helm",
       "stats": {
         "armor": 28,
-        "stamina": 5,
-        "strength": 2
+        "health": 5,
+        "brawn": 2
       },
       "iconName": "helm_steel",
       "sellValue": 75,
@@ -40,7 +40,7 @@
       "slot": "armor",
       "stats": {
         "armor": 35,
-        "stamina": 5
+        "health": 5
       },
       "iconName": "armor_chain",
       "sellValue": 50,
@@ -55,8 +55,9 @@
       "slot": "armor",
       "stats": {
         "armor": 65,
-        "stamina": 10,
-        "strength": 5
+        "health": 10,
+        "brawn": 5,
+        "valor": 5
       },
       "iconName": "armor_plate",
       "sellValue": 200,
@@ -70,8 +71,8 @@
       "rarity": "common",
       "slot": "back",
       "stats": {
-        "agility": 2,
-        "spirit": 1
+        "yar": 2,
+        "chuff": 2
       },
       "iconName": "cloak_travel",
       "sellValue": 15,
@@ -85,9 +86,9 @@
       "rarity": "epic",
       "slot": "back",
       "stats": {
-        "agility": 12,
+        "yar": 12,
         "critChance": 3,
-        "spirit": 5
+        "zeal": 5
       },
       "iconName": "cloak_shadow",
       "sellValue": 350,
@@ -102,7 +103,7 @@
       "slot": "gloves",
       "stats": {
         "armor": 8,
-        "agility": 2
+        "yar": 2
       },
       "iconName": "gloves_leather",
       "sellValue": 12,
@@ -117,7 +118,7 @@
       "slot": "gloves",
       "stats": {
         "armor": 22,
-        "strength": 8,
+        "brawn": 8,
         "damage": 5
       },
       "iconName": "gloves_might",
@@ -133,7 +134,7 @@
       "slot": "legs",
       "stats": {
         "armor": 20,
-        "stamina": 3
+        "health": 3
       },
       "iconName": "legs_iron",
       "sellValue": 30,
@@ -148,9 +149,9 @@
       "slot": "legs",
       "stats": {
         "armor": 48,
-        "stamina": 12,
-        "strength": 6,
-        "health": 25
+        "health": 37,
+        "brawn": 6,
+        "valor": 6
       },
       "iconName": "legs_valor",
       "sellValue": 400,
@@ -165,7 +166,7 @@
       "slot": "boots",
       "stats": {
         "armor": 10,
-        "agility": 3
+        "yar": 3
       },
       "iconName": "boots_leather",
       "sellValue": 18,
@@ -180,8 +181,8 @@
       "slot": "boots",
       "stats": {
         "armor": 18,
-        "agility": 10,
-        "spirit": 3
+        "yar": 10,
+        "chuff": 3
       },
       "iconName": "boots_swift",
       "sellValue": 150,
@@ -196,7 +197,7 @@
       "slot": "mainHand",
       "stats": {
         "damage": 12,
-        "strength": 2
+        "brawn": 2
       },
       "iconName": "sword_iron",
       "sellValue": 35,
@@ -211,7 +212,7 @@
       "slot": "mainHand",
       "stats": {
         "damage": 22,
-        "strength": 5,
+        "brawn": 5,
         "critChance": 2
       },
       "iconName": "axe_war",
@@ -227,9 +228,9 @@
       "slot": "mainHand",
       "stats": {
         "damage": 45,
-        "strength": 12,
+        "brawn": 12,
         "critChance": 5,
-        "intelligence": 3
+        "auspice": 3
       },
       "iconName": "sword_flame",
       "sellValue": 500,
@@ -244,7 +245,7 @@
       "slot": "offHand",
       "stats": {
         "armor": 25,
-        "stamina": 2
+        "health": 2
       },
       "iconName": "shield_wood",
       "sellValue": 20,
@@ -259,8 +260,8 @@
       "slot": "offHand",
       "stats": {
         "armor": 55,
-        "stamina": 8,
-        "health": 15
+        "health": 23,
+        "valor": 8
       },
       "iconName": "shield_tower",
       "sellValue": 175,
@@ -274,9 +275,9 @@
       "rarity": "rare",
       "slot": "offHand",
       "stats": {
-        "intelligence": 10,
+        "auspice": 10,
         "mana": 20,
-        "spirit": 5
+        "zeal": 5
       },
       "iconName": "orb_power",
       "sellValue": 160,
@@ -284,13 +285,13 @@
     },
     {
       "id": "ring_of_strength",
-      "name": "Ring of Strength",
+      "name": "Ring of Brawn",
       "description": "A simple band that enhances physical power.",
       "type": "accessory",
       "rarity": "uncommon",
       "slot": "ring1",
       "stats": {
-        "strength": 5,
+        "brawn": 5,
         "damage": 3
       },
       "iconName": "ring_str",
@@ -299,15 +300,15 @@
     },
     {
       "id": "ring_of_wisdom",
-      "name": "Ring of Wisdom",
+      "name": "Ring of Auspice",
       "description": "A band inscribed with ancient runes.",
       "type": "accessory",
       "rarity": "uncommon",
       "slot": "ring1",
       "stats": {
-        "intelligence": 5,
+        "auspice": 5,
         "mana": 15,
-        "spirit": 2
+        "zeal": 2
       },
       "iconName": "ring_int",
       "sellValue": 60,
@@ -321,10 +322,9 @@
       "rarity": "legendary",
       "slot": "ring1",
       "stats": {
-        "strength": 10,
-        "stamina": 10,
-        "critChance": 5,
-        "health": 50
+        "brawn": 10,
+        "health": 60,
+        "critChance": 5
       },
       "iconName": "ring_warchief",
       "sellValue": 1000,
@@ -339,11 +339,27 @@
       "slot": "ring2",
       "stats": {
         "armor": 15,
-        "stamina": 6,
-        "health": 20
+        "health": 26,
+        "valor": 3
       },
       "iconName": "ring_prot",
       "sellValue": 140,
+      "levelRequirement": 5
+    },
+    {
+      "id": "amulet_of_fortitude",
+      "name": "Amulet of Fortitude",
+      "description": "A mystical amulet that strengthens the wearer's resolve.",
+      "type": "accessory",
+      "rarity": "rare",
+      "slot": "talisman",
+      "stats": {
+        "health": 38,
+        "zeal": 4,
+        "chuff": 5
+      },
+      "iconName": "talisman_fortitude",
+      "sellValue": 200,
       "levelRequirement": 5
     },
     {

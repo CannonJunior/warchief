@@ -15,6 +15,7 @@ import '../rendering3d/player_mesh.dart';
 import '../game/controllers/input_manager.dart';
 import '../models/game_action.dart';
 import '../ai/ollama_client.dart';
+import '../models/item.dart';
 import '../models/projectile.dart';
 import '../models/ally.dart';
 import '../models/ai_chat_message.dart';
@@ -55,6 +56,11 @@ import 'state/ability_override_manager.dart';
 import 'state/mana_config.dart';
 import 'state/custom_options_manager.dart';
 import 'state/custom_ability_manager.dart';
+import 'state/item_config.dart';
+import 'state/custom_item_manager.dart';
+import 'state/wind_config.dart';
+import 'state/wind_state.dart';
+import 'ui/wind_indicator.dart';
 import 'systems/entity_picking_system.dart';
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
@@ -91,6 +97,10 @@ class _Game3DState extends State<Game3D> {
   // Game state - centralized state management
   final GameState gameState = GameState();
 
+  // Reason: explicit FocusNode so we can reclaim keyboard focus from text fields
+  // after the user interacts with editor panels or clicks on the game world.
+  final FocusNode _gameFocusNode = FocusNode(debugLabel: 'Game3D');
+
   @override
   void initState() {
     super.initState();
@@ -111,11 +121,20 @@ class _Game3DState extends State<Game3D> {
     // Initialize mana config (JSON defaults + SharedPreferences overrides)
     _initializeManaConfig();
 
+    // Initialize wind config (JSON defaults for wind simulation)
+    _initializeWindConfig();
+
     // Initialize custom options manager (custom dropdown values + effect descriptions)
     _initializeCustomOptions();
 
     // Initialize custom ability manager (user-created abilities)
     _initializeCustomAbilities();
+
+    // Initialize item config (power level weights, sentience thresholds)
+    _initializeItemConfig();
+
+    // Initialize custom item manager (user-created items)
+    _initializeCustomItems();
 
     // Initialize player inventory with sample items
     _initializeInventory();
@@ -142,6 +161,13 @@ class _Game3DState extends State<Game3D> {
     globalManaConfig!.initialize();
   }
 
+  /// Initialize the global wind configuration and state (JSON defaults)
+  void _initializeWindConfig() {
+    globalWindConfig ??= WindConfig();
+    globalWindConfig!.initialize();
+    globalWindState ??= WindState();
+  }
+
   /// Initialize the global custom options manager (dropdown values + effect descriptions)
   void _initializeCustomOptions() {
     globalCustomOptionsManager ??= CustomOptionsManager();
@@ -152,6 +178,18 @@ class _Game3DState extends State<Game3D> {
   void _initializeCustomAbilities() {
     globalCustomAbilityManager ??= CustomAbilityManager();
     globalCustomAbilityManager!.loadAbilities();
+  }
+
+  /// Initialize the global item config (power level weights, sentience thresholds)
+  void _initializeItemConfig() {
+    globalItemConfig ??= ItemConfig();
+    globalItemConfig!.initialize();
+  }
+
+  /// Initialize the global custom item manager (user-created items)
+  void _initializeCustomItems() {
+    globalCustomItemManager ??= CustomItemManager();
+    globalCustomItemManager!.loadItems();
   }
 
   /// Initialize player inventory with sample items from database
@@ -470,6 +508,9 @@ class _Game3DState extends State<Game3D> {
     // Update mana regeneration based on Ley Line proximity
     gameState.updateManaRegen(dt);
 
+    // Update wind simulation and White Mana regeneration
+    gameState.updateWindAndWhiteMana(dt);
+
     // Update AI systems (monster AI, ally AI, projectiles)
     AISystem.update(
       dt,
@@ -738,6 +779,9 @@ class _Game3DState extends State<Game3D> {
     // Only process primary (left) mouse button
     if (event.buttons != 1) return;
     if (camera == null) return;
+
+    // Reclaim keyboard focus from any active text field
+    _gameFocusNode.requestFocus();
 
     final clickPos = event.localPosition;
     final viewMatrix = camera!.getViewMatrix();
@@ -1193,10 +1237,17 @@ class _Game3DState extends State<Game3D> {
   @override
   Widget build(BuildContext context) {
     return Focus(
+      focusNode: _gameFocusNode,
       autofocus: true,
       onKeyEvent: (node, event) {
-        // Let text fields handle their own input
+        // Let text fields handle their own input, but allow Escape through
+        // so the user can always close panels and return to the game.
         if (_isTextFieldFocused()) {
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+            _gameFocusNode.requestFocus();
+            _onKeyEvent(event);
+            return KeyEventResult.handled;
+          }
           return KeyEventResult.ignored;
         }
         _onKeyEvent(event);
@@ -1220,6 +1271,15 @@ class _Game3DState extends State<Game3D> {
               camera: camera,
               canvasWidth: 1600,
               canvasHeight: 900,
+            ),
+
+            // Wind indicator compass (top-right corner)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: WindIndicator(
+                windState: gameState.windState,
+              ),
             ),
 
             // Instructions overlay (draggable)
@@ -1426,6 +1486,7 @@ class _Game3DState extends State<Game3D> {
                   setState(() {
                     gameState.abilitiesModalOpen = false;
                   });
+                  _gameFocusNode.requestFocus();
                 },
               ),
 
@@ -1437,12 +1498,31 @@ class _Game3DState extends State<Game3D> {
                   setState(() {
                     gameState.bagPanelOpen = false;
                   });
+                  _gameFocusNode.requestFocus();
                 },
                 onItemClick: (index, item) {
                   if (item != null) {
                     print('[Bag] Clicked item at slot $index: ${item.name}');
-                    // TODO: Implement item use/equip functionality
                   }
+                },
+                onItemEquipped: () => setState(() {}),
+                onUnequipToBag: (slot, item) {
+                  setState(() {
+                    final inventory = gameState.playerInventory;
+                    final oldMaxHealth = gameState.playerMaxHealth;
+                    inventory.unequip(slot);
+                    inventory.addToBag(item);
+                    // Reason: adjust health by delta so removing +30 HP gear
+                    // removes 30 from current health
+                    final healthDelta = gameState.playerMaxHealth - oldMaxHealth;
+                    gameState.playerHealth = (gameState.playerHealth + healthDelta)
+                        .clamp(0.0, gameState.playerMaxHealth);
+                  });
+                },
+                onItemCreated: (item) {
+                  setState(() {
+                    gameState.playerInventory.addToBag(item);
+                  });
                 },
               ),
 
@@ -1830,6 +1910,8 @@ class _Game3DState extends State<Game3D> {
 
     // Remove canvas from DOM
     canvas.remove();
+
+    _gameFocusNode.dispose();
 
     super.dispose();
   }

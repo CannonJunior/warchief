@@ -12,6 +12,7 @@ enum EquipmentSlot {
   offHand,
   ring1,
   ring2,
+  talisman,
 }
 
 /// Item rarity levels
@@ -31,6 +32,32 @@ enum ItemType {
   consumable,
   material,
   quest,
+}
+
+/// Item sentience levels — gated by power thresholds in item_config.json
+enum ItemSentience {
+  inanimate,
+  imbued,
+  sentient,
+}
+
+/// Extension for ItemSentience to get display properties
+extension ItemSentienceExtension on ItemSentience {
+  String get displayName {
+    switch (this) {
+      case ItemSentience.inanimate: return 'Inanimate';
+      case ItemSentience.imbued: return 'Imbued';
+      case ItemSentience.sentient: return 'Sentient';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case ItemSentience.inanimate: return const Color(0xFF666666);
+      case ItemSentience.imbued: return const Color(0xFF6B8EFF);
+      case ItemSentience.sentient: return const Color(0xFFFF6BFF);
+    }
+  }
 }
 
 /// Extension for ItemRarity to get display properties
@@ -70,6 +97,7 @@ extension EquipmentSlotExtension on EquipmentSlot {
       case EquipmentSlot.offHand: return 'Off Hand';
       case EquipmentSlot.ring1: return 'Ring';
       case EquipmentSlot.ring2: return 'Ring';
+      case EquipmentSlot.talisman: return 'Talisman';
     }
   }
 
@@ -85,17 +113,39 @@ extension EquipmentSlotExtension on EquipmentSlot {
       case EquipmentSlot.offHand: return Icons.shield;
       case EquipmentSlot.ring1: return Icons.radio_button_unchecked;
       case EquipmentSlot.ring2: return Icons.radio_button_unchecked;
+      case EquipmentSlot.talisman: return Icons.auto_awesome;
     }
+  }
+
+  /// Check if this equipment slot can accept a given item.
+  ///
+  /// Rings are interchangeable: ring1 and ring2 slots both accept
+  /// items with either ring1 or ring2 slot designation.
+  bool canAcceptItem(Item item) {
+    if (item.slot == null) return false;
+    if (item.slot == this) return true;
+    // Reason: rings are interchangeable (WoW convention)
+    if ((this == EquipmentSlot.ring1 || this == EquipmentSlot.ring2) &&
+        (item.slot == EquipmentSlot.ring1 || item.slot == EquipmentSlot.ring2)) {
+      return true;
+    }
+    return false;
   }
 }
 
-/// Item stats that can be modified by equipment
+/// Item stats that can be modified by equipment.
+///
+/// Primary attributes match the game's 7-attribute system:
+/// Brawn, Yar, Auspice, Valor, Chuff, X, Zeal.
+/// Combat/derived stats: armor, damage, critChance, health, mana.
 class ItemStats {
-  final int strength;
-  final int agility;
-  final int intelligence;
-  final int stamina;
-  final int spirit;
+  final int brawn;
+  final int yar;
+  final int auspice;
+  final int valor;
+  final int chuff;
+  final int x;
+  final int zeal;
   final int armor;
   final int damage;
   final int critChance;
@@ -103,11 +153,13 @@ class ItemStats {
   final int mana;
 
   const ItemStats({
-    this.strength = 0,
-    this.agility = 0,
-    this.intelligence = 0,
-    this.stamina = 0,
-    this.spirit = 0,
+    this.brawn = 0,
+    this.yar = 0,
+    this.auspice = 0,
+    this.valor = 0,
+    this.chuff = 0,
+    this.x = 0,
+    this.zeal = 0,
     this.armor = 0,
     this.damage = 0,
     this.critChance = 0,
@@ -117,11 +169,13 @@ class ItemStats {
 
   factory ItemStats.fromJson(Map<String, dynamic> json) {
     return ItemStats(
-      strength: json['strength'] ?? 0,
-      agility: json['agility'] ?? 0,
-      intelligence: json['intelligence'] ?? 0,
-      stamina: json['stamina'] ?? 0,
-      spirit: json['spirit'] ?? 0,
+      brawn: json['brawn'] ?? 0,
+      yar: json['yar'] ?? 0,
+      auspice: json['auspice'] ?? 0,
+      valor: json['valor'] ?? 0,
+      chuff: json['chuff'] ?? 0,
+      x: json['x'] ?? 0,
+      zeal: json['zeal'] ?? 0,
       armor: json['armor'] ?? 0,
       damage: json['damage'] ?? 0,
       critChance: json['critChance'] ?? 0,
@@ -131,11 +185,13 @@ class ItemStats {
   }
 
   Map<String, dynamic> toJson() => {
-    if (strength != 0) 'strength': strength,
-    if (agility != 0) 'agility': agility,
-    if (intelligence != 0) 'intelligence': intelligence,
-    if (stamina != 0) 'stamina': stamina,
-    if (spirit != 0) 'spirit': spirit,
+    if (brawn != 0) 'brawn': brawn,
+    if (yar != 0) 'yar': yar,
+    if (auspice != 0) 'auspice': auspice,
+    if (valor != 0) 'valor': valor,
+    if (chuff != 0) 'chuff': chuff,
+    if (x != 0) 'x': x,
+    if (zeal != 0) 'zeal': zeal,
     if (armor != 0) 'armor': armor,
     if (damage != 0) 'damage': damage,
     if (critChance != 0) 'critChance': critChance,
@@ -146,11 +202,13 @@ class ItemStats {
   /// Get non-zero stats as a list of (name, value) pairs
   List<MapEntry<String, int>> get nonZeroStats {
     final stats = <MapEntry<String, int>>[];
-    if (strength != 0) stats.add(MapEntry('Strength', strength));
-    if (agility != 0) stats.add(MapEntry('Agility', agility));
-    if (intelligence != 0) stats.add(MapEntry('Intelligence', intelligence));
-    if (stamina != 0) stats.add(MapEntry('Stamina', stamina));
-    if (spirit != 0) stats.add(MapEntry('Spirit', spirit));
+    if (brawn != 0) stats.add(MapEntry('Brawn', brawn));
+    if (yar != 0) stats.add(MapEntry('Yar', yar));
+    if (auspice != 0) stats.add(MapEntry('Auspice', auspice));
+    if (valor != 0) stats.add(MapEntry('Valor', valor));
+    if (chuff != 0) stats.add(MapEntry('Chuff', chuff));
+    if (x != 0) stats.add(MapEntry('X', x));
+    if (zeal != 0) stats.add(MapEntry('Zeal', zeal));
     if (armor != 0) stats.add(MapEntry('Armor', armor));
     if (damage != 0) stats.add(MapEntry('Damage', damage));
     if (critChance != 0) stats.add(MapEntry('Crit Chance', critChance));
@@ -158,6 +216,17 @@ class ItemStats {
     if (mana != 0) stats.add(MapEntry('Mana', mana));
     return stats;
   }
+}
+
+/// Data class for dragging equipped items from equipment slots.
+///
+/// Carries both the source equipment slot and the item being dragged,
+/// so the receiving DragTarget knows which slot to unequip.
+class EquipmentDragData {
+  final EquipmentSlot slot;
+  final Item item;
+
+  const EquipmentDragData({required this.slot, required this.item});
 }
 
 /// Represents an item in the game
@@ -174,6 +243,7 @@ class Item {
   final String iconName; // For future icon loading
   final int sellValue;
   final int levelRequirement;
+  final ItemSentience sentience;
 
   const Item({
     required this.id,
@@ -188,6 +258,7 @@ class Item {
     this.iconName = 'default',
     this.sellValue = 0,
     this.levelRequirement = 1,
+    this.sentience = ItemSentience.inanimate,
   });
 
   /// Whether this item can be equipped
@@ -223,6 +294,12 @@ class Item {
       iconName: json['iconName'] ?? 'default',
       sellValue: json['sellValue'] ?? 0,
       levelRequirement: json['levelRequirement'] ?? 1,
+      sentience: json['sentience'] != null
+          ? ItemSentience.values.firstWhere(
+              (s) => s.name == json['sentience'],
+              orElse: () => ItemSentience.inanimate,
+            )
+          : ItemSentience.inanimate,
     );
   }
 
@@ -239,6 +316,7 @@ class Item {
     'iconName': iconName,
     'sellValue': sellValue,
     'levelRequirement': levelRequirement,
+    'sentience': sentience.name,
   };
 
   /// Create a copy with modified stack size
@@ -256,6 +334,7 @@ class Item {
       iconName: iconName,
       sellValue: sellValue,
       levelRequirement: levelRequirement,
+      sentience: sentience,
     );
   }
 }

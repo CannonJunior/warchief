@@ -49,7 +49,7 @@ class ItemDatabase {
         type: ItemType.weapon,
         rarity: ItemRarity.common,
         slot: EquipmentSlot.mainHand,
-        stats: ItemStats(damage: 12, strength: 2),
+        stats: ItemStats(damage: 12, brawn: 2),
       ),
       const Item(
         id: 'wooden_shield',
@@ -58,7 +58,7 @@ class ItemDatabase {
         type: ItemType.armor,
         rarity: ItemRarity.common,
         slot: EquipmentSlot.offHand,
-        stats: ItemStats(armor: 25, stamina: 2),
+        stats: ItemStats(armor: 25, health: 2),
       ),
       const Item(
         id: 'health_potion',

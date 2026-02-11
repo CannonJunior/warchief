@@ -13,7 +13,7 @@ class Inventory {
   /// Number of bag slots
   final int bagSize;
 
-  Inventory({this.bagSize = 24}) : _bag = List.filled(24, null);
+  Inventory({this.bagSize = 60}) : _bag = List.filled(60, null);
 
   /// Get equipped item in a slot
   Item? getEquipped(EquipmentSlot slot) => _equipment[slot];
@@ -23,6 +23,17 @@ class Inventory {
     if (!item.isEquippable || item.slot == null) return null;
 
     final slot = item.slot!;
+    final previousItem = _equipment[slot];
+    _equipment[slot] = item;
+    return previousItem;
+  }
+
+  /// Equip an item to a specific slot, returning the previously equipped item.
+  ///
+  /// Unlike [equip], this allows placing an item in a specific slot
+  /// (e.g., a ring in ring2 instead of its default ring1 slot).
+  /// The caller is responsible for validating slot compatibility.
+  Item? equipToSlot(EquipmentSlot slot, Item item) {
     final previousItem = _equipment[slot];
     _equipment[slot] = item;
     return previousItem;
@@ -103,17 +114,20 @@ class Inventory {
 
   /// Get total stats from all equipped items
   ItemStats get totalEquippedStats {
-    int strength = 0, agility = 0, intelligence = 0, stamina = 0;
-    int spirit = 0, armor = 0, damage = 0, critChance = 0;
+    int brawn = 0, yar = 0, auspice = 0, valor = 0;
+    int chuff = 0, xVal = 0, zeal = 0;
+    int armor = 0, damage = 0, critChance = 0;
     int health = 0, mana = 0;
 
     for (final item in _equipment.values) {
       if (item != null) {
-        strength += item.stats.strength;
-        agility += item.stats.agility;
-        intelligence += item.stats.intelligence;
-        stamina += item.stats.stamina;
-        spirit += item.stats.spirit;
+        brawn += item.stats.brawn;
+        yar += item.stats.yar;
+        auspice += item.stats.auspice;
+        valor += item.stats.valor;
+        chuff += item.stats.chuff;
+        xVal += item.stats.x;
+        zeal += item.stats.zeal;
         armor += item.stats.armor;
         damage += item.stats.damage;
         critChance += item.stats.critChance;
@@ -123,11 +137,13 @@ class Inventory {
     }
 
     return ItemStats(
-      strength: strength,
-      agility: agility,
-      intelligence: intelligence,
-      stamina: stamina,
-      spirit: spirit,
+      brawn: brawn,
+      yar: yar,
+      auspice: auspice,
+      valor: valor,
+      chuff: chuff,
+      x: xVal,
+      zeal: zeal,
       armor: armor,
       damage: damage,
       critChance: critChance,

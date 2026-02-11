@@ -6,6 +6,7 @@ import '../state/game_config.dart';
 import '../state/abilities_config.dart';
 import '../state/action_bar_config.dart' show globalActionBarConfig;
 import '../state/ability_override_manager.dart';
+import '../state/wind_state.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
@@ -13,7 +14,7 @@ import '../../models/impact_effect.dart';
 import 'combat_system.dart';
 
 /// Mana type enumeration for abilities
-enum _ManaType { none, blue, red }
+enum _ManaType { none, blue, red, white }
 
 /// Ability System - Handles all player ability logic
 ///
@@ -237,7 +238,9 @@ class AbilitySystem {
       manaCost = abilityData.manaCost;
       manaType = abilityData.manaColor == ManaColor.red
           ? _ManaType.red
-          : _ManaType.blue;
+          : abilityData.manaColor == ManaColor.white
+              ? _ManaType.white
+              : _ManaType.blue;
     } else {
       (manaCost, manaType) = _getManaCostAndType(abilityName);
     }
@@ -253,6 +256,11 @@ class AbilitySystem {
           print('[MANA] Not enough red mana for $abilityName (need $manaCost, have ${gameState.redMana.toStringAsFixed(0)})');
           return;
         }
+      } else if (manaType == _ManaType.white) {
+        if (!gameState.hasWhiteMana(manaCost)) {
+          print('[MANA] Not enough white mana for $abilityName (need $manaCost, have ${gameState.whiteMana.toStringAsFixed(0)})');
+          return;
+        }
       }
     }
 
@@ -262,6 +270,7 @@ class AbilitySystem {
       // the mana is never spent and the ability remains available.
       gameState.pendingManaCost = manaCost;
       gameState.pendingManaIsBlue = manaType == _ManaType.blue;
+      gameState.pendingManaType = manaType == _ManaType.blue ? 0 : manaType == _ManaType.red ? 1 : 2;
       _startCastTimeAbility(abilityData, slotIndex, gameState);
       return;
     }
@@ -271,6 +280,7 @@ class AbilitySystem {
       // Defer mana spending until the windup completes.
       gameState.pendingManaCost = manaCost;
       gameState.pendingManaIsBlue = manaType == _ManaType.blue;
+      gameState.pendingManaType = manaType == _ManaType.blue ? 0 : manaType == _ManaType.red ? 1 : 2;
       _startWindupAbility(abilityData, slotIndex, gameState);
       return;
     }
@@ -283,6 +293,9 @@ class AbilitySystem {
       } else if (manaType == _ManaType.red) {
         gameState.spendRedMana(manaCost);
         print('[MANA] Spent $manaCost red mana for $abilityName');
+      } else if (manaType == _ManaType.white) {
+        gameState.spendWhiteMana(manaCost);
+        print('[MANA] Spent $manaCost white mana for $abilityName');
       }
     }
 
@@ -648,12 +661,20 @@ class AbilitySystem {
     final cost = gameState.pendingManaCost;
     if (cost <= 0) return;
 
-    if (gameState.pendingManaIsBlue) {
-      gameState.spendBlueMana(cost);
-      print('[MANA] Spent $cost blue mana for $abilityName');
-    } else {
-      gameState.spendRedMana(cost);
-      print('[MANA] Spent $cost red mana for $abilityName');
+    // Reason: pendingManaType distinguishes blue(0), red(1), white(2)
+    switch (gameState.pendingManaType) {
+      case 2:
+        gameState.spendWhiteMana(cost);
+        print('[MANA] Spent $cost white mana for $abilityName');
+        break;
+      case 1:
+        gameState.spendRedMana(cost);
+        print('[MANA] Spent $cost red mana for $abilityName');
+        break;
+      default:
+        gameState.spendBlueMana(cost);
+        print('[MANA] Spent $cost blue mana for $abilityName');
+        break;
     }
     gameState.pendingManaCost = 0.0;
   }
@@ -1569,6 +1590,13 @@ class AbilitySystem {
           // Target is dead/gone - stop homing, continue in current direction
           projectile.isHoming = false;
         }
+      }
+
+      // Apply wind force to projectile trajectory
+      if (globalWindState != null) {
+        final windForce = globalWindState!.getProjectileForce();
+        projectile.velocity.x += windForce[0] * dt;
+        projectile.velocity.z += windForce[1] * dt;
       }
 
       // Move projectile

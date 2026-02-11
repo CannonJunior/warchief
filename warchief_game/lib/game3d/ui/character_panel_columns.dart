@@ -4,9 +4,11 @@ import '../../models/ally.dart';
 import '../../models/item.dart';
 import '../../models/inventory.dart';
 import 'paper_doll_painter.dart';
+import 'item_tooltip.dart';
 
-// Re-export stats column so consumers only need one import
+// Re-export stats column and tooltip so consumers only need one import
 export 'character_panel_stats.dart' show buildStatsColumn;
+export 'item_tooltip.dart' show buildItemTooltip, EquipSlotHover;
 
 /// Attribute color constants used for color-coding attribute-to-combat-stat links.
 ///
@@ -143,8 +145,14 @@ Widget _buildAttrRow(_AttrData attr, int maxVal) {
 // CENTER COLUMN: Paper Doll
 // ---------------------------------------------------------------------------
 
-/// Builds the center column with the rotatable cube portrait surrounded
-/// by 10 equipment slots in a humanoid silhouette pattern.
+/// Builds the center column with the rotatable cube portrait and
+/// equipment slots arranged in two rows below the paper doll.
+///
+/// Layout:
+///   Helm (centered)
+///   RotatableCubePortrait (120x120)
+///   Row 1: Back, Gloves, Armor, Legs, Boots
+///   Row 2: Ring 1, Main Hand, Talisman, Off Hand, Ring 2
 ///
 /// For ally views, shows ally info instead of equipment.
 Widget buildPaperDollColumn({
@@ -154,6 +162,8 @@ Widget buildPaperDollColumn({
   required double cubeRotation,
   required Color portraitColor,
   required Inventory inventory,
+  void Function(EquipmentSlot slot, Item item)? onEquipItem,
+  void Function(EquipmentSlot slot, Item item)? onUnequipItem,
 }) {
   if (!isPlayer && ally != null) {
     return _buildAllyCenter(ally, currentIndex, portraitColor, cubeRotation);
@@ -163,80 +173,46 @@ Widget buildPaperDollColumn({
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Column(
       children: [
-        // Paper doll area: cube with surrounding equipment slots
-        SizedBox(
-          height: 300,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Central cube portrait
-              Positioned(
-                top: 70,
-                child: RotatableCubePortrait(
-                  color: portraitColor,
-                  size: 120,
-                  rotation: cubeRotation,
-                ),
-              ),
-              // Equipment slots in humanoid silhouette
-              // Helm - top center
-              Positioned(
-                top: 4,
-                child: _equipSlot(EquipmentSlot.helm, inventory),
-              ),
-              // Back - left of head
-              Positioned(
-                top: 56,
-                left: 10,
-                child: _equipSlot(EquipmentSlot.back, inventory),
-              ),
-              // Gloves - right of head
-              Positioned(
-                top: 56,
-                right: 10,
-                child: _equipSlot(EquipmentSlot.gloves, inventory),
-              ),
-              // Main Hand - left of torso
-              Positioned(
-                top: 118,
-                left: 10,
-                child: _equipSlot(EquipmentSlot.mainHand, inventory),
-              ),
-              // Off Hand - right of torso
-              Positioned(
-                top: 118,
-                right: 10,
-                child: _equipSlot(EquipmentSlot.offHand, inventory),
-              ),
-              // Armor - below cube
-              Positioned(
-                top: 198,
-                child: _equipSlot(EquipmentSlot.armor, inventory),
-              ),
-              // Legs - below armor
-              Positioned(
-                top: 250,
-                child: _equipSlot(EquipmentSlot.legs, inventory),
-              ),
-              // Ring1 - left bottom
-              Positioned(
-                bottom: 8,
-                left: 24,
-                child: _equipSlot(EquipmentSlot.ring1, inventory),
-              ),
-              // Ring2 - right bottom
-              Positioned(
-                bottom: 8,
-                right: 24,
-                child: _equipSlot(EquipmentSlot.ring2, inventory),
-              ),
-              // Boots - bottom center
-              Positioned(
-                bottom: 0,
-                child: _equipSlot(EquipmentSlot.boots, inventory),
-              ),
-            ],
-          ),
+        // Helm - top center
+        _equipSlot(EquipmentSlot.helm, inventory, onEquipItem: onEquipItem, onUnequipItem: onUnequipItem),
+        const SizedBox(height: 8),
+        // Central cube portrait
+        RotatableCubePortrait(
+          color: portraitColor,
+          size: 120,
+          rotation: cubeRotation,
+        ),
+        const SizedBox(height: 8),
+        // Row 1: Back, Gloves, Armor, Legs, Boots
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _equipSlot(EquipmentSlot.back, inventory, onEquipItem: onEquipItem, onUnequipItem: onUnequipItem),
+            const SizedBox(width: 4),
+            _equipSlot(EquipmentSlot.gloves, inventory, onEquipItem: onEquipItem, onUnequipItem: onUnequipItem),
+            const SizedBox(width: 4),
+            _equipSlot(EquipmentSlot.armor, inventory, onEquipItem: onEquipItem, onUnequipItem: onUnequipItem),
+            const SizedBox(width: 4),
+            _equipSlot(EquipmentSlot.legs, inventory, onEquipItem: onEquipItem, onUnequipItem: onUnequipItem),
+            const SizedBox(width: 4),
+            _equipSlot(EquipmentSlot.boots, inventory, onEquipItem: onEquipItem, onUnequipItem: onUnequipItem),
+          ],
+        ),
+        const SizedBox(height: 4),
+        // Row 2: Ring 1, Main Hand, Talisman, Off Hand, Ring 2
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _equipSlot(EquipmentSlot.ring1, inventory, onEquipItem: onEquipItem, onUnequipItem: onUnequipItem),
+            const SizedBox(width: 4),
+            _equipSlot(EquipmentSlot.mainHand, inventory, onEquipItem: onEquipItem, onUnequipItem: onUnequipItem),
+            const SizedBox(width: 4),
+            _equipSlot(EquipmentSlot.talisman, inventory, onEquipItem: onEquipItem, onUnequipItem: onUnequipItem),
+            const SizedBox(width: 4),
+            _equipSlot(EquipmentSlot.offHand, inventory, onEquipItem: onEquipItem, onUnequipItem: onUnequipItem),
+            const SizedBox(width: 4),
+            _equipSlot(EquipmentSlot.ring2, inventory, onEquipItem: onEquipItem, onUnequipItem: onUnequipItem),
+          ],
         ),
         const SizedBox(height: 4),
         // Drag hint
@@ -337,8 +313,18 @@ Widget _allyInfoRow(String label, String value, IconData icon) {
   );
 }
 
-/// Builds a single 44x44 equipment slot with rarity color and tooltip.
-Widget _equipSlot(EquipmentSlot slot, Inventory inventory) {
+/// Builds a single 44x44 equipment slot with rarity color and rich tooltip.
+///
+/// Wraps the slot in a [DragTarget<Item>] so items can be dragged from
+/// the bag panel to equip. Shows a green glow when a valid item hovers.
+/// Equipped items are wrapped in [Draggable<EquipmentDragData>] so they
+/// can be dragged to the bag panel to unequip.
+Widget _equipSlot(
+  EquipmentSlot slot,
+  Inventory inventory, {
+  void Function(EquipmentSlot slot, Item item)? onEquipItem,
+  void Function(EquipmentSlot slot, Item item)? onUnequipItem,
+}) {
   final item = inventory.getEquipped(slot);
   final hasItem = item != null;
   final borderColor = hasItem ? item.rarity.color : const Color(0xFF3a3a3a);
@@ -346,56 +332,108 @@ Widget _equipSlot(EquipmentSlot slot, Inventory inventory) {
       ? item.rarity.color.withValues(alpha: 0.15)
       : const Color(0xFF1a1a1a);
 
-  return Tooltip(
-    message: hasItem
-        ? '${item.name}\n${item.rarity.displayName} ${item.type.name}'
-        : 'Empty ${slot.displayName} slot',
-    child: Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: borderColor,
-          width: hasItem ? 2 : 1,
+  return DragTarget<Item>(
+    onWillAcceptWithDetails: (details) {
+      return slot.canAcceptItem(details.data);
+    },
+    onAcceptWithDetails: (details) {
+      onEquipItem?.call(slot, details.data);
+    },
+    builder: (context, candidateData, rejectedData) {
+      final isHovering = candidateData.isNotEmpty;
+
+      Widget slotContent = Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isHovering
+                ? const Color(0xFF4CAF50)
+                : borderColor,
+            width: isHovering ? 2 : (hasItem ? 2 : 1),
+          ),
+          boxShadow: isHovering
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF4CAF50).withValues(alpha: 0.5),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : hasItem
+                  ? [
+                      BoxShadow(
+                        color: item.rarity.color.withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
         ),
-        boxShadow: hasItem
-            ? [
-                BoxShadow(
-                  color: item.rarity.color.withValues(alpha: 0.3),
-                  blurRadius: 4,
-                  spreadRadius: 1,
-                ),
-              ]
-            : null,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            slot.icon,
-            color: hasItem ? item.rarity.color : Colors.grey.shade600,
-            size: 20,
-          ),
-          const SizedBox(height: 1),
-          Text(
-            slot.displayName,
-            style: TextStyle(
-              color: hasItem ? Colors.white70 : Colors.grey.shade700,
-              fontSize: 7,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              slot.icon,
+              color: hasItem ? item.rarity.color : Colors.grey.shade600,
+              size: 20,
             ),
-            overflow: TextOverflow.ellipsis,
+            const SizedBox(height: 1),
+            Text(
+              slot.displayName,
+              style: TextStyle(
+                color: hasItem ? Colors.white70 : Colors.grey.shade700,
+                fontSize: 7,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      );
+
+      // Wrap equipped items in Draggable so they can be dragged to bag
+      if (hasItem && onUnequipItem != null) {
+        slotContent = Draggable<EquipmentDragData>(
+          data: EquipmentDragData(slot: slot, item: item),
+          feedback: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: item.rarity.color.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: item.rarity.color, width: 2),
+              ),
+              child: Center(
+                child: Icon(slot.icon, color: item.rarity.color, size: 20),
+              ),
+            ),
           ),
-        ],
-      ),
-    ),
+          childWhenDragging: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1a1a1a),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: const Color(0xFF3a3a3a), width: 1),
+            ),
+          ),
+          child: slotContent,
+        );
+      }
+
+      // Wrap in EquipSlotHover for rich tooltip on hover
+      return EquipSlotHover(
+        item: item,
+        slotName: slot.displayName,
+        child: slotContent,
+      );
+    },
   );
 }
-
-// ---------------------------------------------------------------------------
-// Shared helpers
-// ---------------------------------------------------------------------------
 
 /// Reusable section title matching existing character_panel style.
 Widget sectionTitle(String title) {

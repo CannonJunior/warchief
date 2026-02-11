@@ -1,0 +1,33 @@
+{
+  "wind": {
+    "baseStrength": 0.3,
+    "maxStrength": 1.0,
+    "driftSpeed": 0.1,
+    "gustFrequency": 0.05,
+    "gustAmplitude": 0.4,
+    "directionDriftSpeed": 0.08
+  },
+  "whiteMana": {
+    "maxMana": 100.0,
+    "baseRegen": 0.0,
+    "windExposureRegen": 2.5,
+    "windStrengthMultiplier": 1.0,
+    "decayRate": 0.5,
+    "shelterThreshold": 0.1
+  },
+  "movement": {
+    "headwindFactor": 0.15,
+    "tailwindFactor": 0.10,
+    "crosswindFactor": 0.05
+  },
+  "projectile": {
+    "windForceMultiplier": 0.8
+  },
+  "particles": {
+    "count": 60,
+    "speed": 2.0,
+    "lifetime": 3.0,
+    "fadeDistance": 15.0,
+    "color": [1.0, 1.0, 1.0, 0.3]
+  }
+}

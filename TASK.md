@@ -2,6 +2,66 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-10
+
+#### Wind Effects System: Foundation + Unit Movement
+- ✅ Created `assets/data/wind_config.json` — all tuning values (wind drift, White Mana, movement, projectile, particles)
+- ✅ Created `lib/game3d/state/wind_config.dart` — config loader following ManaConfig pattern
+- ✅ Created `lib/game3d/state/wind_state.dart` — wind simulation with layered sine wave drift (no sudden jumps)
+- ✅ Created `lib/game3d/rendering/wind_particles.dart` — batched particle system rendered in Effects pass
+- ✅ Created `lib/game3d/ui/wind_indicator.dart` — HUD wind compass (top-right corner)
+- ✅ Added `white` to `ManaColor` enum in `ability_types.dart`
+- ✅ Added White Mana fields + `updateWindAndWhiteMana()` to `game_state.dart` (regen from wind exposure, decay when sheltered)
+- ✅ Added White Mana bar (silver-white gradient) to `mana_bar.dart` with wind exposure info
+- ✅ Applied wind movement modifier to player (`input_system.dart`), allies, and minions (`ai_system.dart`)
+- ✅ Applied wind force to all projectile types (player, ally, minion, monster)
+- ✅ Updated `ability_system.dart` for white mana cost checking, spending, and deferred spending
+- ✅ Wired wind particles into `render_system.dart` Effects pass
+- ✅ Initialized WindConfig + WindState globals in `game3d_widget.dart`
+- ✅ Added WindIndicator widget to HUD Stack
+- ✅ Registered `wind_config.json` in `source-tree.json`
+- ✅ All values config-driven — nothing hardcoded
+- ✅ All files under 500 lines
+
+#### Item Editor Panel: "+ Add New Item" for Bag Panel
+- ✅ Created `assets/data/item_config.json` with power level weights, rarity bonuses, sentience thresholds
+- ✅ Created `lib/game3d/state/item_config.dart` — config loader + power calculator (ManaConfig pattern)
+- ✅ Created `lib/game3d/state/custom_item_manager.dart` — persistence manager (CustomAbilityManager pattern)
+- ✅ Created `lib/game3d/ui/item_editor_panel.dart` — side panel UI with 6 sections
+- ✅ Created `lib/game3d/ui/item_editor_fields.dart` — shared field widgets and power/sentience section
+- ✅ Added `ItemSentience` enum + extension to `item.dart` with fromJson/toJson/copyWithStackSize support
+- ✅ Added "+ ADD NEW ITEM" button and Row layout with conditional editor panel to `bag_panel.dart`
+- ✅ Wired `onItemCreated` callback through `game3d_widget.dart` to add items to inventory
+- ✅ Initialized `ItemConfig` and `CustomItemManager` global singletons in `game3d_widget.dart`
+- ✅ Power level bar with gradient fill, 3-way sentience toggle gated by config thresholds
+- ✅ Type dropdown changes available slot options; stack fields only for consumable/material
+- ✅ All tuning values in JSON config — nothing hardcoded
+- ✅ Build verified clean, all files under 500 lines
+
+#### Character Panel Equipment Rearrangement + Bag Drag-to-Equip + Talisman Slot
+- ✅ Added `talisman` to `EquipmentSlot` enum with `canAcceptItem()` slot validation helper (ring interchangeability)
+- ✅ Expanded bag from 24 to 60 slots, added `equipToSlot()` method to Inventory
+- ✅ Replaced Stack/Positioned silhouette layout with Column-based: Helm → Cube → Row1 (5 armor slots) → Row2 (rings/weapons/talisman)
+- ✅ Made equipment slots `DragTarget<Item>` with green glow on valid hover
+- ✅ Wired `_handleEquipFromBag` callback in CharacterPanel (removes from bag, equips, returns displaced item)
+- ✅ Made bag items `Draggable<Item>` with feedback widget and `onDragEnd` safe removal
+- ✅ Added Amulet of Fortitude talisman item to items.json and starting inventory
+- ✅ Passed `onItemEquipped` refresh callback through game3d_widget.dart
+- ✅ Build verified clean, all files under 500 lines
+
+#### Equipment Drag-to-Bag, Rich Tooltips, Game Attribute System
+- ✅ Replaced item stats (strength/agility/intelligence/stamina/spirit) with game attributes (Brawn/Yar/Auspice/Valor/Chuff/X/Zeal)
+- ✅ Converted all Stamina values to Health in items.json (merged with existing health bonuses)
+- ✅ Made `playerMaxHealth` a dynamic getter: `basePlayerMaxHealth + totalEquippedStats.health`
+- ✅ Health delta tracking on equip/unequip adjusts current health proportionally
+- ✅ Made equipped items `Draggable<EquipmentDragData>` for drag-to-bag unequipping
+- ✅ Added `DragTarget<EquipmentDragData>` to BagPanel with gold highlight on valid hover
+- ✅ Created shared rich tooltip (`buildItemTooltip`) used by both equipment slots and bag slots
+- ✅ Added `EquipSlotHover` stateful widget for hover-triggered tooltip on equipment slots
+- ✅ Extracted tooltip into `item_tooltip.dart` to keep files under 500 lines
+- ✅ Fixed fallback items in `item_database.dart` to use new attribute names
+- ✅ Build verified clean, all files under 500 lines
+
 ### ✅ Completed - 2025-10-29
 
 #### Research & Design Phase

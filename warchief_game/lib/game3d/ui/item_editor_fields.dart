@@ -1,0 +1,329 @@
+import 'package:flutter/material.dart';
+
+import '../../models/item.dart';
+import '../state/item_config.dart';
+
+/// Shared accent color for the item editor (bag panel gold)
+const Color itemEditorAccent = Color(0xFFFFB300);
+
+/// Shared background color for the item editor
+const Color itemEditorBg = Color(0xFF1a1a2e);
+
+/// Shared section background
+const Color itemEditorSectionBg = Color(0xFF252542);
+
+/// Tooltip text for every editor field
+const Map<String, String> itemEditorTooltips = {
+  'name': 'Unique display name for this item.',
+  'description': 'Flavor text shown in the item tooltip on mouseover.',
+  'type': 'Item category: weapon, armor, accessory, consumable, material, quest.',
+  'rarity': 'Quality tier affecting power level bonus and border color.',
+  'slot': 'Equipment slot where this item can be worn or wielded.',
+  'brawn': 'Raw physical strength. Increases melee damage.',
+  'yar': 'Agility and reflexes. Increases attack speed.',
+  'auspice': 'Magical attunement. Increases spell power.',
+  'valor': 'Combat resolve. Increases critical strike damage.',
+  'chuff': 'Resilience and toughness. Reduces incoming damage.',
+  'x': 'The unknown stat. Mysterious multiplicative effects.',
+  'zeal': 'Fervor and devotion. Increases healing done.',
+  'armor': 'Physical damage reduction rating.',
+  'damage': 'Base weapon damage added to attacks.',
+  'critChance': 'Percentage chance to critically strike.',
+  'health': 'Bonus hit points added to max health.',
+  'mana': 'Bonus mana points added to max mana.',
+  'sellValue': 'Gold received when selling to a vendor.',
+  'levelReq': 'Minimum character level to equip this item.',
+  'stackSize': 'Current number of items in this stack.',
+  'maxStack': 'Maximum number of items per stack slot.',
+  'sentience': 'Whether this item has awareness. Gated by power level thresholds.',
+};
+
+/// Common label style for the item editor
+const TextStyle itemEditorLabelStyle = TextStyle(
+    color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold);
+
+/// Common input text style for the item editor
+const TextStyle itemEditorInputStyle = TextStyle(color: Colors.white, fontSize: 11);
+
+/// Common input decoration for the item editor
+const InputDecoration itemEditorInputDecoration = InputDecoration(
+  isDense: true,
+  contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+  filled: true, fillColor: Colors.black38,
+  border: OutlineInputBorder(
+    borderSide: BorderSide(color: Colors.white24),
+    borderRadius: BorderRadius.all(Radius.circular(3))),
+  enabledBorder: OutlineInputBorder(
+    borderSide: BorderSide(color: Colors.white24),
+    borderRadius: BorderRadius.all(Radius.circular(3))),
+  focusedBorder: OutlineInputBorder(
+    borderSide: BorderSide(color: itemEditorAccent),
+    borderRadius: BorderRadius.all(Radius.circular(3))),
+);
+
+/// Wrap a widget with a tooltip from the shared tooltip map
+Widget withItemTooltip(String tooltipKey, Widget child) {
+  final tip = itemEditorTooltips[tooltipKey];
+  if (tip == null) return child;
+  return Tooltip(
+    message: tip,
+    preferBelow: false,
+    textStyle: const TextStyle(color: Colors.white, fontSize: 11),
+    decoration: BoxDecoration(
+      color: const Color(0xDD1a1a2e),
+      borderRadius: BorderRadius.circular(4),
+      border: Border.all(color: itemEditorAccent.withValues(alpha: 0.5)),
+    ),
+    waitDuration: const Duration(milliseconds: 400),
+    child: child,
+  );
+}
+
+/// Build an editor section container with title
+Widget buildEditorSection(String title, Color color, List<Widget> children) {
+  return Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    decoration: BoxDecoration(
+        color: itemEditorSectionBg, borderRadius: BorderRadius.circular(4)),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Text(title, style: TextStyle(color: color, fontSize: 10,
+              fontWeight: FontWeight.bold, letterSpacing: 1)),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+          child: Column(children: children),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Build a text field row
+Widget buildEditorTextField(String label, TextEditingController ctrl,
+    String tooltipKey, {bool multiline = false}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: Row(
+      crossAxisAlignment: multiline ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      children: [
+        SizedBox(width: 80, child: withItemTooltip(tooltipKey,
+            Text(label, style: itemEditorLabelStyle))),
+        Expanded(
+          child: TextField(
+            controller: ctrl, maxLines: multiline ? 2 : 1,
+            style: itemEditorInputStyle, decoration: itemEditorInputDecoration),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Build a numeric input row with onChange callback for live recalculation
+Widget buildEditorNumericRow(String label, TextEditingController ctrl,
+    String tooltipKey, {VoidCallback? onChange}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: Row(
+      children: [
+        SizedBox(width: 110, child: withItemTooltip(tooltipKey,
+            Text(label, style: itemEditorLabelStyle))),
+        Expanded(
+          child: TextField(
+            controller: ctrl,
+            keyboardType: TextInputType.number,
+            style: itemEditorInputStyle,
+            decoration: itemEditorInputDecoration,
+            onChanged: onChange != null ? (_) => onChange() : null,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Build a dropdown row
+Widget buildEditorDropdown(String label, String tooltipKey,
+    List<String> values, String selected, ValueChanged<String> onChanged) {
+  // Reason: ensure selected value is in list to avoid DropdownButton assertion
+  if (!values.contains(selected)) {
+    selected = values.first;
+  }
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: Row(
+      children: [
+        SizedBox(width: 80, child: withItemTooltip(tooltipKey,
+            Text(label, style: itemEditorLabelStyle))),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            decoration: BoxDecoration(
+              color: Colors.black38,
+              borderRadius: BorderRadius.circular(3),
+              border: Border.all(color: Colors.white24),
+            ),
+            child: DropdownButton<String>(
+              value: selected,
+              isExpanded: true,
+              dropdownColor: itemEditorBg,
+              underline: const SizedBox.shrink(),
+              iconSize: 16,
+              iconEnabledColor: Colors.white54,
+              style: itemEditorInputStyle,
+              items: values.map((v) => DropdownMenuItem<String>(
+                value: v,
+                child: Text(displayFriendlyName(v), style: itemEditorInputStyle),
+              )).toList(),
+              onChanged: (v) {
+                if (v != null) onChanged(v);
+              },
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Convert camelCase enum names to display-friendly format
+String displayFriendlyName(String name) {
+  // Reason: insert space before capital letters for readability (e.g. mainHand -> Main Hand)
+  final spaced = name.replaceAllMapped(
+      RegExp(r'([a-z])([A-Z])'), (m) => '${m[1]} ${m[2]}');
+  return spaced[0].toUpperCase() + spaced.substring(1);
+}
+
+/// Build a styled action button
+Widget buildEditorButton(String label, Color color, VoidCallback onPressed) {
+  return GestureDetector(
+    onTap: onPressed,
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color, width: 1),
+      ),
+      child: Text(label, textAlign: TextAlign.center,
+        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+    ),
+  );
+}
+
+/// Build the power & sentience section
+Widget buildPowerSentienceSection({
+  required double powerLevel,
+  required ItemSentience selectedSentience,
+  required ValueChanged<ItemSentience> onSentienceChanged,
+}) {
+  final config = globalItemConfig;
+  final maxDisplay = config?.maxDisplayLevel ?? 200.0;
+  final fillFraction = (powerLevel / maxDisplay).clamp(0.0, 1.0);
+  final imbuedThreshold = config?.imbuedThreshold ?? 40.0;
+  final sentientThreshold = config?.sentientThreshold ?? 100.0;
+
+  final canImbued = powerLevel >= imbuedThreshold;
+  final canSentient = powerLevel >= sentientThreshold;
+
+  return buildEditorSection('POWER & SENTIENCE', Colors.purple.shade300, [
+    // Power level label
+    Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          withItemTooltip('sentience',
+            const Text('Power Level', style: TextStyle(
+                color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold))),
+          Text(powerLevel.toStringAsFixed(1),
+              style: const TextStyle(color: Colors.white, fontSize: 10,
+                  fontWeight: FontWeight.bold)),
+        ],
+      ),
+    ),
+    // Power level bar with gradient fill
+    Container(
+      height: 12,
+      decoration: BoxDecoration(
+        color: Colors.black38,
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(2),
+        child: FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: fillFraction,
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF4CAF50), Color(0xFFFFEB3B), Color(0xFFFF5722)],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+    const SizedBox(height: 8),
+    // Sentience toggle (3-way segmented)
+    Row(
+      children: [
+        _sentienceOption(ItemSentience.inanimate, true,
+            selectedSentience, onSentienceChanged),
+        const SizedBox(width: 4),
+        _sentienceOption(ItemSentience.imbued, canImbued,
+            selectedSentience, onSentienceChanged),
+        const SizedBox(width: 4),
+        _sentienceOption(ItemSentience.sentient, canSentient,
+            selectedSentience, onSentienceChanged),
+      ],
+    ),
+    // Threshold hints
+    if (!canSentient)
+      Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(
+          canImbued
+              ? 'Sentient requires ${sentientThreshold.toInt()} power'
+              : 'Imbued requires ${imbuedThreshold.toInt()} power',
+          style: const TextStyle(color: Colors.white24, fontSize: 9),
+        ),
+      ),
+  ]);
+}
+
+Widget _sentienceOption(ItemSentience sentience, bool enabled,
+    ItemSentience selected, ValueChanged<ItemSentience> onChanged) {
+  final isSelected = selected == sentience;
+  final color = enabled ? sentience.color : Colors.white24;
+
+  return Expanded(
+    child: GestureDetector(
+      onTap: enabled ? () => onChanged(sentience) : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.3) : Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isSelected ? color : (enabled ? color.withValues(alpha: 0.4) : Colors.white12),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Text(
+          sentience.displayName,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: enabled ? color : Colors.white24,
+            fontSize: 9,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    ),
+  );
+}

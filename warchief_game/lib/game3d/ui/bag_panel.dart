@@ -1,23 +1,32 @@
 import 'package:flutter/material.dart';
 import '../../models/item.dart';
 import '../../models/inventory.dart';
+import 'item_tooltip.dart' show buildItemTooltip;
+import 'item_editor_panel.dart';
 
 /// Bag Panel - Draggable panel displaying player inventory
 ///
 /// Opened with the 'B' key, this panel shows:
-/// - Grid of bag slots (4x6 = 24 slots)
+/// - Grid of bag slots (6x10 = 60 slots)
 /// - Item tooltips on hover
 /// - Item icons with rarity borders
+/// - "+ ADD NEW ITEM" button to open the item editor
 class BagPanel extends StatefulWidget {
   final VoidCallback onClose;
   final Inventory inventory;
   final Function(int index, Item? item)? onItemClick;
+  final VoidCallback? onItemEquipped;
+  final void Function(EquipmentSlot slot, Item item)? onUnequipToBag;
+  final Function(Item)? onItemCreated;
 
   const BagPanel({
     Key? key,
     required this.onClose,
     required this.inventory,
     this.onItemClick,
+    this.onItemEquipped,
+    this.onUnequipToBag,
+    this.onItemCreated,
   }) : super(key: key);
 
   @override
@@ -28,16 +37,19 @@ class _BagPanelState extends State<BagPanel> {
   double _xPos = 450.0;
   double _yPos = 100.0;
   int? _hoveredSlot;
+  bool _isEditorOpen = false;
 
   static const int columns = 6;
-  static const int rows = 4;
+  static const int rows = 10;
   static const double slotSize = 48.0;
   static const double slotSpacing = 4.0;
 
   @override
   Widget build(BuildContext context) {
     final panelWidth = (slotSize + slotSpacing) * columns + 32;
-    final panelHeight = (slotSize + slotSpacing) * rows + 100;
+    final panelHeight = (slotSize + slotSpacing) * rows + 150;
+    // Reason: account for editor panel width when clamping drag bounds
+    final totalWidth = _isEditorOpen ? panelWidth + 8 + 320 : panelWidth;
 
     return Positioned(
       left: _xPos,
@@ -47,40 +59,116 @@ class _BagPanelState extends State<BagPanel> {
           setState(() {
             _xPos += details.delta.dx;
             _yPos += details.delta.dy;
-            _xPos = _xPos.clamp(0.0, MediaQuery.of(context).size.width - panelWidth);
+            _xPos = _xPos.clamp(0.0, MediaQuery.of(context).size.width - totalWidth);
             _yPos = _yPos.clamp(0.0, MediaQuery.of(context).size.height - panelHeight);
           });
         },
-        child: Container(
-          width: panelWidth,
-          decoration: BoxDecoration(
-            color: const Color(0xFF1a1a2e),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFFFB300), width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.6),
-                blurRadius: 12,
-                spreadRadius: 3,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Main bag panel
+            Container(
+              width: panelWidth,
+              decoration: BoxDecoration(
+                color: const Color(0xFF1a1a2e),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFFB300), width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    blurRadius: 12,
+                    spreadRadius: 3,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildHeader(),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        _buildAddNewItemButton(),
+                        const SizedBox(height: 8),
+                        // Wrap grid in DragTarget to accept equipment drags
+                        DragTarget<EquipmentDragData>(
+                          onWillAcceptWithDetails: (details) => true,
+                          onAcceptWithDetails: (details) {
+                            final data = details.data;
+                            widget.onUnequipToBag?.call(data.slot, data.item);
+                            setState(() {});
+                          },
+                          builder: (context, candidateData, rejectedData) {
+                            return Container(
+                              decoration: candidateData.isNotEmpty
+                                  ? BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFFFFB300)
+                                            .withValues(alpha: 0.6),
+                                        width: 2,
+                                      ),
+                                    )
+                                  : null,
+                              child: _buildBagGrid(),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _buildFooter(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Editor panel (side-by-side)
+            if (_isEditorOpen) ...[
+              const SizedBox(width: 8),
+              ItemEditorPanel(
+                onClose: () {
+                  setState(() => _isEditorOpen = false);
+                },
+                onItemCreated: (item) {
+                  widget.onItemCreated?.call(item);
+                  setState(() => _isEditorOpen = false);
+                },
               ),
             ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildHeader(),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildBagGrid(),
-                    const SizedBox(height: 12),
-                    _buildFooter(),
-                  ],
-                ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddNewItemButton() {
+    return GestureDetector(
+      onTap: () {
+        setState(() => _isEditorOpen = !_isEditorOpen);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.green.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.green, width: 2),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_circle_outline, color: Colors.green, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              '+ ADD NEW ITEM',
+              style: TextStyle(
+                color: Colors.green,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -168,12 +256,13 @@ class _BagPanelState extends State<BagPanel> {
     final item = widget.inventory.getBagItem(index);
     final isHovered = _hoveredSlot == index;
 
-    return MouseRegion(
+    Widget slotWidget = MouseRegion(
       onEnter: (_) => setState(() => _hoveredSlot = index),
       onExit: (_) => setState(() => _hoveredSlot = null),
       child: GestureDetector(
         onTap: () => widget.onItemClick?.call(index, item),
         child: Stack(
+          clipBehavior: Clip.none,
           children: [
             Container(
               width: slotSize,
@@ -208,12 +297,60 @@ class _BagPanelState extends State<BagPanel> {
               Positioned(
                 bottom: slotSize + 4,
                 left: -60,
-                child: _buildTooltip(item),
+                child: buildItemTooltip(item),
               ),
           ],
         ),
       ),
     );
+
+    // Wrap non-empty slots in Draggable for drag-to-equip
+    if (item != null) {
+      slotWidget = Draggable<Item>(
+        data: item,
+        feedback: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: slotSize,
+            height: slotSize,
+            decoration: BoxDecoration(
+              color: item.rarity.color.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: item.rarity.color, width: 2),
+            ),
+            child: Center(
+              child: Icon(
+                _getItemIcon(item),
+                color: item.rarity.color,
+                size: 24,
+              ),
+            ),
+          ),
+        ),
+        childWhenDragging: Container(
+          width: slotSize,
+          height: slotSize,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1a1a2a),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: const Color(0xFF3a3a4a),
+              width: 1,
+            ),
+          ),
+        ),
+        onDragEnd: (details) {
+          if (details.wasAccepted) {
+            // Item was accepted by a DragTarget (equipment slot)
+            setState(() {});
+            widget.onItemEquipped?.call();
+          }
+        },
+        child: slotWidget,
+      );
+    }
+
+    return slotWidget;
   }
 
   Widget _buildItemIcon(Item item) {
@@ -266,6 +403,7 @@ class _BagPanelState extends State<BagPanel> {
         if (item.slot == EquipmentSlot.offHand) return Icons.shield;
         return Icons.checkroom;
       case ItemType.accessory:
+        if (item.slot == EquipmentSlot.talisman) return Icons.auto_awesome;
         return Icons.radio_button_unchecked;
       case ItemType.consumable:
         return Icons.science;
@@ -274,99 +412,6 @@ class _BagPanelState extends State<BagPanel> {
       case ItemType.quest:
         return Icons.star;
     }
-  }
-
-  Widget _buildTooltip(Item item) {
-    return Container(
-      width: 180,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1a1a2e).withValues(alpha: 0.98),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: item.rarity.color, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.8),
-            blurRadius: 12,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Item name
-          Text(
-            item.name,
-            style: TextStyle(
-              color: item.rarity.color,
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 2),
-          // Rarity and type
-          Text(
-            '${item.rarity.displayName} ${item.type.name.capitalize()}',
-            style: TextStyle(
-              color: Colors.grey.shade400,
-              fontSize: 10,
-            ),
-          ),
-          if (item.slot != null) ...[
-            Text(
-              item.slot!.displayName,
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 10,
-              ),
-            ),
-          ],
-          const SizedBox(height: 6),
-          // Stats
-          ...item.stats.nonZeroStats.map((stat) => Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: Text(
-              '+${stat.value} ${stat.key}',
-              style: const TextStyle(
-                color: Color(0xFF4CAF50),
-                fontSize: 11,
-              ),
-            ),
-          )),
-          const SizedBox(height: 4),
-          // Description
-          if (item.description.isNotEmpty)
-            Text(
-              item.description,
-              style: TextStyle(
-                color: Colors.grey.shade400,
-                fontSize: 10,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          if (item.levelRequirement > 1) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Requires Level ${item.levelRequirement}',
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 10,
-              ),
-            ),
-          ],
-          const SizedBox(height: 4),
-          Text(
-            'Sell: ${item.sellValue} gold',
-            style: TextStyle(
-              color: Colors.yellow.shade700,
-              fontSize: 10,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildFooter() {
