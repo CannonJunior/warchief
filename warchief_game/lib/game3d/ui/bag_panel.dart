@@ -37,7 +37,9 @@ class _BagPanelState extends State<BagPanel> {
   double _xPos = 450.0;
   double _yPos = 100.0;
   int? _hoveredSlot;
-  bool _isEditorOpen = false;
+  Item? _editingItem;
+  int? _editingItemIndex;
+  bool _isCreatingNew = false;
 
   static const int columns = 6;
   static const int rows = 10;
@@ -49,7 +51,8 @@ class _BagPanelState extends State<BagPanel> {
     final panelWidth = (slotSize + slotSpacing) * columns + 32;
     final panelHeight = (slotSize + slotSpacing) * rows + 150;
     // Reason: account for editor panel width when clamping drag bounds
-    final totalWidth = _isEditorOpen ? panelWidth + 8 + 320 : panelWidth;
+    final isEditorOpen = _editingItem != null || _isCreatingNew;
+    final totalWidth = isEditorOpen ? panelWidth + 8 + 320 : panelWidth;
 
     return Positioned(
       left: _xPos,
@@ -124,15 +127,33 @@ class _BagPanelState extends State<BagPanel> {
               ),
             ),
             // Editor panel (side-by-side)
-            if (_isEditorOpen) ...[
+            if (isEditorOpen) ...[
               const SizedBox(width: 8),
               ItemEditorPanel(
+                key: ValueKey(_editingItem?.id ?? 'new'),
                 onClose: () {
-                  setState(() => _isEditorOpen = false);
+                  setState(() {
+                    _editingItem = null;
+                    _editingItemIndex = null;
+                    _isCreatingNew = false;
+                  });
                 },
                 onItemCreated: (item) {
                   widget.onItemCreated?.call(item);
-                  setState(() => _isEditorOpen = false);
+                  setState(() {
+                    _editingItem = null;
+                    _editingItemIndex = null;
+                    _isCreatingNew = false;
+                  });
+                },
+                existingItem: _editingItem,
+                existingItemIndex: _editingItemIndex,
+                onItemSaved: (index, item) {
+                  widget.inventory.setBagItem(index, item);
+                  setState(() {
+                    _editingItem = null;
+                    _editingItemIndex = null;
+                  });
                 },
               ),
             ],
@@ -145,7 +166,11 @@ class _BagPanelState extends State<BagPanel> {
   Widget _buildAddNewItemButton() {
     return GestureDetector(
       onTap: () {
-        setState(() => _isEditorOpen = !_isEditorOpen);
+        setState(() {
+          _isCreatingNew = !_isCreatingNew;
+          _editingItem = null;
+          _editingItemIndex = null;
+        });
       },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -261,6 +286,13 @@ class _BagPanelState extends State<BagPanel> {
       onExit: (_) => setState(() => _hoveredSlot = null),
       child: GestureDetector(
         onTap: () => widget.onItemClick?.call(index, item),
+        onDoubleTap: item != null ? () {
+          setState(() {
+            _editingItem = item;
+            _editingItemIndex = index;
+            _isCreatingNew = false;
+          });
+        } : null,
         child: Stack(
           clipBehavior: Clip.none,
           children: [

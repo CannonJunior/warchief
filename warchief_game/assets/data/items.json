@@ -276,7 +276,7 @@
       "slot": "offHand",
       "stats": {
         "auspice": 10,
-        "mana": 20,
+        "maxBlueMana": 20,
         "zeal": 5
       },
       "iconName": "orb_power",
@@ -307,7 +307,7 @@
       "slot": "ring1",
       "stats": {
         "auspice": 5,
-        "mana": 15,
+        "maxBlueMana": 15,
         "zeal": 2
       },
       "iconName": "ring_int",

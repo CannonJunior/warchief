@@ -117,7 +117,9 @@ class Inventory {
     int brawn = 0, yar = 0, auspice = 0, valor = 0;
     int chuff = 0, xVal = 0, zeal = 0;
     int armor = 0, damage = 0, critChance = 0;
-    int health = 0, mana = 0;
+    int health = 0;
+    int maxBlueMana = 0, maxRedMana = 0, maxWhiteMana = 0;
+    int blueManaRegen = 0, redManaRegen = 0, whiteManaRegen = 0;
 
     for (final item in _equipment.values) {
       if (item != null) {
@@ -132,7 +134,12 @@ class Inventory {
         damage += item.stats.damage;
         critChance += item.stats.critChance;
         health += item.stats.health;
-        mana += item.stats.mana;
+        maxBlueMana += item.stats.maxBlueMana;
+        maxRedMana += item.stats.maxRedMana;
+        maxWhiteMana += item.stats.maxWhiteMana;
+        blueManaRegen += item.stats.blueManaRegen;
+        redManaRegen += item.stats.redManaRegen;
+        whiteManaRegen += item.stats.whiteManaRegen;
       }
     }
 
@@ -148,7 +155,12 @@ class Inventory {
       damage: damage,
       critChance: critChance,
       health: health,
-      mana: mana,
+      maxBlueMana: maxBlueMana,
+      maxRedMana: maxRedMana,
+      maxWhiteMana: maxWhiteMana,
+      blueManaRegen: blueManaRegen,
+      redManaRegen: redManaRegen,
+      whiteManaRegen: whiteManaRegen,
     );
   }
 

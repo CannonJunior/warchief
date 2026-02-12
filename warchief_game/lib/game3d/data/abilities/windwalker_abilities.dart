@@ -186,6 +186,75 @@ class WindWalkerAbilities {
     category: 'windwalker',
   );
 
+  // ==================== ADDITIONAL ABILITIES (4) ====================
+
+  /// Wind Affinity — Doubles white mana regen rate for 15 seconds.
+  static final windAffinity = AbilityData(
+    name: 'Wind Affinity',
+    description: 'Attune to the wind — doubles white mana regeneration for 15 seconds',
+    type: AbilityType.buff,
+    cooldown: 60.0,
+    duration: 15.0,
+    color: Vector3(0.8, 0.92, 1.0),
+    impactColor: Vector3(0.75, 0.88, 1.0),
+    impactSize: 0.6,
+    manaColor: ManaColor.white,
+    manaCost: 15.0,
+    category: 'windwalker',
+  );
+
+  /// Silent Mind — Fully restores white mana; next white ability is free and instant.
+  static final silentMind = AbilityData(
+    name: 'Silent Mind',
+    description: 'Clear your mind — fully restore white mana; next white ability costs 0 and casts instantly',
+    type: AbilityType.buff,
+    cooldown: 120.0,
+    duration: 0.0,
+    color: Vector3(0.95, 0.98, 1.0),
+    impactColor: Vector3(0.9, 0.95, 1.0),
+    impactSize: 0.8,
+    manaColor: ManaColor.white,
+    manaCost: 0.0,
+    category: 'windwalker',
+  );
+
+  /// Windshear — 90-degree cone AoE (40 yards). Lifts targets: enemies take
+  /// 10 damage + knockdown, friendlies are healed for 10 HP.
+  static final windshear = AbilityData(
+    name: 'Windshear',
+    description: 'Unleash a shearing gust in a cone — enemies take damage and are knocked down, allies are healed',
+    type: AbilityType.aoe,
+    damage: 10.0,
+    cooldown: 240.0,
+    duration: 0.0,
+    color: Vector3(0.7, 0.85, 1.0),
+    impactColor: Vector3(0.65, 0.8, 1.0),
+    impactSize: 1.0,
+    aoeRadius: 40.0,
+    healAmount: 10.0,
+    statusEffect: StatusEffect.stun,
+    statusDuration: 2.0,
+    manaColor: ManaColor.white,
+    manaCost: 35.0,
+    category: 'windwalker',
+  );
+
+  /// Wind Warp — Dash forward on ground; if flying, doubles flight speed for 5s.
+  static final windWarp = AbilityData(
+    name: 'Wind Warp',
+    description: 'Warp through the wind — dash forward on ground, or double flight speed for 5 seconds while airborne',
+    type: AbilityType.melee,
+    cooldown: 10.0,
+    duration: 0.3,
+    range: 8.0,
+    color: Vector3(0.85, 0.93, 1.0),
+    impactColor: Vector3(0.8, 0.9, 1.0),
+    impactSize: 0.5,
+    manaColor: ManaColor.white,
+    manaCost: 12.0,
+    category: 'windwalker',
+  );
+
   /// All Wind Walker abilities as a list
   static List<AbilityData> get all => [
     galeStep,
@@ -198,5 +267,9 @@ class WindWalkerAbilities {
     tempestCharge,
     healingGale,
     sovereignOfTheSky,
+    windAffinity,
+    silentMind,
+    windshear,
+    windWarp,
   ];
 }

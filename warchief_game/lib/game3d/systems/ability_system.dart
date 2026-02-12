@@ -247,6 +247,12 @@ class AbilitySystem {
       (manaCost, manaType) = _getManaCostAndType(abilityName);
     }
 
+    // Silent Mind: next white mana ability is free
+    if (gameState.silentMindActive && manaType == _ManaType.white && manaCost > 0) {
+      print('[SILENT MIND] $abilityName mana cost overridden to 0 (was $manaCost)');
+      manaCost = 0;
+    }
+
     if (manaCost > 0) {
       if (manaType == _ManaType.blue) {
         if (!gameState.hasBlueMana(manaCost)) {
@@ -267,14 +273,20 @@ class AbilitySystem {
     }
 
     // Check for cast-time abilities (must be stationary)
+    // Silent Mind: skip cast time for white mana abilities, execute instantly
     if (abilityData != null && abilityData.hasCastTime) {
-      // Defer mana spending until the cast completes. If interrupted,
-      // the mana is never spent and the ability remains available.
-      gameState.pendingManaCost = manaCost;
-      gameState.pendingManaIsBlue = manaType == _ManaType.blue;
-      gameState.pendingManaType = manaType == _ManaType.blue ? 0 : manaType == _ManaType.red ? 1 : 2;
-      _startCastTimeAbility(abilityData, slotIndex, gameState);
-      return;
+      if (gameState.silentMindActive && manaType == _ManaType.white) {
+        print('[SILENT MIND] $abilityName cast time skipped — instant cast!');
+        // Fall through to instant execution below instead of starting cast
+      } else {
+        // Defer mana spending until the cast completes. If interrupted,
+        // the mana is never spent and the ability remains available.
+        gameState.pendingManaCost = manaCost;
+        gameState.pendingManaIsBlue = manaType == _ManaType.blue;
+        gameState.pendingManaType = manaType == _ManaType.blue ? 0 : manaType == _ManaType.red ? 1 : 2;
+        _startCastTimeAbility(abilityData, slotIndex, gameState);
+        return;
+      }
     }
 
     // Check for windup abilities (reduced movement, red mana)
@@ -299,6 +311,12 @@ class AbilitySystem {
         gameState.spendWhiteMana(manaCost);
         print('[MANA] Spent $manaCost white mana for $abilityName');
       }
+    }
+
+    // Consume Silent Mind after a white mana ability is used
+    if (gameState.silentMindActive && manaType == _ManaType.white) {
+      gameState.silentMindActive = false;
+      print('[SILENT MIND] Buff consumed by $abilityName');
     }
 
     // Map ability names to their execution logic
@@ -465,6 +483,18 @@ class AbilitySystem {
         break;
       case 'Sovereign of the Sky':
         _executeSovereignOfTheSky(slotIndex, gameState);
+        break;
+      case 'Wind Affinity':
+        _executeWindAffinity(slotIndex, gameState);
+        break;
+      case 'Silent Mind':
+        _executeSilentMind(slotIndex, gameState);
+        break;
+      case 'Windshear':
+        _executeWindshear(slotIndex, gameState);
+        break;
+      case 'Wind Warp':
+        _executeWindWarp(slotIndex, gameState);
         break;
 
       default:
@@ -1524,6 +1554,133 @@ class AbilitySystem {
     gameState.sovereignBuffTimer = ability.duration;
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Sovereign of the Sky! Enhanced flight for ${ability.duration}s.');
+  }
+
+  /// Wind Affinity — doubles white mana regen rate for 15 seconds
+  static void _executeWindAffinity(int slotIndex, GameState gameState) {
+    final ability = WindWalkerAbilities.windAffinity;
+    gameState.windAffinityActive = true;
+    gameState.windAffinityTimer = ability.duration;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Wind Affinity! White mana regen doubled for ${ability.duration}s.');
+  }
+
+  /// Silent Mind — fully restores white mana; next white ability is free + instant
+  static void _executeSilentMind(int slotIndex, GameState gameState) {
+    final ability = WindWalkerAbilities.silentMind;
+    gameState.whiteMana = gameState.maxWhiteMana;
+    gameState.silentMindActive = true;
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Silent Mind! White mana fully restored. Next white ability is free and instant.');
+  }
+
+  /// Windshear — 90-degree cone AoE: enemies take damage + knockdown,
+  /// allies are healed
+  static void _executeWindshear(int slotIndex, GameState gameState) {
+    if (gameState.playerTransform == null) return;
+    final ability = WindWalkerAbilities.windshear;
+
+    final playerPos = gameState.playerTransform!.position;
+    final facingRad = gameState.playerRotation * math.pi / 180.0;
+    final facingX = -math.sin(facingRad);
+    final facingZ = -math.cos(facingRad);
+    final coneHalfAngle = 45.0; // 90-degree cone = 45 half-angle
+    final coneRange = ability.aoeRadius; // 40 yards
+
+    // Check boss
+    if (gameState.monsterHealth > 0 && gameState.monsterTransform != null) {
+      if (_isInCone(playerPos, facingX, facingZ, gameState.monsterTransform!.position, coneHalfAngle, coneRange)) {
+        CombatSystem.checkAndDamageMonster(
+          gameState,
+          attackerPosition: gameState.monsterTransform!.position,
+          damage: ability.damage,
+          attackType: ability.name,
+          impactColor: ability.impactColor,
+          impactSize: ability.impactSize,
+          collisionThreshold: 5.0,
+          showDamageIndicator: true,
+        );
+      }
+    }
+
+    // Check minions
+    for (final minion in gameState.aliveMinions) {
+      if (_isInCone(playerPos, facingX, facingZ, minion.transform.position, coneHalfAngle, coneRange)) {
+        CombatSystem.damageMinion(
+          gameState,
+          minionInstanceId: minion.instanceId,
+          damage: ability.damage,
+          attackType: ability.name,
+          impactColor: ability.impactColor,
+          impactSize: ability.impactSize,
+          showDamageIndicator: true,
+        );
+      }
+    }
+
+    // Check allies — heal friendlies in cone
+    for (final ally in gameState.allies) {
+      if (ally.health <= 0) continue;
+      if (_isInCone(playerPos, facingX, facingZ, ally.transform.position, coneHalfAngle, coneRange)) {
+        ally.health = math.min(ally.maxHealth, ally.health + ability.healAmount);
+        print('[WINDSHEAR] Healed ally for ${ability.healAmount} HP');
+      }
+    }
+
+    // Visual effect
+    final impactMesh = Mesh.cube(
+      size: 4.0,
+      color: ability.color,
+    );
+    final impactTransform = Transform3d(
+      position: playerPos.clone(),
+      scale: Vector3(1, 1, 1),
+    );
+    gameState.impactEffects.add(ImpactEffect(
+      mesh: impactMesh,
+      transform: impactTransform,
+      lifetime: 0.8,
+    ));
+
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print('Windshear! Cone AoE — enemies damaged, allies healed.');
+  }
+
+  /// Wind Warp — dash forward on ground; if flying, double flight speed for 5s
+  static void _executeWindWarp(int slotIndex, GameState gameState) {
+    final ability = WindWalkerAbilities.windWarp;
+
+    if (gameState.isFlying) {
+      // Flying: activate speed buff instead of dash
+      gameState.windWarpSpeedActive = true;
+      gameState.windWarpSpeedTimer = 5.0;
+      _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+      print('Wind Warp! Flight speed doubled for 5s.');
+    } else {
+      // Ground: use dash pattern (same as Gale Step / ability4)
+      if (gameState.ability4Active) return;
+      gameState.ability4Active = true;
+      gameState.ability4ActiveTime = 0.0;
+      _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+      gameState.ability4HitRegistered = false;
+      print('Wind Warp! Dashing forward.');
+    }
+  }
+
+  /// Check if a target position is within a cone defined by origin, facing
+  /// direction, half-angle (degrees), and range.
+  static bool _isInCone(Vector3 origin, double facingX, double facingZ, Vector3 target, double halfAngleDeg, double range) {
+    final dx = target.x - origin.x;
+    final dz = target.z - origin.z;
+    final dist = math.sqrt(dx * dx + dz * dz);
+    if (dist > range || dist < 0.001) return false;
+
+    // Dot product for angle check
+    final dirX = dx / dist;
+    final dirZ = dz / dist;
+    final dot = (facingX * dirX + facingZ * dirZ).clamp(-1.0, 1.0);
+    final angleDeg = math.acos(dot) * 180.0 / math.pi;
+    return angleDeg <= halfAngleDeg;
   }
 
   // ==================== GENERIC ABILITY HELPERS ====================

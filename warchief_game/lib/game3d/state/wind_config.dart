@@ -57,12 +57,42 @@ class WindConfig extends ChangeNotifier {
       _resolve('flight.minAltitudeForDescent', 10.0);
   double get initialManaCost => _resolve('flight.initialManaCost', 15.0);
 
+  // ==================== TRAIL GETTERS ====================
+
+  bool get trailsEnabled => _resolveBool('trails.enabled', true);
+  double get trailLength => _resolve('trails.length', 1.2);
+  double get trailWidth => _resolve('trails.width', 0.08);
+
+  // ==================== DERECHO GETTERS ====================
+
+  double get derechoAverageInterval =>
+      _resolve('derecho.averageInterval', 300.0);
+  double get derechoDurationMin => _resolve('derecho.durationMin', 30.0);
+  double get derechoDurationMax => _resolve('derecho.durationMax', 60.0);
+  double get derechoStrengthMultiplier =>
+      _resolve('derecho.strengthMultiplier', 10.0);
+  double get derechoManaRegenMultiplier =>
+      _resolve('derecho.manaRegenMultiplier', 10.0);
+  double get derechoVisualMultiplier =>
+      _resolve('derecho.visualMultiplier', 10.0);
+  double get derechoRampUpTime => _resolve('derecho.rampUpTime', 5.0);
+  double get derechoRampDownTime => _resolve('derecho.rampDownTime', 5.0);
+
+  List<double> get derechoColor {
+    final val = _resolveFromNestedMap(_defaults, 'derecho.color');
+    if (val is List) {
+      return val.map((e) => (e as num).toDouble()).toList();
+    }
+    return [0.9, 0.95, 1.0, 0.85];
+  }
+
   // ==================== PARTICLE GETTERS ====================
 
   int get particleCount => _resolveInt('particles.count', 60);
   double get particleSpeed => _resolve('particles.speed', 2.0);
   double get particleLifetime => _resolve('particles.lifetime', 3.0);
   double get fadeDistance => _resolve('particles.fadeDistance', 15.0);
+  double get particleSize => _resolve('particles.size', 0.25);
 
   List<double> get particleColor {
     final val = _resolveFromNestedMap(_defaults, 'particles.color');
@@ -97,6 +127,13 @@ class WindConfig extends ChangeNotifier {
   double _resolve(String dotKey, double fallback) {
     final val = _resolveFromNestedMap(_defaults, dotKey);
     if (val is num) return val.toDouble();
+    return fallback;
+  }
+
+  /// Resolve a bool value from nested map with fallback.
+  bool _resolveBool(String dotKey, bool fallback) {
+    final val = _resolveFromNestedMap(_defaults, dotKey);
+    if (val is bool) return val;
     return fallback;
   }
 

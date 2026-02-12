@@ -4,6 +4,47 @@
 
 ### ✅ Completed - 2026-02-11
 
+#### Wind Trail Effects + Derecho Storms
+- ✅ Added wind trail rendering: particles now render as elongated streaks aligned with wind direction (configurable length/width in `wind_config.json`)
+- ✅ Added `trails` config section to `wind_config.json` — `enabled`, `length` (1.2), `width` (0.08)
+- ✅ Added `derecho` config section to `wind_config.json` — `averageInterval` (300s), `durationMin/Max` (30-60s), `strengthMultiplier` (10x), `manaRegenMultiplier` (10x), `visualMultiplier` (10x), `rampUpTime/rampDownTime` (5s), `color`
+- ✅ Added trail + derecho getters to `wind_config.dart` (including `_resolveBool` helper)
+- ✅ Added derecho state to `wind_state.dart` — `isDerechoActive`, `derechoIntensity` (smooth ramp), `effectiveWindStrength` (10x during derecho), `derechoManaMultiplier`, `derechoVisualMultiplier`, random Poisson trigger after half-interval
+- ✅ Wind vector, movement modifier, and exposure level now use `effectiveWindStrength` for derecho amplification
+- ✅ Movement modifier clamped to 0.1 minimum so player can crawl against derecho headwind
+- ✅ Rewrote `wind_particles.dart` — pre-allocates particle pool at max (normal * 10x), active count scales with derecho, trail quads aligned to wind direction, color lerps to derecho palette during storms
+- ✅ Applied `derechoManaMultiplier` to white mana regen in `game_state.dart` `updateWindAndWhiteMana()`
+- ✅ Updated `wind_indicator.dart` — shows "DERECHO" warning label with pulsing orange/red border, arrow transitions to orange, strength display shows >100% during storms
+- ✅ Direction drift speed increases 3x during derecho for chaotic wind feel
+- ✅ All values config-driven via `wind_config.json` — nothing hardcoded
+- ✅ Build verified clean (`flutter build web`)
+
+#### Double-Click to Edit Bag Items
+- ✅ Added edit mode to `ItemEditorPanel` — `existingItem`, `existingItemIndex`, `onItemSaved` parameters
+- ✅ Editor populates all controllers from existing item in `initState`
+- ✅ Added `_onSave()` (preserves item ID) and `_onRevert()` (resets all fields to original) methods
+- ✅ Header shows "EDIT ITEM" / edit icon vs "NEW ITEM" / add icon
+- ✅ Footer shows "Save" / "Revert" in edit mode vs "Create" / "Cancel" in create mode
+- ✅ Added double-click (`onDoubleTap`) to bag slots in `bag_panel.dart`
+- ✅ Replaced `_isEditorOpen` with `_editingItem`, `_editingItemIndex`, `_isCreatingNew` state
+- ✅ Editor panel uses `ValueKey` on item ID for proper rebuild when switching items
+- ✅ `onItemSaved` callback updates inventory via `setBagItem` and closes editor
+- ✅ Build verified clean (`flutter build web`)
+
+#### Wind Visibility, Regen Doubling, Per-Color Mana Item Stats
+- ✅ Increased wind particle count from 60 to 150, size from 0.08 to 0.25, alpha from 0.3 to 0.6 in `wind_config.json`
+- ✅ Added `particleSize` getter to `wind_config.dart`, updated `wind_particles.dart` to read size from config
+- ✅ Doubled wind regeneration rate: `windExposureRegen` 2.5 → 5.0
+- ✅ Replaced single `mana` field in `ItemStats` with 6 per-color fields: `maxBlueMana`, `maxRedMana`, `maxWhiteMana`, `blueManaRegen`, `redManaRegen`, `whiteManaRegen`
+- ✅ Updated `inventory.dart` `totalEquippedStats` to sum new fields
+- ✅ Added MANA section to item editor panel with 6 new fields (3 max mana + 3 regen)
+- ✅ Added tooltips for all 6 new mana fields in `item_editor_fields.dart`
+- ✅ Updated `game_state.dart` max mana getters to include equipped item bonuses
+- ✅ Wired per-color mana regen bonuses into `updateManaRegen()` and `updateWindAndWhiteMana()`
+- ✅ Updated `item_config.dart` power calculation to use per-color mana fields
+- ✅ Migrated existing items (`orb_of_power`, `ring_of_wisdom`) from `mana` to `maxBlueMana`
+- ✅ Build verified clean (`flutter build web`)
+
 #### Wind Walker Class: Abilities + Flight System
 - ✅ Added `flight` section to `assets/data/wind_config.json` — all flight tuning values (speed, pitch, boost, brake, mana drain, thresholds)
 - ✅ Added flight getters to `lib/game3d/state/wind_config.dart` — 11 config-driven flight parameters

@@ -137,7 +137,8 @@ extension EquipmentSlotExtension on EquipmentSlot {
 ///
 /// Primary attributes match the game's 7-attribute system:
 /// Brawn, Yar, Auspice, Valor, Chuff, X, Zeal.
-/// Combat/derived stats: armor, damage, critChance, health, mana.
+/// Combat/derived stats: armor, damage, critChance, health.
+/// Per-color mana: max mana bonuses and mana regeneration rate bonuses.
 class ItemStats {
   final int brawn;
   final int yar;
@@ -150,7 +151,12 @@ class ItemStats {
   final int damage;
   final int critChance;
   final int health;
-  final int mana;
+  final int maxBlueMana;
+  final int maxRedMana;
+  final int maxWhiteMana;
+  final int blueManaRegen;
+  final int redManaRegen;
+  final int whiteManaRegen;
 
   const ItemStats({
     this.brawn = 0,
@@ -164,7 +170,12 @@ class ItemStats {
     this.damage = 0,
     this.critChance = 0,
     this.health = 0,
-    this.mana = 0,
+    this.maxBlueMana = 0,
+    this.maxRedMana = 0,
+    this.maxWhiteMana = 0,
+    this.blueManaRegen = 0,
+    this.redManaRegen = 0,
+    this.whiteManaRegen = 0,
   });
 
   factory ItemStats.fromJson(Map<String, dynamic> json) {
@@ -180,7 +191,12 @@ class ItemStats {
       damage: json['damage'] ?? 0,
       critChance: json['critChance'] ?? 0,
       health: json['health'] ?? 0,
-      mana: json['mana'] ?? 0,
+      maxBlueMana: json['maxBlueMana'] ?? 0,
+      maxRedMana: json['maxRedMana'] ?? 0,
+      maxWhiteMana: json['maxWhiteMana'] ?? 0,
+      blueManaRegen: json['blueManaRegen'] ?? 0,
+      redManaRegen: json['redManaRegen'] ?? 0,
+      whiteManaRegen: json['whiteManaRegen'] ?? 0,
     );
   }
 
@@ -196,7 +212,12 @@ class ItemStats {
     if (damage != 0) 'damage': damage,
     if (critChance != 0) 'critChance': critChance,
     if (health != 0) 'health': health,
-    if (mana != 0) 'mana': mana,
+    if (maxBlueMana != 0) 'maxBlueMana': maxBlueMana,
+    if (maxRedMana != 0) 'maxRedMana': maxRedMana,
+    if (maxWhiteMana != 0) 'maxWhiteMana': maxWhiteMana,
+    if (blueManaRegen != 0) 'blueManaRegen': blueManaRegen,
+    if (redManaRegen != 0) 'redManaRegen': redManaRegen,
+    if (whiteManaRegen != 0) 'whiteManaRegen': whiteManaRegen,
   };
 
   /// Get non-zero stats as a list of (name, value) pairs
@@ -213,7 +234,12 @@ class ItemStats {
     if (damage != 0) stats.add(MapEntry('Damage', damage));
     if (critChance != 0) stats.add(MapEntry('Crit Chance', critChance));
     if (health != 0) stats.add(MapEntry('Health', health));
-    if (mana != 0) stats.add(MapEntry('Mana', mana));
+    if (maxBlueMana != 0) stats.add(MapEntry('Blue Mana', maxBlueMana));
+    if (maxRedMana != 0) stats.add(MapEntry('Red Mana', maxRedMana));
+    if (maxWhiteMana != 0) stats.add(MapEntry('White Mana', maxWhiteMana));
+    if (blueManaRegen != 0) stats.add(MapEntry('Blue Regen', blueManaRegen));
+    if (redManaRegen != 0) stats.add(MapEntry('Red Regen', redManaRegen));
+    if (whiteManaRegen != 0) stats.add(MapEntry('White Regen', whiteManaRegen));
     return stats;
   }
 }

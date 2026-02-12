@@ -55,7 +55,14 @@ class ItemConfig extends ChangeNotifier {
     total += stats.damage * getStatWeight('damage');
     total += stats.critChance * getStatWeight('critChance');
     total += stats.health * getStatWeight('health');
-    total += stats.mana * getStatWeight('mana');
+    // Reason: sum all per-color mana stats using the legacy 'mana' weight
+    final manaWeight = getStatWeight('mana');
+    total += stats.maxBlueMana * manaWeight;
+    total += stats.maxRedMana * manaWeight;
+    total += stats.maxWhiteMana * manaWeight;
+    total += stats.blueManaRegen * manaWeight;
+    total += stats.redManaRegen * manaWeight;
+    total += stats.whiteManaRegen * manaWeight;
 
     total += getRarityBonus(rarity.name);
 

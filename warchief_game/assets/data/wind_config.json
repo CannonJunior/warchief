@@ -10,7 +10,7 @@
   "whiteMana": {
     "maxMana": 100.0,
     "baseRegen": 0.0,
-    "windExposureRegen": 2.5,
+    "windExposureRegen": 5.0,
     "windStrengthMultiplier": 1.0,
     "decayRate": 0.5,
     "shelterThreshold": 0.1
@@ -24,11 +24,28 @@
     "windForceMultiplier": 0.8
   },
   "particles": {
-    "count": 60,
-    "speed": 2.0,
-    "lifetime": 3.0,
-    "fadeDistance": 15.0,
-    "color": [1.0, 1.0, 1.0, 0.3]
+    "count": 150,
+    "speed": 3.0,
+    "lifetime": 4.0,
+    "fadeDistance": 20.0,
+    "size": 0.25,
+    "color": [1.0, 1.0, 1.0, 0.6]
+  },
+  "trails": {
+    "enabled": true,
+    "length": 1.2,
+    "width": 0.08
+  },
+  "derecho": {
+    "averageInterval": 300.0,
+    "durationMin": 30.0,
+    "durationMax": 60.0,
+    "strengthMultiplier": 10.0,
+    "manaRegenMultiplier": 10.0,
+    "visualMultiplier": 10.0,
+    "rampUpTime": 5.0,
+    "rampDownTime": 5.0,
+    "color": [0.9, 0.95, 1.0, 0.85]
   },
   "flight": {
     "flightSpeed": 7.0,

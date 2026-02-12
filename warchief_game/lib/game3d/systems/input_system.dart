@@ -213,6 +213,9 @@ class InputSystem {
     // Sovereign buff speed bonus
     final sovereignSpeedMult = gameState.sovereignBuffActive ? 1.5 : 1.0;
 
+    // Wind Warp flight speed bonus (doubles flight speed for 5s)
+    final windWarpSpeedMult = gameState.windWarpSpeedActive ? 2.0 : 1.0;
+
     // W = pitch up (climb)
     if (inputManager.isActionPressed(GameAction.moveForward)) {
       gameState.flightPitchAngle += pitchRate * dt;
@@ -241,7 +244,7 @@ class InputSystem {
     }
 
     // Calculate current speed with modifiers
-    double currentSpeed = baseSpeed * sovereignSpeedMult;
+    double currentSpeed = baseSpeed * sovereignSpeedMult * windWarpSpeedMult;
 
     // ALT = speed boost
     if (inputManager.isActionPressed(GameAction.sprint)) {

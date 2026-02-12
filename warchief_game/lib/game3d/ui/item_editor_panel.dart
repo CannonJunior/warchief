@@ -5,19 +5,25 @@ import '../state/item_config.dart';
 import '../state/custom_item_manager.dart';
 import 'item_editor_fields.dart';
 
-/// Side-panel editor for creating new items.
+/// Side-panel editor for creating or editing items.
 ///
 /// Displays all Item fields as editable inputs, grouped into sections.
 /// Includes a computed power level bar and sentience toggle.
-/// Opened by clicking "+ ADD NEW ITEM" in the Bag panel.
+/// Supports both create mode (new item) and edit mode (existing item).
 class ItemEditorPanel extends StatefulWidget {
   final VoidCallback onClose;
   final Function(Item) onItemCreated;
+  final Item? existingItem;
+  final int? existingItemIndex;
+  final Function(int index, Item item)? onItemSaved;
 
   const ItemEditorPanel({
     Key? key,
     required this.onClose,
     required this.onItemCreated,
+    this.existingItem,
+    this.existingItemIndex,
+    this.onItemSaved,
   }) : super(key: key);
 
   @override
@@ -43,7 +49,14 @@ class _ItemEditorPanelState extends State<ItemEditorPanel> {
   late TextEditingController _damageCtrl;
   late TextEditingController _critChanceCtrl;
   late TextEditingController _healthCtrl;
-  late TextEditingController _manaCtrl;
+
+  // Per-color mana controllers
+  late TextEditingController _maxBlueManaCtrl;
+  late TextEditingController _maxRedManaCtrl;
+  late TextEditingController _maxWhiteManaCtrl;
+  late TextEditingController _blueManaRegenCtrl;
+  late TextEditingController _redManaRegenCtrl;
+  late TextEditingController _whiteManaRegenCtrl;
 
   // Properties controllers
   late TextEditingController _sellValueCtrl;
@@ -61,27 +74,41 @@ class _ItemEditorPanelState extends State<ItemEditorPanel> {
 
   static const double _panelWidth = 320.0;
 
+  bool get _isEditMode => widget.existingItem != null;
+
   @override
   void initState() {
     super.initState();
-    _nameCtrl = TextEditingController();
-    _descriptionCtrl = TextEditingController();
-    _brawnCtrl = TextEditingController(text: '0');
-    _yarCtrl = TextEditingController(text: '0');
-    _auspiceCtrl = TextEditingController(text: '0');
-    _valorCtrl = TextEditingController(text: '0');
-    _chuffCtrl = TextEditingController(text: '0');
-    _xCtrl = TextEditingController(text: '0');
-    _zealCtrl = TextEditingController(text: '0');
-    _armorCtrl = TextEditingController(text: '0');
-    _damageCtrl = TextEditingController(text: '0');
-    _critChanceCtrl = TextEditingController(text: '0');
-    _healthCtrl = TextEditingController(text: '0');
-    _manaCtrl = TextEditingController(text: '0');
-    _sellValueCtrl = TextEditingController(text: '0');
-    _levelReqCtrl = TextEditingController(text: '1');
-    _stackSizeCtrl = TextEditingController(text: '1');
-    _maxStackCtrl = TextEditingController(text: '1');
+    final item = widget.existingItem;
+    _nameCtrl = TextEditingController(text: item?.name ?? '');
+    _descriptionCtrl = TextEditingController(text: item?.description ?? '');
+    _brawnCtrl = TextEditingController(text: '${item?.stats.brawn ?? 0}');
+    _yarCtrl = TextEditingController(text: '${item?.stats.yar ?? 0}');
+    _auspiceCtrl = TextEditingController(text: '${item?.stats.auspice ?? 0}');
+    _valorCtrl = TextEditingController(text: '${item?.stats.valor ?? 0}');
+    _chuffCtrl = TextEditingController(text: '${item?.stats.chuff ?? 0}');
+    _xCtrl = TextEditingController(text: '${item?.stats.x ?? 0}');
+    _zealCtrl = TextEditingController(text: '${item?.stats.zeal ?? 0}');
+    _armorCtrl = TextEditingController(text: '${item?.stats.armor ?? 0}');
+    _damageCtrl = TextEditingController(text: '${item?.stats.damage ?? 0}');
+    _critChanceCtrl = TextEditingController(text: '${item?.stats.critChance ?? 0}');
+    _healthCtrl = TextEditingController(text: '${item?.stats.health ?? 0}');
+    _maxBlueManaCtrl = TextEditingController(text: '${item?.stats.maxBlueMana ?? 0}');
+    _maxRedManaCtrl = TextEditingController(text: '${item?.stats.maxRedMana ?? 0}');
+    _maxWhiteManaCtrl = TextEditingController(text: '${item?.stats.maxWhiteMana ?? 0}');
+    _blueManaRegenCtrl = TextEditingController(text: '${item?.stats.blueManaRegen ?? 0}');
+    _redManaRegenCtrl = TextEditingController(text: '${item?.stats.redManaRegen ?? 0}');
+    _whiteManaRegenCtrl = TextEditingController(text: '${item?.stats.whiteManaRegen ?? 0}');
+    _sellValueCtrl = TextEditingController(text: '${item?.sellValue ?? 0}');
+    _levelReqCtrl = TextEditingController(text: '${item?.levelRequirement ?? 1}');
+    _stackSizeCtrl = TextEditingController(text: '${item?.stackSize ?? 1}');
+    _maxStackCtrl = TextEditingController(text: '${item?.maxStack ?? 1}');
+    if (item != null) {
+      _selectedType = item.type.name;
+      _selectedRarity = item.rarity.name;
+      _selectedSlot = item.slot?.name;
+      _selectedSentience = item.sentience;
+    }
   }
 
   @override
@@ -99,7 +126,12 @@ class _ItemEditorPanelState extends State<ItemEditorPanel> {
     _damageCtrl.dispose();
     _critChanceCtrl.dispose();
     _healthCtrl.dispose();
-    _manaCtrl.dispose();
+    _maxBlueManaCtrl.dispose();
+    _maxRedManaCtrl.dispose();
+    _maxWhiteManaCtrl.dispose();
+    _blueManaRegenCtrl.dispose();
+    _redManaRegenCtrl.dispose();
+    _whiteManaRegenCtrl.dispose();
     _sellValueCtrl.dispose();
     _levelReqCtrl.dispose();
     _stackSizeCtrl.dispose();
@@ -121,7 +153,12 @@ class _ItemEditorPanelState extends State<ItemEditorPanel> {
       damage: int.tryParse(_damageCtrl.text) ?? 0,
       critChance: int.tryParse(_critChanceCtrl.text) ?? 0,
       health: int.tryParse(_healthCtrl.text) ?? 0,
-      mana: int.tryParse(_manaCtrl.text) ?? 0,
+      maxBlueMana: int.tryParse(_maxBlueManaCtrl.text) ?? 0,
+      maxRedMana: int.tryParse(_maxRedManaCtrl.text) ?? 0,
+      maxWhiteMana: int.tryParse(_maxWhiteManaCtrl.text) ?? 0,
+      blueManaRegen: int.tryParse(_blueManaRegenCtrl.text) ?? 0,
+      redManaRegen: int.tryParse(_redManaRegenCtrl.text) ?? 0,
+      whiteManaRegen: int.tryParse(_whiteManaRegenCtrl.text) ?? 0,
     );
   }
 
@@ -220,6 +257,77 @@ class _ItemEditorPanelState extends State<ItemEditorPanel> {
     print('[ItemEditor] Created new item: $name ($id)');
   }
 
+  void _onSave() {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      print('[ItemEditor] Cannot save: name is empty');
+      return;
+    }
+
+    final stats = _currentStats();
+    final rarity = _currentRarity;
+    final type = ItemType.values.firstWhere(
+        (t) => t.name == _selectedType, orElse: () => ItemType.material);
+    final slot = _selectedSlot != null
+        ? EquipmentSlot.values.firstWhere(
+            (s) => s.name == _selectedSlot, orElse: () => EquipmentSlot.mainHand)
+        : null;
+
+    // Reason: preserve original item's id when editing
+    final item = Item(
+      id: widget.existingItem!.id,
+      name: name,
+      description: _descriptionCtrl.text,
+      type: type,
+      rarity: rarity,
+      slot: slot,
+      stats: stats,
+      stackSize: int.tryParse(_stackSizeCtrl.text) ?? 1,
+      maxStack: int.tryParse(_maxStackCtrl.text) ?? 1,
+      sellValue: int.tryParse(_sellValueCtrl.text) ?? 0,
+      levelRequirement: int.tryParse(_levelReqCtrl.text) ?? 1,
+      sentience: _selectedSentience,
+    );
+
+    globalCustomItemManager?.saveItem(item);
+    widget.onItemSaved?.call(widget.existingItemIndex!, item);
+    print('[ItemEditor] Saved item: $name (${item.id})');
+  }
+
+  void _onRevert() {
+    final item = widget.existingItem;
+    if (item == null) return;
+    setState(() {
+      _nameCtrl.text = item.name;
+      _descriptionCtrl.text = item.description;
+      _selectedType = item.type.name;
+      _selectedRarity = item.rarity.name;
+      _selectedSlot = item.slot?.name;
+      _selectedSentience = item.sentience;
+      _brawnCtrl.text = '${item.stats.brawn}';
+      _yarCtrl.text = '${item.stats.yar}';
+      _auspiceCtrl.text = '${item.stats.auspice}';
+      _valorCtrl.text = '${item.stats.valor}';
+      _chuffCtrl.text = '${item.stats.chuff}';
+      _xCtrl.text = '${item.stats.x}';
+      _zealCtrl.text = '${item.stats.zeal}';
+      _armorCtrl.text = '${item.stats.armor}';
+      _damageCtrl.text = '${item.stats.damage}';
+      _critChanceCtrl.text = '${item.stats.critChance}';
+      _healthCtrl.text = '${item.stats.health}';
+      _maxBlueManaCtrl.text = '${item.stats.maxBlueMana}';
+      _maxRedManaCtrl.text = '${item.stats.maxRedMana}';
+      _maxWhiteManaCtrl.text = '${item.stats.maxWhiteMana}';
+      _blueManaRegenCtrl.text = '${item.stats.blueManaRegen}';
+      _redManaRegenCtrl.text = '${item.stats.redManaRegen}';
+      _whiteManaRegenCtrl.text = '${item.stats.whiteManaRegen}';
+      _sellValueCtrl.text = '${item.sellValue}';
+      _levelReqCtrl.text = '${item.levelRequirement}';
+      _stackSizeCtrl.text = '${item.stackSize}';
+      _maxStackCtrl.text = '${item.maxStack}';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // Reason: auto-downgrade sentience before rendering so UI stays consistent
@@ -250,6 +358,7 @@ class _ItemEditorPanelState extends State<ItemEditorPanel> {
                   _buildClassificationSection(),
                   _buildAttributesSection(),
                   _buildCombatStatsSection(),
+                  _buildManaSection(),
                   _buildPropertiesSection(),
                   buildPowerSentienceSection(
                     powerLevel: _currentPowerLevel,
@@ -279,13 +388,15 @@ class _ItemEditorPanelState extends State<ItemEditorPanel> {
       ),
       child: Row(
         children: [
-          const Padding(
-            padding: EdgeInsets.only(right: 6),
-            child: Icon(Icons.add_circle, color: itemEditorAccent, size: 14),
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Icon(
+              _isEditMode ? Icons.edit : Icons.add_circle,
+              color: itemEditorAccent, size: 14),
           ),
-          const Expanded(
-            child: Text('NEW ITEM',
-              style: TextStyle(color: itemEditorAccent, fontSize: 14,
+          Expanded(
+            child: Text(_isEditMode ? 'EDIT ITEM' : 'NEW ITEM',
+              style: const TextStyle(color: itemEditorAccent, fontSize: 14,
                 fontWeight: FontWeight.bold, letterSpacing: 1),
               overflow: TextOverflow.ellipsis),
           ),
@@ -308,9 +419,17 @@ class _ItemEditorPanelState extends State<ItemEditorPanel> {
       ),
       child: Row(
         children: [
-          Expanded(child: buildEditorButton('Create', itemEditorAccent, _onCreate)),
+          Expanded(child: buildEditorButton(
+            _isEditMode ? 'Save' : 'Create',
+            itemEditorAccent,
+            _isEditMode ? _onSave : _onCreate,
+          )),
           const SizedBox(width: 8),
-          Expanded(child: buildEditorButton('Cancel', Colors.red, widget.onClose)),
+          Expanded(child: buildEditorButton(
+            _isEditMode ? 'Revert' : 'Cancel',
+            _isEditMode ? Colors.orange : Colors.red,
+            _isEditMode ? _onRevert : widget.onClose,
+          )),
         ],
       ),
     );
@@ -362,7 +481,17 @@ class _ItemEditorPanelState extends State<ItemEditorPanel> {
       buildEditorNumericRow('Damage', _damageCtrl, 'damage', onChange: _refresh),
       buildEditorNumericRow('Crit Chance', _critChanceCtrl, 'critChance', onChange: _refresh),
       buildEditorNumericRow('Health', _healthCtrl, 'health', onChange: _refresh),
-      buildEditorNumericRow('Mana', _manaCtrl, 'mana', onChange: _refresh),
+    ]);
+  }
+
+  Widget _buildManaSection() {
+    return buildEditorSection('MANA', Colors.cyan.shade300, [
+      buildEditorNumericRow('Max Blue', _maxBlueManaCtrl, 'maxBlueMana', onChange: _refresh),
+      buildEditorNumericRow('Max Red', _maxRedManaCtrl, 'maxRedMana', onChange: _refresh),
+      buildEditorNumericRow('Max White', _maxWhiteManaCtrl, 'maxWhiteMana', onChange: _refresh),
+      buildEditorNumericRow('Blue Regen', _blueManaRegenCtrl, 'blueManaRegen', onChange: _refresh),
+      buildEditorNumericRow('Red Regen', _redManaRegenCtrl, 'redManaRegen', onChange: _refresh),
+      buildEditorNumericRow('White Regen', _whiteManaRegenCtrl, 'whiteManaRegen', onChange: _refresh),
     ]);
   }
 
