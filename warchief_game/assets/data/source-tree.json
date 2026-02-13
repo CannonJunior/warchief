@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-12T22:39:15.579115",
+  "generated_at": "2026-02-13T00:09:17.785039",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
     "files": 163,
     "directories": 34,
-    "lines": 44974,
-    "size": 1520040
+    "lines": 45134,
+    "size": 1525834
   },
   "tree": {
     "name": "warchief_game",
@@ -72,7 +72,7 @@
                 "name": "source-tree.json",
                 "type": "file",
                 "path": "warchief_game/assets/data/source-tree.json",
-                "size": 61095,
+                "size": 61096,
                 "extension": ".json",
                 "icon": "📋",
                 "lines": 1707
@@ -532,7 +532,7 @@
                     "name": "game_config.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_config.dart",
-                    "size": 7571,
+                    "size": 7599,
                     "extension": ".dart",
                     "icon": "🎯",
                     "lines": 206
@@ -577,10 +577,10 @@
                     "name": "minimap_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/minimap_state.dart",
-                    "size": 3793,
+                    "size": 3908,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 129
+                    "lines": 132
                   },
                   {
                     "name": "wind_config.dart",
@@ -686,46 +686,46 @@
                         "name": "minimap_border_icons.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/minimap/minimap_border_icons.dart",
-                        "size": 7696,
+                        "size": 10933,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 259
+                        "lines": 359
                       },
                       {
                         "name": "minimap_entity_painter.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/minimap/minimap_entity_painter.dart",
-                        "size": 6749,
+                        "size": 7693,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 203
+                        "lines": 225
                       },
                       {
                         "name": "minimap_ping_overlay.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/minimap/minimap_ping_overlay.dart",
-                        "size": 8380,
+                        "size": 8611,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 272
+                        "lines": 279
                       },
                       {
                         "name": "minimap_terrain_painter.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/minimap/minimap_terrain_painter.dart",
-                        "size": 9278,
+                        "size": 9814,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 268
+                        "lines": 282
                       },
                       {
                         "name": "minimap_widget.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/minimap/minimap_widget.dart",
-                        "size": 8796,
+                        "size": 9498,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 239
+                        "lines": 253
                       }
                     ]
                   },

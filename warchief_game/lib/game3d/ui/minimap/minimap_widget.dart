@@ -55,6 +55,7 @@ class MinimapWidget extends StatelessWidget {
     final playerX = gameState.playerTransform?.position.x ?? 0.0;
     final playerZ = gameState.playerTransform?.position.z ?? 0.0;
     final viewRadius = minimapState.viewRadius;
+    final isRotating = minimapState.isRotatingMode;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -69,8 +70,8 @@ class MinimapWidget extends StatelessWidget {
             children: [
               // Circular minimap with terrain, entities, pings
               GestureDetector(
-                onTapDown: (details) =>
-                    _handleTap(details, size, playerX, playerZ, viewRadius),
+                onTapDown: (details) => _handleTap(details, size, playerX,
+                    playerZ, viewRadius, gameState.playerRotation, isRotating),
                 child: Container(
                   width: size,
                   height: size,
@@ -106,6 +107,8 @@ class MinimapWidget extends StatelessWidget {
                             painter: MinimapEntityPainter(
                               gameState: gameState,
                               viewRadius: viewRadius,
+                              mapRotation: gameState.playerRotation,
+                              isRotatingMode: isRotating,
                             ),
                           ),
                           // Ping overlay layer
@@ -118,6 +121,7 @@ class MinimapWidget extends StatelessWidget {
                               viewRadius: viewRadius,
                               pings: minimapState.pings,
                               elapsedTime: minimapState.elapsedTime,
+                              isRotatingMode: isRotating,
                             ),
                           ),
                         ],
@@ -126,7 +130,7 @@ class MinimapWidget extends StatelessWidget {
                   ),
                 ),
               ),
-              // Border icons: suns, zoom, wind arrow
+              // Border icons: suns, zoom, wind arrow, north indicator, rotation toggle
               MinimapBorderIcons(
                 size: size,
                 elapsedTime: minimapState.elapsedTime,
@@ -136,6 +140,11 @@ class MinimapWidget extends StatelessWidget {
                     (config?.zoomLevels.length ?? 4),
                 onZoomIn: () => minimapState.zoomIn(),
                 onZoomOut: () => minimapState.zoomOut(),
+                playerRotation: gameState.playerRotation,
+                isRotatingMode: isRotating,
+                onToggleRotation: () {
+                  minimapState.isRotatingMode = !minimapState.isRotatingMode;
+                },
               ),
             ],
           ),
@@ -147,9 +156,9 @@ class MinimapWidget extends StatelessWidget {
   }
 
   /// Convert tap position on the minimap to world coordinates and create ping.
-  /// Accounts for the rotating minimap (forward = up).
   void _handleTap(TapDownDetails details, double size, double playerX,
-      double playerZ, double viewRadius) {
+      double playerZ, double viewRadius, double playerRotation,
+      bool isRotating) {
     final localPos = details.localPosition;
     final half = size / 2;
 
@@ -158,18 +167,23 @@ class MinimapWidget extends StatelessWidget {
     final dy = localPos.dy - half;
     if (dx * dx + dy * dy > half * half) return;
 
-    // Convert minimap pixel to player-relative then to world coordinates
-    final ndx = dx / half;
-    final ndy = -dy / half;
-    final rightComp = ndx * viewRadius;
-    final fwdComp = ndy * viewRadius;
-
-    // Un-rotate from player-relative frame back to world
-    final rotRad = gameState.playerRotation * math.pi / 180.0;
-    final cosR = math.cos(rotRad);
-    final sinR = math.sin(rotRad);
-    final worldX = playerX + rightComp * cosR - fwdComp * sinR;
-    final worldZ = playerZ - rightComp * sinR - fwdComp * cosR;
+    double worldX, worldZ;
+    if (isRotating) {
+      // Un-rotate from player-relative frame back to world
+      final ndx = dx / half;
+      final ndy = -dy / half;
+      final rightComp = ndx * viewRadius;
+      final fwdComp = ndy * viewRadius;
+      final rotRad = playerRotation * math.pi / 180.0;
+      final cosR = math.cos(rotRad);
+      final sinR = math.sin(rotRad);
+      worldX = playerX + rightComp * cosR - fwdComp * sinR;
+      worldZ = playerZ - rightComp * sinR - fwdComp * cosR;
+    } else {
+      // Fixed-north with X negated to match screen-relative left/right
+      worldX = playerX - (dx / half) * viewRadius;
+      worldZ = playerZ - (dy / half) * viewRadius;
+    }
 
     onPingCreated(worldX, worldZ);
   }

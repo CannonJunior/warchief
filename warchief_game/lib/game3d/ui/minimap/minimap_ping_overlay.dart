@@ -16,6 +16,7 @@ class MinimapPingPainter extends CustomPainter {
   final double viewRadius;
   final List<MinimapPing> pings;
   final double elapsedTime;
+  final bool isRotatingMode;
 
   MinimapPingPainter({
     required this.playerX,
@@ -24,6 +25,7 @@ class MinimapPingPainter extends CustomPainter {
     required this.viewRadius,
     required this.pings,
     required this.elapsedTime,
+    required this.isRotatingMode,
   });
 
   @override
@@ -72,20 +74,25 @@ class MinimapPingPainter extends CustomPainter {
   }
 
   /// Convert world coordinates to minimap pixel position.
-  /// Rotates by player facing so forward = up on minimap.
   Offset? _worldToMinimap(double worldX, double worldZ, double half) {
     final dx = worldX - playerX;
     final dz = worldZ - playerZ;
 
-    // Rotate into player-relative frame (forward = up)
-    final rotRad = playerRotation * math.pi / 180.0;
-    final cosR = math.cos(rotRad);
-    final sinR = math.sin(rotRad);
-    final rightComp = dx * cosR - dz * sinR;
-    final fwdComp = -dx * sinR - dz * cosR;
-
-    final mx = half + (rightComp / viewRadius) * half;
-    final my = half - (fwdComp / viewRadius) * half;
+    double mx, my;
+    if (isRotatingMode) {
+      // Rotate into player-relative frame (forward = up)
+      final rotRad = playerRotation * math.pi / 180.0;
+      final cosR = math.cos(rotRad);
+      final sinR = math.sin(rotRad);
+      final rightComp = dx * cosR - dz * sinR;
+      final fwdComp = -dx * sinR - dz * cosR;
+      mx = half + (rightComp / viewRadius) * half;
+      my = half - (fwdComp / viewRadius) * half;
+    } else {
+      // Fixed-north with X negated to match screen-relative left/right
+      mx = half - (dx / viewRadius) * half;
+      my = half - (dz / viewRadius) * half;
+    }
 
     // Check within circular bounds (allow slight overflow for ping rings)
     final rdx = mx - half;

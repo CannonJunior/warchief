@@ -30,6 +30,15 @@ class MinimapBorderIcons extends StatelessWidget {
   /// Callback for zoom out button.
   final VoidCallback onZoomOut;
 
+  /// Player facing rotation in degrees (for North indicator positioning).
+  final double playerRotation;
+
+  /// Whether the minimap is in rotating mode (true) or fixed-north (false).
+  final bool isRotatingMode;
+
+  /// Callback to toggle between rotating and fixed-north mode.
+  final VoidCallback onToggleRotation;
+
   const MinimapBorderIcons({
     Key? key,
     required this.size,
@@ -39,6 +48,9 @@ class MinimapBorderIcons extends StatelessWidget {
     required this.zoomLevelCount,
     required this.onZoomIn,
     required this.onZoomOut,
+    required this.playerRotation,
+    required this.isRotatingMode,
+    required this.onToggleRotation,
   }) : super(key: key);
 
   @override
@@ -56,8 +68,18 @@ class MinimapBorderIcons extends StatelessWidget {
           // Orbiting sun icons
           ...sunDefs.map((sunDef) => _buildSunIcon(sunDef, radius)),
 
+          // North indicator on border
+          _buildNorthIndicator(radius),
+
           // Wind direction arrow on border
           if (config?.showWindOnBorder ?? true) _buildWindArrow(radius),
+
+          // Rotation mode toggle at bottom-left
+          Positioned(
+            left: 0,
+            bottom: 0,
+            child: _buildRotationToggle(),
+          ),
 
           // Zoom buttons at bottom-right
           Positioned(
@@ -176,6 +198,84 @@ class MinimapBorderIcons extends StatelessWidget {
         child: CustomPaint(
           size: Size(arrowSize, arrowSize),
           painter: _SmallArrowPainter(color: arrowColor),
+        ),
+      ),
+    );
+  }
+
+  /// Build the North ("N") indicator on the minimap border.
+  /// In rotating mode, it orbits to show where north is relative to the player.
+  /// In fixed-north mode, it stays at the top.
+  Widget _buildNorthIndicator(double radius) {
+    // In rotating mode, north's position depends on player rotation.
+    // At rotation 0 (facing south), north is at 180° (bottom).
+    // The pattern is: angle = 180 + playerRotation (CW from top).
+    // In fixed-north mode, north is always at the top (0°).
+    final angleDeg = isRotatingMode ? 180.0 + playerRotation : 0.0;
+    final angleRad = (angleDeg - 90.0) * math.pi / 180.0;
+
+    final orbitRadius = radius + 4;
+    final centerX = (size + 20) / 2 + math.cos(angleRad) * orbitRadius;
+    final centerY = (size + 20) / 2 + math.sin(angleRad) * orbitRadius;
+    const indicatorSize = 16.0;
+
+    return Positioned(
+      left: centerX - indicatorSize / 2,
+      top: centerY - indicatorSize / 2,
+      child: Container(
+        width: indicatorSize,
+        height: indicatorSize,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFF0A0A1A).withOpacity(0.7),
+          border: Border.all(
+            color: const Color(0xFFCCA040),
+            width: 1,
+          ),
+        ),
+        child: const Center(
+          child: Text(
+            'N',
+            style: TextStyle(
+              color: Color(0xFFCCA040),
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              height: 1.0,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build the rotation mode toggle button.
+  Widget _buildRotationToggle() {
+    return GestureDetector(
+      onTap: onToggleRotation,
+      child: Tooltip(
+        message: isRotatingMode ? 'Switch to fixed north' : 'Switch to rotating',
+        child: Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A0A1A).withOpacity(0.8),
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(
+              color: isRotatingMode
+                  ? const Color(0xFF4cc9f0)
+                  : const Color(0xFFCCA040),
+              width: 1,
+            ),
+          ),
+          child: Center(
+            child: Icon(
+              isRotatingMode ? Icons.explore : Icons.north,
+              color: isRotatingMode
+                  ? const Color(0xFF4cc9f0)
+                  : const Color(0xFFCCA040),
+              size: 12,
+            ),
+          ),
         ),
       ),
     );

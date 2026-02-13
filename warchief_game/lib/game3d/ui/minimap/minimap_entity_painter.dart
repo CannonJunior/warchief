@@ -14,10 +14,14 @@ import '../../state/minimap_config.dart';
 class MinimapEntityPainter extends CustomPainter {
   final GameState gameState;
   final double viewRadius;
+  final double mapRotation;
+  final bool isRotatingMode;
 
   MinimapEntityPainter({
     required this.gameState,
     required this.viewRadius,
+    required this.mapRotation,
+    required this.isRotatingMode,
   });
 
   @override
@@ -102,14 +106,26 @@ class MinimapEntityPainter extends CustomPainter {
     _drawPlayerArrow(canvas, half);
   }
 
-  /// Draw the player as a triangle at the minimap center, always pointing up.
-  /// In a rotating minimap, forward is always up so the arrow is fixed.
+  /// Draw the player arrow at the minimap center.
+  /// Rotating mode: arrow always points up (forward = up on minimap).
+  /// Fixed-north mode: arrow rotates to show the player's world facing.
   void _drawPlayerArrow(Canvas canvas, double half) {
     final config = globalMinimapConfig;
     final playerSize = (config?.playerSize ?? 8).toDouble();
 
     canvas.save();
     canvas.translate(half, half);
+
+    // In fixed-north mode, rotate arrow to show facing direction.
+    // Use (180 - rotation) to correct the rotation sense: the game's
+    // rotateY convention mirrors X relative to standard compass, so
+    // negating rotation compensates for the X-axis negation in entity
+    // positions, keeping arrow direction and rotation sense consistent.
+    if (!isRotatingMode) {
+      final rotation = gameState.playerRotation;
+      final angleRad = (180.0 - rotation) * math.pi / 180.0;
+      canvas.rotate(angleRad);
+    }
 
     final path = Path()
       ..moveTo(0, -playerSize) // Tip (forward = up)
@@ -163,22 +179,28 @@ class MinimapEntityPainter extends CustomPainter {
   }
 
   /// Convert world coordinates to minimap pixel position.
-  /// Rotates by player facing so forward = up on minimap.
   Offset? _worldToMinimap(double worldX, double worldZ,
       double playerX, double playerZ, double half) {
     final dx = worldX - playerX;
     final dz = worldZ - playerZ;
 
-    // Rotate into player-relative frame (forward = up)
-    final rotation = gameState.playerRotation;
-    final rotRad = rotation * math.pi / 180.0;
-    final cosR = math.cos(rotRad);
-    final sinR = math.sin(rotRad);
-    final rightComp = dx * cosR - dz * sinR;
-    final fwdComp = -dx * sinR - dz * cosR;
-
-    final mx = half + (rightComp / viewRadius) * half;
-    final my = half - (fwdComp / viewRadius) * half;
+    double mx, my;
+    if (isRotatingMode) {
+      // Rotate into player-relative frame (forward = up)
+      final rotRad = mapRotation * math.pi / 180.0;
+      final cosR = math.cos(rotRad);
+      final sinR = math.sin(rotRad);
+      final rightComp = dx * cosR - dz * sinR;
+      final fwdComp = -dx * sinR - dz * cosR;
+      mx = half + (rightComp / viewRadius) * half;
+      my = half - (fwdComp / viewRadius) * half;
+    } else {
+      // Fixed-north with X negated to match screen-relative left/right.
+      // The game's rotateY convention mirrors X vs standard compass,
+      // so negating X makes screen-right = minimap-right.
+      mx = half - (dx / viewRadius) * half;
+      my = half - (dz / viewRadius) * half;
+    }
 
     // Check within circular bounds
     final rdx = mx - half;

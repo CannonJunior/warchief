@@ -101,6 +101,7 @@ class MinimapTerrainPainter extends CustomPainter {
     final groundLevel = GameConfig.groundLevel;
 
     final paint = Paint()..style = PaintingStyle.fill;
+    final isRotating = minimapState.isRotatingMode;
 
     // Pre-compute rotation for player-relative minimap (forward = up)
     final rotRad = playerRotation * math.pi / 180.0;
@@ -118,13 +119,21 @@ class MinimapTerrainPainter extends CustomPainter {
         final dy = cy - half;
         if (dx * dx + dy * dy > halfRadius * halfRadius) continue;
 
-        // Convert to world coordinates (rotating minimap: up = forward)
-        final ndx = dx / halfRadius;
-        final ndy = -dy / halfRadius;
-        final rightComp = ndx * viewRadius;
-        final fwdComp = ndy * viewRadius;
-        final worldX = playerX + rightComp * cosR - fwdComp * sinR;
-        final worldZ = playerZ - rightComp * sinR - fwdComp * cosR;
+        // Convert to world coordinates
+        double worldX, worldZ;
+        if (isRotating) {
+          // Rotating minimap: up = forward direction
+          final ndx = dx / halfRadius;
+          final ndy = -dy / halfRadius;
+          final rightComp = ndx * viewRadius;
+          final fwdComp = ndy * viewRadius;
+          worldX = playerX + rightComp * cosR - fwdComp * sinR;
+          worldZ = playerZ - rightComp * sinR - fwdComp * cosR;
+        } else {
+          // Fixed-north with X negated to match screen-relative left/right
+          worldX = playerX - (dx / halfRadius) * viewRadius;
+          worldZ = playerZ - (dy / halfRadius) * viewRadius;
+        }
 
         // Sample terrain height from loaded chunks, fall back to direct
         // noise when the chunk isn't loaded (zoomed out beyond render distance)
@@ -219,21 +228,26 @@ class MinimapTerrainPainter extends CustomPainter {
   }
 
   /// Convert world coordinates to minimap pixel position.
-  /// Rotates by player facing so forward = up on minimap.
   /// Returns null if outside the circular view.
   Offset? _worldToMinimap(double worldX, double worldZ, double half) {
     final dx = worldX - playerX;
     final dz = worldZ - playerZ;
 
-    // Rotate into player-relative frame (forward = up)
-    final rotRad = playerRotation * math.pi / 180.0;
-    final cosR = math.cos(rotRad);
-    final sinR = math.sin(rotRad);
-    final rightComp = dx * cosR - dz * sinR;
-    final fwdComp = -dx * sinR - dz * cosR;
-
-    final mx = half + (rightComp / viewRadius) * half;
-    final my = half - (fwdComp / viewRadius) * half;
+    double mx, my;
+    if (minimapState.isRotatingMode) {
+      // Rotate into player-relative frame (forward = up)
+      final rotRad = playerRotation * math.pi / 180.0;
+      final cosR = math.cos(rotRad);
+      final sinR = math.sin(rotRad);
+      final rightComp = dx * cosR - dz * sinR;
+      final fwdComp = -dx * sinR - dz * cosR;
+      mx = half + (rightComp / viewRadius) * half;
+      my = half - (fwdComp / viewRadius) * half;
+    } else {
+      // Fixed-north with X negated to match screen-relative left/right
+      mx = half - (dx / viewRadius) * half;
+      my = half - (dz / viewRadius) * half;
+    }
 
     // Check within circular bounds (with small margin for lines)
     final rdx = mx - half;

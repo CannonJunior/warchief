@@ -63,6 +63,9 @@ class MinimapState {
   /// Whether the clock is in "Warchief time" mode (stub).
   bool warchiefTimeMode = false;
 
+  /// Whether the minimap rotates with the player (true) or is fixed-north (false).
+  bool isRotatingMode = true;
+
   // ==================== TERRAIN CACHE ====================
 
   /// Cached terrain image (regenerated when player moves too far).

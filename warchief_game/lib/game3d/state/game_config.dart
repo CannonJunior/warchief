@@ -45,8 +45,8 @@ class GameConfig {
   /// Player starting position
   static final Vector3 playerStartPosition = Vector3(10, 0.5, 2);
 
-  /// Player starting rotation (degrees)
-  static const double playerStartRotation = 0.0;
+  /// Player starting rotation (degrees). 180 = facing north (+Z).
+  static const double playerStartRotation = 180.0;
 
   /// Player direction indicator size
   static const double playerDirectionIndicatorSize = 0.5;

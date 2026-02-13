@@ -4,6 +4,16 @@
 
 ### ✅ Completed - 2026-02-12
 
+#### Minimap North Indicator + Rotation Toggle + Fixed-North Mirror Fix
+- ✅ Added gold "N" compass indicator on minimap border — rotates in rotating mode to show north direction, stays at top in fixed-north mode
+- ✅ Added rotation mode toggle button (compass/north icon) at bottom-left of minimap border — switches between rotating and fixed-north modes
+- ✅ Added `isRotatingMode` bool to `MinimapState` (default: true = rotating)
+- ✅ Changed `playerStartRotation` from 0 to 180 degrees — character starts facing north (+Z), north is up in rotating minimap
+- ✅ Fixed mirror effect in fixed-north mode: negated X axis in all coordinate mappings (entities, terrain, ley lines, pings, tap handler) to compensate for the game's rotateY convention mirroring X vs standard compass
+- ✅ Fixed arrow rotation sense in fixed-north mode: changed formula from `(rotation + 180)` to `(180 - rotation)` — right turn = clockwise on minimap, left turn = counter-clockwise
+- ✅ All files under 500 lines (border_icons: 359, entity: 222, terrain: 283, ping: 279, widget: 253)
+- ✅ Build verified clean (`flutter build web`)
+
 #### Minimap Rotation Fix (Rotating Minimap)
 - ✅ Converted minimap from fixed-north to player-relative rotating view (forward = always up, like WoW)
 - ✅ Updated `minimap_terrain_painter.dart` — added `playerRotation` param, rotates pixel-to-world sampling so terrain rotates with player, rotates ley line coordinate conversion, `shouldRepaint` triggers on rotation change
