@@ -2,6 +2,38 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-12
+
+#### Categorized Interface Settings
+- ✅ Added `category` and `shortcutKey` fields to `InterfaceConfig` class (constructor, copyWith, toJson)
+- ✅ Removed 4 stale registrations (formation_panel, attack_panel, hold_panel, follow_panel) replaced by unified AllyCommandsPanel
+- ✅ Added 5 new registrations: abilities_codex (P), character_panel (C), bag_panel (B), dps_panel (SHIFT+D), ally_commands (F)
+- ✅ Assigned all 12 interfaces to categories: `game_abilities` (3 items) and `ui_panels` (9 items)
+- ✅ Added category query methods to `InterfaceConfigManager` (categories, categoryLabel, interfacesForCategory)
+- ✅ Created `lib/game3d/ui/settings/interfaces_tab.dart` — extracted InterfacesTab widget with categorized sections, shortcut key badges, expand/collapse details
+- ✅ Updated `settings_panel.dart` — delegates to InterfacesTab, removed ~250 lines of extracted code (847→485 lines)
+- ✅ Wired `_isVisible()` into all modal rendering conditions in `game3d_widget.dart` (minimap, character, ally commands, abilities, bag, DPS)
+- ✅ Wired `_isVisible()` into all keyboard handlers (P, C, B, M, F, SHIFT+D) — disabled interfaces block their shortcut keys
+- ✅ Removed stale `_defaultPositions` entries (formation_panel, attack_panel, hold_panel, follow_panel)
+- ✅ All files under 500 lines (interfaces_tab: 389, settings_panel: 485, interface_config: 394)
+- ✅ Build verified clean (`flutter build web`)
+
+#### Minimap System
+- ✅ Created `assets/data/minimap_config.json` — all minimap tuning values (terrain, entities, zoom, suns, pings, clock, wind)
+- ✅ Created `lib/game3d/state/minimap_config.dart` — config class following WindConfig pattern with dot-notation getters, global singleton
+- ✅ Created `lib/game3d/state/minimap_state.dart` — state class with zoom levels, active pings, elapsed time, terrain cache, MinimapPing class, PingType enum
+- ✅ Created `lib/game3d/ui/minimap/minimap_widget.dart` — top-level 160px circular minimap with terrain/entity/ping layers, click-to-ping, clock widget
+- ✅ Created `lib/game3d/ui/minimap/minimap_terrain_painter.dart` — CustomPainter sampling heightmap, height-to-color mapping (sand/grass/rock), ley line segments and power nodes
+- ✅ Created `lib/game3d/ui/minimap/minimap_entity_painter.dart` — CustomPainter for player arrow (silver triangle), allies (green), enemies (red), boss (large red), target dummy (yellow X)
+- ✅ Created `lib/game3d/ui/minimap/minimap_border_icons.dart` — 3 orbiting sun icons (Solara/Kethis/Umbris), zoom +/- buttons, wind direction arrow on border (absorbs WindIndicator)
+- ✅ Created `lib/game3d/ui/minimap/minimap_ping_overlay.dart` — expanding concentric ring animation on minimap + world-space diamond ping via worldToScreen(), off-screen edge arrows
+- ✅ Added `MinimapState minimapState` and `minimapOpen` to `game_state.dart`
+- ✅ Wired minimap into `game3d_widget.dart` — config init, update loop, M key toggle, replaced WindIndicator with MinimapWidget, added MinimapPingWorldOverlay
+- ✅ Registered `'minimap'` interface in `interface_config.dart`
+- ✅ All values config-driven via `minimap_config.json` — nothing hardcoded
+- ✅ All new files under 500 lines (config: 214, state: 129, widget: 227, terrain: 206, entity: 200, border: 259, ping: 262)
+- ✅ Build verified clean (`flutter build web`)
+
 ### ✅ Completed - 2026-02-11
 
 #### Wind Trail Effects + Derecho Storms

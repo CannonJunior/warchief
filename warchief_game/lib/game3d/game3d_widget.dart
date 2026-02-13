@@ -60,8 +60,12 @@ import 'state/item_config.dart';
 import 'state/custom_item_manager.dart';
 import 'state/wind_config.dart';
 import 'state/wind_state.dart';
-import 'ui/wind_indicator.dart';
+import 'state/minimap_config.dart';
+import 'state/minimap_state.dart';
+import 'ui/minimap/minimap_widget.dart';
+import 'ui/minimap/minimap_ping_overlay.dart';
 import 'systems/entity_picking_system.dart';
+// Note: WindIndicator replaced by minimap border wind arrow
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
 ///
@@ -124,6 +128,9 @@ class _Game3DState extends State<Game3D> {
     // Initialize wind config (JSON defaults for wind simulation)
     _initializeWindConfig();
 
+    // Initialize minimap config (JSON defaults for minimap display)
+    _initializeMinimapConfig();
+
     // Initialize custom options manager (custom dropdown values + effect descriptions)
     _initializeCustomOptions();
 
@@ -166,6 +173,12 @@ class _Game3DState extends State<Game3D> {
     globalWindConfig ??= WindConfig();
     globalWindConfig!.initialize();
     globalWindState ??= WindState();
+  }
+
+  /// Initialize the global minimap configuration (JSON defaults)
+  void _initializeMinimapConfig() {
+    globalMinimapConfig ??= MinimapConfig();
+    globalMinimapConfig!.initialize();
   }
 
   /// Initialize the global custom options manager (dropdown values + effect descriptions)
@@ -511,6 +524,9 @@ class _Game3DState extends State<Game3D> {
     // Update wind simulation and White Mana regeneration
     gameState.updateWindAndWhiteMana(dt);
 
+    // Update minimap state (elapsed time for sun orbits, ping decay)
+    gameState.minimapState.update(dt);
+
     // Update AI systems (monster AI, ally AI, projectiles)
     AISystem.update(
       dt,
@@ -637,6 +653,7 @@ class _Game3DState extends State<Game3D> {
   void _onKeyEvent(KeyEvent event) {
     // Handle P key for abilities modal (only on key down, not repeat)
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyP) {
+      if (!_isVisible('abilities_codex')) return;
       print('P key detected! Toggling abilities modal.');
       setState(() {
         gameState.abilitiesModalOpen = !gameState.abilitiesModalOpen;
@@ -646,6 +663,7 @@ class _Game3DState extends State<Game3D> {
 
     // Handle C key for character panel (only on key down, not repeat)
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyC) {
+      if (!_isVisible('character_panel')) return;
       print('C key detected! Toggling character panel.');
       setState(() {
         gameState.characterPanelOpen = !gameState.characterPanelOpen;
@@ -655,6 +673,7 @@ class _Game3DState extends State<Game3D> {
 
     // Handle B key for bag panel (only on key down, not repeat)
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyB) {
+      if (!_isVisible('bag_panel')) return;
       print('B key detected! Toggling bag panel.');
       setState(() {
         gameState.bagPanelOpen = !gameState.bagPanelOpen;
@@ -662,8 +681,18 @@ class _Game3DState extends State<Game3D> {
       return;
     }
 
+    // Handle M key for minimap toggle (only on key down, not repeat)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyM) {
+      if (!_isVisible('minimap')) return;
+      setState(() {
+        gameState.minimapOpen = !gameState.minimapOpen;
+      });
+      return;
+    }
+
     // Handle F key for ally commands panel (only on key down, not repeat)
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyF) {
+      if (!_isVisible('ally_commands')) return;
       if (gameState.allies.isNotEmpty) {
         print('F key detected! Toggling ally commands panel.');
         setState(() {
@@ -677,6 +706,7 @@ class _Game3DState extends State<Game3D> {
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyD) {
       final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
       if (isShiftPressed) {
+        if (!_isVisible('dps_panel')) return;
         print('SHIFT+D detected! Toggling DPS panel.');
         setState(() {
           gameState.dpsPanelOpen = !gameState.dpsPanelOpen;
@@ -805,6 +835,32 @@ class _Game3DState extends State<Game3D> {
     });
   }
 
+  /// Handle ping created from clicking the minimap.
+  ///
+  /// Creates a [MinimapPing] at the given world XZ position and adds it
+  /// to the minimap state. The ping is visible on both the minimap
+  /// (expanding rings) and in the 3D world view (diamond icon).
+  void _handleMinimapPing(double worldX, double worldZ) {
+    final config = globalMinimapConfig;
+    final colorList = config?.pingDefaultColor ?? [1.0, 0.9, 0.3, 1.0];
+    final color = Color.fromRGBO(
+      (colorList[0] * 255).round(),
+      (colorList[1] * 255).round(),
+      (colorList[2] * 255).round(),
+      colorList.length > 3 ? colorList[3] : 1.0,
+    );
+
+    setState(() {
+      gameState.minimapState.addPing(MinimapPing(
+        worldX: worldX,
+        worldZ: worldZ,
+        createTime: gameState.minimapState.elapsedTime,
+        color: color,
+      ));
+    });
+    print('[MINIMAP] Ping at world ($worldX, $worldZ)');
+  }
+
   // Ability activation methods (for clickable buttons)
   void _activateAbility1() {
     setState(() {
@@ -889,10 +945,6 @@ class _Game3DState extends State<Game3D> {
     'combat_hud': Offset(300, 500),
     'monster_abilities': Offset(10, 300),
     'ai_chat': Offset(10, 450),
-    'formation_panel': Offset(800, 150),
-    'attack_panel': Offset(800, 260),
-    'hold_panel': Offset(800, 370),
-    'follow_panel': Offset(800, 480),
   };
 
   /// Track SHIFT+key state for formation panel toggling
@@ -1273,14 +1325,28 @@ class _Game3DState extends State<Game3D> {
               canvasHeight: 900,
             ),
 
-            // Wind indicator compass (top-right corner)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: WindIndicator(
-                windState: gameState.windState,
+            // World-space ping indicators (from minimap pings)
+            if (gameState.minimapState.pings.isNotEmpty && camera != null)
+              MinimapPingWorldOverlay(
+                pings: gameState.minimapState.pings,
+                elapsedTime: gameState.minimapState.elapsedTime,
+                viewMatrix: camera?.getViewMatrix(),
+                projMatrix: camera?.getProjectionMatrix(),
+                screenSize: MediaQuery.of(context).size,
               ),
-            ),
+
+            // Minimap (top-right corner, replaces standalone WindIndicator)
+            if (gameState.minimapOpen && _isVisible('minimap'))
+              Positioned(
+                top: 8,
+                right: 8,
+                child: MinimapWidget(
+                  gameState: gameState,
+                  windState: gameState.windState,
+                  camera: camera,
+                  onPingCreated: _handleMinimapPing,
+                ),
+              ),
 
             // Instructions overlay (draggable)
             if (_isVisible('instructions'))
@@ -1454,7 +1520,7 @@ class _Game3DState extends State<Game3D> {
 
             // Character Panel (Press C to toggle)
             // Reason: Rendered before command panels so they appear on top of the 750px-wide panel
-            if (gameState.characterPanelOpen)
+            if (gameState.characterPanelOpen && _isVisible('character_panel'))
               CharacterPanel(
                 gameState: gameState,
                 onClose: () {
@@ -1465,7 +1531,7 @@ class _Game3DState extends State<Game3D> {
               ),
 
             // ========== ALLY COMMANDS PANEL (Press F to toggle) ==========
-            if (gameState.allies.isNotEmpty && gameState.allyCommandPanelOpen)
+            if (gameState.allies.isNotEmpty && gameState.allyCommandPanelOpen && _isVisible('ally_commands'))
               AllyCommandsPanel(
                 onClose: () {
                   setState(() {
@@ -1480,7 +1546,7 @@ class _Game3DState extends State<Game3D> {
               ),
 
             // Abilities Modal (Press P to toggle)
-            if (gameState.abilitiesModalOpen)
+            if (gameState.abilitiesModalOpen && _isVisible('abilities_codex'))
               AbilitiesModal(
                 onClose: () {
                   setState(() {
@@ -1491,7 +1557,7 @@ class _Game3DState extends State<Game3D> {
               ),
 
             // Bag Panel (Press B to toggle)
-            if (gameState.bagPanelOpen)
+            if (gameState.bagPanelOpen && _isVisible('bag_panel'))
               BagPanel(
                 inventory: gameState.playerInventory,
                 onClose: () {
@@ -1527,7 +1593,7 @@ class _Game3DState extends State<Game3D> {
               ),
 
             // DPS Panel (Press SHIFT+D to toggle)
-            if (gameState.dpsPanelOpen)
+            if (gameState.dpsPanelOpen && _isVisible('dps_panel'))
               DpsPanel(
                 dpsTracker: gameState.dpsTracker,
                 onClose: () {

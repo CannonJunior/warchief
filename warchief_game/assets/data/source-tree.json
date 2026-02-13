@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-11T22:48:02.161208",
+  "generated_at": "2026-02-12T19:12:18.804830",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
-    "files": 153,
-    "directories": 33,
-    "lines": 43061,
-    "size": 1452568
+    "files": 163,
+    "directories": 34,
+    "lines": 44791,
+    "size": 1512540
   },
   "tree": {
     "name": "warchief_game",
@@ -58,6 +58,15 @@
                 "extension": ".json",
                 "icon": "📋",
                 "lines": 17
+              },
+              {
+                "name": "minimap_config.json",
+                "type": "file",
+                "path": "warchief_game/assets/data/minimap_config.json",
+                "size": 1693,
+                "extension": ".json",
+                "icon": "📋",
+                "lines": 61
               },
               {
                 "name": "source-tree.json",
@@ -532,10 +541,10 @@
                     "name": "game_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state.dart",
-                    "size": 41286,
+                    "size": 41582,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 1218
+                    "lines": 1227
                   },
                   {
                     "name": "item_config.dart",
@@ -554,6 +563,24 @@
                     "extension": ".dart",
                     "icon": "🎯",
                     "lines": 180
+                  },
+                  {
+                    "name": "minimap_config.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/state/minimap_config.dart",
+                    "size": 7307,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 214
+                  },
+                  {
+                    "name": "minimap_state.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/state/minimap_state.dart",
+                    "size": 3793,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 129
                   },
                   {
                     "name": "wind_config.dart",
@@ -651,6 +678,58 @@
                 "path": "warchief_game/lib/game3d/ui",
                 "children": [
                   {
+                    "name": "minimap",
+                    "type": "directory",
+                    "path": "warchief_game/lib/game3d/ui/minimap",
+                    "children": [
+                      {
+                        "name": "minimap_border_icons.dart",
+                        "type": "file",
+                        "path": "warchief_game/lib/game3d/ui/minimap/minimap_border_icons.dart",
+                        "size": 7696,
+                        "extension": ".dart",
+                        "icon": "🎯",
+                        "lines": 259
+                      },
+                      {
+                        "name": "minimap_entity_painter.dart",
+                        "type": "file",
+                        "path": "warchief_game/lib/game3d/ui/minimap/minimap_entity_painter.dart",
+                        "size": 6546,
+                        "extension": ".dart",
+                        "icon": "🎯",
+                        "lines": 200
+                      },
+                      {
+                        "name": "minimap_ping_overlay.dart",
+                        "type": "file",
+                        "path": "warchief_game/lib/game3d/ui/minimap/minimap_ping_overlay.dart",
+                        "size": 7975,
+                        "extension": ".dart",
+                        "icon": "🎯",
+                        "lines": 262
+                      },
+                      {
+                        "name": "minimap_terrain_painter.dart",
+                        "type": "file",
+                        "path": "warchief_game/lib/game3d/ui/minimap/minimap_terrain_painter.dart",
+                        "size": 6847,
+                        "extension": ".dart",
+                        "icon": "🎯",
+                        "lines": 206
+                      },
+                      {
+                        "name": "minimap_widget.dart",
+                        "type": "file",
+                        "path": "warchief_game/lib/game3d/ui/minimap/minimap_widget.dart",
+                        "size": 8252,
+                        "extension": ".dart",
+                        "icon": "🎯",
+                        "lines": 227
+                      }
+                    ]
+                  },
+                  {
                     "name": "settings",
                     "type": "directory",
                     "path": "warchief_game/lib/game3d/ui/settings",
@@ -659,19 +738,28 @@
                         "name": "interface_config.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/settings/interface_config.dart",
-                        "size": 9298,
+                        "size": 11487,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 324
+                        "lines": 394
+                      },
+                      {
+                        "name": "interfaces_tab.dart",
+                        "type": "file",
+                        "path": "warchief_game/lib/game3d/ui/settings/interfaces_tab.dart",
+                        "size": 12722,
+                        "extension": ".dart",
+                        "icon": "🎯",
+                        "lines": 389
                       },
                       {
                         "name": "settings_panel.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/settings/settings_panel.dart",
-                        "size": 25153,
+                        "size": 14061,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 847
+                        "lines": 485
                       },
                       {
                         "name": "source_code_tab.dart",
@@ -1055,10 +1143,10 @@
                 "name": "game3d_widget.dart",
                 "type": "file",
                 "path": "warchief_game/lib/game3d/game3d_widget.dart",
-                "size": 69827,
+                "size": 72568,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 1923
+                "lines": 1989
               }
             ]
           },
@@ -1525,6 +1613,14 @@
         "extension": ".md",
         "icon": "📝",
         "lines": 71
+      },
+      {
+        "name": "flutter_01.log",
+        "type": "file",
+        "path": "warchief_game/flutter_01.log",
+        "size": 3007,
+        "extension": ".log",
+        "icon": "📄"
       },
       {
         "name": "GAME_BEHAVIOR_CHECKLIST.md",

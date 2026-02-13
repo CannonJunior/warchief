@@ -1,0 +1,61 @@
+{
+  "minimap": {
+    "size": 160,
+    "borderWidth": 2,
+    "borderColor": [0.15, 0.15, 0.26, 1.0],
+    "backgroundColor": [0.04, 0.04, 0.10, 0.85]
+  },
+  "terrain": {
+    "cacheResolution": 128,
+    "refreshThresholdFraction": 0.3,
+    "sandColor": [0.76, 0.70, 0.50, 1.0],
+    "grassColor": [0.29, 0.49, 0.25, 1.0],
+    "rockColor": [0.42, 0.42, 0.42, 1.0],
+    "sandThreshold": 0.15,
+    "rockThreshold": 0.70
+  },
+  "leyLines": {
+    "show": true,
+    "lineColor": [0.27, 0.53, 0.80, 0.6],
+    "powerNodeColor": [0.40, 0.27, 0.80, 0.8],
+    "lineWidth": 1.0,
+    "nodeRadius": 3.0
+  },
+  "entities": {
+    "playerColor": [0.75, 0.75, 0.75, 1.0],
+    "playerSize": 8,
+    "allyColor": [0.40, 0.80, 0.40, 1.0],
+    "allySize": 5,
+    "enemyColor": [1.0, 0.27, 0.27, 1.0],
+    "enemySize": 4,
+    "bossColor": [1.0, 0.0, 0.0, 1.0],
+    "bossSize": 8
+  },
+  "zoom": {
+    "levels": [25.0, 50.0, 100.0, 150.0],
+    "defaultLevel": 1
+  },
+  "suns": [
+    { "name": "Solara",  "color": [1.0, 0.95, 0.6, 1.0],  "orbitalPeriod": 600.0,  "startAngle": 0.0,   "iconSize": 14 },
+    { "name": "Kethis",  "color": [1.0, 0.6, 0.3, 1.0],   "orbitalPeriod": 900.0,  "startAngle": 120.0, "iconSize": 12 },
+    { "name": "Umbris",  "color": [0.7, 0.5, 0.9, 1.0],   "orbitalPeriod": 1200.0, "startAngle": 240.0, "iconSize": 10 }
+  ],
+  "ping": {
+    "decayDuration": 5.0,
+    "ringCount": 3,
+    "maxRingRadius": 20.0,
+    "defaultColor": [1.0, 0.9, 0.3, 1.0],
+    "worldIndicatorSize": 32,
+    "maxActivePings": 5
+  },
+  "clock": {
+    "showByDefault": true,
+    "defaultMode": "real",
+    "fontSize": 9,
+    "warchiefTimeEnabled": false
+  },
+  "wind": {
+    "showOnBorder": true,
+    "arrowSize": 10
+  }
+}

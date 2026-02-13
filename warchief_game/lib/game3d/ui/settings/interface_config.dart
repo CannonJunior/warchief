@@ -16,6 +16,8 @@ class InterfaceConfig {
   final String name;
   final String description;
   final IconData icon;
+  final String category;       // 'game_abilities' or 'ui_panels'
+  final String? shortcutKey;   // e.g. 'P', 'C', 'B', 'SHIFT+D', 'M', 'F', null
   bool isVisible;
   Offset position;
   final Offset defaultPosition;
@@ -25,6 +27,8 @@ class InterfaceConfig {
     required this.name,
     required this.description,
     required this.icon,
+    required this.category,
+    this.shortcutKey,
     required this.isVisible,
     required this.position,
     required this.defaultPosition,
@@ -40,6 +44,8 @@ class InterfaceConfig {
       name: name,
       description: description,
       icon: icon,
+      category: category,
+      shortcutKey: shortcutKey,
       isVisible: isVisible ?? this.isVisible,
       position: position ?? this.position,
       defaultPosition: defaultPosition,
@@ -55,6 +61,7 @@ class InterfaceConfig {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'category': category,
       'isVisible': isVisible,
       'positionX': position.dx,
       'positionY': position.dy,
@@ -91,12 +98,56 @@ class InterfaceConfigManager {
 
   /// Initialize default interface configurations
   void _initializeDefaults() {
+    // ===== GAME ABILITIES CATEGORY =====
+
+    // Abilities Codex (Press P to toggle)
+    _interfaces['abilities_codex'] = InterfaceConfig(
+      id: 'abilities_codex',
+      name: 'Abilities Codex',
+      description: 'Browse and drag abilities to action bar',
+      icon: Icons.auto_stories,
+      category: 'game_abilities',
+      shortcutKey: 'P',
+      isVisible: true,
+      position: const Offset(0, 0),
+      defaultPosition: const Offset(0, 0),
+    );
+
+    // Character Panel (Press C to toggle)
+    _interfaces['character_panel'] = InterfaceConfig(
+      id: 'character_panel',
+      name: 'Character Panel',
+      description: 'Equipment, stats, and character info',
+      icon: Icons.person,
+      category: 'game_abilities',
+      shortcutKey: 'C',
+      isVisible: true,
+      position: const Offset(0, 0),
+      defaultPosition: const Offset(0, 0),
+    );
+
+    // Bag Panel (Press B to toggle)
+    _interfaces['bag_panel'] = InterfaceConfig(
+      id: 'bag_panel',
+      name: 'Bag Panel',
+      description: 'Inventory and item management',
+      icon: Icons.backpack,
+      category: 'game_abilities',
+      shortcutKey: 'B',
+      isVisible: true,
+      position: const Offset(0, 0),
+      defaultPosition: const Offset(0, 0),
+    );
+
+    // ===== UI PANELS CATEGORY =====
+
     // Instructions Overlay (top-left)
     _interfaces['instructions'] = InterfaceConfig(
       id: 'instructions',
       name: 'Instructions',
       description: 'Control hints and camera info',
       icon: Icons.help_outline,
+      category: 'ui_panels',
       isVisible: true,
       position: const Offset(10, 10),
       defaultPosition: const Offset(10, 10),
@@ -108,6 +159,7 @@ class InterfaceConfigManager {
       name: 'Combat HUD',
       description: 'Player and target frames with action bar',
       icon: Icons.sports_martial_arts,
+      category: 'ui_panels',
       isVisible: true,
       position: const Offset(300, 500),
       defaultPosition: const Offset(300, 500),
@@ -119,6 +171,7 @@ class InterfaceConfigManager {
       name: 'Boss Abilities',
       description: 'Boss monster health and abilities',
       icon: Icons.dangerous,
+      category: 'ui_panels',
       isVisible: true,
       position: const Offset(10, 300),
       defaultPosition: const Offset(10, 300),
@@ -130,77 +183,94 @@ class InterfaceConfigManager {
       name: 'AI Chat',
       description: 'Monster AI decision log',
       icon: Icons.chat,
+      category: 'ui_panels',
       isVisible: true,
       position: const Offset(10, 450),
       defaultPosition: const Offset(10, 450),
     );
 
-    // Formation Panel (right side)
-    _interfaces['formation_panel'] = InterfaceConfig(
-      id: 'formation_panel',
-      name: 'Formation Panel',
-      description: 'Ally formation selector (SHIFT+R)',
-      icon: Icons.grid_view,
-      isVisible: true,
-      position: const Offset(800, 150),
-      defaultPosition: const Offset(800, 150),
-    );
-
-    // Attack Command Panel (right side)
-    _interfaces['attack_panel'] = InterfaceConfig(
-      id: 'attack_panel',
-      name: 'Attack Panel',
-      description: 'Ally attack command (SHIFT+T)',
-      icon: Icons.flash_on,
-      isVisible: true,
-      position: const Offset(800, 260),
-      defaultPosition: const Offset(800, 260),
-    );
-
-    // Hold Command Panel (right side)
-    _interfaces['hold_panel'] = InterfaceConfig(
-      id: 'hold_panel',
-      name: 'Hold Panel',
-      description: 'Ally hold command (SHIFT+G)',
-      icon: Icons.pan_tool,
-      isVisible: true,
-      position: const Offset(800, 370),
-      defaultPosition: const Offset(800, 370),
-    );
-
-    // Follow Command Panel (right side)
-    _interfaces['follow_panel'] = InterfaceConfig(
-      id: 'follow_panel',
-      name: 'Follow Panel',
-      description: 'Ally follow command (SHIFT+F)',
-      icon: Icons.directions_walk,
-      isVisible: true,
-      position: const Offset(800, 480),
-      defaultPosition: const Offset(800, 480),
-    );
-
-    // Party Frames (not used separately, part of combat_hud)
+    // Party Frames (part of combat_hud)
     _interfaces['party_frames'] = InterfaceConfig(
       id: 'party_frames',
       name: 'Party Frames',
       description: 'Allied unit health and status (part of Combat HUD)',
       icon: Icons.group,
+      category: 'ui_panels',
       isVisible: true,
       position: const Offset(0, 0),
       defaultPosition: const Offset(0, 0),
     );
 
-    // Minion Frames (not used separately, part of combat_hud)
+    // Minion Frames (part of combat_hud)
     _interfaces['minion_frames'] = InterfaceConfig(
       id: 'minion_frames',
       name: 'Minion Frames',
       description: 'Adversary minion health and status (part of Combat HUD)',
       icon: Icons.pest_control,
+      category: 'ui_panels',
+      isVisible: true,
+      position: const Offset(0, 0),
+      defaultPosition: const Offset(0, 0),
+    );
+
+    // Minimap (fixed top-right, Press M to toggle)
+    _interfaces['minimap'] = InterfaceConfig(
+      id: 'minimap',
+      name: 'Minimap',
+      description: 'Overhead terrain map with entity tracking',
+      icon: Icons.map,
+      category: 'ui_panels',
+      shortcutKey: 'M',
+      isVisible: true,
+      position: const Offset(0, 0),
+      defaultPosition: const Offset(0, 0),
+    );
+
+    // DPS Panel (Press SHIFT+D to toggle)
+    _interfaces['dps_panel'] = InterfaceConfig(
+      id: 'dps_panel',
+      name: 'DPS Panel',
+      description: 'Damage-per-second testing with target dummy',
+      icon: Icons.bar_chart,
+      category: 'ui_panels',
+      shortcutKey: 'SHIFT+D',
+      isVisible: true,
+      position: const Offset(0, 0),
+      defaultPosition: const Offset(0, 0),
+    );
+
+    // Ally Commands (Press F to toggle)
+    _interfaces['ally_commands'] = InterfaceConfig(
+      id: 'ally_commands',
+      name: 'Ally Commands',
+      description: 'Formation and command controls for allies',
+      icon: Icons.groups,
+      category: 'ui_panels',
+      shortcutKey: 'F',
       isVisible: true,
       position: const Offset(0, 0),
       defaultPosition: const Offset(0, 0),
     );
   }
+
+  /// Category display labels
+  static const Map<String, String> _categoryLabels = {
+    'game_abilities': 'Game Abilities',
+    'ui_panels': 'UI Panels',
+  };
+
+  /// Ordered list of category IDs
+  static const List<String> _categoryOrder = ['game_abilities', 'ui_panels'];
+
+  /// Get ordered category IDs
+  List<String> get categories => _categoryOrder;
+
+  /// Get human-readable label for a category ID
+  String categoryLabel(String id) => _categoryLabels[id] ?? id;
+
+  /// Get all interfaces belonging to a specific category
+  List<InterfaceConfig> interfacesForCategory(String category) =>
+      _interfaces.values.where((i) => i.category == category).toList();
 
   /// Get all interface configs
   List<InterfaceConfig> get allInterfaces => _interfaces.values.toList();

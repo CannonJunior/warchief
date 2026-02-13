@@ -21,6 +21,7 @@ import 'game_config.dart';
 import 'mana_config.dart';
 import 'wind_config.dart';
 import 'wind_state.dart';
+import 'minimap_state.dart';
 import '../utils/movement_prediction.dart';
 import '../utils/bezier_path.dart';
 import '../ai/tactical_positioning.dart';
@@ -814,6 +815,14 @@ class GameState {
     final x5 = x3 * x * x;
     return x + x3 / 6 + 3 * x5 / 40;
   }
+
+  // ==================== MINIMAP STATE ====================
+
+  /// Minimap state: zoom, pings, elapsed time, terrain cache
+  final MinimapState minimapState = MinimapState();
+
+  /// Whether the minimap is currently visible (M key toggle)
+  bool minimapOpen = true;
 
   // ==================== UI STATE ====================
 
