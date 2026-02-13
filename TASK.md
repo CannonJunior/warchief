@@ -4,6 +4,22 @@
 
 ### ✅ Completed - 2026-02-12
 
+#### Minimap Rotation Fix (Rotating Minimap)
+- ✅ Converted minimap from fixed-north to player-relative rotating view (forward = always up, like WoW)
+- ✅ Updated `minimap_terrain_painter.dart` — added `playerRotation` param, rotates pixel-to-world sampling so terrain rotates with player, rotates ley line coordinate conversion, `shouldRepaint` triggers on rotation change
+- ✅ Updated `minimap_entity_painter.dart` — rotates `_worldToMinimap` coordinates by player facing, simplified `_drawPlayerArrow` to always point up (no rotation needed in rotating minimap)
+- ✅ Updated `minimap_ping_overlay.dart` — added `playerRotation` param, rotates ping coordinate conversion
+- ✅ Updated `minimap_widget.dart` — passes `playerRotation` to terrain and ping painters, updated `_handleTap` to un-rotate tap coordinates back to world space
+- ✅ Fixes: turning left on screen now rotates minimap correctly (entities to your left appear on the left), arrow always points forward, no more mirrored sensing
+- ✅ Build verified clean (`flutter build web`)
+
+#### Minimap Improvements
+- ✅ Made minimap draggable using `_draggable()` pattern (same as all other panels), default position top-right
+- ✅ Fixed player arrow direction — rotated 180 degrees so it points in the direction the player is facing
+- ✅ Made player arrow bright white with black shadow outline for better visibility (was faint silver with transparent glow)
+- ✅ Fixed terrain coverage when zoomed out — uses `SimplexNoise` directly as fallback for unloaded chunks beyond render distance, terrain now fills entire circular minimap at all zoom levels
+- ✅ Build verified clean (`flutter build web`)
+
 #### Categorized Interface Settings
 - ✅ Added `category` and `shortcutKey` fields to `InterfaceConfig` class (constructor, copyWith, toJson)
 - ✅ Removed 4 stale registrations (formation_panel, attack_panel, hold_panel, follow_panel) replaced by unified AllyCommandsPanel

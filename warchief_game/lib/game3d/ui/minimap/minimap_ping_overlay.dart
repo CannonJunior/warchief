@@ -12,6 +12,7 @@ import '../../utils/screen_projection.dart';
 class MinimapPingPainter extends CustomPainter {
   final double playerX;
   final double playerZ;
+  final double playerRotation;
   final double viewRadius;
   final List<MinimapPing> pings;
   final double elapsedTime;
@@ -19,6 +20,7 @@ class MinimapPingPainter extends CustomPainter {
   MinimapPingPainter({
     required this.playerX,
     required this.playerZ,
+    required this.playerRotation,
     required this.viewRadius,
     required this.pings,
     required this.elapsedTime,
@@ -70,12 +72,20 @@ class MinimapPingPainter extends CustomPainter {
   }
 
   /// Convert world coordinates to minimap pixel position.
+  /// Rotates by player facing so forward = up on minimap.
   Offset? _worldToMinimap(double worldX, double worldZ, double half) {
     final dx = worldX - playerX;
     final dz = worldZ - playerZ;
 
-    final mx = half + (dx / viewRadius) * half;
-    final my = half - (dz / viewRadius) * half;
+    // Rotate into player-relative frame (forward = up)
+    final rotRad = playerRotation * math.pi / 180.0;
+    final cosR = math.cos(rotRad);
+    final sinR = math.sin(rotRad);
+    final rightComp = dx * cosR - dz * sinR;
+    final fwdComp = -dx * sinR - dz * cosR;
+
+    final mx = half + (rightComp / viewRadius) * half;
+    final my = half - (fwdComp / viewRadius) * half;
 
     // Check within circular bounds (allow slight overflow for ping rings)
     final rdx = mx - half;

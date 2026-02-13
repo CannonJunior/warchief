@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../rendering3d/infinite_terrain_manager.dart';
 import '../../../rendering3d/ley_lines.dart';
 import '../../../rendering3d/game_config_terrain.dart';
+import '../../../rendering3d/heightmap.dart';
+import '../../state/game_config.dart';
 import '../../state/minimap_config.dart';
 import '../../state/minimap_state.dart';
 
@@ -17,6 +19,7 @@ import '../../state/minimap_state.dart';
 class MinimapTerrainPainter extends CustomPainter {
   final double playerX;
   final double playerZ;
+  final double playerRotation;
   final double viewRadius;
   final InfiniteTerrainManager? terrainManager;
   final LeyLineManager? leyLineManager;
@@ -25,6 +28,7 @@ class MinimapTerrainPainter extends CustomPainter {
   MinimapTerrainPainter({
     required this.playerX,
     required this.playerZ,
+    required this.playerRotation,
     required this.viewRadius,
     required this.terrainManager,
     required this.leyLineManager,
@@ -47,6 +51,37 @@ class MinimapTerrainPainter extends CustomPainter {
     }
   }
 
+  /// Lazy-initialized noise generator for terrain beyond loaded chunks.
+  /// Uses same seed and parameters as the infinite terrain manager.
+  static SimplexNoise? _noiseCache;
+  static SimplexNoise get _noise {
+    _noiseCache ??= SimplexNoise(seed: TerrainConfig.seed);
+    return _noiseCache!;
+  }
+
+  /// Generate terrain height directly from noise for unloaded chunks.
+  /// Matches the algorithm in TerrainChunkWithLOD._generateChunkPerlinNoise.
+  static double _noiseHeight(double worldX, double worldZ) {
+    final scale = TerrainConfig.noiseScale;
+    final octaves = TerrainConfig.noiseOctaves;
+    final persistence = TerrainConfig.noisePersistence;
+    final maxH = TerrainConfig.maxHeight;
+
+    double amplitude = 1.0;
+    double frequency = scale;
+    double noiseValue = 0.0;
+    double maxValue = 0.0;
+
+    for (int i = 0; i < octaves; i++) {
+      noiseValue += _noise.noise2D(worldX * frequency, worldZ * frequency) * amplitude;
+      maxValue += amplitude;
+      amplitude *= persistence;
+      frequency *= 2.0;
+    }
+
+    return ((noiseValue / maxValue + 1.0) / 2.0) * maxH;
+  }
+
   /// Sample heightmap and paint terrain colors.
   void _paintTerrain(Canvas canvas, Size size, int resolution) {
     final config = globalMinimapConfig;
@@ -63,8 +98,14 @@ class MinimapTerrainPainter extends CustomPainter {
     final half = size.width / 2;
     final pixelSize = size.width / resolution;
     final halfRadius = half;
+    final groundLevel = GameConfig.groundLevel;
 
     final paint = Paint()..style = PaintingStyle.fill;
+
+    // Pre-compute rotation for player-relative minimap (forward = up)
+    final rotRad = playerRotation * math.pi / 180.0;
+    final cosR = math.cos(rotRad);
+    final sinR = math.sin(rotRad);
 
     for (int py = 0; py < resolution; py++) {
       for (int px = 0; px < resolution; px++) {
@@ -77,12 +118,26 @@ class MinimapTerrainPainter extends CustomPainter {
         final dy = cy - half;
         if (dx * dx + dy * dy > halfRadius * halfRadius) continue;
 
-        // Convert to world coordinates
-        final worldX = playerX + (dx / halfRadius) * viewRadius;
-        final worldZ = playerZ - (dy / halfRadius) * viewRadius;
+        // Convert to world coordinates (rotating minimap: up = forward)
+        final ndx = dx / halfRadius;
+        final ndy = -dy / halfRadius;
+        final rightComp = ndx * viewRadius;
+        final fwdComp = ndy * viewRadius;
+        final worldX = playerX + rightComp * cosR - fwdComp * sinR;
+        final worldZ = playerZ - rightComp * sinR - fwdComp * cosR;
 
-        // Sample terrain height
-        final height = terrainManager!.getTerrainHeight(worldX, worldZ);
+        // Sample terrain height from loaded chunks, fall back to direct
+        // noise when the chunk isn't loaded (zoomed out beyond render distance)
+        double height;
+        if (terrainManager != null) {
+          height = terrainManager!.getTerrainHeight(worldX, worldZ);
+          if (height == groundLevel) {
+            // Chunk not loaded — use noise directly
+            height = _noiseHeight(worldX, worldZ);
+          }
+        } else {
+          height = _noiseHeight(worldX, worldZ);
+        }
         final normalizedHeight = (height / maxHeight).clamp(0.0, 1.0);
 
         // Map height to color
@@ -96,10 +151,8 @@ class MinimapTerrainPainter extends CustomPainter {
           final grassRange = rockThresh - sandThresh;
           final grassT = (normalizedHeight - sandThresh) / grassRange;
           if (grassT < 0.5) {
-            // Sand to grass transition
             color = Color.lerp(sandColor, grassColor, grassT * 2)!;
           } else {
-            // Grass to rock transition
             color = Color.lerp(grassColor, rockColor, (grassT - 0.5) * 2)!;
           }
         }
@@ -166,13 +219,21 @@ class MinimapTerrainPainter extends CustomPainter {
   }
 
   /// Convert world coordinates to minimap pixel position.
+  /// Rotates by player facing so forward = up on minimap.
   /// Returns null if outside the circular view.
   Offset? _worldToMinimap(double worldX, double worldZ, double half) {
     final dx = worldX - playerX;
     final dz = worldZ - playerZ;
 
-    final mx = half + (dx / viewRadius) * half;
-    final my = half - (dz / viewRadius) * half;
+    // Rotate into player-relative frame (forward = up)
+    final rotRad = playerRotation * math.pi / 180.0;
+    final cosR = math.cos(rotRad);
+    final sinR = math.sin(rotRad);
+    final rightComp = dx * cosR - dz * sinR;
+    final fwdComp = -dx * sinR - dz * cosR;
+
+    final mx = half + (rightComp / viewRadius) * half;
+    final my = half - (fwdComp / viewRadius) * half;
 
     // Check within circular bounds (with small margin for lines)
     final rdx = mx - half;
@@ -194,13 +255,14 @@ class MinimapTerrainPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(MinimapTerrainPainter oldDelegate) {
-    // Repaint when player moves significantly or zoom changes
+    // Repaint when player moves significantly, rotates, or zoom changes
     final dx = playerX - oldDelegate.playerX;
     final dz = playerZ - oldDelegate.playerZ;
     final moved = math.sqrt(dx * dx + dz * dz);
     final threshold = viewRadius *
         (globalMinimapConfig?.refreshThresholdFraction ?? 0.3);
     return moved > threshold ||
+        playerRotation != oldDelegate.playerRotation ||
         viewRadius != oldDelegate.viewRadius;
   }
 }

@@ -92,6 +92,7 @@ class MinimapWidget extends StatelessWidget {
                             painter: MinimapTerrainPainter(
                               playerX: playerX,
                               playerZ: playerZ,
+                              playerRotation: gameState.playerRotation,
                               viewRadius: viewRadius,
                               terrainManager:
                                   gameState.infiniteTerrainManager,
@@ -113,6 +114,7 @@ class MinimapWidget extends StatelessWidget {
                             painter: MinimapPingPainter(
                               playerX: playerX,
                               playerZ: playerZ,
+                              playerRotation: gameState.playerRotation,
                               viewRadius: viewRadius,
                               pings: minimapState.pings,
                               elapsedTime: minimapState.elapsedTime,
@@ -145,6 +147,7 @@ class MinimapWidget extends StatelessWidget {
   }
 
   /// Convert tap position on the minimap to world coordinates and create ping.
+  /// Accounts for the rotating minimap (forward = up).
   void _handleTap(TapDownDetails details, double size, double playerX,
       double playerZ, double viewRadius) {
     final localPos = details.localPosition;
@@ -155,9 +158,18 @@ class MinimapWidget extends StatelessWidget {
     final dy = localPos.dy - half;
     if (dx * dx + dy * dy > half * half) return;
 
-    // Convert minimap pixel position to world coordinates
-    final worldX = playerX + (dx / half) * viewRadius;
-    final worldZ = playerZ - (dy / half) * viewRadius; // Z inverted
+    // Convert minimap pixel to player-relative then to world coordinates
+    final ndx = dx / half;
+    final ndy = -dy / half;
+    final rightComp = ndx * viewRadius;
+    final fwdComp = ndy * viewRadius;
+
+    // Un-rotate from player-relative frame back to world
+    final rotRad = gameState.playerRotation * math.pi / 180.0;
+    final cosR = math.cos(rotRad);
+    final sinR = math.sin(rotRad);
+    final worldX = playerX + rightComp * cosR - fwdComp * sinR;
+    final worldZ = playerZ - rightComp * sinR - fwdComp * cosR;
 
     onPingCreated(worldX, worldZ);
   }

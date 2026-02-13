@@ -945,6 +945,7 @@ class _Game3DState extends State<Game3D> {
     'combat_hud': Offset(300, 500),
     'monster_abilities': Offset(10, 300),
     'ai_chat': Offset(10, 450),
+    'minimap': Offset(1410, 8),
   };
 
   /// Track SHIFT+key state for formation panel toggling
@@ -1335,17 +1336,16 @@ class _Game3DState extends State<Game3D> {
                 screenSize: MediaQuery.of(context).size,
               ),
 
-            // Minimap (top-right corner, replaces standalone WindIndicator)
+            // Minimap (draggable, replaces standalone WindIndicator)
             if (gameState.minimapOpen && _isVisible('minimap'))
-              Positioned(
-                top: 8,
-                right: 8,
-                child: MinimapWidget(
+              _draggable('minimap',
+                MinimapWidget(
                   gameState: gameState,
                   windState: gameState.windState,
                   camera: camera,
                   onPingCreated: _handleMinimapPing,
                 ),
+                width: 180, height: 200,
               ),
 
             // Instructions overlay (draggable)

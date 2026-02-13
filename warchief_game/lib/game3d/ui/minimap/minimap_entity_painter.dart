@@ -102,38 +102,32 @@ class MinimapEntityPainter extends CustomPainter {
     _drawPlayerArrow(canvas, half);
   }
 
-  /// Draw the player as a rotated triangle at the minimap center.
+  /// Draw the player as a triangle at the minimap center, always pointing up.
+  /// In a rotating minimap, forward is always up so the arrow is fixed.
   void _drawPlayerArrow(Canvas canvas, double half) {
     final config = globalMinimapConfig;
-    final playerColor = _colorFromList(
-        config?.playerColor ?? [0.75, 0.75, 0.75, 1.0]);
     final playerSize = (config?.playerSize ?? 8).toDouble();
-    final rotation = gameState.playerRotation;
-
-    // Convert rotation to radians (game rotation: 0=north, increases clockwise)
-    final angleRad = rotation * math.pi / 180.0;
 
     canvas.save();
     canvas.translate(half, half);
-    canvas.rotate(angleRad);
 
     final path = Path()
-      ..moveTo(0, -playerSize) // Tip (forward)
+      ..moveTo(0, -playerSize) // Tip (forward = up)
       ..lineTo(-playerSize * 0.6, playerSize * 0.5) // Bottom left
       ..lineTo(0, playerSize * 0.2) // Bottom notch
       ..lineTo(playerSize * 0.6, playerSize * 0.5) // Bottom right
       ..close();
 
-    // Outline glow
+    // Black shadow outline for contrast
     canvas.drawPath(
       path,
       Paint()
-        ..color = playerColor.withOpacity(0.3)
+        ..color = Colors.black.withOpacity(0.7)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
+        ..strokeWidth = 3,
     );
-    // Filled arrow
-    canvas.drawPath(path, Paint()..color = playerColor);
+    // Bright white filled arrow
+    canvas.drawPath(path, Paint()..color = Colors.white);
 
     canvas.restore();
   }
@@ -169,13 +163,22 @@ class MinimapEntityPainter extends CustomPainter {
   }
 
   /// Convert world coordinates to minimap pixel position.
+  /// Rotates by player facing so forward = up on minimap.
   Offset? _worldToMinimap(double worldX, double worldZ,
       double playerX, double playerZ, double half) {
     final dx = worldX - playerX;
     final dz = worldZ - playerZ;
 
-    final mx = half + (dx / viewRadius) * half;
-    final my = half - (dz / viewRadius) * half;
+    // Rotate into player-relative frame (forward = up)
+    final rotation = gameState.playerRotation;
+    final rotRad = rotation * math.pi / 180.0;
+    final cosR = math.cos(rotRad);
+    final sinR = math.sin(rotRad);
+    final rightComp = dx * cosR - dz * sinR;
+    final fwdComp = -dx * sinR - dz * cosR;
+
+    final mx = half + (rightComp / viewRadius) * half;
+    final my = half - (fwdComp / viewRadius) * half;
 
     // Check within circular bounds
     final rdx = mx - half;
