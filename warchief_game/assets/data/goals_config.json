@@ -1,0 +1,108 @@
+{
+  "warrior_spirit": {
+    "model": "llama3.2",
+    "temperature": 0.8,
+    "personality": "You are the Warrior Spirit, an ancient warrior soul bound to the warchief's bloodline. You speak with gruff wisdom, using short sentences. You never break character. You care deeply about the warchief's growth but express it through challenge, not coddling.",
+    "greeting": "The flame stirs, Warchief. What weighs on your sword arm?",
+    "goal_check_interval_seconds": 120,
+    "max_active_goals": 5,
+    "reflection_prompt_template": "The warchief has completed: {goal_name} — {goal_description}. Reflect on this achievement in 1-2 sentences as the Warrior Spirit."
+  },
+  "goal_categories": {
+    "combat": { "color": [0.9, 0.3, 0.3, 1.0], "icon": "sword" },
+    "exploration": { "color": [0.3, 0.7, 0.9, 1.0], "icon": "compass" },
+    "mastery": { "color": [0.9, 0.7, 0.2, 1.0], "icon": "star" },
+    "community": { "color": [0.4, 0.8, 0.4, 1.0], "icon": "home" },
+    "spirit": { "color": [0.7, 0.4, 0.9, 1.0], "icon": "spirit" }
+  },
+  "goals": {
+    "first_blood": {
+      "name": "First Blood",
+      "description": "Strike down your first enemy in combat.",
+      "category": "combat",
+      "tracking_type": "counter",
+      "default_source": "warriorSpirit",
+      "tracking_event": "enemy_killed",
+      "target_value": 1,
+      "spirit_reflection": "The first kill changes a warrior. Not the blade, but the resolve behind it.",
+      "rewards": { "narrative": "The Warrior Spirit acknowledges your blade." }
+    },
+    "gnoll_hunter": {
+      "name": "Gnoll Hunter",
+      "description": "Defeat 5 Gnoll Marauders to protect your village.",
+      "category": "combat",
+      "tracking_type": "counter",
+      "default_source": "villageChief",
+      "tracking_event": "kill_gnoll_marauder",
+      "target_value": 5,
+      "spirit_reflection": "The pack thins. But remember — a cornered gnoll fights hardest.",
+      "rewards": { "narrative": "The village chief nods in grateful respect." }
+    },
+    "wind_walker": {
+      "name": "Wind Walker",
+      "description": "Achieve flight and maintain it for 30 seconds.",
+      "category": "mastery",
+      "tracking_type": "threshold",
+      "default_source": "warriorSpirit",
+      "tracking_event": "flight_duration",
+      "target_value": 30,
+      "spirit_reflection": "To walk the wind is to trust what you cannot see.",
+      "rewards": { "aura_bonus": "wind_affinity_duration_+5s" }
+    },
+    "ley_pilgrim": {
+      "name": "Ley Pilgrim",
+      "description": "Visit 3 different ley line power nodes.",
+      "category": "exploration",
+      "tracking_type": "counter",
+      "default_source": "selfDiscovery",
+      "tracking_event": "visit_power_node",
+      "target_value": 3,
+      "spirit_reflection": "The earth remembers those who walk its veins.",
+      "rewards": { "narrative": "You feel the ley lines pulse in recognition." }
+    },
+    "builders_pride": {
+      "name": "Builder's Pride",
+      "description": "Upgrade the Warchief's Longhouse to Tier 2.",
+      "category": "community",
+      "tracking_type": "counter",
+      "default_source": "villager",
+      "tracking_event": "building_upgraded",
+      "target_value": 1,
+      "spirit_reflection": "Stone walls do not make a home. But they help.",
+      "rewards": { "narrative": "Your people sleep safer tonight." }
+    },
+    "derecho_survivor": {
+      "name": "Derecho Survivor",
+      "description": "Survive a full derecho storm without taking shelter.",
+      "category": "mastery",
+      "tracking_type": "narrative",
+      "default_source": "adversary",
+      "tracking_event": "derecho_survived",
+      "target_value": 1,
+      "spirit_reflection": "The storm tried to break you. It failed.",
+      "rewards": { "narrative": "The wind remembers your defiance." }
+    },
+    "sword_mastery": {
+      "name": "Way of the Blade",
+      "description": "Land 10 consecutive sword strikes without missing.",
+      "category": "mastery",
+      "tracking_type": "mastery",
+      "default_source": "warriorSpirit",
+      "tracking_event": "consecutive_melee_hits",
+      "target_value": 10,
+      "spirit_reflection": "The blade is not swung. It arrives.",
+      "rewards": { "narrative": "Your strikes flow like water." }
+    },
+    "ally_commander": {
+      "name": "Commander's Voice",
+      "description": "Issue 20 ally commands in combat.",
+      "category": "community",
+      "tracking_type": "counter",
+      "default_source": "warriorSpirit",
+      "tracking_event": "ally_command_issued",
+      "target_value": 20,
+      "spirit_reflection": "A true warchief's greatest weapon is not a sword — it is trust.",
+      "rewards": { "narrative": "Your allies fight with renewed purpose." }
+    }
+  }
+}

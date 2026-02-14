@@ -7,6 +7,7 @@ import '../ui/damage_indicators.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/impact_effect.dart';
+import 'goal_system.dart';
 
 /// Target types for damage application
 enum DamageTarget { player, monster, ally, minion, dummy }
@@ -478,6 +479,7 @@ class CombatSystem {
     }
 
     // Check boss monster first
+    final bossHealthBefore = gameState.monsterHealth;
     if (checkAndDamageMonster(
       gameState,
       attackerPosition: attackerPosition,
@@ -493,10 +495,24 @@ class CombatSystem {
       if (isMeleeDamage) {
         gameState.generateRedManaFromMelee(damage);
       }
+      // Track melee streaks for mastery goals
+      if (isMeleeDamage) {
+        gameState.consecutiveMeleeHits++;
+        GoalSystem.processEvent(gameState, 'consecutive_melee_hits',
+            metadata: {'streak': gameState.consecutiveMeleeHits});
+      }
+      // Emit goal events on boss kill
+      if (bossHealthBefore > 0 && gameState.monsterHealth <= 0) {
+        GoalSystem.processEvent(gameState, 'enemy_killed');
+        GoalSystem.processEvent(gameState, 'boss_killed');
+      }
       return true;
     }
 
-    // Then check minions
+    // Then check minions — snapshot alive status before damage
+    final aliveBeforeIds = gameState.aliveMinions
+        .map((m) => m.instanceId)
+        .toSet();
     final minionHit = checkAndDamageMinions(
       gameState,
       attackerPosition: attackerPosition,
@@ -509,9 +525,23 @@ class CombatSystem {
       isMelee: isMeleeDamage,
     );
 
-    // Generate red mana from melee damage to minions
-    if (minionHit && isMeleeDamage) {
-      gameState.generateRedManaFromMelee(damage);
+    if (minionHit) {
+      // Generate red mana from melee damage to minions
+      if (isMeleeDamage) {
+        gameState.generateRedManaFromMelee(damage);
+        // Track melee streaks for mastery goals
+        gameState.consecutiveMeleeHits++;
+        GoalSystem.processEvent(gameState, 'consecutive_melee_hits',
+            metadata: {'streak': gameState.consecutiveMeleeHits});
+      }
+      // Check for minion kills — emit goal events
+      for (final minion in gameState.minions) {
+        if (aliveBeforeIds.contains(minion.instanceId) && !minion.isAlive) {
+          GoalSystem.processEvent(gameState, 'enemy_killed');
+          GoalSystem.processEvent(
+              gameState, 'kill_${minion.definition.id}');
+        }
+      }
     }
 
     return minionHit;

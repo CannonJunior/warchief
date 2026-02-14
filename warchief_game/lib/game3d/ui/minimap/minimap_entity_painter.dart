@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../state/game_state.dart';
 import '../../state/minimap_config.dart';
+import '../../state/building_config.dart';
 
 /// CustomPainter that draws entity blips on the minimap.
 ///
@@ -51,6 +52,24 @@ class MinimapEntityPainter extends CustomPainter {
         if (pos != null) {
           _drawDiamond(canvas, pos, 3, nodeColor);
         }
+      }
+    }
+
+    // Draw buildings (colored squares)
+    for (final building in gameState.buildings) {
+      if (!building.isPlaced) continue;
+      final pos = _worldToMinimap(
+          building.transform.position.x,
+          building.transform.position.z,
+          playerX, playerZ, half);
+      if (pos != null) {
+        final tierDef = building.tierDef;
+        final bColor = _colorFromList(tierDef.minimapColor);
+        final bSize = tierDef.minimapSize;
+        canvas.drawRect(
+          Rect.fromCenter(center: pos, width: bSize, height: bSize),
+          Paint()..color = bColor,
+        );
       }
     }
 

@@ -56,6 +56,14 @@ class WindConfig extends ChangeNotifier {
   double get minAltitudeForDescent =>
       _resolve('flight.minAltitudeForDescent', 10.0);
   double get initialManaCost => _resolve('flight.initialManaCost', 15.0);
+  double get flightBankRate => _resolve('flight.bankRate', 120.0);
+  double get flightMaxBankAngle => _resolve('flight.maxBankAngle', 60.0);
+  double get flightAutoLevelRate => _resolve('flight.autoLevelRate', 90.0);
+  double get flightAutoLevelThreshold =>
+      _resolve('flight.autoLevelThreshold', 90.0);
+  double get flightBankToTurnMultiplier =>
+      _resolve('flight.bankToTurnMultiplier', 2.5);
+  double get flightBarrelRollRate => _resolve('flight.barrelRollRate', 360.0);
 
   // ==================== TRAIL GETTERS ====================
 

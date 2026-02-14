@@ -63,6 +63,9 @@ class Camera3D {
   final double _thirdPersonFOV = 90.0; // Wide FOV for third-person view
   final double _staticFOV = 60.0;      // Standard FOV for static camera
 
+  /// Camera roll angle in degrees (for cockpit-style banking tilt)
+  double rollAngle = 0.0;
+
   /// Smooth camera interpolation speed
   final double _cameraLerpSpeed = 8.0;
 
@@ -82,13 +85,17 @@ class Camera3D {
   ///
   /// View matrix transforms world space to camera space.
   /// This is the inverse of the camera's transform matrix.
+  /// When rollAngle != 0, the up vector is rotated around the view direction
+  /// to create cockpit-style camera tilt during flight banking.
   Matrix4 getViewMatrix() {
+    final up = _getCameraUpVector();
+
     if (_target != null) {
       // Look-at mode: camera looks at target
       return makeViewMatrix(
         transform.position,
         _target!,
-        Vector3(0, 1, 0), // Up vector
+        up,
       );
     } else {
       // Free-look mode: use camera's forward direction
@@ -97,9 +104,35 @@ class Camera3D {
       return makeViewMatrix(
         transform.position,
         lookAt,
-        Vector3(0, 1, 0),
+        up,
       );
     }
+  }
+
+  /// Compute the camera up vector, rotated by rollAngle for banking tilt.
+  ///
+  /// Uses Rodrigues' rotation formula to rotate world-up around the
+  /// view direction axis by rollAngle degrees.
+  Vector3 _getCameraUpVector() {
+    if (rollAngle == 0.0) return Vector3(0, 1, 0);
+
+    // Determine view direction
+    Vector3 viewDir;
+    if (_target != null) {
+      viewDir = (_target! - transform.position).normalized();
+    } else {
+      viewDir = transform.forward;
+    }
+
+    // Rodrigues' rotation: rotate worldUp around viewDir by rollAngle
+    final rollRad = radians(rollAngle);
+    final cosA = math.cos(rollRad);
+    final sinA = math.sin(rollRad);
+    final worldUp = Vector3(0, 1, 0);
+    final dot = viewDir.dot(worldUp);
+    final cross = viewDir.cross(worldUp);
+
+    return worldUp * cosA + cross * sinA + viewDir * (dot * (1 - cosA));
   }
 
   /// Get the projection matrix for rendering

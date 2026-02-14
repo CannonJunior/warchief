@@ -58,6 +58,12 @@
     "lowManaThreshold": 33.0,
     "lowManaDescentRate": 2.0,
     "minAltitudeForDescent": 10.0,
-    "initialManaCost": 15.0
+    "initialManaCost": 15.0,
+    "bankRate": 120.0,
+    "maxBankAngle": 60.0,
+    "autoLevelRate": 90.0,
+    "autoLevelThreshold": 90.0,
+    "bankToTurnMultiplier": 2.5,
+    "barrelRollRate": 360.0
   }
 }

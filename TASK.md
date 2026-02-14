@@ -2,6 +2,53 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-13
+
+#### Flight Banking & Barrel Roll System
+- ✅ Added `flightBankAngle` field to `game_state.dart` flight state section, reset in `startFlight()` and `endFlight()`
+- ✅ Added 6 banking config values to `wind_config.json` `flight` section: `bankRate`, `maxBankAngle`, `autoLevelRate`, `autoLevelThreshold`, `bankToTurnMultiplier`, `barrelRollRate`
+- ✅ Added 6 banking getters to `wind_config.dart` following existing `_resolve` pattern
+- ✅ Replaced Q/E disabled section in `input_system.dart` with full banking/barrel roll logic
+- ✅ Modified A/D yaw to use bank-enhanced turn rate (sin-based multiplier formula)
+- ✅ Barrel roll combos: Q+A = left barrel roll, E+D = right barrel roll (continuous, uncapped)
+- ✅ Auto-level suppressed when |bankAngle| >= 90 deg (inverted flight rule)
+- ✅ Visual roll applied via `playerTransform.rotation.z`
+- ✅ Created `warchief_game/FLIGHT_MECHANICS.md` context document for future sessions
+- ✅ All values config-driven via `wind_config.json` — nothing hardcoded
+- ✅ Build verified clean (`flutter build web`)
+
+#### Goals System - Phase 1: Framework + Warrior Spirit
+- ✅ Created `warchief_game/GOALS_SYSTEM_DESIGN.md` — design doc covering SDT philosophy, goal taxonomy, state machine, Warrior Spirit architecture, data flow, integration points
+- ✅ Created `warchief_game/AI_INTEGRATION.md` — AI reference doc covering OllamaClient API, MCP patterns, AIChatPanel UI, Warrior Spirit integration, how to add new AI features
+- ✅ Created `warchief_game/CLAUDE_TASK_TEMPLATE.md` — reusable prompt template for future Claude Code tasks with patterns reference and anti-patterns
+- ✅ Created `assets/data/goals_config.json` — 8 goal definitions (first_blood, gnoll_hunter, wind_walker, ley_pilgrim, builders_pride, derecho_survivor, sword_mastery, ally_commander), Warrior Spirit config, goal category colors
+- ✅ Created `lib/game3d/state/goals_config.dart` — config class following BuildingConfig/ManaConfig pattern with JSON asset defaults, global singleton, dot-notation resolution
+- ✅ Created `lib/models/goal.dart` — Goal, GoalDefinition, GoalSource, GoalTrackingType, GoalStatus, GoalCategory enums with JSON parsing
+- ✅ Created `lib/game3d/systems/goal_system.dart` — event processing (counter/threshold/mastery/discovery/narrative), completion checks, goal acceptance/abandonment
+- ✅ Created `lib/game3d/ai/warrior_spirit.dart` — hybrid deterministic+LLM Warrior Spirit with Ollama chat, narrative goal suggestions, fallback static text, periodic update, initial greeting
+- ✅ Updated `lib/game3d/state/game_state.dart` — added goals list, activeGoals/completedGoals getters, warriorSpiritMessages, pendingSpiritGoal, goalsPanelOpen, warriorSpiritPanelOpen, consecutiveMeleeHits, visitedPowerNodes
+- ✅ Created `lib/game3d/ui/goals_panel.dart` — draggable G-key panel with category-grouped goals, progress bars, pending spirit suggestion with accept/decline buttons
+- ✅ Created `lib/game3d/ui/warrior_spirit_panel.dart` — draggable V-key chat panel with message history, text input, send button, "Spirit is thinking..." indicator
+- ✅ Updated `lib/game3d/game3d_widget.dart` — GoalsConfig init, WarriorSpirit init, G/V key handlers, Escape close, game loop Warrior Spirit update, flight duration tracking, power node visit tracking, ally command goal events, GoalsPanel + WarriorSpiritPanel UI wiring
+- ✅ Updated `lib/game3d/systems/combat_system.dart` — goal event emission on enemy kills (enemy_killed, kill_<type>, boss_killed), melee streak tracking (consecutive_melee_hits)
+- ✅ All values config-driven via `goals_config.json` — no hardcoded goal data
+- ✅ All new files under 500 lines
+- ✅ Build verified clean (`flutter build web`)
+
+#### Building System - Phase 1: Warchief's Home
+- ✅ Created `assets/data/building_config.json` — building type definitions (warchief_home, barracks, workshop) with tiers, parts geometry, aura effects, minimap display
+- ✅ Created `lib/game3d/state/building_config.dart` — config class following ManaConfig pattern with JSON asset defaults, global singleton
+- ✅ Created `lib/models/building.dart` — Building + BuildingDefinition + BuildingTierDef models with JSON parsing, aura/range checks, distance calculations
+- ✅ Created `lib/rendering3d/building_mesh.dart` — procedural mesh factory generating foundation, walls (with door cutout), and peaked roof from tier config parts
+- ✅ Created `lib/game3d/systems/building_system.dart` — placement (terrain-snapped), upgrade, aura effects (health+mana regen), ley line proximity bonus
+- ✅ Updated `lib/game3d/state/game_state.dart` — added buildings list, buildingPanelOpen/selectedBuilding UI state, spawnWarchiefHome(), getNearestBuilding()
+- ✅ Updated `lib/game3d/systems/render_system.dart` — added building render loop after ley lines, before shadows
+- ✅ Updated `lib/game3d/ui/minimap/minimap_entity_painter.dart` — added building blips as colored squares from tier config
+- ✅ Created `lib/game3d/ui/building_panel.dart` — draggable info/upgrade panel with aura stats, ley line bonus display, upgrade button
+- ✅ Updated `lib/game3d/game3d_widget.dart` — building config init, H key handler, Escape close, game loop aura update, BuildingPanel wiring, warchief home spawn after config load
+- ✅ All values config-driven via `building_config.json` — no hardcoded building data
+- ✅ All new files under 500 lines
+
 ### ✅ Completed - 2026-02-12
 
 #### Minimap North Indicator + Rotation Toggle + Fixed-North Mirror Fix

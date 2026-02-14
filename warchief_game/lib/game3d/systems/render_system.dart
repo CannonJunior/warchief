@@ -60,6 +60,13 @@ class RenderSystem {
     // Render Ley Lines (magical energy lines on terrain)
     _renderLeyLines(renderer, camera, gameState);
 
+    // Render buildings (static structures on terrain, before characters)
+    for (final building in gameState.buildings) {
+      if (building.isPlaced) {
+        renderer.render(building.mesh, building.transform, camera);
+      }
+    }
+
     // Render shadow (before player so it appears underneath)
     if (gameState.shadowMesh != null && gameState.shadowTransform != null) {
       renderer.render(gameState.shadowMesh!, gameState.shadowTransform!, camera);

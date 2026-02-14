@@ -16,9 +16,13 @@ import '../../models/inventory.dart';
 import '../../models/item.dart';
 import '../../models/damage_event.dart';
 import '../../models/target_dummy.dart';
+import '../../models/building.dart';
+import '../../models/goal.dart';
+import '../../rendering3d/building_mesh.dart';
 import '../../data/item_database.dart';
 import 'game_config.dart';
 import 'mana_config.dart';
+import 'building_config.dart';
 import 'wind_config.dart';
 import 'wind_state.dart';
 import 'minimap_state.dart';
@@ -824,6 +828,136 @@ class GameState {
   /// Whether the minimap is currently visible (M key toggle)
   bool minimapOpen = true;
 
+  // ==================== BUILDINGS ====================
+
+  /// Active buildings in the world.
+  List<Building> buildings = [];
+
+  /// Whether the building panel is currently open.
+  bool buildingPanelOpen = false;
+
+  /// Currently selected building (for interaction panel).
+  Building? selectedBuilding;
+
+  /// Spawn the warchief's home at a fixed position near player start.
+  ///
+  /// Only spawns once — skips if a warchief_home already exists.
+  void spawnWarchiefHome(InfiniteTerrainManager? terrainManager) {
+    if (buildings.any((b) => b.definition.id == 'warchief_home')) return;
+
+    final config = globalBuildingConfig;
+    final typeDef = BuildingDefinition.fromConfig(
+      'warchief_home',
+      config?.getBuildingType('warchief_home'),
+    );
+    if (typeDef == null) {
+      print('[BUILDING] Warning: warchief_home definition not found in config');
+      return;
+    }
+
+    // Place near player start, offset to the side
+    final homeX = GameConfig.playerStartPosition.x + 15;
+    final homeZ = GameConfig.playerStartPosition.z + 15;
+
+    final building = _placeBuildingInternal(
+      definition: typeDef,
+      worldX: homeX,
+      worldZ: homeZ,
+      terrainManager: terrainManager,
+    );
+
+    buildings.add(building);
+    print('[BUILDING] Warchief Home placed at ($homeX, $homeZ)');
+  }
+
+  /// Internal helper: place a building and return it.
+  Building _placeBuildingInternal({
+    required BuildingDefinition definition,
+    required double worldX,
+    required double worldZ,
+    required InfiniteTerrainManager? terrainManager,
+    int tier = 0,
+  }) {
+    // Imported inline to avoid circular dependency
+    // Uses BuildingSystem.placeBuilding from systems layer
+    final tierDef = definition.getTier(tier);
+    final mesh = _createBuildingMeshFromTier(tierDef);
+    double y = 0.0;
+    if (terrainManager != null) {
+      y = terrainManager.getTerrainHeight(worldX, worldZ);
+    }
+    final transform = Transform3d(
+      position: Vector3(worldX, y, worldZ),
+    );
+    return Building(
+      instanceId: '${definition.id}_${buildings.length}',
+      definition: definition,
+      currentTier: tier,
+      mesh: mesh,
+      transform: transform,
+    );
+  }
+
+  /// Create building mesh from tier (delegates to BuildingMesh factory).
+  static Mesh _createBuildingMeshFromTier(BuildingTierDef tier) {
+    // Reason: import is at file level, keeping this as a static method
+    // avoids importing building_system.dart into game_state.dart (circular)
+    return _BuildingMeshHelper.create(tier);
+  }
+
+  /// Get the nearest building to player within a given range.
+  ///
+  /// Returns null if no building is within range.
+  Building? getNearestBuilding(double range) {
+    if (playerTransform == null) return null;
+    final px = playerTransform!.position.x;
+    final pz = playerTransform!.position.z;
+
+    Building? nearest;
+    double nearestDist = range;
+
+    for (final building in buildings) {
+      if (!building.isPlaced) continue;
+      final dist = building.distanceTo(px, pz);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = building;
+      }
+    }
+    return nearest;
+  }
+
+  // ==================== GOALS ====================
+
+  /// All goals (active, completed, abandoned).
+  List<Goal> goals = [];
+
+  /// Convenience: only active goals.
+  List<Goal> get activeGoals =>
+      goals.where((g) => g.status == GoalStatus.active).toList();
+
+  /// Convenience: completed goals awaiting reflection.
+  List<Goal> get completedGoals =>
+      goals.where((g) => g.status == GoalStatus.completed).toList();
+
+  /// Warrior Spirit chat messages.
+  List<AIChatMessage> warriorSpiritMessages = [];
+
+  /// Goal the Warrior Spirit is currently suggesting (accept/decline).
+  GoalDefinition? pendingSpiritGoal;
+
+  /// Whether the goals panel is open (G key).
+  bool goalsPanelOpen = false;
+
+  /// Whether the Warrior Spirit panel is open (V key).
+  bool warriorSpiritPanelOpen = false;
+
+  /// Melee hit streak tracker (for mastery goals).
+  int consecutiveMeleeHits = 0;
+
+  /// Visited power node IDs (for exploration goals).
+  Set<String> visitedPowerNodes = {};
+
   // ==================== UI STATE ====================
 
   /// Whether the abilities modal is currently open
@@ -980,6 +1114,9 @@ class GameState {
   /// Current flight speed (modified by ALT boost / Space brake)
   double flightSpeed = 7.0;
 
+  /// Current bank angle in degrees. Positive = right, negative = left.
+  double flightBankAngle = 0.0;
+
   /// Current height above terrain (computed each frame by physics system)
   double flightAltitude = 0.0;
 
@@ -1017,7 +1154,12 @@ class GameState {
     spendWhiteMana(cost);
     isFlying = true;
     flightPitchAngle = 0.0;
+    flightBankAngle = 0.0;
     flightSpeed = config?.flightSpeed ?? 7.0;
+    // Reset visual roll
+    if (playerTransform != null) {
+      playerTransform!.rotation.z = 0.0;
+    }
     // Cancel any cast/windup when entering flight
     cancelCast();
     cancelWindup();
@@ -1028,7 +1170,12 @@ class GameState {
   void endFlight() {
     isFlying = false;
     flightPitchAngle = 0.0;
+    flightBankAngle = 0.0;
     flightSpeed = globalWindConfig?.flightSpeed ?? 7.0;
+    // Reset visual roll
+    if (playerTransform != null) {
+      playerTransform!.rotation.z = 0.0;
+    }
     print('[FLIGHT] Flight ended');
   }
 
@@ -1224,4 +1371,24 @@ class _TargetCandidate {
   final double angle; // Angle from player's facing direction
 
   _TargetCandidate(this.id, this.distance, this.angle);
+}
+
+/// Helper to create building meshes without importing building_system.dart.
+///
+/// Reason: game_state.dart must not import building_system.dart because
+/// building_system.dart imports game_state.dart. This helper delegates
+/// to BuildingMesh directly instead.
+class _BuildingMeshHelper {
+  static Mesh create(BuildingTierDef tier) {
+    // Inline import to avoid circular dependency
+    return _createFromParts(tier);
+  }
+
+  /// Minimal mesh creation from tier parts.
+  /// Delegates to the BuildingMesh factory via the rendering3d layer.
+  static Mesh _createFromParts(BuildingTierDef tier) {
+    // Use the same factory as building_mesh.dart
+    // This import is safe because rendering3d has no dependency on game3d/state
+    return BuildingMesh.createBuilding(tier);
+  }
 }

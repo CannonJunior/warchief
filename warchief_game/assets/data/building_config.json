@@ -1,0 +1,81 @@
+{
+  "building_types": {
+    "warchief_home": {
+      "name": "Warchief's Longhouse",
+      "description": "Home of the Warchief. Provides shelter and resting bonuses.",
+      "category": "residential",
+      "tiers": [
+        {
+          "tier": 1,
+          "name": "Wooden Longhouse",
+          "parts": {
+            "foundation": { "width": 6.0, "depth": 8.0, "height": 0.3, "color": [0.45, 0.35, 0.20] },
+            "walls": { "height": 3.0, "thickness": 0.3, "color": [0.55, 0.40, 0.25] },
+            "roof": { "style": "peaked", "overhang": 0.5, "color": [0.35, 0.25, 0.15] },
+            "door": { "width": 1.2, "height": 2.2, "color": [0.40, 0.30, 0.18] }
+          },
+          "aura": { "radius": 15.0, "health_regen": 2.0, "mana_regen": 1.0 },
+          "minimap_color": [0.7, 0.5, 0.2, 1.0],
+          "minimap_size": 5
+        },
+        {
+          "tier": 2,
+          "name": "Stone Longhouse",
+          "parts": {
+            "foundation": { "width": 8.0, "depth": 10.0, "height": 0.5, "color": [0.50, 0.50, 0.50] },
+            "walls": { "height": 4.0, "thickness": 0.5, "color": [0.60, 0.58, 0.55] },
+            "roof": { "style": "peaked", "overhang": 0.8, "color": [0.40, 0.30, 0.25] },
+            "door": { "width": 1.5, "height": 2.5, "color": [0.50, 0.35, 0.20] }
+          },
+          "aura": { "radius": 20.0, "health_regen": 4.0, "mana_regen": 2.0 },
+          "minimap_color": [0.6, 0.6, 0.6, 1.0],
+          "minimap_size": 6
+        }
+      ]
+    },
+    "barracks": {
+      "name": "Barracks",
+      "description": "Houses allied soldiers. Increases ally stats.",
+      "category": "military",
+      "tiers": [
+        {
+          "tier": 1,
+          "name": "Wooden Barracks",
+          "parts": {
+            "foundation": { "width": 5.0, "depth": 6.0, "height": 0.3, "color": [0.45, 0.35, 0.20] },
+            "walls": { "height": 2.5, "thickness": 0.3, "color": [0.50, 0.38, 0.22] },
+            "roof": { "style": "peaked", "overhang": 0.4, "color": [0.30, 0.22, 0.12] },
+            "door": { "width": 1.5, "height": 2.0, "color": [0.40, 0.30, 0.18] }
+          },
+          "aura": { "radius": 12.0, "health_regen": 0.0, "mana_regen": 0.0 },
+          "minimap_color": [0.8, 0.3, 0.3, 1.0],
+          "minimap_size": 4
+        }
+      ]
+    },
+    "workshop": {
+      "name": "Workshop",
+      "description": "Crafting station for equipment.",
+      "category": "production",
+      "tiers": [
+        {
+          "tier": 1,
+          "name": "Basic Workshop",
+          "parts": {
+            "foundation": { "width": 5.0, "depth": 5.0, "height": 0.3, "color": [0.45, 0.35, 0.20] },
+            "walls": { "height": 2.5, "thickness": 0.3, "color": [0.48, 0.36, 0.22] },
+            "roof": { "style": "peaked", "overhang": 0.3, "color": [0.32, 0.24, 0.14] },
+            "door": { "width": 1.8, "height": 2.2, "color": [0.42, 0.32, 0.20] }
+          },
+          "aura": { "radius": 10.0, "health_regen": 0.0, "mana_regen": 0.0 },
+          "minimap_color": [0.3, 0.6, 0.8, 1.0],
+          "minimap_size": 4
+        }
+      ]
+    }
+  },
+  "interaction_range": 5.0,
+  "placement_grid_size": 1.0,
+  "ley_line_bonus_radius": 10.0,
+  "ley_line_bonus_multiplier": 1.5
+}

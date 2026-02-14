@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-13T00:09:17.785039",
+  "generated_at": "2026-02-13T19:00:41.735104",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
-    "files": 163,
+    "files": 182,
     "directories": 34,
-    "lines": 45134,
-    "size": 1525834
+    "lines": 49713,
+    "size": 1687170
   },
   "tree": {
     "name": "warchief_game",
@@ -24,6 +24,15 @@
             "path": "warchief_game/assets/data",
             "children": [
               {
+                "name": "building_config.json",
+                "type": "file",
+                "path": "warchief_game/assets/data/building_config.json",
+                "size": 3212,
+                "extension": ".json",
+                "icon": "📋",
+                "lines": 81
+              },
+              {
                 "name": "effect_descriptions.json",
                 "type": "file",
                 "path": "warchief_game/assets/data/effect_descriptions.json",
@@ -31,6 +40,15 @@
                 "extension": ".json",
                 "icon": "📋",
                 "lines": 55
+              },
+              {
+                "name": "goals_config.json",
+                "type": "file",
+                "path": "warchief_game/assets/data/goals_config.json",
+                "size": 4746,
+                "extension": ".json",
+                "icon": "📋",
+                "lines": 108
               },
               {
                 "name": "item_config.json",
@@ -72,19 +90,19 @@
                 "name": "source-tree.json",
                 "type": "file",
                 "path": "warchief_game/assets/data/source-tree.json",
-                "size": 61096,
+                "size": 66854,
                 "extension": ".json",
                 "icon": "📋",
-                "lines": 1707
+                "lines": 1878
               },
               {
                 "name": "wind_config.json",
                 "type": "file",
                 "path": "warchief_game/assets/data/wind_config.json",
-                "size": 1356,
+                "size": 1526,
                 "extension": ".json",
                 "icon": "📋",
-                "lines": 63
+                "lines": 69
               }
             ]
           }
@@ -285,6 +303,15 @@
                     "extension": ".dart",
                     "icon": "🎯",
                     "lines": 517
+                  },
+                  {
+                    "name": "warrior_spirit.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/ai/warrior_spirit.dart",
+                    "size": 7732,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 225
                   }
                 ]
               },
@@ -502,6 +529,15 @@
                     "lines": 147
                   },
                   {
+                    "name": "building_config.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/state/building_config.dart",
+                    "size": 2927,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 86
+                  },
+                  {
                     "name": "custom_ability_manager.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/custom_ability_manager.dart",
@@ -541,10 +577,19 @@
                     "name": "game_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state.dart",
-                    "size": 41582,
+                    "size": 47010,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 1227
+                    "lines": 1394
+                  },
+                  {
+                    "name": "goals_config.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/state/goals_config.dart",
+                    "size": 5368,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 155
                   },
                   {
                     "name": "item_config.dart",
@@ -586,10 +631,10 @@
                     "name": "wind_config.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/wind_config.dart",
-                    "size": 6508,
+                    "size": 6991,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 164
+                    "lines": 172
                   },
                   {
                     "name": "wind_state.dart",
@@ -626,13 +671,22 @@
                     "lines": 1191
                   },
                   {
+                    "name": "building_system.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/systems/building_system.dart",
+                    "size": 4341,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 130
+                  },
+                  {
                     "name": "combat_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/combat_system.dart",
-                    "size": 23991,
+                    "size": 25306,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 733
+                    "lines": 763
                   },
                   {
                     "name": "entity_picking_system.dart",
@@ -644,13 +698,22 @@
                     "lines": 144
                   },
                   {
+                    "name": "goal_system.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/systems/goal_system.dart",
+                    "size": 3799,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 114
+                  },
+                  {
                     "name": "input_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/input_system.dart",
-                    "size": 9915,
+                    "size": 13013,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 286
+                    "lines": 353
                   },
                   {
                     "name": "physics_system.dart",
@@ -665,10 +728,10 @@
                     "name": "render_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/render_system.dart",
-                    "size": 13543,
+                    "size": 13781,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 384
+                    "lines": 391
                   }
                 ]
               },
@@ -695,10 +758,10 @@
                         "name": "minimap_entity_painter.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/minimap/minimap_entity_painter.dart",
-                        "size": 7693,
+                        "size": 8344,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 225
+                        "lines": 244
                       },
                       {
                         "name": "minimap_ping_overlay.dart",
@@ -915,6 +978,15 @@
                     "lines": 487
                   },
                   {
+                    "name": "building_panel.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/ui/building_panel.dart",
+                    "size": 9724,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 315
+                  },
+                  {
                     "name": "cast_bar.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/cast_bar.dart",
@@ -1014,6 +1086,15 @@
                     "lines": 196
                   },
                   {
+                    "name": "goals_panel.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/ui/goals_panel.dart",
+                    "size": 12516,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 401
+                  },
+                  {
                     "name": "instructions_overlay.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/instructions_overlay.dart",
@@ -1095,6 +1176,15 @@
                     "lines": 75
                   },
                   {
+                    "name": "warrior_spirit_panel.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/ui/warrior_spirit_panel.dart",
+                    "size": 10122,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 328
+                  },
+                  {
                     "name": "wind_indicator.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/wind_indicator.dart",
@@ -1143,10 +1233,10 @@
                 "name": "game3d_widget.dart",
                 "type": "file",
                 "path": "warchief_game/lib/game3d/game3d_widget.dart",
-                "size": 72587,
+                "size": 79369,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 1989
+                "lines": 2172
               }
             ]
           },
@@ -1174,6 +1264,15 @@
                 "lines": 75
               },
               {
+                "name": "building.dart",
+                "type": "file",
+                "path": "warchief_game/lib/models/building.dart",
+                "size": 5668,
+                "extension": ".dart",
+                "icon": "🎯",
+                "lines": 181
+              },
+              {
                 "name": "damage_event.dart",
                 "type": "file",
                 "path": "warchief_game/lib/models/damage_event.dart",
@@ -1190,6 +1289,15 @@
                 "extension": ".dart",
                 "icon": "🎯",
                 "lines": 243
+              },
+              {
+                "name": "goal.dart",
+                "type": "file",
+                "path": "warchief_game/lib/models/goal.dart",
+                "size": 5369,
+                "extension": ".dart",
+                "icon": "🎯",
+                "lines": 160
               },
               {
                 "name": "impact_effect.dart",
@@ -1294,13 +1402,22 @@
                 ]
               },
               {
+                "name": "building_mesh.dart",
+                "type": "file",
+                "path": "warchief_game/lib/rendering3d/building_mesh.dart",
+                "size": 9938,
+                "extension": ".dart",
+                "icon": "🎯",
+                "lines": 314
+              },
+              {
                 "name": "camera3d.dart",
                 "type": "file",
                 "path": "warchief_game/lib/rendering3d/camera3d.dart",
-                "size": 9145,
+                "size": 10240,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 312
+                "lines": 345
               },
               {
                 "name": "chunk_manager.dart",
@@ -1588,6 +1705,15 @@
         "lines": 231
       },
       {
+        "name": "AI_INTEGRATION.md",
+        "type": "file",
+        "path": "warchief_game/AI_INTEGRATION.md",
+        "size": 2985,
+        "extension": ".md",
+        "icon": "📝",
+        "lines": 86
+      },
+      {
         "name": "ALLY_AND_MONSTER_AI_DOCUMENTATION.md",
         "type": "file",
         "path": "warchief_game/ALLY_AND_MONSTER_AI_DOCUMENTATION.md",
@@ -1615,6 +1741,24 @@
         "lines": 71
       },
       {
+        "name": "CLAUDE_TASK_TEMPLATE.md",
+        "type": "file",
+        "path": "warchief_game/CLAUDE_TASK_TEMPLATE.md",
+        "size": 2399,
+        "extension": ".md",
+        "icon": "📝",
+        "lines": 68
+      },
+      {
+        "name": "FLIGHT_MECHANICS.md",
+        "type": "file",
+        "path": "warchief_game/FLIGHT_MECHANICS.md",
+        "size": 6325,
+        "extension": ".md",
+        "icon": "📝",
+        "lines": 137
+      },
+      {
         "name": "flutter_01.log",
         "type": "file",
         "path": "warchief_game/flutter_01.log",
@@ -1630,6 +1774,24 @@
         "extension": ".md",
         "icon": "📝",
         "lines": 272
+      },
+      {
+        "name": "GAME_STATE_ENTITIES.md",
+        "type": "file",
+        "path": "warchief_game/GAME_STATE_ENTITIES.md",
+        "size": 20710,
+        "extension": ".md",
+        "icon": "📝",
+        "lines": 563
+      },
+      {
+        "name": "GOALS_SYSTEM_DESIGN.md",
+        "type": "file",
+        "path": "warchief_game/GOALS_SYSTEM_DESIGN.md",
+        "size": 4530,
+        "extension": ".md",
+        "icon": "📝",
+        "lines": 114
       },
       {
         "name": "PERFORMANCE_FIXES_COMPLETED.md",
@@ -1666,6 +1828,15 @@
         "extension": ".md",
         "icon": "📝",
         "lines": 16
+      },
+      {
+        "name": "RENDERING_PIPELINE.md",
+        "type": "file",
+        "path": "warchief_game/RENDERING_PIPELINE.md",
+        "size": 13907,
+        "extension": ".md",
+        "icon": "📝",
+        "lines": 322
       },
       {
         "name": "ROLLBACK_PLAN.md",

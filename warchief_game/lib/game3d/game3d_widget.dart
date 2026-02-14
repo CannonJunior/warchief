@@ -62,9 +62,17 @@ import 'state/wind_config.dart';
 import 'state/wind_state.dart';
 import 'state/minimap_config.dart';
 import 'state/minimap_state.dart';
+import 'state/building_config.dart';
+import 'state/goals_config.dart';
 import 'ui/minimap/minimap_widget.dart';
 import 'ui/minimap/minimap_ping_overlay.dart';
+import 'ui/building_panel.dart';
+import 'ui/goals_panel.dart';
+import 'ui/warrior_spirit_panel.dart';
 import 'systems/entity_picking_system.dart';
+import 'systems/building_system.dart';
+import 'systems/goal_system.dart';
+import 'ai/warrior_spirit.dart';
 // Note: WindIndicator replaced by minimap border wind arrow
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
@@ -131,6 +139,9 @@ class _Game3DState extends State<Game3D> {
     // Initialize minimap config (JSON defaults for minimap display)
     _initializeMinimapConfig();
 
+    // Initialize building config (JSON defaults for building definitions)
+    _initializeBuildingConfig();
+
     // Initialize custom options manager (custom dropdown values + effect descriptions)
     _initializeCustomOptions();
 
@@ -142,6 +153,9 @@ class _Game3DState extends State<Game3D> {
 
     // Initialize custom item manager (user-created items)
     _initializeCustomItems();
+
+    // Initialize goals config (JSON defaults for goal definitions)
+    _initializeGoalsConfig();
 
     // Initialize player inventory with sample items
     _initializeInventory();
@@ -181,6 +195,16 @@ class _Game3DState extends State<Game3D> {
     globalMinimapConfig!.initialize();
   }
 
+  /// Initialize the global building configuration (JSON defaults)
+  void _initializeBuildingConfig() {
+    globalBuildingConfig ??= BuildingConfig();
+    globalBuildingConfig!.initialize().then((_) {
+      // Spawn warchief's home after config is loaded
+      gameState.spawnWarchiefHome(gameState.infiniteTerrainManager);
+      if (mounted) setState(() {});
+    });
+  }
+
   /// Initialize the global custom options manager (dropdown values + effect descriptions)
   void _initializeCustomOptions() {
     globalCustomOptionsManager ??= CustomOptionsManager();
@@ -203,6 +227,16 @@ class _Game3DState extends State<Game3D> {
   void _initializeCustomItems() {
     globalCustomItemManager ??= CustomItemManager();
     globalCustomItemManager!.loadItems();
+  }
+
+  /// Initialize the global goals configuration and Warrior Spirit
+  void _initializeGoalsConfig() {
+    globalGoalsConfig ??= GoalsConfig();
+    globalGoalsConfig!.initialize().then((_) {
+      // Initialize Warrior Spirit after goals config is loaded
+      WarriorSpirit.init();
+      if (mounted) setState(() {});
+    });
   }
 
   /// Initialize player inventory with sample items from database
@@ -524,8 +558,35 @@ class _Game3DState extends State<Game3D> {
     // Update wind simulation and White Mana regeneration
     gameState.updateWindAndWhiteMana(dt);
 
+    // Apply building aura effects (health + mana regen near buildings)
+    BuildingSystem.applyBuildingAuras(gameState, dt);
+
     // Update minimap state (elapsed time for sun orbits, ping decay)
     gameState.minimapState.update(dt);
+
+    // Update Warrior Spirit (periodic goal suggestion check)
+    WarriorSpirit.update(gameState, dt);
+
+    // Track flight duration for mastery goals
+    if (gameState.isFlying) {
+      _flightDurationAccum += dt;
+      GoalSystem.processEvent(gameState, 'flight_duration',
+          metadata: {'value': _flightDurationAccum.toInt()});
+    } else {
+      _flightDurationAccum = 0;
+    }
+
+    // Track power node visits for exploration goals
+    if (gameState.isOnPowerNode && gameState.playerTransform != null) {
+      final px = gameState.playerTransform!.position.x;
+      final pz = gameState.playerTransform!.position.z;
+      final nodeKey = '${px.toInt()}_${pz.toInt()}';
+      if (!gameState.visitedPowerNodes.contains(nodeKey)) {
+        gameState.visitedPowerNodes.add(nodeKey);
+        GoalSystem.processEvent(gameState, 'visit_power_node');
+        print('[GOALS] Visited new power node: $nodeKey');
+      }
+    }
 
     // Update AI systems (monster AI, ally AI, projectiles)
     AISystem.update(
@@ -618,6 +679,9 @@ class _Game3DState extends State<Game3D> {
         camera!.setTarget(newTarget);
       }
     }
+
+    // Cockpit-style camera roll during flight banking
+    camera!.rollAngle = gameState.isFlying ? gameState.flightBankAngle : 0.0;
   }
 
   void _render() {
@@ -702,6 +766,48 @@ class _Game3DState extends State<Game3D> {
       return;
     }
 
+    // Handle G key for goals panel (only on key down, not repeat)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyG) {
+      // Reason: G was previously unbound. Only intercept without shift
+      // so T (attack) and G (hold) commands still work with shift combos.
+      if (!HardwareKeyboard.instance.isShiftPressed) {
+        setState(() {
+          gameState.goalsPanelOpen = !gameState.goalsPanelOpen;
+        });
+        return;
+      }
+    }
+
+    // Handle ` (backtick) key for Warrior Spirit panel (only on key down)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backquote) {
+      setState(() {
+        gameState.warriorSpiritPanelOpen = !gameState.warriorSpiritPanelOpen;
+      });
+      return;
+    }
+
+    // Handle H key for building panel (only on key down, not repeat)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyH) {
+      setState(() {
+        if (gameState.buildingPanelOpen) {
+          // Close if already open
+          gameState.buildingPanelOpen = false;
+          gameState.selectedBuilding = null;
+        } else {
+          // Open if near a building
+          final nearest = gameState.getNearestBuilding(
+            globalBuildingConfig?.interactionRange ?? 5.0,
+          );
+          if (nearest != null) {
+            gameState.selectedBuilding = nearest;
+            gameState.buildingPanelOpen = true;
+            print('[BUILDING] Opened panel for ${nearest.definition.name}');
+          }
+        }
+      });
+      return;
+    }
+
     // Handle SHIFT+D for DPS testing panel (only on key down, not repeat)
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyD) {
       final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
@@ -782,6 +888,25 @@ class _Game3DState extends State<Game3D> {
           if (gameState.currentTargetId == TargetDummy.instanceId) {
             gameState.clearTarget();
           }
+        });
+        return;
+      }
+      if (gameState.buildingPanelOpen) {
+        setState(() {
+          gameState.buildingPanelOpen = false;
+          gameState.selectedBuilding = null;
+        });
+        return;
+      }
+      if (gameState.goalsPanelOpen) {
+        setState(() {
+          gameState.goalsPanelOpen = false;
+        });
+        return;
+      }
+      if (gameState.warriorSpiritPanelOpen) {
+        setState(() {
+          gameState.warriorSpiritPanelOpen = false;
         });
         return;
       }
@@ -934,6 +1059,9 @@ class _Game3DState extends State<Game3D> {
 
   // ===== ALLY COMMAND METHODS =====
 
+  /// Flight duration accumulator for goals tracking
+  double _flightDurationAccum = 0;
+
   /// Track previous command key states to detect key press (not hold)
   bool _attackKeyWasPressed = false;
   bool _holdKeyWasPressed = false;
@@ -1084,6 +1212,8 @@ class _Game3DState extends State<Game3D> {
         }
       }
     });
+    // Track ally commands for goals
+    GoalSystem.processEvent(gameState, 'ally_command_issued');
   }
 
   /// Get the current command active across allies (for UI display)
@@ -1605,6 +1735,59 @@ class _Game3DState extends State<Game3D> {
                     }
                   });
                 },
+              ),
+
+            // Building Panel (Press H near a building to toggle)
+            if (gameState.buildingPanelOpen && gameState.selectedBuilding != null)
+              BuildingPanel(
+                building: gameState.selectedBuilding!,
+                leyLineManager: gameState.leyLineManager,
+                onClose: () {
+                  setState(() {
+                    gameState.buildingPanelOpen = false;
+                    gameState.selectedBuilding = null;
+                  });
+                },
+                onUpgrade: () {
+                  setState(() {
+                    BuildingSystem.upgradeBuilding(gameState.selectedBuilding!);
+                  });
+                },
+              ),
+
+            // Goals Panel (Press G to toggle)
+            if (gameState.goalsPanelOpen)
+              GoalsPanel(
+                goals: gameState.goals,
+                pendingGoal: gameState.pendingSpiritGoal,
+                onAcceptGoal: (def) => setState(() {
+                  gameState.goals.add(GoalSystem.acceptGoal(def));
+                  gameState.pendingSpiritGoal = null;
+                }),
+                onDeclineGoal: () => setState(() {
+                  gameState.pendingSpiritGoal = null;
+                }),
+                onClose: () => setState(() {
+                  gameState.goalsPanelOpen = false;
+                }),
+              ),
+
+            // Warrior Spirit Panel (Press V to toggle)
+            if (gameState.warriorSpiritPanelOpen)
+              WarriorSpiritPanel(
+                messages: gameState.warriorSpiritMessages,
+                onSendMessage: (msg) async {
+                  gameState.warriorSpiritMessages.add(
+                    AIChatMessage(text: msg, isInput: true));
+                  setState(() {});
+                  final reply = await WarriorSpirit.chat(gameState, msg);
+                  gameState.warriorSpiritMessages.add(
+                    AIChatMessage(text: reply, isInput: false));
+                  if (mounted) setState(() {});
+                },
+                onClose: () => setState(() {
+                  gameState.warriorSpiritPanelOpen = false;
+                }),
               ),
 
             // Cast Bar (shows when casting or winding up)

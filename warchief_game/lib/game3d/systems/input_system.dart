@@ -271,16 +271,83 @@ class InputSystem {
     final horizontalSpeed = currentSpeed * math.cos(pitchRad);
     gameState.playerTransform!.position += fwd * horizontalSpeed * dt;
 
-    // A/D rotation still works during flight
-    if (inputManager.isActionPressed(GameAction.rotateLeft)) {
-      gameState.playerRotation += 180 * dt;
-      gameState.playerTransform!.rotation.y = gameState.playerRotation;
-    }
-    if (inputManager.isActionPressed(GameAction.rotateRight)) {
-      gameState.playerRotation -= 180 * dt;
-      gameState.playerTransform!.rotation.y = gameState.playerRotation;
+    // ==================== BANKING / BARREL ROLL ====================
+
+    final bankRate = config?.flightBankRate ?? 120.0;
+    final maxBankAngle = config?.flightMaxBankAngle ?? 60.0;
+    final autoLevelRate = config?.flightAutoLevelRate ?? 90.0;
+    final autoLevelThreshold = config?.flightAutoLevelThreshold ?? 90.0;
+    final bankToTurnMult = config?.flightBankToTurnMultiplier ?? 2.5;
+    final barrelRollRate = config?.flightBarrelRollRate ?? 360.0;
+
+    // Detect key states (Q=strafeLeft, E=strafeRight, A=rotateLeft, D=rotateRight)
+    final qHeld = inputManager.isActionPressed(GameAction.strafeLeft);
+    final eHeld = inputManager.isActionPressed(GameAction.strafeRight);
+    final aHeld = inputManager.isActionPressed(GameAction.rotateLeft);
+    final dHeld = inputManager.isActionPressed(GameAction.rotateRight);
+
+    final barrelRollLeft = qHeld && aHeld;
+    final barrelRollRight = eHeld && dHeld;
+
+    // Banking / barrel roll logic
+    // Reason: positive rotateZ = counter-clockwise from behind = bank LEFT,
+    // so Q (bank left) increases angle, E (bank right) decreases angle.
+    if (barrelRollLeft) {
+      // Continuous left barrel roll — uncapped
+      gameState.flightBankAngle -= barrelRollRate * dt;
+      if (gameState.flightBankAngle < -360) gameState.flightBankAngle += 360;
+    } else if (barrelRollRight) {
+      // Continuous right barrel roll — uncapped
+      gameState.flightBankAngle += barrelRollRate * dt;
+      if (gameState.flightBankAngle > 360) gameState.flightBankAngle -= 360;
+    } else if (qHeld) {
+      // Bank left
+      gameState.flightBankAngle = (gameState.flightBankAngle - bankRate * dt)
+          .clamp(-maxBankAngle, maxBankAngle);
+    } else if (eHeld) {
+      // Bank right
+      gameState.flightBankAngle = (gameState.flightBankAngle + bankRate * dt)
+          .clamp(-maxBankAngle, maxBankAngle);
+    } else {
+      // Auto-level: only if |bankAngle| < autoLevelThreshold (90 deg)
+      if (gameState.flightBankAngle.abs() < autoLevelThreshold) {
+        if (gameState.flightBankAngle > 0) {
+          gameState.flightBankAngle =
+              (gameState.flightBankAngle - autoLevelRate * dt)
+                  .clamp(0.0, double.infinity);
+        } else if (gameState.flightBankAngle < 0) {
+          gameState.flightBankAngle =
+              (gameState.flightBankAngle + autoLevelRate * dt)
+                  .clamp(double.negativeInfinity, 0.0);
+        }
+      }
     }
 
-    // Q/E strafe disabled during flight (intentionally omitted)
+    // Apply visual roll (rotation.z stores degrees, same as rotation.y for yaw)
+    // Reason: rotateZ(positive) tilts the model opposite to the camera's
+    // cockpit roll, so we negate to keep model and camera visually consistent.
+    gameState.playerTransform!.rotation.z = -gameState.flightBankAngle;
+
+    // ==================== A/D YAW WITH BANK-ENHANCED TURN RATE ====================
+
+    // Reason: during barrel rolls, A/D yaw is suppressed (keys are used for combo)
+    if (!barrelRollLeft && !barrelRollRight) {
+      final bankAngleRad =
+          (gameState.flightBankAngle.abs().clamp(0.0, 90.0)) *
+              (math.pi / 180.0);
+      final turnMultiplier = 1.0 + math.sin(bankAngleRad) * bankToTurnMult;
+      final effectiveTurnRate = 180.0 * turnMultiplier;
+
+      if (aHeld) {
+        gameState.playerRotation +=
+            effectiveTurnRate * dt;
+        gameState.playerTransform!.rotation.y = gameState.playerRotation;
+      }
+      if (dHeld) {
+        gameState.playerRotation -=
+            effectiveTurnRate * dt;
+        gameState.playerTransform!.rotation.y = gameState.playerRotation;
+      }
+    }
   }
 }
