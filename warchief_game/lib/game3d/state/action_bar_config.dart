@@ -5,11 +5,14 @@ import '../data/abilities/abilities.dart';
 import 'ability_override_manager.dart';
 import 'custom_ability_manager.dart';
 
-/// Configuration for the player's action bar slots
+/// Configuration for a character's action bar slots
 ///
 /// Tracks which abilities are assigned to which action bar slots (1-10).
-/// Supports persistence via SharedPreferences.
+/// Supports per-character persistence via SharedPreferences.
 class ActionBarConfig extends ChangeNotifier {
+  /// Character index this config belongs to (0 = Warchief, 1+ = ally)
+  final int _characterIndex;
+
   /// Current ability assignments by slot index (0-9)
   /// Stores the ability name as the identifier
   List<String> _slotAssignments = [
@@ -24,6 +27,16 @@ class ActionBarConfig extends ChangeNotifier {
     'Sword',       // Slot 9 (key 9)
     'Sword',       // Slot 10 (key 0)
   ];
+
+  ActionBarConfig({int characterIndex = 0}) : _characterIndex = characterIndex;
+
+  /// Get persistence key for this character index.
+  /// 0 = Warchief (uses existing 'action_bar_config' for backward compatibility)
+  /// 1+ = ally (uses 'action_bar_config_ally_0', etc.)
+  String get _storageKey {
+    if (_characterIndex == 0) return 'action_bar_config';
+    return 'action_bar_config_ally_${_characterIndex - 1}';
+  }
 
   /// Get the ability assigned to a slot (0-indexed)
   String getSlotAbility(int slotIndex) {
@@ -98,9 +111,9 @@ class ActionBarConfig extends ChangeNotifier {
   Future<void> _saveConfig() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('action_bar_config', jsonEncode(_slotAssignments));
+      await prefs.setString(_storageKey, jsonEncode(_slotAssignments));
     } catch (e) {
-      print('[ActionBarConfig] Failed to save: $e');
+      print('[ActionBarConfig] Failed to save ($_storageKey): $e');
     }
   }
 
@@ -108,7 +121,7 @@ class ActionBarConfig extends ChangeNotifier {
   Future<void> loadConfig() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final configJson = prefs.getString('action_bar_config');
+      final configJson = prefs.getString(_storageKey);
       if (configJson != null) {
         final List<dynamic> loaded = jsonDecode(configJson);
         final assignments = loaded.cast<String>();
@@ -120,7 +133,7 @@ class ActionBarConfig extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('[ActionBarConfig] Failed to load: $e');
+      print('[ActionBarConfig] Failed to load ($_storageKey): $e');
     }
   }
 
@@ -143,5 +156,36 @@ class ActionBarConfig extends ChangeNotifier {
   }
 }
 
-/// Global action bar config instance
-ActionBarConfig? globalActionBarConfig;
+/// Manages per-character action bar configs
+///
+/// Each party member (Warchief + allies) gets their own ActionBarConfig
+/// with independent persistence via SharedPreferences.
+class ActionBarConfigManager {
+  final Map<int, ActionBarConfig> _configs = {};
+  int _activeIndex = 0;
+
+  /// Get the config for the currently active character
+  ActionBarConfig get activeConfig => getConfig(_activeIndex);
+
+  /// Get or create the config for a specific character index
+  ActionBarConfig getConfig(int characterIndex) {
+    return _configs.putIfAbsent(characterIndex, () {
+      final config = ActionBarConfig(characterIndex: characterIndex);
+      config.loadConfig();
+      return config;
+    });
+  }
+
+  /// Set the active character index and return the active config
+  void setActiveIndex(int index) {
+    _activeIndex = index;
+  }
+}
+
+/// Global action bar config manager instance
+ActionBarConfigManager? globalActionBarConfigManager;
+
+/// Global action bar config instance (backward-compatible alias)
+/// Returns the active character's config from the manager, or null
+ActionBarConfig? get globalActionBarConfig =>
+    globalActionBarConfigManager?.activeConfig;

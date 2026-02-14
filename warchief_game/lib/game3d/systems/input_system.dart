@@ -35,7 +35,7 @@ class InputSystem {
     Camera3D camera,
     GameState gameState,
   ) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
     // Update input manager state
     inputManager.update(dt);
@@ -97,9 +97,9 @@ class InputSystem {
     InputManager inputManager,
     GameState gameState,
   ) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
-    // Flight mode — different control scheme
+    // Flight mode — different control scheme (Warchief only)
     if (gameState.isFlying) {
       _handleFlightMovement(dt, inputManager, gameState);
       return;
@@ -117,21 +117,21 @@ class InputSystem {
     }
 
     // Get effective speed (includes windup modifier if winding up)
-    double effectiveSpeed = gameState.effectivePlayerSpeed;
+    double effectiveSpeed = gameState.activeEffectiveSpeed;
 
     // Compute combined movement direction for wind modifier
     double moveDx = 0.0;
     double moveDz = 0.0;
 
     final fwd = Vector3(
-      -math.sin(radians(gameState.playerRotation)),
+      -math.sin(radians(gameState.activeRotation)),
       0,
-      -math.cos(radians(gameState.playerRotation)),
+      -math.cos(radians(gameState.activeRotation)),
     );
     final right = Vector3(
-      math.cos(radians(gameState.playerRotation)),
+      math.cos(radians(gameState.activeRotation)),
       0,
-      -math.sin(radians(gameState.playerRotation)),
+      -math.sin(radians(gameState.activeRotation)),
     );
 
     if (inputManager.isActionPressed(GameAction.moveForward)) {
@@ -157,34 +157,34 @@ class InputSystem {
 
     // W = Forward
     if (inputManager.isActionPressed(GameAction.moveForward)) {
-      gameState.playerTransform!.position += fwd * effectiveSpeed * dt;
+      gameState.activeTransform!.position += fwd * effectiveSpeed * dt;
     }
 
     // S = Backward
     if (inputManager.isActionPressed(GameAction.moveBackward)) {
-      gameState.playerTransform!.position -= fwd * effectiveSpeed * dt;
+      gameState.activeTransform!.position -= fwd * effectiveSpeed * dt;
     }
 
     // A = Rotate Right (rotation not affected by windup)
     if (inputManager.isActionPressed(GameAction.rotateLeft)) {
-      gameState.playerRotation += 180 * dt; // A key - rotate right
-      gameState.playerTransform!.rotation.y = gameState.playerRotation;
+      gameState.activeRotation = gameState.activeRotation + 180 * dt;
+      gameState.activeTransform!.rotation.y = gameState.activeRotation;
     }
 
     // D = Rotate Left (rotation not affected by windup)
     if (inputManager.isActionPressed(GameAction.rotateRight)) {
-      gameState.playerRotation -= 180 * dt; // D key - rotate left
-      gameState.playerTransform!.rotation.y = gameState.playerRotation;
+      gameState.activeRotation = gameState.activeRotation - 180 * dt;
+      gameState.activeTransform!.rotation.y = gameState.activeRotation;
     }
 
     // Q = Strafe Left
     if (inputManager.isActionPressed(GameAction.strafeLeft)) {
-      gameState.playerTransform!.position -= right * effectiveSpeed * dt;
+      gameState.activeTransform!.position -= right * effectiveSpeed * dt;
     }
 
     // E = Strafe Right
     if (inputManager.isActionPressed(GameAction.strafeRight)) {
-      gameState.playerTransform!.position += right * effectiveSpeed * dt;
+      gameState.activeTransform!.position += right * effectiveSpeed * dt;
     }
   }
 
@@ -200,6 +200,8 @@ class InputSystem {
     InputManager inputManager,
     GameState gameState,
   ) {
+    // Flight is Warchief-only
+    if (!gameState.isWarchiefActive) return;
     if (gameState.playerTransform == null) return;
 
     final config = globalWindConfig;

@@ -2,7 +2,48 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-14
+
+#### Active Character Control, Ally Mana, Panel Integration & Friendly Colors
+- ✅ Added 6 mana fields to `Ally` model: `blueMana`, `maxBlueMana`, `redMana`, `maxRedMana`, `whiteMana`, `maxWhiteMana` with constructor defaults
+- ✅ Added `activeTransform`, `activeRotation` (getter/setter), `activeEffectiveSpeed` getters to `GameState` — returns Warchief or active ally data
+- ✅ Added `_resetPhysicsForSwitch()` — resets verticalVelocity, jumping, grounded, jumpsRemaining, cancels casts/windups, ends flight when switching away from Warchief
+- ✅ Added `characterPanelSelectedIndex` to `GameState` for panel carousel sync
+- ✅ Added `'player'` type handling in `getCurrentTarget()` and `validateTarget()`
+- ✅ Added ally mana regen loops in `updateManaRegen()` — blue mana from ley lines + item bonuses, red mana from power nodes + item bonuses
+- ✅ Added ally white mana regen in `updateWindAndWhiteMana()` — shares global wind exposure level, regen/decay like player
+- ✅ Redirected `InputSystem` to use `activeTransform`/`activeRotation`/`activeEffectiveSpeed` — WASD now controls active character
+- ✅ Added flight guard in `_handleFlightMovement()` — flight is Warchief-only
+- ✅ Redirected `PhysicsSystem` — `update()`, `_checkGroundCollision()`, `getPlayerHeight()` use `activeTransform`; `_updateFlight()` stays on `playerTransform`
+- ✅ Added AI skip in `updateAllyMovement()` and `updateAllyAI()` — player-controlled ally excluded from AI processing
+- ✅ Updated camera follow, shadow follow, terrain loading, direction indicator to use `activeTransform`/`activeRotation`
+- ✅ Modified `[`/`]` keys — when Character Panel is open, cycles panel carousel; otherwise cycles active controlled character
+- ✅ Added `didUpdateWidget()` to `CharacterPanel` — syncs `_currentIndex` when `initialIndex` changes externally
+- ✅ Added `isFriendly` flag to `_getTargetData()` — `true` for player/ally targets, `false` for enemies
+- ✅ Added `targetBorderColor`/`targetHealthColor` params to `CombatHUD` — defaults to red, green when targeting friendlies
+- ✅ Build verified clean (`flutter build web`)
+
 ### ✅ Completed - 2026-02-13
+
+#### Party System & Active Character
+- ✅ Added `cyclePartyNext`, `cyclePartyPrev`, `tabTargetFriendly` to `GameAction` enum with `]`, `[`, Shift+Tab key bindings and display names
+- ✅ Added `Inventory` field to `Ally` model with default empty `Inventory()`
+- ✅ Added `activeCharacterIndex`, `isWarchiefActive`, `activeAlly`, `cycleActiveCharacterNext()`, `cycleActiveCharacterPrev()` to `GameState`
+- ✅ Added `_friendlyTabIndex`, `getTargetableFriendlies()`, `tabToNextFriendlyTarget()` to `GameState` for friendly target cycling
+- ✅ Refactored `ActionBarConfig` for per-character persistence — `_storageKey` uses `'action_bar_config'` for Warchief (backward compatible) and `'action_bar_config_ally_N'` for allies
+- ✅ Created `ActionBarConfigManager` with `_configs` map, `activeConfig`, `getConfig()`, `setActiveIndex()` — lazy-loads per-character configs
+- ✅ Changed `globalActionBarConfig` to a getter alias for `globalActionBarConfigManager?.activeConfig` — all existing consumers work unchanged
+- ✅ Wired `[`/`]` keys in `game3d_widget.dart` — cycles active character and updates action bar config
+- ✅ Updated Shift+Tab handler — now cycles friendly targets instead of reverse enemy targeting
+- ✅ Updated `_buildCombatHUD()` — player frame shows active character's name, health, max health, level, and portrait color
+- ✅ Updated `C` key — character panel opens to `initialIndex: gameState.activeCharacterIndex`
+- ✅ Added `initialIndex` parameter to `CharacterPanel`, used in `initState()` to set `_currentIndex`
+- ✅ Updated `buildPaperDollColumn()` — removed early return for allies, now shows equipment slots for ALL characters (player and allies)
+- ✅ Ally equipment: pass `_currentAlly?.inventory` instead of always using `playerInventory`; equip/unequip callbacks work for both player and ally inventories
+- ✅ Replaced `_buildAllyCenter()` with compact `_buildAllyStatusCompact()` shown below equipment slots (strategy, command, ability chips)
+- ✅ Added White Mana resource bar to `character_panel_stats.dart` (silver-white color, real values from gameState)
+- ✅ Build verified clean (`flutter build web`)
+- **Keybinds**: `[` = cycle party prev, `]` = cycle party next, Shift+Tab = friendly target cycle
 
 #### Flight Banking & Barrel Roll System
 - ✅ Added `flightBankAngle` field to `game_state.dart` flight state section, reset in `startFlight()` and `endFlight()`

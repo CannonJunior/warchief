@@ -17,11 +17,13 @@ import 'character_panel_columns.dart';
 class CharacterPanel extends StatefulWidget {
   final VoidCallback onClose;
   final GameState gameState;
+  final int initialIndex;
 
   const CharacterPanel({
     Key? key,
     required this.onClose,
     required this.gameState,
+    this.initialIndex = 0,
   }) : super(key: key);
 
   @override
@@ -33,10 +35,26 @@ class _CharacterPanelState extends State<CharacterPanel> {
   double _yPos = 80.0;
 
   /// Current carousel index: 0 = Player, 1+ = Allies
-  int _currentIndex = 0;
+  late int _currentIndex;
 
   /// Cube rotation angle in degrees, controlled by horizontal drag
   double _cubeRotation = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex.clamp(0, _totalCharacters - 1);
+  }
+
+  @override
+  void didUpdateWidget(CharacterPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialIndex != oldWidget.initialIndex) {
+      setState(() {
+        _currentIndex = widget.initialIndex.clamp(0, _totalCharacters - 1);
+      });
+    }
+  }
 
   /// Total number of characters (player + allies)
   int get _totalCharacters => 1 + widget.gameState.allies.length;
@@ -52,6 +70,12 @@ class _CharacterPanelState extends State<CharacterPanel> {
     return widget.gameState.allies[_currentIndex - 1];
   }
 
+  /// Get the active inventory (player or ally)
+  Inventory get _activeInventory {
+    if (_isViewingPlayer) return widget.gameState.playerInventory;
+    return _currentAlly?.inventory ?? Inventory();
+  }
+
   /// Handle equipping an item from the bag to a specific equipment slot.
   ///
   /// Removes the item from the bag, equips it to the target slot,
@@ -60,8 +84,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
   void _handleEquipFromBag(EquipmentSlot slot, Item item) {
     setState(() {
       final gs = widget.gameState;
-      final inventory = gs.playerInventory;
-      final oldMaxHealth = gs.playerMaxHealth;
+      final inventory = _activeInventory;
+      final oldMaxHealth = _isViewingPlayer ? gs.playerMaxHealth : 0.0;
       final bag = inventory.bag;
 
       // Find and remove the item from the bag
@@ -82,9 +106,11 @@ class _CharacterPanelState extends State<CharacterPanel> {
 
       // Reason: adjust current health by the delta so equipping +30 HP
       // adds 30 to current health, and unequipping removes it.
-      final healthDelta = gs.playerMaxHealth - oldMaxHealth;
-      gs.playerHealth =
-          (gs.playerHealth + healthDelta).clamp(0.0, gs.playerMaxHealth);
+      if (_isViewingPlayer) {
+        final healthDelta = gs.playerMaxHealth - oldMaxHealth;
+        gs.playerHealth =
+            (gs.playerHealth + healthDelta).clamp(0.0, gs.playerMaxHealth);
+      }
     });
   }
 
@@ -95,15 +121,17 @@ class _CharacterPanelState extends State<CharacterPanel> {
   void _handleUnequipToBag(EquipmentSlot slot, Item item) {
     setState(() {
       final gs = widget.gameState;
-      final inventory = gs.playerInventory;
-      final oldMaxHealth = gs.playerMaxHealth;
+      final inventory = _activeInventory;
+      final oldMaxHealth = _isViewingPlayer ? gs.playerMaxHealth : 0.0;
 
       inventory.unequip(slot);
       inventory.addToBag(item);
 
-      final healthDelta = gs.playerMaxHealth - oldMaxHealth;
-      gs.playerHealth =
-          (gs.playerHealth + healthDelta).clamp(0.0, gs.playerMaxHealth);
+      if (_isViewingPlayer) {
+        final healthDelta = gs.playerMaxHealth - oldMaxHealth;
+        gs.playerHealth =
+            (gs.playerHealth + healthDelta).clamp(0.0, gs.playerMaxHealth);
+      }
     });
   }
 
@@ -219,13 +247,11 @@ class _CharacterPanelState extends State<CharacterPanel> {
                         portraitColor: _isViewingPlayer
                             ? const Color(0xFF4D80CC)
                             : _getAllyColor(_currentIndex - 1),
-                        inventory: widget.gameState.playerInventory,
-                        onEquipItem: _isViewingPlayer
-                            ? _handleEquipFromBag
-                            : null,
-                        onUnequipItem: _isViewingPlayer
-                            ? _handleUnequipToBag
-                            : null,
+                        inventory: _isViewingPlayer
+                            ? widget.gameState.playerInventory
+                            : (_currentAlly?.inventory ?? Inventory()),
+                        onEquipItem: _handleEquipFromBag,
+                        onUnequipItem: _handleUnequipToBag,
                       ),
                     ),
                   ),

@@ -164,10 +164,11 @@ class _Game3DState extends State<Game3D> {
     _initializeGame();
   }
 
-  /// Initialize the global action bar configuration
+  /// Initialize the global action bar configuration manager
   void _initializeActionBarConfig() {
-    globalActionBarConfig ??= ActionBarConfig();
-    globalActionBarConfig!.loadConfig();
+    globalActionBarConfigManager ??= ActionBarConfigManager();
+    // Pre-load Warchief config (index 0)
+    globalActionBarConfigManager!.getConfig(0);
   }
 
   /// Initialize the global ability override manager
@@ -519,7 +520,7 @@ class _Game3DState extends State<Game3D> {
   }
 
   void _update(double dt) {
-    if (inputManager == null || camera == null || gameState.playerTransform == null) return;
+    if (inputManager == null || camera == null || gameState.activeTransform == null) return;
 
     // Process player and camera input
     InputSystem.update(dt, inputManager!, camera!, gameState);
@@ -540,10 +541,10 @@ class _Game3DState extends State<Game3D> {
       );
     }
 
-    // Update infinite terrain (chunk loading/unloading based on player position)
-    if (gameState.infiniteTerrainManager != null && gameState.playerTransform != null && camera != null) {
+    // Update infinite terrain (chunk loading/unloading based on active character position)
+    if (gameState.infiniteTerrainManager != null && gameState.activeTransform != null && camera != null) {
       gameState.infiniteTerrainManager!.update(
-        gameState.playerTransform!.position,
+        gameState.activeTransform!.position,
         camera!.position,
       );
     }
@@ -614,30 +615,41 @@ class _Game3DState extends State<Game3D> {
     // ===== ALLY COMMAND SYSTEM =====
     _handleAllyCommands();
 
-    // Update direction indicator position and rotation to match player
+    // Update Warchief direction indicator position and rotation
     if (gameState.directionIndicatorTransform != null && gameState.playerTransform != null) {
       gameState.directionIndicatorTransform!.position.x = gameState.playerTransform!.position.x;
-      // Direction indicator sits on top of the player mesh (position.y is already at mesh center)
       gameState.directionIndicatorTransform!.position.y =
           gameState.playerTransform!.position.y + GameConfig.playerSize / 2 + 0.1;
       gameState.directionIndicatorTransform!.position.z = gameState.playerTransform!.position.z;
-      gameState.directionIndicatorTransform!.rotation.y = gameState.playerRotation + 180; // Rotate 180 degrees
+      gameState.directionIndicatorTransform!.rotation.y = gameState.playerRotation + 180;
     }
 
-    // Update shadow position, rotation, and scale based on player height and light direction
-    if (gameState.shadowTransform != null && gameState.playerTransform != null) {
+    // Update active ally direction indicator when controlling an ally
+    if (!gameState.isWarchiefActive) {
+      final activeAlly = gameState.activeAlly;
+      if (activeAlly != null && activeAlly.directionIndicatorTransform != null) {
+        activeAlly.directionIndicatorTransform!.position.x = activeAlly.transform.position.x;
+        activeAlly.directionIndicatorTransform!.position.y =
+            activeAlly.transform.position.y + 0.8 / 2 + 0.1;
+        activeAlly.directionIndicatorTransform!.position.z = activeAlly.transform.position.z;
+        activeAlly.directionIndicatorTransform!.rotation.y = activeAlly.rotation + 180;
+      }
+    }
+
+    // Update shadow position, rotation, and scale based on active character height and light direction
+    if (gameState.shadowTransform != null && gameState.activeTransform != null) {
       // Light direction (from upper-right-front) - normalized direction from where light is coming
       final lightDirX = 0.5; // Light from right
       final lightDirZ = 0.3; // Light from front
 
-      // Calculate shadow offset based on player height above terrain (higher = further from player)
+      // Calculate shadow offset based on character height above terrain (higher = further from character)
       final playerHeight = PhysicsSystem.getPlayerHeight(gameState);
       final shadowOffsetX = playerHeight * lightDirX;
       final shadowOffsetZ = playerHeight * lightDirZ;
 
-      // Position shadow with offset from player
-      gameState.shadowTransform!.position.x = gameState.playerTransform!.position.x + shadowOffsetX;
-      gameState.shadowTransform!.position.z = gameState.playerTransform!.position.z + shadowOffsetZ;
+      // Position shadow with offset from active character
+      gameState.shadowTransform!.position.x = gameState.activeTransform!.position.x + shadowOffsetX;
+      gameState.shadowTransform!.position.z = gameState.activeTransform!.position.z + shadowOffsetZ;
 
       // Set shadow Y to terrain height at shadow position (slightly above to avoid z-fighting)
       if (gameState.infiniteTerrainManager != null) {
@@ -648,8 +660,8 @@ class _Game3DState extends State<Game3D> {
         gameState.shadowTransform!.position.y = shadowTerrainHeight + 0.01;
       }
 
-      // Rotate shadow to match player rotation
-      gameState.shadowTransform!.rotation.y = gameState.playerRotation;
+      // Rotate shadow to match active character rotation
+      gameState.shadowTransform!.rotation.y = gameState.activeRotation;
 
       // Shadow gets larger the higher the player is (scale factor includes base size adjustment)
       final scaleFactor = 1.0 + playerHeight * 0.15;
@@ -659,23 +671,23 @@ class _Game3DState extends State<Game3D> {
     // Update floating damage indicators
     updateDamageIndicators(gameState.damageIndicators, dt);
 
-    // Update camera based on mode
+    // Update camera based on mode — follows the active character
     if (camera!.mode == CameraMode.thirdPerson) {
-      // Third-person mode: Camera follows player from behind
+      // Third-person mode: Camera follows active character from behind
       camera!.updateThirdPersonFollow(
-        gameState.playerTransform!.position,
-        gameState.playerRotation,
+        gameState.activeTransform!.position,
+        gameState.activeRotation,
         dt,
       );
     } else {
-      // Static mode: Camera orbits around player with smoothing
+      // Static mode: Camera orbits around active character with smoothing
       final currentTarget = camera!.getTarget();
-      final distanceFromTarget = (gameState.playerTransform!.position - currentTarget).length;
+      final distanceFromTarget = (gameState.activeTransform!.position - currentTarget).length;
 
-      // Update camera target smoothly when player moves away from center
+      // Update camera target smoothly when active character moves away from center
       if (distanceFromTarget > 0.1) {
-        // Smoothly interpolate camera target toward player position
-        final newTarget = currentTarget + (gameState.playerTransform!.position - currentTarget) * 0.05;
+        // Smoothly interpolate camera target toward active character position
+        final newTarget = currentTarget + (gameState.activeTransform!.position - currentTarget) * 0.05;
         camera!.setTarget(newTarget);
       }
     }
@@ -726,11 +738,15 @@ class _Game3DState extends State<Game3D> {
     }
 
     // Handle C key for character panel (only on key down, not repeat)
+    // Opens to the active party member's tab
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyC) {
       if (!_isVisible('character_panel')) return;
-      print('C key detected! Toggling character panel.');
+      print('C key detected! Toggling character panel (active: ${gameState.activeCharacterIndex}).');
       setState(() {
         gameState.characterPanelOpen = !gameState.characterPanelOpen;
+        if (!gameState.characterPanelOpen) {
+          gameState.characterPanelSelectedIndex = null;
+        }
       });
       return;
     }
@@ -835,21 +851,64 @@ class _Game3DState extends State<Game3D> {
     }
 
     // Handle Tab/Shift+Tab for target cycling (WoW-style)
+    // Shift+Tab = cycle friendly targets, Tab = cycle enemy targets
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.tab) {
       final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+
+      if (isShiftPressed) {
+        // Shift+Tab = cycle friendly targets
+        setState(() {
+          gameState.tabToNextFriendlyTarget();
+          debugPrint('Shift+Tab: friendly target -> ${gameState.currentTargetId}');
+        });
+        return;
+      }
+
       final playerX = gameState.playerTransform?.position.x ?? 0.0;
       final playerZ = gameState.playerTransform?.position.z ?? 0.0;
       final playerRotation = gameState.playerTransform?.rotation.y ?? 0.0;
 
       setState(() {
-        gameState.tabToNextTarget(playerX, playerZ, playerRotation, reverse: isShiftPressed);
+        gameState.tabToNextTarget(playerX, playerZ, playerRotation);
         final target = gameState.getCurrentTarget();
         if (target != null) {
           final name = target['type'] == 'boss' ? 'Boss Monster' :
             (target['entity'] as Monster?)?.definition.name ?? 'Unknown';
-          debugPrint('Tab target: $name (${isShiftPressed ? "reverse" : "forward"})');
+          debugPrint('Tab target: $name');
         } else {
           debugPrint('No targets available');
+        }
+      });
+      return;
+    }
+
+    // Handle [ and ] keys for party cycling or panel carousel
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.bracketLeft) {
+      setState(() {
+        if (gameState.characterPanelOpen) {
+          // Cycle panel carousel
+          final total = 1 + gameState.allies.length;
+          final current = gameState.characterPanelSelectedIndex ?? gameState.activeCharacterIndex;
+          gameState.characterPanelSelectedIndex = (current - 1 + total) % total;
+        } else {
+          // Cycle active controlled character
+          gameState.cycleActiveCharacterPrev();
+          _updateActiveActionBarConfig();
+        }
+      });
+      return;
+    }
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.bracketRight) {
+      setState(() {
+        if (gameState.characterPanelOpen) {
+          // Cycle panel carousel
+          final total = 1 + gameState.allies.length;
+          final current = gameState.characterPanelSelectedIndex ?? gameState.activeCharacterIndex;
+          gameState.characterPanelSelectedIndex = (current + 1) % total;
+        } else {
+          // Cycle active controlled character
+          gameState.cycleActiveCharacterNext();
+          _updateActiveActionBarConfig();
         }
       });
       return;
@@ -866,6 +925,7 @@ class _Game3DState extends State<Game3D> {
       if (gameState.characterPanelOpen) {
         setState(() {
           gameState.characterPanelOpen = false;
+          gameState.characterPanelSelectedIndex = null;
         });
         return;
       }
@@ -1045,6 +1105,14 @@ class _Game3DState extends State<Game3D> {
     setState(() {
       AbilitySystem.handleAbility10Input(true, gameState);
     });
+  }
+
+  /// Update the action bar config manager to match the active character
+  void _updateActiveActionBarConfig() {
+    globalActionBarConfigManager?.setActiveIndex(gameState.activeCharacterIndex);
+    final activeIdx = gameState.activeCharacterIndex;
+    final name = activeIdx == 0 ? 'Warchief' : 'Ally $activeIdx';
+    print('[PARTY] Active character: $name');
   }
 
   /// Handle ability dropped from Abilities Codex onto action bar slot
@@ -1653,9 +1721,11 @@ class _Game3DState extends State<Game3D> {
             if (gameState.characterPanelOpen && _isVisible('character_panel'))
               CharacterPanel(
                 gameState: gameState,
+                initialIndex: gameState.characterPanelSelectedIndex ?? gameState.activeCharacterIndex,
                 onClose: () {
                   setState(() {
                     gameState.characterPanelOpen = false;
+                    gameState.characterPanelSelectedIndex = null;
                   });
                 },
               ),
@@ -1813,6 +1883,21 @@ class _Game3DState extends State<Game3D> {
         'maxMana': 0.0,
         'level': null,
         'color': const Color(0xFF666666),
+        'isFriendly': false,
+      };
+    }
+
+    if (target['type'] == 'player') {
+      return {
+        'hasTarget': true,
+        'name': 'Warchief',
+        'health': gameState.playerHealth,
+        'maxHealth': gameState.playerMaxHealth,
+        'mana': gameState.blueMana,
+        'maxMana': gameState.maxBlueMana,
+        'level': 10,
+        'color': const Color(0xFF4D80CC),
+        'isFriendly': true,
       };
     }
 
@@ -1826,6 +1911,7 @@ class _Game3DState extends State<Game3D> {
         'maxMana': 100.0,
         'level': 15,
         'color': const Color(0xFF9933CC), // Purple for boss
+        'isFriendly': false,
       };
     } else if (target['type'] == 'dummy') {
       final dummy = gameState.targetDummy;
@@ -1838,6 +1924,7 @@ class _Game3DState extends State<Game3D> {
         'maxMana': 0.0,
         'level': 0,
         'color': const Color(0xFFC19A6B), // Burlywood/wooden color
+        'isFriendly': false,
       };
     } else if (target['type'] == 'ally') {
       final ally = target['entity'] as Ally?;
@@ -1851,6 +1938,7 @@ class _Game3DState extends State<Game3D> {
           'maxMana': 0.0,
           'level': null,
           'color': const Color(0xFF666666),
+          'isFriendly': false,
         };
       }
       final allyIndex = int.tryParse((target['id'] as String).substring(5)) ?? 0;
@@ -1859,10 +1947,11 @@ class _Game3DState extends State<Game3D> {
         'name': 'Ally ${allyIndex + 1}',
         'health': ally.health,
         'maxHealth': ally.maxHealth,
-        'mana': 0.0,
-        'maxMana': 0.0,
+        'mana': ally.blueMana,
+        'maxMana': ally.maxBlueMana,
         'level': 10,
         'color': const Color(0xFF66CC66), // Green for allies
+        'isFriendly': true,
       };
     } else {
       final minion = target['entity'] as Monster?;
@@ -1876,6 +1965,7 @@ class _Game3DState extends State<Game3D> {
           'maxMana': 0.0,
           'level': null,
           'color': const Color(0xFF666666),
+          'isFriendly': false,
         };
       }
 
@@ -1908,6 +1998,7 @@ class _Game3DState extends State<Game3D> {
         'maxMana': minion.maxMana,
         'level': minion.definition.monsterPower,
         'color': archetypeColor,
+        'isFriendly': false,
       };
     }
   }
@@ -1940,19 +2031,47 @@ class _Game3DState extends State<Game3D> {
     final targetData = _getTargetData();
     final totInfo = _getTargetOfTargetInfo();
 
+    // Determine friendly/enemy colors for target frame
+    final isFriendly = targetData['isFriendly'] as bool? ?? false;
+    final targetBorderColor = isFriendly
+        ? const Color(0xFF4CAF50) // Green border for friendlies
+        : const Color(0xFFFF6B6B); // Red border for enemies
+    final targetHealthColor = isFriendly
+        ? const Color(0xFF66BB6A) // Green health for friendlies
+        : const Color(0xFFEF5350); // Red health for enemies
+
+    // Determine active character info for player frame
+    final isWarchief = gameState.isWarchiefActive;
+    final activeAlly = gameState.activeAlly;
+    final activeName = isWarchief
+        ? 'Warchief'
+        : 'Ally ${gameState.activeCharacterIndex}';
+    final activeHealth = isWarchief
+        ? gameState.playerHealth
+        : (activeAlly?.health ?? 0);
+    final activeMaxHealth = isWarchief
+        ? gameState.playerMaxHealth
+        : (activeAlly?.maxHealth ?? 50);
+    final activeLevel = isWarchief
+        ? 10
+        : (5 + gameState.activeCharacterIndex);
+    final activePortraitColor = isWarchief
+        ? const Color(0xFF4D80CC)
+        : const Color(0xFF66CC66);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         CombatHUD(
-          playerName: 'Warchief',
-          playerHealth: gameState.playerHealth,
-          playerMaxHealth: gameState.playerMaxHealth,
-          playerLevel: 10,
-          playerPortraitWidget: const CubePortrait(
-            color: Color(0xFF4D80CC),
+          playerName: activeName,
+          playerHealth: activeHealth,
+          playerMaxHealth: activeMaxHealth,
+          playerLevel: activeLevel,
+          playerPortraitWidget: CubePortrait(
+            color: activePortraitColor,
             size: 36,
             hasDirectionIndicator: true,
-            indicatorColor: Colors.red,
+            indicatorColor: isWarchief ? Colors.red : Colors.green,
           ),
           gameState: gameState, // For mana bar display
           targetName: targetData['name'] as String?,
@@ -2000,7 +2119,9 @@ class _Game3DState extends State<Game3D> {
           onAbility8Pressed: _activateAbility8,
           onAbility9Pressed: _activateAbility9,
           onAbility10Pressed: _activateAbility10,
-          actionBarConfig: globalActionBarConfig,
+          actionBarConfig: globalActionBarConfigManager?.activeConfig,
+          targetBorderColor: targetBorderColor,
+          targetHealthColor: targetHealthColor,
           onAbilityDropped: _handleAbilityDropped,
         ),
         // Target of Target display

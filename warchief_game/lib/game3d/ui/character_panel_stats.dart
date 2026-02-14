@@ -27,6 +27,8 @@ Widget buildStatsColumn({
   final maxBlueMana = isPlayer ? gameState.maxBlueMana : 100.0;
   final redMana = isPlayer ? gameState.redMana : 0.0;
   final maxRedMana = isPlayer ? gameState.maxRedMana : 100.0;
+  final whiteMana = isPlayer ? gameState.whiteMana : 0.0;
+  final maxWhiteMana = isPlayer ? gameState.maxWhiteMana : 100.0;
 
   // Combat stats
   final damage = isPlayer
@@ -54,6 +56,9 @@ Widget buildStatsColumn({
         const SizedBox(height: 4),
         _compactResourceBar('Red', redMana, maxRedMana,
             const Color(0xFFE53935)),
+        const SizedBox(height: 4),
+        _compactResourceBar('White', whiteMana, maxWhiteMana,
+            const Color(0xFFE0E0E0)),
         const SizedBox(height: 14),
 
         // Combat stats section

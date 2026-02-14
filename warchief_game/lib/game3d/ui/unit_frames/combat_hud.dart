@@ -67,6 +67,10 @@ class CombatHUD extends StatelessWidget {
   final VoidCallback? onAbility9Pressed;
   final VoidCallback? onAbility10Pressed;
 
+  // Target frame colors (friendly = green, enemy = red)
+  final Color targetBorderColor;
+  final Color targetHealthColor;
+
   // Action bar configuration (for drag-and-drop)
   final ActionBarConfig? actionBarConfig;
   final Function(int slotIndex, String abilityName)? onAbilityDropped;
@@ -119,6 +123,8 @@ class CombatHUD extends StatelessWidget {
     this.onAbility8Pressed,
     this.onAbility9Pressed,
     this.onAbility10Pressed,
+    this.targetBorderColor = const Color(0xFFFF6B6B),
+    this.targetHealthColor = const Color(0xFFEF5350),
     this.actionBarConfig,
     this.onAbilityDropped,
   }) : super(key: key);
@@ -195,8 +201,8 @@ class CombatHUD extends StatelessWidget {
                 isPlayer: false,
                 level: targetLevel,
                 portraitWidget: targetPortraitWidget,
-                borderColor: const Color(0xFFFF6B6B),
-                healthColor: const Color(0xFFEF5350),
+                borderColor: targetBorderColor,
+                healthColor: targetHealthColor,
                 width: 200,
               ),
               // Target mana bar below target frame (same width as player's)

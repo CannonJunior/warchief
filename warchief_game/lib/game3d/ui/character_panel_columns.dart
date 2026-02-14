@@ -150,11 +150,12 @@ Widget _buildAttrRow(_AttrData attr, int maxVal) {
 ///
 /// Layout:
 ///   Helm (centered)
-///   RotatableCubePortrait (120x120)
+///   RotatableCubePortrait (120x120 for player, 100x100 for ally)
 ///   Row 1: Back, Gloves, Armor, Legs, Boots
 ///   Row 2: Ring 1, Main Hand, Talisman, Off Hand, Ring 2
+///   Ally Status (for ally views only, below equipment)
 ///
-/// For ally views, shows ally info instead of equipment.
+/// Equipment slots are shown for ALL characters (player and allies).
 Widget buildPaperDollColumn({
   required bool isPlayer,
   required int currentIndex,
@@ -165,10 +166,6 @@ Widget buildPaperDollColumn({
   void Function(EquipmentSlot slot, Item item)? onEquipItem,
   void Function(EquipmentSlot slot, Item item)? onUnequipItem,
 }) {
-  if (!isPlayer && ally != null) {
-    return _buildAllyCenter(ally, currentIndex, portraitColor, cubeRotation);
-  }
-
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Column(
@@ -176,10 +173,10 @@ Widget buildPaperDollColumn({
         // Helm - top center
         _equipSlot(EquipmentSlot.helm, inventory, onEquipItem: onEquipItem, onUnequipItem: onUnequipItem),
         const SizedBox(height: 8),
-        // Central cube portrait
+        // Central cube portrait (smaller for allies to leave room for status)
         RotatableCubePortrait(
           color: portraitColor,
-          size: 120,
+          size: isPlayer ? 120 : 100,
           rotation: cubeRotation,
         ),
         const SizedBox(height: 8),
@@ -224,90 +221,47 @@ Widget buildPaperDollColumn({
             fontStyle: FontStyle.italic,
           ),
         ),
+        // Ally status info below equipment (compact)
+        if (!isPlayer && ally != null) ...[
+          const SizedBox(height: 8),
+          _buildAllyStatusCompact(ally),
+        ],
       ],
     ),
   );
 }
 
-/// Builds ally info for the center column when viewing an ally.
-Widget _buildAllyCenter(
-  Ally ally,
-  int currentIndex,
-  Color portraitColor,
-  double cubeRotation,
-) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    child: Column(
+/// Compact ally status info shown below equipment slots.
+Widget _buildAllyStatusCompact(Ally ally) {
+  return Container(
+    margin: const EdgeInsets.symmetric(horizontal: 8),
+    padding: const EdgeInsets.all(6),
+    decoration: BoxDecoration(
+      color: Colors.black.withValues(alpha: 0.3),
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: const Color(0xFF252542)),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        const SizedBox(height: 16),
-        // Ally cube portrait (rotatable)
-        RotatableCubePortrait(
-          color: portraitColor,
-          size: 100,
-          rotation: cubeRotation,
-        ),
-        const SizedBox(height: 12),
-        // Drag hint
-        Text(
-          '\u2190 drag to rotate \u2192',
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 10,
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-        const SizedBox(height: 16),
-        sectionTitle('Ally Status'),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFF252542)),
-          ),
-          child: Column(
-            children: [
-              _allyInfoRow('Strategy', ally.strategy.name, Icons.psychology),
-              const SizedBox(height: 6),
-              _allyInfoRow('Command', _commandName(ally.currentCommand),
-                  Icons.assignment),
-              const SizedBox(height: 6),
-              _allyInfoRow('Mode', _movementModeName(ally.movementMode),
-                  Icons.directions_walk),
-              const SizedBox(height: 6),
-              _allyInfoRow('Ability', _abilityName(ally.abilityIndex),
-                  Icons.auto_fix_high),
-            ],
-          ),
-        ),
+        _allyStatusChip(Icons.psychology, ally.strategy.name),
+        _allyStatusChip(Icons.assignment, _commandName(ally.currentCommand)),
+        _allyStatusChip(Icons.auto_fix_high, _abilityName(ally.abilityIndex)),
       ],
     ),
   );
 }
 
-Widget _allyInfoRow(String label, String value, IconData icon) {
+/// Compact chip showing an ally status value.
+Widget _allyStatusChip(IconData icon, String value) {
   return Row(
+    mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(icon, color: const Color(0xFF4cc9f0), size: 14),
-      const SizedBox(width: 6),
-      SizedBox(
-        width: 60,
-        child: Text(
-          label,
-          style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
-        ),
-      ),
-      Expanded(
-        child: Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+      Icon(icon, color: const Color(0xFF4cc9f0), size: 11),
+      const SizedBox(width: 3),
+      Text(
+        value,
+        style: const TextStyle(color: Colors.white70, fontSize: 9),
       ),
     ],
   );

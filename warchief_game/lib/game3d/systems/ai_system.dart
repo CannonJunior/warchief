@@ -148,6 +148,8 @@ class AISystem {
 
     for (final ally in gameState.allies) {
       if (ally.health <= 0) continue;
+      // Skip the active player-controlled ally
+      if (!gameState.isWarchiefActive && ally == gameState.activeAlly) continue;
 
       const double allySize = 0.8; // Ally mesh size
 
@@ -510,6 +512,8 @@ class AISystem {
   static void updateAllyAI(double dt, GameState gameState) {
     for (final ally in gameState.allies) {
       if (ally.health <= 0) continue; // Skip dead allies
+      // Skip the active player-controlled ally
+      if (!gameState.isWarchiefActive && ally == gameState.activeAlly) continue;
 
       ally.aiTimer += dt;
 

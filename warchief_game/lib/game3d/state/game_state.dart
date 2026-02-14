@@ -215,6 +215,34 @@ class GameState {
         }
       }
     }
+
+    // ===== ALLY MANA REGEN =====
+    for (final ally in allies) {
+      if (ally.health <= 0) continue;
+
+      final allyPos = ally.transform.position;
+      final allyBlueRegen = leyLineManager!.calculateManaRegen(allyPos.x, allyPos.z);
+      final allyOnPowerNode = leyLineManager!.isOnPowerNode(allyPos.x, allyPos.z);
+      final allyItemBlueBonus = ally.inventory.totalEquippedStats.blueManaRegen;
+      final allyItemRedBonus = ally.inventory.totalEquippedStats.redManaRegen;
+
+      // Ally blue mana regen (ley lines + item bonus)
+      final effectiveAllyBlueRegen = allyBlueRegen + allyItemBlueBonus;
+      if (effectiveAllyBlueRegen > 0) {
+        ally.blueMana = (ally.blueMana + effectiveAllyBlueRegen * dt)
+            .clamp(0.0, ally.maxBlueMana);
+      }
+
+      // Ally red mana regen (power nodes + item bonus)
+      if (allyOnPowerNode) {
+        final allyRedRegen = allyBlueRegen + allyItemRedBonus;
+        ally.redMana = (ally.redMana + allyRedRegen * dt)
+            .clamp(0.0, ally.maxRedMana);
+      } else if (allyItemRedBonus > 0) {
+        ally.redMana = (ally.redMana + allyItemRedBonus * dt)
+            .clamp(0.0, ally.maxRedMana);
+      }
+    }
   }
 
   /// Update wind simulation and White Mana regeneration/decay.
@@ -257,6 +285,35 @@ class GameState {
       if (whiteMana > 0 && whiteRegenBonus <= 0) {
         final decay = config?.decayRate ?? 0.5;
         whiteMana = (whiteMana - decay * dt).clamp(0.0, maxWhiteMana);
+      }
+    }
+
+    // ===== ALLY WHITE MANA REGEN =====
+    // Allies share the global wind exposure level
+    for (final ally in allies) {
+      if (ally.health <= 0) continue;
+      final allyWhiteRegenBonus = ally.inventory.totalEquippedStats.whiteManaRegen;
+
+      if (exposure >= shelterThresh) {
+        // Wind is blowing — ally regenerates white mana
+        final allyRegenRate = (config?.windExposureRegen ?? 5.0) *
+            exposure *
+            (config?.windStrengthMultiplier ?? 1.0) +
+            allyWhiteRegenBonus;
+        ally.whiteMana = (ally.whiteMana + allyRegenRate * dt)
+            .clamp(0.0, ally.maxWhiteMana);
+      } else {
+        // Sheltered — item regen still applies
+        if (allyWhiteRegenBonus > 0) {
+          ally.whiteMana = (ally.whiteMana + allyWhiteRegenBonus * dt)
+              .clamp(0.0, ally.maxWhiteMana);
+        }
+        // Ally white mana decay when sheltered
+        if (ally.whiteMana > 0 && allyWhiteRegenBonus <= 0) {
+          final decay = config?.decayRate ?? 0.5;
+          ally.whiteMana = (ally.whiteMana - decay * dt)
+              .clamp(0.0, ally.maxWhiteMana);
+        }
       }
     }
 
@@ -362,6 +419,98 @@ class GameState {
   bool monsterAbility1Active = false;
   double monsterAbility1ActiveTime = 0.0;
   bool monsterAbility1HitRegistered = false;
+
+  // ==================== ACTIVE CHARACTER (PARTY) ====================
+
+  /// Index of the active party member: 0 = Warchief, 1+ = ally index + 1
+  int activeCharacterIndex = 0;
+
+  /// Whether the active character is the Warchief
+  bool get isWarchiefActive => activeCharacterIndex == 0;
+
+  /// Get the active ally (null if Warchief is active)
+  Ally? get activeAlly {
+    if (activeCharacterIndex == 0 || activeCharacterIndex > allies.length) {
+      return null;
+    }
+    return allies[activeCharacterIndex - 1];
+  }
+
+  /// Cycle active character forward (] key)
+  void cycleActiveCharacterNext() {
+    final total = 1 + allies.length;
+    activeCharacterIndex = (activeCharacterIndex + 1) % total;
+    _resetPhysicsForSwitch();
+  }
+
+  /// Cycle active character backward ([ key)
+  void cycleActiveCharacterPrev() {
+    final total = 1 + allies.length;
+    activeCharacterIndex = (activeCharacterIndex - 1 + total) % total;
+    _resetPhysicsForSwitch();
+  }
+
+  /// Transform of the currently controlled character (Warchief or active ally)
+  Transform3d? get activeTransform =>
+      isWarchiefActive ? playerTransform : activeAlly?.transform;
+
+  /// Rotation of the currently controlled character
+  double get activeRotation =>
+      isWarchiefActive ? playerRotation : (activeAlly?.rotation ?? 0.0);
+
+  /// Set rotation of the currently controlled character
+  set activeRotation(double val) {
+    if (isWarchiefActive) {
+      playerRotation = val;
+    } else if (activeAlly != null) {
+      activeAlly!.rotation = val;
+    }
+  }
+
+  /// Effective speed of the currently controlled character
+  double get activeEffectiveSpeed =>
+      isWarchiefActive ? effectivePlayerSpeed : (activeAlly?.moveSpeed ?? 2.5);
+
+  /// Reset physics state when switching active character
+  /// Prevents carried velocity / jump state from bleeding across characters
+  void _resetPhysicsForSwitch() {
+    verticalVelocity = 0.0;
+    isJumping = false;
+    isGrounded = true;
+    jumpsRemaining = maxJumps;
+    cancelCast();
+    cancelWindup();
+    // End flight if switching away from Warchief
+    if (!isWarchiefActive && isFlying) {
+      endFlight();
+    }
+  }
+
+  /// Selected index in the character panel carousel (null = not externally set)
+  int? characterPanelSelectedIndex;
+
+  // ==================== FRIENDLY TARGET CYCLING ====================
+
+  /// Index for friendly tab targeting cycle
+  int _friendlyTabIndex = -1;
+
+  /// Get list of targetable friendlies (player + alive allies)
+  List<String> getTargetableFriendlies() {
+    final targets = <String>['player'];
+    for (int i = 0; i < allies.length; i++) {
+      if (allies[i].health > 0) targets.add('ally_$i');
+    }
+    return targets;
+  }
+
+  /// Cycle to next friendly target (Shift+Tab)
+  void tabToNextFriendlyTarget() {
+    final targets = getTargetableFriendlies();
+    if (targets.isEmpty) return;
+    _friendlyTabIndex++;
+    if (_friendlyTabIndex >= targets.length) _friendlyTabIndex = 0;
+    currentTargetId = targets[_friendlyTabIndex];
+  }
 
   // ==================== ALLY STATE ====================
 
@@ -533,6 +682,14 @@ class GameState {
   /// Returns a map with 'type' ('boss', 'minion', or 'dummy') and the entity itself
   Map<String, dynamic>? getCurrentTarget() {
     if (currentTargetId == null) return null;
+
+    if (currentTargetId == 'player') {
+      return {
+        'type': 'player',
+        'entity': null,
+        'id': 'player',
+      };
+    }
 
     if (currentTargetId == 'boss') {
       return {
@@ -769,6 +926,11 @@ class GameState {
   /// Validate current target (clear if dead)
   void validateTarget() {
     if (currentTargetId == null) return;
+
+    if (currentTargetId == 'player') {
+      // Player is always a valid target
+      return;
+    }
 
     if (currentTargetId == 'boss') {
       if (monsterHealth <= 0) clearTarget();

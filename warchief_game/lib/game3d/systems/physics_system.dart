@@ -32,9 +32,9 @@ class PhysicsSystem {
   /// - dt: Time elapsed since last frame (in seconds)
   /// - gameState: Current game state to update
   static void update(double dt, GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
-    // Flight mode — bypass normal gravity and ground collision
+    // Flight mode — bypass normal gravity and ground collision (Warchief only)
     if (gameState.isFlying) {
       _updateFlight(dt, gameState);
       return;
@@ -44,7 +44,7 @@ class PhysicsSystem {
     gameState.verticalVelocity -= gameState.gravity * dt;
 
     // Apply vertical movement
-    gameState.playerTransform!.position.y += gameState.verticalVelocity * dt;
+    gameState.activeTransform!.position.y += gameState.verticalVelocity * dt;
 
     // Check ground collision
     _checkGroundCollision(gameState);
@@ -123,20 +123,20 @@ class PhysicsSystem {
   static const double _terrainBuffer = 0.15;
 
   static void _checkGroundCollision(GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
-    // Get terrain height at player's current X,Z position
+    // Get terrain height at active character's current X,Z position
     final terrainHeight = _getTerrainHeight(
       gameState,
-      gameState.playerTransform!.position.x,
-      gameState.playerTransform!.position.z,
+      gameState.activeTransform!.position.x,
+      gameState.activeTransform!.position.z,
     );
 
-    // Player mesh is centered, so add half height + buffer to sit above terrain
+    // Character mesh is centered, so add half height + buffer to sit above terrain
     final groundY = terrainHeight + GameConfig.playerSize / 2 + _terrainBuffer;
 
-    if (gameState.playerTransform!.position.y <= groundY) {
-      gameState.playerTransform!.position.y = groundY;
+    if (gameState.activeTransform!.position.y <= groundY) {
+      gameState.activeTransform!.position.y = groundY;
       gameState.verticalVelocity = 0.0;
       gameState.isJumping = false;
       gameState.isGrounded = true;
@@ -150,14 +150,14 @@ class PhysicsSystem {
   /// - Height above terrain surface (in world units)
   /// - 0.0 if player transform is null
   static double getPlayerHeight(GameState gameState) {
-    if (gameState.playerTransform == null) return 0.0;
+    if (gameState.activeTransform == null) return 0.0;
 
     final terrainHeight = _getTerrainHeight(
       gameState,
-      gameState.playerTransform!.position.x,
-      gameState.playerTransform!.position.z,
+      gameState.activeTransform!.position.x,
+      gameState.activeTransform!.position.z,
     );
 
-    return gameState.playerTransform!.position.y - terrainHeight;
+    return gameState.activeTransform!.position.y - terrainHeight;
   }
 }

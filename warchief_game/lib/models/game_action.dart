@@ -52,7 +52,12 @@ enum GameAction {
   // Targeting
   tabTarget,
   tabTargetReverse,
+  tabTargetFriendly,
   clearTarget,
+
+  // Party Management
+  cyclePartyNext,
+  cyclePartyPrev,
 
   // UI
   toggleSettings,
@@ -140,8 +145,14 @@ extension GameActionExtension on GameAction {
         return 'Tab Target';
       case GameAction.tabTargetReverse:
         return 'Previous Target';
+      case GameAction.tabTargetFriendly:
+        return 'Target Friendly';
       case GameAction.clearTarget:
         return 'Clear Target';
+      case GameAction.cyclePartyNext:
+        return 'Cycle Party Next';
+      case GameAction.cyclePartyPrev:
+        return 'Cycle Party Previous';
       case GameAction.toggleSettings:
         return 'Toggle Settings';
       case GameAction.toggleInventory:
@@ -230,8 +241,14 @@ extension GameActionExtension on GameAction {
         return LogicalKeyboardKey.tab;
       case GameAction.tabTargetReverse:
         return LogicalKeyboardKey.tab; // Shift+Tab handled separately
+      case GameAction.tabTargetFriendly:
+        return LogicalKeyboardKey.tab; // Shift+Tab handled separately in game3d_widget
       case GameAction.clearTarget:
         return LogicalKeyboardKey.escape;
+      case GameAction.cyclePartyNext:
+        return LogicalKeyboardKey.bracketRight;
+      case GameAction.cyclePartyPrev:
+        return LogicalKeyboardKey.bracketLeft;
       case GameAction.toggleSettings:
         return LogicalKeyboardKey.escape;
       case GameAction.toggleInventory:
