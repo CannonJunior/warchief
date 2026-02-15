@@ -72,6 +72,9 @@ class RenderSystem {
       renderer.render(gameState.shadowMesh!, gameState.shadowTransform!, camera);
     }
 
+    // Render aura glow discs at unit bases (additive blending)
+    _renderAuras(renderer, camera, gameState);
+
     // Render target indicator (yellow dashed rectangle around target's base)
     _renderTargetIndicator(renderer, camera, gameState);
 
@@ -166,6 +169,40 @@ class RenderSystem {
 
     // Render wind particles (Effects pass)
     _renderWindParticles(renderer, camera, gameState);
+  }
+
+  /// Render aura glow discs at unit bases with additive blending.
+  ///
+  /// Enables GL_BLEND with SRC_ALPHA + ONE (additive) so the disc
+  /// creates a soft glow effect. Depth writes are disabled to prevent
+  /// the transparent disc from occluding geometry behind it.
+  static void _renderAuras(
+    WebGLRenderer renderer,
+    Camera3D camera,
+    GameState gameState,
+  ) {
+    final gl = renderer.gl;
+
+    // Enable additive blending for glow effect
+    gl.enable(0x0BE2); // GL_BLEND
+    gl.blendFunc(0x0302, 0x0001); // SRC_ALPHA, ONE (additive)
+    gl.depthMask(false); // Don't write to depth buffer
+
+    // Render player aura
+    if (gameState.playerAuraMesh != null && gameState.playerAuraTransform != null) {
+      renderer.render(gameState.playerAuraMesh!, gameState.playerAuraTransform!, camera);
+    }
+
+    // Render ally auras
+    for (final ally in gameState.allies) {
+      if (ally.auraMesh != null) {
+        renderer.render(ally.auraMesh!, ally.auraTransform, camera);
+      }
+    }
+
+    // Restore state
+    gl.depthMask(true);
+    gl.disable(0x0BE2); // GL_BLEND
   }
 
   /// Update and render wind particles.

@@ -2,7 +2,86 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-15
+
+#### Fix Macro Execution + Combat Log Tab
+- ✅ Made `getCooldownForSlot` public in `ability_system.dart` — renamed from `_getCooldownForSlot`, updated internal call site
+- ✅ Added pre-checks in `macro_system.dart` `_executeAbilityForCharacter()` — checks cooldown, casting/winding up, and mana cost before calling `executeSlotAbility()`; macro now waits and retries on next frame when ability would fail instead of unconditionally advancing
+- ✅ Created `lib/models/combat_log_entry.dart` — `CombatLogType` enum (damage/heal/buff/debuff/death/ability), `CombatLogEntry` class with source, action, type, amount, target, timestamp, formatted time
+- ✅ Added `combatLogMessages` list to `game_state.dart`, updated `chatPanelActiveTab` comment to include tab 2
+- ✅ Added `_logCombat()` helper to `combat_system.dart` — logs damage events from `checkAndApplyDamage()` with target type resolution, caps at 200 entries
+- ✅ Added `_logHeal()` helper to `ability_system.dart` — logs heal events from `_executeHeal()`, `_executeGenericHeal()`, and `_executeGreaterHealEffect()`
+- ✅ Created `lib/game3d/ui/combat_log_tab.dart` — `CombatLogTab` widget modeled after `RaidChatTab`, color-coded entries (red=damage, green=heal, yellow=buff, purple=debuff), monospace timestamps, scrollable list
+- ✅ Added 3rd "Combat" tab to `chat_panel.dart` — red color scheme (0xFFCC3333), menu_book icon, border color tri-state, tab content routing
+- ✅ Wired `combatLogMessages` prop through `game3d_widget.dart` → `ChatPanel`
+- ✅ Build verified clean (`flutter build web`)
+
+#### Macro Builder Fix: Ability Execution + Character Name Display
+- ✅ Fixed `AbilityRegistry.findByName()` — now searches `PlayerAbilities` (Sword, Fireball, Heal, Dash Attack) first, then potentialAbilities; previously returned null for all Player abilities, silently killing macro execution
+- ✅ Fixed `_executeAbilityForCharacter()` — uses `globalActionBarConfigManager.getConfig(characterIndex)` (target character's config) instead of `globalActionBarConfig` (active character's config); prevents wrong-config lookup when active character differs from macro target
+- ✅ Restructured macro execution: active character path uses full AbilitySystem (animations/projectiles), non-active allies use direct cooldown+mana, non-active Warchief logs clear error
+- ✅ Fixed macro step dropdown — includes `PlayerAbilities.all` so Sword, Fireball, Heal, Dash Attack appear in the ability selector
+- ✅ Updated `MacroExecution.getCharacterName()` — matches Character Panel format: `'Warchief · Lv10 Warrior · "The Commander"'`, `'Ally N · LvX Class · "Title"'`
+- ✅ Updated macro builder panel `_charName` and running indicator — displays full character identity instead of generic "this character"
+- ✅ Build verified clean (`flutter build web`)
+
+#### Spell Rotation & Macro System — Phase 3: Macro Builder UI Panel
+- ✅ Added `macroPanelOpen` bool to `game_state.dart` UI STATE section
+- ✅ Added `isRunningOnCharacter(int)` static method to `MacroSystem` for UI play/stop state
+- ✅ Created `lib/game3d/ui/macro_step_list.dart` (~340 lines) — extracted step list + add-step form widget with numbered step cards, reorder/delete, inline add form with action type dropdown, ability selector, wait duration, condition dropdown
+- ✅ Created `lib/game3d/ui/macro_builder_panel.dart` (~450 lines) — main draggable panel with list view (saved macros, play/stop/edit/delete, active indicator) and editor view (name field, loop toggle, step list, save/cancel)
+- ✅ Wired R key handler in `game3d_widget.dart` — toggles `macroPanelOpen`, respects `_isVisible('rotation_builder')`
+- ✅ Wired Escape handler — closes macro panel before chat panel in priority chain
+- ✅ Wired `MacroBuilderPanel` into build Stack before ChatPanel with `_isVisible()` guard
+- ✅ Updated `rotation_builder` in `interface_config.dart` — added `shortcutKey: 'R'`, updated description
+- ✅ All new files under 500 lines (macro_step_list: ~340, macro_builder_panel: ~450)
+- ✅ Build verified clean (`flutter build web`)
+
 ### ✅ Completed - 2026-02-14
+
+#### Spell Rotation & Macro System — Phase 1 + 2: Engine + Chat
+- ✅ Created `assets/data/macro_config.json` — GCD timing, alert thresholds, execution behavior config
+- ✅ Created `lib/game3d/state/macro_config.dart` — config class following WindConfig pattern with dot-notation getters, global singleton
+- ✅ Created `lib/models/macro.dart` — `MacroActionType` enum, `MacroStep` (action, delay, condition), `Macro` (steps, loop, loopCount) with JSON serialization
+- ✅ Created `lib/models/raid_chat_message.dart` — `RaidAlertType` (info/warning/critical/success), `RaidAlertCategory` (mana/health/cooldown/aggro/rotation/phase), `RaidChatMessage` with formatted timestamps
+- ✅ Created `lib/game3d/state/macro_manager.dart` — CRUD + SharedPreferences persistence for per-character macros (`macros_char_0`, `macros_char_1`, etc.)
+- ✅ Created `lib/game3d/systems/macro_system.dart` — `MacroExecution` runtime state, `MacroSystem` with `startMacro()`, `stopMacro()`, `stopAll()`, `update()` loop, GCD tracking, step delays, condition checking, throttled raid chat alerts for low mana/health
+- ✅ Added `raidChatMessages`, `chatPanelOpen`, `chatPanelActiveTab` fields to `game_state.dart`
+- ✅ Created `lib/game3d/ui/raid_chat.dart` — `RaidChatTab` widget with color-coded messages (cyan/yellow/red/green), monospace timestamps, auto-scroll
+- ✅ Created `lib/game3d/ui/chat_panel.dart` — tabbed `ChatPanel` replacing standalone WarriorSpiritPanel for backtick key, Spirit tab (purple, interactive) + Raid tab (orange, read-only), draggable, 340×400
+- ✅ Updated `game3d_widget.dart` — imported MacroConfig/MacroManager/MacroSystem/ChatPanel, added `_initializeMacroConfig()`, `MacroSystem.update(dt, gameState)` in update loop, backtick toggles `chatPanelOpen`, Escape closes `chatPanelOpen`, ChatPanel rendered with Spirit + Raid tabs
+- ✅ Registered `'chat_panel'` and `'rotation_builder'` interfaces in `interface_config.dart`
+- ✅ WarriorSpiritPanel kept as standalone V-key fallback (shown only when chat panel is closed)
+- ✅ All values config-driven via `macro_config.json` — nothing hardcoded
+- ✅ All new files under 500 lines (macro_config: ~100, macro: ~120, raid_chat_message: ~50, macro_manager: ~115, macro_system: ~340, raid_chat: ~100, chat_panel: ~370)
+- ✅ Build verified clean (`flutter build web`)
+
+#### Fix Ability System to Use Active Character Instead of Hardcoded Warchief
+- ✅ Added active character mana helpers to `GameState`: `activeBlueMana`, `activeRedMana`, `activeWhiteMana` getters + max variants
+- ✅ Added `activeHasBlueMana()`, `activeHasRedMana()`, `activeHasWhiteMana()` check methods
+- ✅ Added `activeSpendBlueMana()`, `activeSpendRedMana()`, `activeSpendWhiteMana()` spend methods
+- ✅ Added `activeWhiteMana` setter for Silent Mind restore
+- ✅ Added `activeHealth` getter/setter and `activeMaxHealth` getter
+- ✅ Fixed `getDistanceToCurrentTarget()` to use `activeTransform` instead of `playerTransform`
+- ✅ Replaced all `gameState.playerTransform` → `gameState.activeTransform` in `ability_system.dart` (~35 occurrences)
+- ✅ Replaced all `gameState.playerRotation` → `gameState.activeRotation` in `ability_system.dart` (~23 occurrences)
+- ✅ Replaced all mana check/spend calls to active variants (hasBlueMana→activeHasBlueMana, spendBlueMana→activeSpendBlueMana, etc.)
+- ✅ Replaced all `gameState.playerHealth` → `gameState.activeHealth` and `playerMaxHealth` → `activeMaxHealth`
+- ✅ Fixed Silent Mind: `whiteMana = maxWhiteMana` → `activeWhiteMana = activeMaxWhiteMana`
+- ✅ All ~30+ ability methods now operate on the active character (Warchief or ally)
+- ✅ Build verified clean (`flutter build web`)
+
+#### Ability Aura Glow Effect System
+- ✅ Added `Mesh.auraDisc()` factory to `mesh.dart` — flat circular disc with radial alpha falloff (17 vertices × 2 faces, 32 triangles), center alpha 0.35 → mid 0.2 → outer 0.0
+- ✅ Created `lib/game3d/effects/aura_system.dart` — `AuraType` enum, `getCategoryColorVec3()` color map (warrior=red, mage=blue, healer=green, etc.), `computeAuraColor()` averages unique category colors from action bar, `createOrUpdateAuraMesh()` with color-change detection to avoid per-frame allocation
+- ✅ Added `auraMesh`, `auraTransform`, `lastAuraColor` fields to `Ally` model
+- ✅ Added `playerAuraMesh`, `playerAuraTransform`, `lastPlayerAuraColor` fields to `GameState`
+- ✅ Added `_renderAuras()` to `render_system.dart` — enables WebGL additive blending (SRC_ALPHA + ONE), disables depth writes, renders player + ally auras, restores GL state; render order: shadow → **auras** → target indicator
+- ✅ Wired aura initialization in `game3d_widget.dart` — player aura created after shadow setup, ally auras created in `_addAlly()`
+- ✅ Added `_updateAuraPositions()` — positions all aura discs at terrain height + 0.02 each frame
+- ✅ Added `_refreshAllAuraColors()` — recomputes player + all ally aura colors; called on ability drop, and every 60 frames (~1s) to catch load-class and other config changes
+- ✅ All new files under 500 lines (aura_system: ~115 lines)
+- ✅ Build verified clean (`flutter build web`)
 
 #### Active Character Control, Ally Mana, Panel Integration & Friendly Colors
 - ✅ Added 6 mana fields to `Ally` model: `blueMana`, `maxBlueMana`, `redMana`, `maxRedMana`, `whiteMana`, `maxWhiteMana` with constructor defaults

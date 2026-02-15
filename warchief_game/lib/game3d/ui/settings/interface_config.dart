@@ -251,6 +251,32 @@ class InterfaceConfigManager {
       position: const Offset(0, 0),
       defaultPosition: const Offset(0, 0),
     );
+
+    // Chat Panel (Press ` to toggle — Spirit + Raid tabs)
+    _interfaces['chat_panel'] = InterfaceConfig(
+      id: 'chat_panel',
+      name: 'Chat Panel',
+      description: 'Warrior Spirit chat and Raid combat alerts',
+      icon: Icons.chat,
+      category: 'ui_panels',
+      shortcutKey: '`',
+      isVisible: true,
+      position: const Offset(0, 0),
+      defaultPosition: const Offset(0, 0),
+    );
+
+    // Rotation Builder (Press R to toggle)
+    _interfaces['rotation_builder'] = InterfaceConfig(
+      id: 'rotation_builder',
+      name: 'Rotation Builder',
+      description: 'Visual macro rotation editor for spell automation',
+      icon: Icons.queue_music,
+      category: 'game_abilities',
+      shortcutKey: 'R',
+      isVisible: true,
+      position: const Offset(0, 0),
+      defaultPosition: const Offset(0, 0),
+    );
   }
 
   /// Category display labels

@@ -14,6 +14,7 @@ import '../../models/projectile.dart';
 import '../../models/impact_effect.dart';
 import 'combat_system.dart';
 import 'physics_system.dart';
+import '../../models/combat_log_entry.dart';
 
 /// Mana type enumeration for abilities
 enum _ManaType { none, blue, red, white }
@@ -211,7 +212,7 @@ class AbilitySystem {
   /// Execute ability by name
   static void _executeAbilityByName(String abilityName, int slotIndex, GameState gameState) {
     // Get cooldown for this slot
-    final cooldown = _getCooldownForSlot(slotIndex, gameState);
+    final cooldown = getCooldownForSlot(slotIndex, gameState);
     if (cooldown > 0) return;
 
     // Check if already casting or winding up
@@ -255,18 +256,18 @@ class AbilitySystem {
 
     if (manaCost > 0) {
       if (manaType == _ManaType.blue) {
-        if (!gameState.hasBlueMana(manaCost)) {
-          print('[MANA] Not enough blue mana for $abilityName (need $manaCost, have ${gameState.blueMana.toStringAsFixed(0)})');
+        if (!gameState.activeHasBlueMana(manaCost)) {
+          print('[MANA] Not enough blue mana for $abilityName (need $manaCost, have ${gameState.activeBlueMana.toStringAsFixed(0)})');
           return;
         }
       } else if (manaType == _ManaType.red) {
-        if (!gameState.hasRedMana(manaCost)) {
-          print('[MANA] Not enough red mana for $abilityName (need $manaCost, have ${gameState.redMana.toStringAsFixed(0)})');
+        if (!gameState.activeHasRedMana(manaCost)) {
+          print('[MANA] Not enough red mana for $abilityName (need $manaCost, have ${gameState.activeRedMana.toStringAsFixed(0)})');
           return;
         }
       } else if (manaType == _ManaType.white) {
-        if (!gameState.hasWhiteMana(manaCost)) {
-          print('[MANA] Not enough white mana for $abilityName (need $manaCost, have ${gameState.whiteMana.toStringAsFixed(0)})');
+        if (!gameState.activeHasWhiteMana(manaCost)) {
+          print('[MANA] Not enough white mana for $abilityName (need $manaCost, have ${gameState.activeWhiteMana.toStringAsFixed(0)})');
           return;
         }
       }
@@ -302,13 +303,13 @@ class AbilitySystem {
     // Spend mana for instant abilities
     if (manaCost > 0) {
       if (manaType == _ManaType.blue) {
-        gameState.spendBlueMana(manaCost);
+        gameState.activeSpendBlueMana(manaCost);
         print('[MANA] Spent $manaCost blue mana for $abilityName');
       } else if (manaType == _ManaType.red) {
-        gameState.spendRedMana(manaCost);
+        gameState.activeSpendRedMana(manaCost);
         print('[MANA] Spent $manaCost red mana for $abilityName');
       } else if (manaType == _ManaType.white) {
-        gameState.spendWhiteMana(manaCost);
+        gameState.activeSpendWhiteMana(manaCost);
         print('[MANA] Spent $manaCost white mana for $abilityName');
       }
     }
@@ -528,8 +529,8 @@ class AbilitySystem {
     }
   }
 
-  /// Get cooldown for a slot
-  static double _getCooldownForSlot(int slotIndex, GameState gameState) {
+  /// Get cooldown for a slot (public for macro pre-checks)
+  static double getCooldownForSlot(int slotIndex, GameState gameState) {
     switch (slotIndex) {
       case 0: return gameState.ability1Cooldown;
       case 1: return gameState.ability2Cooldown;
@@ -728,15 +729,15 @@ class AbilitySystem {
     // Reason: pendingManaType distinguishes blue(0), red(1), white(2)
     switch (gameState.pendingManaType) {
       case 2:
-        gameState.spendWhiteMana(cost);
+        gameState.activeSpendWhiteMana(cost);
         print('[MANA] Spent $cost white mana for $abilityName');
         break;
       case 1:
-        gameState.spendRedMana(cost);
+        gameState.activeSpendRedMana(cost);
         print('[MANA] Spent $cost red mana for $abilityName');
         break;
       default:
-        gameState.spendBlueMana(cost);
+        gameState.activeSpendBlueMana(cost);
         print('[MANA] Spent $cost blue mana for $abilityName');
         break;
     }
@@ -747,9 +748,9 @@ class AbilitySystem {
 
   /// Launch Lightning Bolt after cast completes
   static void _launchLightningBolt(int slotIndex, GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
-    final playerPos = gameState.playerTransform!.position;
+    final playerPos = gameState.activeTransform!.position;
     final targetPos = _getTargetPositionOrForward(gameState, playerPos);
     final direction = (targetPos - playerPos).normalized();
 
@@ -784,9 +785,9 @@ class AbilitySystem {
 
   /// Launch Pyroblast after cast completes
   static void _launchPyroblast(int slotIndex, GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
-    final playerPos = gameState.playerTransform!.position;
+    final playerPos = gameState.activeTransform!.position;
     final targetPos = _getTargetPositionOrForward(gameState, playerPos);
     final direction = (targetPos - playerPos).normalized();
 
@@ -821,9 +822,9 @@ class AbilitySystem {
 
   /// Launch Arcane Missile after cast completes
   static void _launchArcaneMissile(int slotIndex, GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
-    final playerPos = gameState.playerTransform!.position;
+    final playerPos = gameState.activeTransform!.position;
     final targetPos = _getTargetPositionOrForward(gameState, playerPos);
     final direction = (targetPos - playerPos).normalized();
 
@@ -858,7 +859,7 @@ class AbilitySystem {
 
   /// Execute Frost Nova effect after cast completes
   static void _executeFrostNovaEffect(int slotIndex, GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
     // Create impact effect around player
     final impactMesh = Mesh.cube(
@@ -866,7 +867,7 @@ class AbilitySystem {
       color: Vector3(0.4, 0.7, 1.0),
     );
     final impactTransform = Transform3d(
-      position: gameState.playerTransform!.position.clone(),
+      position: gameState.activeTransform!.position.clone(),
       scale: Vector3(1, 1, 1),
     );
     gameState.impactEffects.add(ImpactEffect(
@@ -878,7 +879,7 @@ class AbilitySystem {
     // Damage nearby enemies
     CombatSystem.checkAndDamageEnemies(
       gameState,
-      attackerPosition: gameState.playerTransform!.position,
+      attackerPosition: gameState.activeTransform!.position,
       damage: 20.0,
       attackType: 'Frost Nova',
       impactColor: Vector3(0.5, 0.8, 1.0),
@@ -891,21 +892,22 @@ class AbilitySystem {
 
   /// Execute Greater Heal effect after cast completes
   static void _executeGreaterHealEffect(int slotIndex, GameState gameState) {
-    final oldHealth = gameState.playerHealth;
-    gameState.playerHealth = math.min(gameState.playerMaxHealth, gameState.playerHealth + 50.0);
-    final healedAmount = gameState.playerHealth - oldHealth;
+    final oldHealth = gameState.activeHealth;
+    gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + 50.0);
+    final healedAmount = gameState.activeHealth - oldHealth;
 
     gameState.ability3Active = true;
     gameState.ability3ActiveTime = 0.0;
 
+    _logHeal(gameState, 'Greater Heal', healedAmount);
     print('Greater Heal! Restored ${healedAmount.toStringAsFixed(1)} HP');
   }
 
   /// Generic projectile launch for unknown cast-time abilities
   static void _executeGenericProjectileFromAbility(int slotIndex, GameState gameState, String abilityName) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
-    final playerPos = gameState.playerTransform!.position;
+    final playerPos = gameState.activeTransform!.position;
     final targetPos = _getTargetPositionOrForward(gameState, playerPos);
     final direction = (targetPos - playerPos).normalized();
 
@@ -942,14 +944,14 @@ class AbilitySystem {
 
   /// Execute Heavy Strike effect after windup completes
   static void _executeHeavyStrikeEffect(int slotIndex, GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
     final forward = Vector3(
-      -math.sin(_radians(gameState.playerRotation)),
+      -math.sin(_radians(gameState.activeRotation)),
       0,
-      -math.cos(_radians(gameState.playerRotation)),
+      -math.cos(_radians(gameState.activeRotation)),
     );
-    final strikePosition = gameState.playerTransform!.position + forward * 2.5;
+    final strikePosition = gameState.activeTransform!.position + forward * 2.5;
 
     // Large hit radius
     final hitRegistered = CombatSystem.checkAndDamageEnemies(
@@ -970,7 +972,7 @@ class AbilitySystem {
 
   /// Execute Whirlwind effect after windup completes
   static void _executeWhirlwindEffect(int slotIndex, GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
     // Create spinning visual effect
     final impactMesh = Mesh.cube(
@@ -978,7 +980,7 @@ class AbilitySystem {
       color: Vector3(0.6, 0.6, 0.7),
     );
     final impactTransform = Transform3d(
-      position: gameState.playerTransform!.position.clone(),
+      position: gameState.activeTransform!.position.clone(),
       scale: Vector3(1, 1, 1),
     );
     gameState.impactEffects.add(ImpactEffect(
@@ -990,7 +992,7 @@ class AbilitySystem {
     // Damage all nearby enemies with large radius
     CombatSystem.checkAndDamageEnemies(
       gameState,
-      attackerPosition: gameState.playerTransform!.position,
+      attackerPosition: gameState.activeTransform!.position,
       damage: 48.0,
       attackType: 'Whirlwind',
       impactColor: Vector3(0.7, 0.7, 0.8),
@@ -1004,14 +1006,14 @@ class AbilitySystem {
 
   /// Execute Crushing Blow effect after windup completes
   static void _executeCrushingBlowEffect(int slotIndex, GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
     final forward = Vector3(
-      -math.sin(_radians(gameState.playerRotation)),
+      -math.sin(_radians(gameState.activeRotation)),
       0,
-      -math.cos(_radians(gameState.playerRotation)),
+      -math.cos(_radians(gameState.activeRotation)),
     );
-    final strikePosition = gameState.playerTransform!.position + forward * 2.0;
+    final strikePosition = gameState.activeTransform!.position + forward * 2.0;
 
     // Create powerful impact visual
     final impactMesh = Mesh.cube(
@@ -1047,14 +1049,14 @@ class AbilitySystem {
 
   /// Generic windup melee for unknown windup abilities
   static void _executeGenericWindupMelee(int slotIndex, GameState gameState, String abilityName) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
     final forward = Vector3(
-      -math.sin(_radians(gameState.playerRotation)),
+      -math.sin(_radians(gameState.activeRotation)),
       0,
-      -math.cos(_radians(gameState.playerRotation)),
+      -math.cos(_radians(gameState.activeRotation)),
     );
-    final strikePosition = gameState.playerTransform!.position + forward * 2.5;
+    final strikePosition = gameState.activeTransform!.position + forward * 2.5;
 
     CombatSystem.checkAndDamageEnemies(
       gameState,
@@ -1079,9 +1081,9 @@ class AbilitySystem {
 
     // Fall back to position ahead of player
     final forward = Vector3(
-      -math.sin(_radians(gameState.playerRotation)),
+      -math.sin(_radians(gameState.activeRotation)),
       0,
-      -math.cos(_radians(gameState.playerRotation)),
+      -math.cos(_radians(gameState.activeRotation)),
     );
     return playerPos + forward * 30.0;
   }
@@ -1101,10 +1103,10 @@ class AbilitySystem {
 
   /// Execute Fireball (ranged projectile)
   static void _executeFireball(int slotIndex, GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
     final fireball = _effective(AbilitiesConfig.playerFireball);
-    final playerPos = gameState.playerTransform!.position;
+    final playerPos = gameState.activeTransform!.position;
 
     // Get target position for homing
     Vector3? targetPos;
@@ -1121,9 +1123,9 @@ class AbilitySystem {
     } else {
       // Fallback to player facing direction
       direction = Vector3(
-        -math.sin(_radians(gameState.playerRotation)),
+        -math.sin(_radians(gameState.activeRotation)),
         0,
-        -math.cos(_radians(gameState.playerRotation)),
+        -math.cos(_radians(gameState.activeRotation)),
       );
     }
 
@@ -1182,11 +1184,12 @@ class AbilitySystem {
     gameState.ability3ActiveTime = 0.0;
 
     final healAbility = _effective(AbilitiesConfig.playerHeal);
-    final oldHealth = gameState.playerHealth;
-    gameState.playerHealth = math.min(gameState.playerMaxHealth, gameState.playerHealth + healAbility.healAmount);
-    final healedAmount = gameState.playerHealth - oldHealth;
+    final oldHealth = gameState.activeHealth;
+    gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + healAbility.healAmount);
+    final healedAmount = gameState.activeHealth - oldHealth;
 
     _setCooldownForSlot(slotIndex, healAbility.cooldown, gameState);
+    _logHeal(gameState, 'Heal', healedAmount);
     print('[HEAL] Player heal activated! Restored ${healedAmount.toStringAsFixed(1)} HP');
   }
 
@@ -1271,16 +1274,16 @@ class AbilitySystem {
   }
 
   static void _executeTeleport(int slotIndex, GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
     final ability = MageAbilities.teleport;
 
     // Teleport forward
     final forward = Vector3(
-      -math.sin(_radians(gameState.playerRotation)),
+      -math.sin(_radians(gameState.activeRotation)),
       0,
-      -math.cos(_radians(gameState.playerRotation)),
+      -math.cos(_radians(gameState.activeRotation)),
     );
-    gameState.playerTransform!.position += forward * ability.range;
+    gameState.activeTransform!.position += forward * ability.range;
 
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Teleport!');
@@ -1368,7 +1371,7 @@ class AbilitySystem {
     final ability = NecromancerAbilities.lifeDrain;
     // Damage enemy and heal self
     _executeGenericProjectile(slotIndex, gameState, ability, 'Life Drain!');
-    gameState.playerHealth = math.min(gameState.playerMaxHealth, gameState.playerHealth + ability.healAmount);
+    gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + ability.healAmount);
   }
 
   static void _executeCurseOfWeakness(int slotIndex, GameState gameState) {
@@ -1446,22 +1449,22 @@ class AbilitySystem {
 
   /// Tailwind Retreat — backward movement + knockback nearby enemies
   static void _executeTailwindRetreat(int slotIndex, GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
     final ability = WindWalkerAbilities.tailwindRetreat;
 
     // Move player backward
     final backward = Vector3(
-      math.sin(_radians(gameState.playerRotation)),
+      math.sin(_radians(gameState.activeRotation)),
       0,
-      math.cos(_radians(gameState.playerRotation)),
+      math.cos(_radians(gameState.activeRotation)),
     );
-    gameState.playerTransform!.position += backward * ability.range;
+    gameState.activeTransform!.position += backward * ability.range;
 
     // Knockback nearby enemies
     if (ability.knockbackForce > 0) {
       CombatSystem.checkAndDamageEnemies(
         gameState,
-        attackerPosition: gameState.playerTransform!.position - backward * 3.0,
+        attackerPosition: gameState.activeTransform!.position - backward * 3.0,
         damage: 0.0,
         attackType: ability.name,
         impactColor: ability.impactColor,
@@ -1494,7 +1497,7 @@ class AbilitySystem {
 
   /// Cyclone Dive — leap up then AoE slam dealing damage + stun
   static void _executeCycloneDive(int slotIndex, GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
     final ability = WindWalkerAbilities.cycloneDive;
 
     // Create impact effect at player location
@@ -1503,7 +1506,7 @@ class AbilitySystem {
       color: ability.color,
     );
     final impactTransform = Transform3d(
-      position: gameState.playerTransform!.position.clone(),
+      position: gameState.activeTransform!.position.clone(),
       scale: Vector3(1, 1, 1),
     );
     gameState.impactEffects.add(ImpactEffect(
@@ -1515,7 +1518,7 @@ class AbilitySystem {
     // Damage nearby enemies
     CombatSystem.checkAndDamageEnemies(
       gameState,
-      attackerPosition: gameState.playerTransform!.position,
+      attackerPosition: gameState.activeTransform!.position,
       damage: ability.damage,
       attackType: ability.name,
       impactColor: ability.impactColor,
@@ -1568,7 +1571,7 @@ class AbilitySystem {
   /// Silent Mind — fully restores white mana; next white ability is free + instant
   static void _executeSilentMind(int slotIndex, GameState gameState) {
     final ability = WindWalkerAbilities.silentMind;
-    gameState.whiteMana = gameState.maxWhiteMana;
+    gameState.activeWhiteMana = gameState.activeMaxWhiteMana;
     gameState.silentMindActive = true;
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Silent Mind! White mana fully restored. Next white ability is free and instant.');
@@ -1577,11 +1580,11 @@ class AbilitySystem {
   /// Windshear — 90-degree cone AoE: enemies take damage + knockdown,
   /// allies are healed
   static void _executeWindshear(int slotIndex, GameState gameState) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
     final ability = WindWalkerAbilities.windshear;
 
-    final playerPos = gameState.playerTransform!.position;
-    final facingRad = gameState.playerRotation * math.pi / 180.0;
+    final playerPos = gameState.activeTransform!.position;
+    final facingRad = gameState.activeRotation * math.pi / 180.0;
     final facingX = -math.sin(facingRad);
     final facingZ = -math.cos(facingRad);
     final coneHalfAngle = 45.0; // 90-degree cone = 45 half-angle
@@ -1698,9 +1701,9 @@ class AbilitySystem {
 
   /// Generic projectile attack execution (with homing toward current target)
   static void _executeGenericProjectile(int slotIndex, GameState gameState, AbilityData ability, String message) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
-    final playerPos = gameState.playerTransform!.position;
+    final playerPos = gameState.activeTransform!.position;
     final projectileSpeed = ability.projectileSpeed > 0 ? ability.projectileSpeed : 10.0;
 
     // Get target position for homing
@@ -1718,9 +1721,9 @@ class AbilitySystem {
     } else {
       // Fallback to player facing direction
       direction = Vector3(
-        -math.sin(_radians(gameState.playerRotation)),
+        -math.sin(_radians(gameState.activeRotation)),
         0,
-        -math.cos(_radians(gameState.playerRotation)),
+        -math.cos(_radians(gameState.activeRotation)),
       );
     }
 
@@ -1756,7 +1759,7 @@ class AbilitySystem {
 
   /// Generic AoE attack execution
   static void _executeGenericAoE(int slotIndex, GameState gameState, AbilityData ability, String message) {
-    if (gameState.playerTransform == null) return;
+    if (gameState.activeTransform == null) return;
 
     // Create impact effect at player location
     final impactMesh = Mesh.cube(
@@ -1764,7 +1767,7 @@ class AbilitySystem {
       color: ability.color,
     );
     final impactTransform = Transform3d(
-      position: gameState.playerTransform!.position.clone(),
+      position: gameState.activeTransform!.position.clone(),
       scale: Vector3(1, 1, 1),
     );
     gameState.impactEffects.add(ImpactEffect(
@@ -1776,7 +1779,7 @@ class AbilitySystem {
     // Damage nearby enemies
     CombatSystem.checkAndDamageEnemies(
       gameState,
-      attackerPosition: gameState.playerTransform!.position,
+      attackerPosition: gameState.activeTransform!.position,
       damage: ability.damage,
       attackType: ability.name,
       impactColor: ability.impactColor,
@@ -1794,11 +1797,12 @@ class AbilitySystem {
     gameState.ability3Active = true;
     gameState.ability3ActiveTime = 0.0;
 
-    final oldHealth = gameState.playerHealth;
-    gameState.playerHealth = math.min(gameState.playerMaxHealth, gameState.playerHealth + ability.healAmount);
-    final healedAmount = gameState.playerHealth - oldHealth;
+    final oldHealth = gameState.activeHealth;
+    gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + ability.healAmount);
+    final healedAmount = gameState.activeHealth - oldHealth;
 
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    _logHeal(gameState, ability.name, healedAmount);
     print('$message Restored ${healedAmount.toStringAsFixed(1)} HP');
   }
 
@@ -1856,24 +1860,24 @@ class AbilitySystem {
 
     if (gameState.ability1ActiveTime >= gameState.ability1Duration) {
       gameState.ability1Active = false;
-    } else if (gameState.swordTransform != null && gameState.playerTransform != null) {
+    } else if (gameState.swordTransform != null && gameState.activeTransform != null) {
       // Position sword in front of player, rotating during swing
       final forward = Vector3(
-        -math.sin(_radians(gameState.playerRotation)),
+        -math.sin(_radians(gameState.activeRotation)),
         0,
-        -math.cos(_radians(gameState.playerRotation)),
+        -math.cos(_radians(gameState.activeRotation)),
       );
       final swingProgress = gameState.ability1ActiveTime / gameState.ability1Duration;
       final swingAngle = swingProgress * 180; // 0 to 180 degrees
 
-      gameState.swordTransform!.position = gameState.playerTransform!.position + forward * 0.8;
-      gameState.swordTransform!.position.y = gameState.playerTransform!.position.y;
-      gameState.swordTransform!.rotation.y = gameState.playerRotation + swingAngle - 90;
+      gameState.swordTransform!.position = gameState.activeTransform!.position + forward * 0.8;
+      gameState.swordTransform!.position.y = gameState.activeTransform!.position.y;
+      gameState.swordTransform!.rotation.y = gameState.activeRotation + swingAngle - 90;
 
       // Check collision with monster (only once per swing)
       if (!gameState.ability1HitRegistered) {
         final sword = _effective(AbilitiesConfig.playerSword);
-        final swordTipPosition = gameState.playerTransform!.position + forward * sword.range;
+        final swordTipPosition = gameState.activeTransform!.position + forward * sword.range;
 
         final hitRegistered = CombatSystem.checkAndDamageEnemies(
           gameState,
@@ -1898,7 +1902,7 @@ class AbilitySystem {
   static void handleAbility2Input(bool ability2KeyPressed, GameState gameState) {
     if (ability2KeyPressed &&
         gameState.ability2Cooldown <= 0 &&
-        gameState.playerTransform != null) {
+        gameState.activeTransform != null) {
       executeSlotAbility(1, gameState);
     }
   }
@@ -2006,9 +2010,9 @@ class AbilitySystem {
 
     if (gameState.ability3ActiveTime >= gameState.ability3Duration) {
       gameState.ability3Active = false;
-    } else if (gameState.healEffectTransform != null && gameState.playerTransform != null) {
+    } else if (gameState.healEffectTransform != null && gameState.activeTransform != null) {
       // Position heal effect around player with pulsing animation
-      gameState.healEffectTransform!.position = gameState.playerTransform!.position.clone();
+      gameState.healEffectTransform!.position = gameState.activeTransform!.position.clone();
       final pulseScale = 1.0 + (math.sin(gameState.ability3ActiveTime * 10) * 0.2);
       gameState.healEffectTransform!.scale = Vector3(pulseScale, pulseScale, pulseScale);
     }
@@ -2033,36 +2037,36 @@ class AbilitySystem {
 
     if (gameState.ability4ActiveTime >= gameState.ability4Duration) {
       gameState.ability4Active = false;
-    } else if (gameState.playerTransform != null) {
+    } else if (gameState.activeTransform != null) {
       final dashConfig = _effective(AbilitiesConfig.playerDashAttack);
 
       // Calculate forward direction based on player rotation
       final forward = Vector3(
-        -math.sin(_radians(gameState.playerRotation)),
+        -math.sin(_radians(gameState.activeRotation)),
         0,
-        -math.cos(_radians(gameState.playerRotation)),
+        -math.cos(_radians(gameState.activeRotation)),
       );
 
       // Calculate dash speed (total distance / duration)
       final dashSpeed = dashConfig.range / dashConfig.duration;
 
       // Move player forward at dash speed
-      gameState.playerTransform!.position += forward * dashSpeed * dt;
+      gameState.activeTransform!.position += forward * dashSpeed * dt;
 
       // Get terrain height at new position and apply it
       if (gameState.infiniteTerrainManager != null) {
         final terrainHeight = gameState.infiniteTerrainManager!.getTerrainHeight(
-          gameState.playerTransform!.position.x,
-          gameState.playerTransform!.position.z,
+          gameState.activeTransform!.position.x,
+          gameState.activeTransform!.position.z,
         );
-        gameState.playerTransform!.position.y = terrainHeight;
+        gameState.activeTransform!.position.y = terrainHeight;
       }
 
       // Check collision with monster during dash
       if (!gameState.ability4HitRegistered) {
         final hitRegistered = CombatSystem.checkAndDamageEnemies(
           gameState,
-          attackerPosition: gameState.playerTransform!.position,
+          attackerPosition: gameState.activeTransform!.position,
           damage: dashConfig.damage,
           attackType: dashConfig.name,
           impactColor: dashConfig.impactColor,
@@ -2081,8 +2085,8 @@ class AbilitySystem {
 
       // Update dash trail visual effect if it exists
       if (gameState.dashTrailTransform != null) {
-        gameState.dashTrailTransform!.position = gameState.playerTransform!.position.clone();
-        gameState.dashTrailTransform!.rotation.y = gameState.playerRotation;
+        gameState.dashTrailTransform!.position = gameState.activeTransform!.position.clone();
+        gameState.dashTrailTransform!.rotation.y = gameState.activeRotation;
       }
     }
   }
@@ -2144,6 +2148,22 @@ class AbilitySystem {
 
       return impact.lifetime <= 0;
     });
+  }
+
+  // ==================== COMBAT LOG HELPERS ====================
+
+  /// Log a heal event to the combat log.
+  static void _logHeal(GameState gameState, String abilityName, double healedAmount) {
+    gameState.combatLogMessages.add(CombatLogEntry(
+      source: 'Player',
+      action: abilityName,
+      type: CombatLogType.heal,
+      amount: healedAmount,
+      target: 'Player',
+    ));
+    if (gameState.combatLogMessages.length > 200) {
+      gameState.combatLogMessages.removeAt(0);
+    }
   }
 
   // ==================== UTILITY FUNCTIONS ====================

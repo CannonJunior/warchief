@@ -111,6 +111,13 @@ class AbilityRegistry {
   /// Find ability by name (case-insensitive), searching built-in and custom
   static AbilityData? findByName(String name) {
     final lowerName = name.toLowerCase();
+    // Search player abilities first (Sword, Fireball, Heal, Dash Attack)
+    for (final ability in PlayerAbilities.all) {
+      if (ability.name.toLowerCase() == lowerName) {
+        return ability;
+      }
+    }
+    // Search all potential abilities (warrior, mage, rogue, etc.)
     for (final ability in potentialAbilities) {
       if (ability.name.toLowerCase() == lowerName) {
         return ability;

@@ -18,6 +18,8 @@ import '../../models/damage_event.dart';
 import '../../models/target_dummy.dart';
 import '../../models/building.dart';
 import '../../models/goal.dart';
+import '../../models/raid_chat_message.dart';
+import '../../models/combat_log_entry.dart';
 import '../../rendering3d/building_mesh.dart';
 import '../../data/item_database.dart';
 import 'game_config.dart';
@@ -57,6 +59,11 @@ class GameState {
   Transform3d? directionIndicatorTransform;
   Mesh? shadowMesh;
   Transform3d? shadowTransform;
+
+  // Aura glow effect at player base
+  Mesh? playerAuraMesh;
+  Transform3d? playerAuraTransform;
+  Vector3? lastPlayerAuraColor;
 
   double playerRotation = GameConfig.playerStartRotation;
   double playerSpeed = GameConfig.playerSpeed;
@@ -471,6 +478,57 @@ class GameState {
   double get activeEffectiveSpeed =>
       isWarchiefActive ? effectivePlayerSpeed : (activeAlly?.moveSpeed ?? 2.5);
 
+  // ==================== ACTIVE CHARACTER MANA ====================
+
+  /// Active character mana getters — delegate to Warchief or active ally
+  double get activeBlueMana => isWarchiefActive ? blueMana : (activeAlly?.blueMana ?? 0.0);
+  double get activeRedMana => isWarchiefActive ? redMana : (activeAlly?.redMana ?? 0.0);
+  double get activeWhiteMana => isWarchiefActive ? whiteMana : (activeAlly?.whiteMana ?? 0.0);
+  double get activeMaxBlueMana => isWarchiefActive ? maxBlueMana : (activeAlly?.maxBlueMana ?? 0.0);
+  double get activeMaxRedMana => isWarchiefActive ? maxRedMana : (activeAlly?.maxRedMana ?? 0.0);
+  double get activeMaxWhiteMana => isWarchiefActive ? maxWhiteMana : (activeAlly?.maxWhiteMana ?? 0.0);
+
+  /// Check if active character has enough mana
+  bool activeHasBlueMana(double amount) => isWarchiefActive ? hasBlueMana(amount) : (activeAlly?.blueMana ?? 0.0) >= amount;
+  bool activeHasRedMana(double amount) => isWarchiefActive ? hasRedMana(amount) : (activeAlly?.redMana ?? 0.0) >= amount;
+  bool activeHasWhiteMana(double amount) => isWarchiefActive ? hasWhiteMana(amount) : (activeAlly?.whiteMana ?? 0.0) >= amount;
+
+  /// Spend mana from active character's pool
+  bool activeSpendBlueMana(double amount) {
+    if (isWarchiefActive) return spendBlueMana(amount);
+    final ally = activeAlly;
+    if (ally != null && ally.blueMana >= amount) { ally.blueMana -= amount; return true; }
+    return false;
+  }
+
+  bool activeSpendRedMana(double amount) {
+    if (isWarchiefActive) return spendRedMana(amount);
+    final ally = activeAlly;
+    if (ally != null && ally.redMana >= amount) { ally.redMana -= amount; return true; }
+    return false;
+  }
+
+  bool activeSpendWhiteMana(double amount) {
+    if (isWarchiefActive) return spendWhiteMana(amount);
+    final ally = activeAlly;
+    if (ally != null && ally.whiteMana >= amount) { ally.whiteMana -= amount; return true; }
+    return false;
+  }
+
+  /// Set active character's white mana (for Silent Mind restore)
+  set activeWhiteMana(double val) {
+    if (isWarchiefActive) { whiteMana = val; } else if (activeAlly != null) { activeAlly!.whiteMana = val; }
+  }
+
+  // ==================== ACTIVE CHARACTER HEALTH ====================
+
+  /// Active character health getters/setter
+  double get activeHealth => isWarchiefActive ? playerHealth : (activeAlly?.health ?? 0.0);
+  set activeHealth(double val) {
+    if (isWarchiefActive) { playerHealth = val; } else if (activeAlly != null) { activeAlly!.health = val; }
+  }
+  double get activeMaxHealth => isWarchiefActive ? playerMaxHealth : (activeAlly?.maxHealth ?? 0.0);
+
   /// Reset physics state when switching active character
   /// Prevents carried velocity / jump state from bleeding across characters
   void _resetPhysicsForSwitch() {
@@ -742,12 +800,12 @@ class GameState {
     return null;
   }
 
-  /// Get XZ-plane distance from player to current target
-  /// Returns null if no target or no player position
+  /// Get XZ-plane distance from active character to current target
+  /// Returns null if no target or no active character position
   double? getDistanceToCurrentTarget() {
-    if (currentTargetId == null || playerTransform == null) return null;
+    if (currentTargetId == null || activeTransform == null) return null;
 
-    final playerPos = playerTransform!.position;
+    final playerPos = activeTransform!.position;
 
     if (currentTargetId == 'boss') {
       if (monsterTransform != null && monsterHealth > 0) {
@@ -1114,6 +1172,20 @@ class GameState {
   /// Whether the Warrior Spirit panel is open (V key).
   bool warriorSpiritPanelOpen = false;
 
+  // ==================== MACRO / CHAT STATE ====================
+
+  /// Raid Chat messages (system-generated combat alerts).
+  List<RaidChatMessage> raidChatMessages = [];
+
+  /// Combat log entries (ability usage and effects).
+  List<CombatLogEntry> combatLogMessages = [];
+
+  /// Whether the unified chat panel is open (backtick key).
+  bool chatPanelOpen = false;
+
+  /// Active tab in the chat panel: 0 = Spirit, 1 = Raid, 2 = Combat.
+  int chatPanelActiveTab = 0;
+
   /// Melee hit streak tracker (for mastery goals).
   int consecutiveMeleeHits = 0;
 
@@ -1136,6 +1208,9 @@ class GameState {
 
   /// Whether the unified ally commands panel is currently open (F key)
   bool allyCommandPanelOpen = false;
+
+  /// Whether the macro builder panel is open (R key).
+  bool macroPanelOpen = false;
 
   // ==================== DPS TESTING STATE ====================
 

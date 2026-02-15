@@ -7,6 +7,7 @@ import '../ui/damage_indicators.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/impact_effect.dart';
+import '../../models/combat_log_entry.dart';
 import 'goal_system.dart';
 
 /// Target types for damage application
@@ -164,6 +165,9 @@ class CombatSystem {
           }
           break;
       }
+
+      // Log to combat log
+      _logCombat(gameState, attackType, damage, targetType, allyIndex, minionInstanceId);
 
       // Spawn floating damage indicator for player attacks on enemies
       if (showDamageIndicator && damage > 0) {
@@ -545,6 +549,38 @@ class CombatSystem {
     }
 
     return minionHit;
+  }
+
+  /// Log a damage event to the combat log.
+  static void _logCombat(GameState gs, String attackType, double damage,
+      DamageTarget targetType, int? allyIndex, String? minionInstanceId) {
+    String target;
+    switch (targetType) {
+      case DamageTarget.player:
+        target = 'Player';
+        break;
+      case DamageTarget.monster:
+        target = 'Monster';
+        break;
+      case DamageTarget.ally:
+        target = 'Ally ${(allyIndex ?? 0) + 1}';
+        break;
+      case DamageTarget.minion:
+        target = 'Minion';
+        break;
+      case DamageTarget.dummy:
+        target = 'Dummy';
+        break;
+    }
+    gs.combatLogMessages.add(CombatLogEntry(
+      source: attackType.split(' ').first,
+      action: attackType,
+      type: CombatLogType.damage,
+      amount: damage,
+      target: target,
+    ));
+    // Cap at 200 entries to prevent memory leak
+    if (gs.combatLogMessages.length > 200) gs.combatLogMessages.removeAt(0);
   }
 
   /// Convert Vector3 color to Flutter Color

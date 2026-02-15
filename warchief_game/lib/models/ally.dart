@@ -1,3 +1,4 @@
+import 'package:vector_math/vector_math.dart';
 import '../rendering3d/mesh.dart';
 import '../rendering3d/math/transform3d.dart';
 import 'projectile.dart';
@@ -62,6 +63,11 @@ class Ally {
 
   // Strategy system
   AllyStrategyType strategyType;
+
+  // Aura glow effect
+  Mesh? auraMesh;
+  Transform3d auraTransform = Transform3d();
+  Vector3? lastAuraColor;
 
   /// Get the current strategy configuration
   AllyStrategy get strategy => AllyStrategies.getStrategy(strategyType);

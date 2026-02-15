@@ -1,0 +1,18 @@
+{
+  "gcd": {
+    "base": 1.5,
+    "minimum": 0.75
+  },
+  "alerts": {
+    "lowManaThreshold": 0.2,
+    "lowHealthThreshold": 0.3,
+    "alertCooldownSeconds": 5.0,
+    "underAttackDamageWindow": 3.0
+  },
+  "execution": {
+    "maxActiveMacros": 5,
+    "retryOnCooldown": true,
+    "retryIntervalSeconds": 0.25,
+    "skipOnConditionFail": false
+  }
+}

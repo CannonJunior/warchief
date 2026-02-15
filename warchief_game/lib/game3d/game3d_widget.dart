@@ -64,15 +64,21 @@ import 'state/minimap_config.dart';
 import 'state/minimap_state.dart';
 import 'state/building_config.dart';
 import 'state/goals_config.dart';
+import 'state/macro_config.dart';
+import 'state/macro_manager.dart';
 import 'ui/minimap/minimap_widget.dart';
 import 'ui/minimap/minimap_ping_overlay.dart';
 import 'ui/building_panel.dart';
 import 'ui/goals_panel.dart';
 import 'ui/warrior_spirit_panel.dart';
+import 'ui/chat_panel.dart';
+import 'ui/macro_builder_panel.dart';
 import 'systems/entity_picking_system.dart';
 import 'systems/building_system.dart';
 import 'systems/goal_system.dart';
+import 'systems/macro_system.dart';
 import 'ai/warrior_spirit.dart';
+import 'effects/aura_system.dart';
 // Note: WindIndicator replaced by minimap border wind arrow
 
 /// Game3D - Main 3D game widget using custom WebGL renderer
@@ -157,6 +163,9 @@ class _Game3DState extends State<Game3D> {
     // Initialize goals config (JSON defaults for goal definitions)
     _initializeGoalsConfig();
 
+    // Initialize macro config and manager (macro system)
+    _initializeMacroConfig();
+
     // Initialize player inventory with sample items
     _initializeInventory();
 
@@ -238,6 +247,14 @@ class _Game3DState extends State<Game3D> {
       WarriorSpirit.init();
       if (mounted) setState(() {});
     });
+  }
+
+  /// Initialize macro config and macro manager
+  void _initializeMacroConfig() {
+    globalMacroConfig ??= MacroConfig();
+    globalMacroConfig!.initialize();
+    globalMacroManager ??= MacroManager();
+    globalMacroManager!.loadMacros();
   }
 
   /// Initialize player inventory with sample items from database
@@ -333,6 +350,13 @@ class _Game3DState extends State<Game3D> {
         position: Vector3(0, 0.01, 0), // Slightly above ground to avoid z-fighting
         scale: Vector3(1, 1, 1),
       );
+
+      // Initialize player aura glow disc (reflects equipped ability categories)
+      gameState.playerAuraTransform = Transform3d(
+        position: Vector3(0, 0.02, 0),
+        scale: Vector3(1, 1, 1),
+      );
+      _updatePlayerAuraColor();
 
       // Initialize sword mesh (gray metallic plane for sword swing)
       gameState.swordMesh = Mesh.plane(
@@ -456,6 +480,8 @@ class _Game3DState extends State<Game3D> {
       // Log every 60 frames (~1 second at 60fps)
       if (gameState.frameCount % 60 == 0) {
         print('Frame ${gameState.frameCount} - dt: ${dt.toStringAsFixed(4)}s - Terrain: ${gameState.terrainTiles?.length ?? 0} tiles');
+        // Reason: Periodic aura refresh catches all config change paths (drag-drop, load-class, character switch)
+        _refreshAllAuraColors();
       }
 
       _update(dt);
@@ -568,6 +594,9 @@ class _Game3DState extends State<Game3D> {
     // Update Warrior Spirit (periodic goal suggestion check)
     WarriorSpirit.update(gameState, dt);
 
+    // Update macro execution engine (spell rotations + raid chat alerts)
+    MacroSystem.update(dt, gameState);
+
     // Track flight duration for mastery goals
     if (gameState.isFlying) {
       _flightDurationAccum += dt;
@@ -667,6 +696,9 @@ class _Game3DState extends State<Game3D> {
       final scaleFactor = 1.0 + playerHeight * 0.15;
       gameState.shadowTransform!.scale = Vector3(scaleFactor, 1, scaleFactor);
     }
+
+    // Update aura positions — place at each unit's base on terrain
+    _updateAuraPositions();
 
     // Update floating damage indicators
     updateDamageIndicators(gameState.damageIndicators, dt);
@@ -794,10 +826,19 @@ class _Game3DState extends State<Game3D> {
       }
     }
 
-    // Handle ` (backtick) key for Warrior Spirit panel (only on key down)
+    // Handle R key for Macro Builder panel (only on key down)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyR) {
+      if (!_isVisible('rotation_builder')) return;
+      setState(() {
+        gameState.macroPanelOpen = !gameState.macroPanelOpen;
+      });
+      return;
+    }
+
+    // Handle ` (backtick) key for Chat panel (only on key down)
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backquote) {
       setState(() {
-        gameState.warriorSpiritPanelOpen = !gameState.warriorSpiritPanelOpen;
+        gameState.chatPanelOpen = !gameState.chatPanelOpen;
       });
       return;
     }
@@ -964,6 +1005,18 @@ class _Game3DState extends State<Game3D> {
         });
         return;
       }
+      if (gameState.macroPanelOpen) {
+        setState(() {
+          gameState.macroPanelOpen = false;
+        });
+        return;
+      }
+      if (gameState.chatPanelOpen) {
+        setState(() {
+          gameState.chatPanelOpen = false;
+        });
+        return;
+      }
       if (gameState.warriorSpiritPanelOpen) {
         setState(() {
           gameState.warriorSpiritPanelOpen = false;
@@ -1121,6 +1174,7 @@ class _Game3DState extends State<Game3D> {
     if (config != null) {
       config.setSlotAbility(slotIndex, abilityName);
       print('[ActionBar] Assigned "$abilityName" to slot ${slotIndex + 1}');
+      _refreshAllAuraColors(); // Update aura glow to reflect new ability loadout
       setState(() {}); // Refresh UI to show new ability
     }
   }
@@ -1467,6 +1521,10 @@ class _Game3DState extends State<Game3D> {
 
       gameState.allies.add(ally);
 
+      // Initialize aura for the new ally
+      final allyIndex = gameState.allies.length; // 1-based for config manager
+      _updateAllyAuraColor(ally, allyIndex);
+
       final abilityNames = ['Sword', 'Fireball', 'Heal'];
       print('Ally added! Ability: ${abilityNames[randomAbility]} (Total: ${gameState.allies.length})');
     });
@@ -1483,6 +1541,87 @@ class _Game3DState extends State<Game3D> {
       gameState.allies.removeLast();
       print('Ally removed! Remaining: ${gameState.allies.length}');
     });
+  }
+
+  /// Update the player's aura mesh color from the active action bar config.
+  void _updatePlayerAuraColor() {
+    final config = globalActionBarConfigManager?.getConfig(0);
+    if (config == null) return;
+
+    final color = AuraSystem.computeAuraColor(config);
+    final newMesh = AuraSystem.createOrUpdateAuraMesh(
+      color: color,
+      radius: 1.2,
+      existing: gameState.playerAuraMesh,
+      lastColor: gameState.lastPlayerAuraColor,
+    );
+    gameState.playerAuraMesh = newMesh;
+    if (color != null) {
+      gameState.lastPlayerAuraColor = color.clone();
+    }
+  }
+
+  /// Update an ally's aura mesh color from their action bar config.
+  void _updateAllyAuraColor(Ally ally, int allyConfigIndex) {
+    final config = globalActionBarConfigManager?.getConfig(allyConfigIndex);
+    if (config == null) return;
+
+    final color = AuraSystem.computeAuraColor(config);
+    final newMesh = AuraSystem.createOrUpdateAuraMesh(
+      color: color,
+      radius: 0.8,
+      existing: ally.auraMesh,
+      lastColor: ally.lastAuraColor,
+    );
+    ally.auraMesh = newMesh;
+    if (color != null) {
+      ally.lastAuraColor = color.clone();
+    }
+  }
+
+  /// Position all aura discs at their unit's base on terrain each frame.
+  void _updateAuraPositions() {
+    // Player aura
+    if (gameState.playerAuraTransform != null && gameState.activeTransform != null) {
+      double auraY = 0.02;
+      if (gameState.infiniteTerrainManager != null) {
+        auraY = gameState.infiniteTerrainManager!.getTerrainHeight(
+          gameState.playerTransform!.position.x,
+          gameState.playerTransform!.position.z,
+        ) + 0.02;
+      }
+      gameState.playerAuraTransform!.position = Vector3(
+        gameState.playerTransform!.position.x,
+        auraY,
+        gameState.playerTransform!.position.z,
+      );
+    }
+
+    // Ally auras
+    for (final ally in gameState.allies) {
+      if (ally.auraMesh != null) {
+        double auraY = 0.02;
+        if (gameState.infiniteTerrainManager != null) {
+          auraY = gameState.infiniteTerrainManager!.getTerrainHeight(
+            ally.transform.position.x,
+            ally.transform.position.z,
+          ) + 0.02;
+        }
+        ally.auraTransform.position = Vector3(
+          ally.transform.position.x,
+          auraY,
+          ally.transform.position.z,
+        );
+      }
+    }
+  }
+
+  /// Refresh all aura colors (call when action bar config changes).
+  void _refreshAllAuraColors() {
+    _updatePlayerAuraColor();
+    for (int i = 0; i < gameState.allies.length; i++) {
+      _updateAllyAuraColor(gameState.allies[i], i + 1);
+    }
   }
 
   @override
@@ -1842,8 +1981,40 @@ class _Game3DState extends State<Game3D> {
                 }),
               ),
 
-            // Warrior Spirit Panel (Press V to toggle)
-            if (gameState.warriorSpiritPanelOpen)
+            // Macro Builder Panel (Press R to toggle)
+            if (gameState.macroPanelOpen && _isVisible('rotation_builder'))
+              MacroBuilderPanel(
+                gameState: gameState,
+                onClose: () => setState(() { gameState.macroPanelOpen = false; }),
+                onMacroStarted: () => setState(() {}),
+              ),
+
+            // Chat Panel (Press ` to toggle — Spirit + Raid tabs)
+            if (gameState.chatPanelOpen)
+              ChatPanel(
+                spiritMessages: gameState.warriorSpiritMessages,
+                onSendSpiritMessage: (msg) async {
+                  gameState.warriorSpiritMessages.add(
+                    AIChatMessage(text: msg, isInput: true));
+                  setState(() {});
+                  final reply = await WarriorSpirit.chat(gameState, msg);
+                  gameState.warriorSpiritMessages.add(
+                    AIChatMessage(text: reply, isInput: false));
+                  if (mounted) setState(() {});
+                },
+                raidMessages: gameState.raidChatMessages,
+                combatLogMessages: gameState.combatLogMessages,
+                initialTab: gameState.chatPanelActiveTab,
+                onTabChanged: (tab) {
+                  gameState.chatPanelActiveTab = tab;
+                },
+                onClose: () => setState(() {
+                  gameState.chatPanelOpen = false;
+                }),
+              ),
+
+            // Warrior Spirit Panel (Press V to toggle — standalone)
+            if (gameState.warriorSpiritPanelOpen && !gameState.chatPanelOpen)
               WarriorSpiritPanel(
                 messages: gameState.warriorSpiritMessages,
                 onSendMessage: (msg) async {

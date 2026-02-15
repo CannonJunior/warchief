@@ -192,11 +192,6 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
 
                           SizedBox(height: 16),
 
-                          // Custom Abilities (user-created)
-                          ..._buildCustomAbilitiesSection(),
-
-                          SizedBox(height: 24),
-
                           // Currently Assigned Abilities
                           _buildSection(
                             'CURRENTLY ASSIGNED ABILITIES',
@@ -227,7 +222,8 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                             [
                               ...AbilitiesConfig.categories.map((category) {
                                 final abilities = AbilitiesConfig.getAbilitiesByCategory(category);
-                                if (abilities.isEmpty) return SizedBox.shrink();
+                                final customInCategory = globalCustomAbilityManager?.getByCategory(category) ?? [];
+                                if (abilities.isEmpty && customInCategory.isEmpty) return SizedBox.shrink();
 
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,6 +234,8 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                                     ),
                                     ...abilities.map((ability) =>
                                       _buildAbilityCard(ability, _getCategoryColor(category).withOpacity(0.3), draggable: true)),
+                                    ...customInCategory.map((ability) =>
+                                      _buildCustomAbilityCard(ability)),
                                     SizedBox(height: 16),
                                   ],
                                 );
@@ -1027,24 +1025,44 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
     );
   }
 
-  /// Build sections for custom categories added via the editor's "+ Add New"
+  /// Build sections for custom categories added via the editor's "+ Add New",
+  /// plus any custom abilities whose category isn't in the built-in list.
   List<Widget> _buildCustomCategorySections() {
-    final customCategories = globalCustomOptionsManager?.getCustomValues('category') ?? [];
-    if (customCategories.isEmpty) return [];
+    final builtInCategories = AbilitiesConfig.categories.toSet();
 
-    // Find abilities assigned to custom categories (via overrides)
-    final allAbilities = [
+    // Collect all non-built-in categories that have custom abilities
+    final customAbilities = globalCustomAbilityManager?.getAll() ?? [];
+    final extraCategories = <String>{};
+    for (final ability in customAbilities) {
+      if (!builtInCategories.contains(ability.category)) {
+        extraCategories.add(ability.category);
+      }
+    }
+
+    // Also include custom categories from the options manager
+    final customOptionCategories = globalCustomOptionsManager?.getCustomValues('category') ?? [];
+    extraCategories.addAll(customOptionCategories);
+
+    if (extraCategories.isEmpty) return [];
+
+    // Find built-in abilities assigned to these categories (via overrides)
+    final allBuiltIn = [
       ...AbilitiesConfig.playerAbilities,
       ...AbilitiesConfig.potentialAbilities,
     ];
 
     final sections = <Widget>[];
-    for (final category in customCategories) {
-      // Check if any abilities have been assigned to this custom category via overrides
-      final matchingAbilities = allAbilities.where((ability) {
+    for (final category in extraCategories) {
+      // Built-in abilities overridden into this category
+      final matchingBuiltIn = allBuiltIn.where((ability) {
         final effective = globalAbilityOverrideManager?.getEffectiveAbility(ability) ?? ability;
         return effective.category == category;
       }).toList();
+
+      // Custom abilities in this category
+      final matchingCustom = globalCustomAbilityManager?.getByCategory(category) ?? [];
+
+      final hasAny = matchingBuiltIn.isNotEmpty || matchingCustom.isNotEmpty;
 
       sections.add(
         Column(
@@ -1054,7 +1072,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
               '${category.toUpperCase()} (Custom)',
               _getCategoryColor(category),
             ),
-            if (matchingAbilities.isEmpty)
+            if (!hasAny)
               Padding(
                 padding: EdgeInsets.only(bottom: 8),
                 child: Text(
@@ -1062,8 +1080,10 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                   style: TextStyle(color: Colors.white38, fontSize: 11, fontStyle: FontStyle.italic),
                 ),
               ),
-            ...matchingAbilities.map((ability) =>
+            ...matchingBuiltIn.map((ability) =>
               _buildAbilityCard(ability, _getCategoryColor(category).withOpacity(0.3), draggable: true)),
+            ...matchingCustom.map((ability) =>
+              _buildCustomAbilityCard(ability)),
             SizedBox(height: 16),
           ],
         ),

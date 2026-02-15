@@ -486,6 +486,119 @@ class Mesh {
     );
   }
 
+  /// Create a flat circular disc with radial alpha falloff for aura glow effects
+  ///
+  /// Creates a soft circular glow when rendered with additive blending.
+  /// The disc has 3 concentric rings with decreasing alpha:
+  /// - Center vertex: full color, alpha 0.35
+  /// - Mid ring (8 vertices at 50% radius): full color, alpha 0.2
+  /// - Outer ring (8 vertices at 100% radius): full color, alpha 0.0
+  /// Total: 17 vertices, 32 triangles (16 inner + 16 outer), double-sided.
+  ///
+  /// Parameters:
+  /// - radius: The radius of the disc
+  /// - color: RGB color as Vector3 (components 0.0-1.0)
+  factory Mesh.auraDisc({
+    double radius = 1.0,
+    required Vector3 color,
+  }) {
+    const int segments = 8;
+    const double centerAlpha = 0.35;
+    const double midAlpha = 0.2;
+    const double outerAlpha = 0.0;
+    final double midRadius = radius * 0.5;
+
+    // 17 vertices per face * 2 faces (double-sided) = 34 vertices
+    final allVertices = <double>[];
+    final allNormals = <double>[];
+    final allColors = <double>[];
+    final allIndices = <int>[];
+
+    // Reason: Double-sided so the disc is visible from both above and below camera angles
+    for (int face = 0; face < 2; face++) {
+      final normalY = face == 0 ? 1.0 : -1.0;
+      final baseVertex = face * (1 + segments * 2);
+
+      // Center vertex
+      allVertices.addAll([0.0, 0.0, 0.0]);
+      allNormals.addAll([0.0, normalY, 0.0]);
+      allColors.addAll([color.x, color.y, color.z, centerAlpha]);
+
+      // Mid ring vertices (8 at 50% radius)
+      for (int i = 0; i < segments; i++) {
+        final angle = (i / segments) * 2.0 * 3.14159265;
+        final x = _cos(angle) * midRadius;
+        final z = _sin(angle) * midRadius;
+        allVertices.addAll([x, 0.0, z]);
+        allNormals.addAll([0.0, normalY, 0.0]);
+        allColors.addAll([color.x, color.y, color.z, midAlpha]);
+      }
+
+      // Outer ring vertices (8 at 100% radius)
+      for (int i = 0; i < segments; i++) {
+        final angle = (i / segments) * 2.0 * 3.14159265;
+        final x = _cos(angle) * radius;
+        final z = _sin(angle) * radius;
+        allVertices.addAll([x, 0.0, z]);
+        allNormals.addAll([0.0, normalY, 0.0]);
+        allColors.addAll([color.x, color.y, color.z, outerAlpha]);
+      }
+
+      // Inner triangles (center to mid ring) — 8 triangles
+      for (int i = 0; i < segments; i++) {
+        final next = (i + 1) % segments;
+        if (face == 0) {
+          // Top face: counter-clockwise from above
+          allIndices.addAll([baseVertex, baseVertex + 1 + i, baseVertex + 1 + next]);
+        } else {
+          // Bottom face: reversed winding
+          allIndices.addAll([baseVertex, baseVertex + 1 + next, baseVertex + 1 + i]);
+        }
+      }
+
+      // Outer triangles (mid ring to outer ring) — 8 quads = 16 triangles
+      for (int i = 0; i < segments; i++) {
+        final next = (i + 1) % segments;
+        final midI = baseVertex + 1 + i;
+        final midNext = baseVertex + 1 + next;
+        final outI = baseVertex + 1 + segments + i;
+        final outNext = baseVertex + 1 + segments + next;
+
+        if (face == 0) {
+          allIndices.addAll([midI, outI, outNext]);
+          allIndices.addAll([midI, outNext, midNext]);
+        } else {
+          allIndices.addAll([midI, outNext, outI]);
+          allIndices.addAll([midI, midNext, outNext]);
+        }
+      }
+    }
+
+    return Mesh(
+      vertices: Float32List.fromList(allVertices),
+      indices: Uint16List.fromList(allIndices),
+      normals: Float32List.fromList(allNormals),
+      colors: Float32List.fromList(allColors),
+    );
+  }
+
+  /// Simple sine approximation using Taylor series
+  static double _sin(double x) {
+    // Normalize to [-pi, pi]
+    while (x > 3.14159265) x -= 6.28318530;
+    while (x < -3.14159265) x += 6.28318530;
+    final x2 = x * x;
+    final x3 = x2 * x;
+    final x5 = x3 * x2;
+    final x7 = x5 * x2;
+    return x - x3 / 6.0 + x5 / 120.0 - x7 / 5040.0;
+  }
+
+  /// Simple cosine approximation using Taylor series
+  static double _cos(double x) {
+    return _sin(x + 1.5707963); // cos(x) = sin(x + pi/2)
+  }
+
   static double _sqrt(double x) {
     if (x <= 0) return 0;
     double guess = x / 2;
