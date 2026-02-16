@@ -2,7 +2,126 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-16
+
+#### Talisman-Based Mana Attunement System
+- ✅ Added `manaAttunement` field (`List<ManaColor>`) to `Item` model — fromJson parses string array, toJson serializes, copyWithStackSize passes through
+- ✅ Added `manaAttunements` getter to `Inventory` — scans equipped items and collects all mana colors
+- ✅ Added `temporaryAttunements` field (`Set<ManaColor>`) to `Ally` model — for future buff/aura attunements
+- ✅ Added `temporaryAttunements`, `playerManaAttunements`, `activeManaAttunements` to `GameState` — unified attunement getters for Warchief and active ally
+- ✅ Added 4 talisman items to `items.json`: All-Source Talisman (legendary, all 3 colors), Talisman of the Ley (rare, blue), Talisman of Blood (rare, red), Talisman of the Wind (rare, white)
+- ✅ Equipped All-Source Talisman on Warchief starting equipment, placed 3 single-color talismans in bag
+- ✅ Gated player blue/red mana regen behind attunement checks in `updateManaRegen()`
+- ✅ Gated player white mana regen/decay behind attunement check in `updateWindAndWhiteMana()`
+- ✅ Gated ally blue/red/white mana regen behind per-ally attunement checks
+- ✅ Added attunement gate in `ability_system.dart` `_executeAbilityByName()` — blocks mana abilities when not attuned to required color
+- ✅ Updated `ManaBar` widget — only shows mana bars for attuned colors, gates info widgets (wind/ley line/power node) behind attunement, shows "No Mana Attunement" when empty
+- ✅ Existing `amulet_of_fortitude` unchanged (defensive-only talisman, no attunement)
+- ✅ Physical abilities (ManaColor.none, manaCost 0) work without any talisman
+- ✅ Build verified clean (`flutter build web`)
+
+#### Performance Optimizations
+- ✅ Cached `AbilityRegistry.findByName` — results stored in `Map<String, AbilityData?>` so repeated lookups (every frame in buff/debuff icons) are O(1) instead of linear scans
+- ✅ Fixed ley line mesh cache hash — now hashes segment endpoint coordinates instead of just count, preventing stale mesh when segments shift but count stays the same
+- ⬜ Cooldown list refactor — replace 10 individual `abilityNCooldown` fields with a `List<double>` (147 references across 7 files, deferred to next session)
+- ✅ Added `_minionIndex` map to `GameState` for O(1) minion lookup by `instanceId` — used by `currentTargetActiveEffects` instead of linear scan
+- ✅ Added terrain color cache to `MinimapTerrainPainter` — static `List<Color>` grid only recomputed when player position/rotation/zoom changes, eliminating redundant height sampling and color interpolation on unchanged frames
+- ✅ Build verified clean (`flutter build web`)
+
+#### Buff/Debuff Icon Fixes & Ability Icon System
+- ✅ Fixed CombatHUD target debuff icons — now shows effects for the actual current target (boss, minion, ally) instead of always showing boss effects via new `currentTargetActiveEffects` getter on `GameState`
+- ✅ Created ability icon system — added `AbilityTypeIcon` extension on `AbilityType` in `ability_types.dart` with `.icon` getter, plus `typeIcon` and `flutterColor` getters on `AbilityData`
+- ✅ Updated `BuffDebuffIcons` to look up source ability via `AbilityRegistry.findByName(effect.sourceName)` and use the ability's type icon and color instead of the `StatusEffect` mapping
+- ✅ Updated `MinionFrames._buildBuffIndicators` to use the same ability icon lookup for active effects
+- ✅ Consolidated Codex: replaced private `_getAbilityTypeIcon` in `abilities_modal.dart` with shared `ability.type.icon` extension
+- ✅ Added mouse-over tooltips showing ability name to icons in both `BuffDebuffIcons` and `MinionFrames`
+- ✅ Build verified clean (`flutter build web`)
+
+#### Cast Time Fix, Haste & Melt Attributes
+- ✅ Fixed cast/windup time accuracy — clamped `castProgress` to `currentCastTime` on completion so logged duration matches configured time exactly (previously overshot by up to one frame ~16ms)
+- ✅ Added combat log entries for cast and windup completions — logged as `CombatLogType.ability` with source `'Player'` and duration in action text
+- ✅ Added `haste` and `melt` integer fields to `ItemStats` — fromJson, toJson, nonZeroStats, totalEquippedStats all updated
+- ✅ Added `activeHaste` and `activeMelt` getters to `GameState` — reads from active character's equipped item stats
+- ✅ Applied Haste to `_startCastTimeAbility` and `_startWindupAbility` — formula: `baseTime / (1 + haste/100)` (100% Haste halves a 2s cast to 1s)
+- ✅ Applied Melt to `_setCooldownForSlot` — formula: `baseCooldown / (1 + melt/100)` (same scaling as Haste)
+- ✅ Build verified clean (`flutter build web`)
+
+#### Attunement Settings Toggles
+- ✅ Created `lib/game3d/state/gameplay_settings.dart` — `GameplaySettings` class with `attunementRequired` and `manaSourceVisibilityGated` booleans, SharedPreferences persistence via `load()`/`save()`
+- ✅ Added `globalGameplaySettings` singleton initialized in `game3d_widget.dart` alongside other config singletons
+- ✅ Added "Mana Attunement" section to Settings > General tab with two toggles:
+  - **Require Mana Attunement** (default ON) — when off, all characters have full access to all mana pools unconditionally (pre-talisman behavior)
+  - **Gate Mana Source Visibility** (default OFF) — when on, hides Ley Lines (blue) and wind particles (white) if the active character lacks the corresponding attunement
+- ✅ All attunement getters (`playerManaAttunements`, `activeManaAttunements`, ally attunements) return all three colors when `attunementRequired` is disabled
+- ✅ Gated 3D Ley Line rendering in `render_system.dart` — hidden when active character is not blue-attuned and visibility toggle is on
+- ✅ Gated wind particle rendering in `render_system.dart` — hidden when active character is not white-attuned and visibility toggle is on
+- ✅ Gated minimap Ley Line/power node drawing in `minimap_terrain_painter.dart` — hidden by same blue attunement check
+- ✅ Added `_buildSectionHeader()` helper to `settings_panel.dart` for styled category headers
+- ✅ Settings persist across sessions via SharedPreferences
+- ✅ Build verified clean (`flutter build web`)
+
 ### ✅ Completed - 2026-02-15
+
+#### Increase Damage Number Size, DoT Damage Display & Combat Log
+- ✅ Increased floating combat damage number font size by 50% in `damage_indicators.dart` — melee: 20→30, ranged: 22→33
+- ✅ Added `sourceName` field to `ActiveEffect` model — stores the ability name that created the effect for combat log attribution
+- ✅ Passed `sourceName` (from `projectile.abilityName`) when creating DoT effects in `_applyDoTFromProjectile()`
+- ✅ Added `_logDoTTick()` helper to `GameState` — spawns a floating `DamageIndicator` at the target's world position and adds a `CombatLogEntry` (with ability name and status effect type) for every DoT tick
+- ✅ Wired `_logDoTTick()` into all four entity loops in `updateActiveEffects()`: player, boss monster, allies, and minions
+- ✅ Build verified clean (`flutter build web`)
+
+#### Fix Custom Ability Colors, Load-to-Action-Bar, Add Type Filter, Fix DoT Ticking
+- ✅ Fixed `_buildCustomAbilityCard()` in `abilities_modal.dart` — replaced hardcoded `Colors.green` background/border/star with `_getCategoryColor(ability.category)` so custom abilities in built-in categories show the correct color
+- ✅ Fixed `_loadClassToActionBar()` — now combines `AbilityRegistry.getByCategory()` + `globalCustomAbilityManager.getByCategory()` so custom abilities load to action bar alongside built-in ones
+- ✅ Fixed `_buildLoadClassRow()` dropdown — count includes custom abilities; custom-only categories appear in dropdown
+- ✅ Added `_enabledTypes` set and `_typeFilterExpanded` toggle state to `_AbilitiesModalState`
+- ✅ Built `_buildTypeFilter()` — non-scrolling type filter bar below category filter with: type count indicator, All/None quick-toggle, expand/collapse, colored chips per `AbilityType`
+- ✅ Built `_buildTypeFilterChip()` — tappable checkbox chips colored by `_getTypeColor()`, toggling type in `_enabledTypes`
+- ✅ Applied type filtering to all ability display loops (player, monster, ally, potential, custom category sections)
+- ✅ Added DoT fields to `ActiveEffect` model: `damagePerTick`, `tickInterval`, `tickAccumulator`, `isDoT` getter
+- ✅ Added status/DoT fields to `Projectile` model: `statusEffect`, `statusDuration`, `dotTicks`
+- ✅ Passed DoT fields from `AbilityData` to `Projectile` in `_executeGenericProjectile()`
+- ✅ Added `_applyDoTFromProjectile()` — creates `ActiveEffect` with DoT data on target (boss or minion) when projectile hits
+- ✅ Wired DoT application in both homing (`_damageTargetWithProjectile`) and non-homing (`checkAndDamageEnemies`) hit paths
+- ✅ Updated `updateActiveEffects(dt)` in `game_state.dart` — accumulates tick time per effect; applies `damagePerTick` damage when accumulator reaches `tickInterval` for player, boss, allies, and minions
+- ✅ Added `Soul Rot` necromancer DoT ability — `AbilityType.dot`, 60 damage over 5 ticks across 10s, `StatusEffect.poison`, fires projectile that applies DoT `ActiveEffect` on hit
+- ✅ Wired `Soul Rot` in `ability_system.dart` — named handler `_executeSoulRot()`, mana cost entry (30 blue), switch case dispatch
+- ✅ Fixed ability overrides not persisting to game execution — added `_effective()` helper to `AbilitySystem` that applies `AbilityOverrideManager` overrides; wrapped all ~45 raw ability references (`XxxAbilities.yyy`) with `_effective()`; also applied overrides in generic execution methods (`_executeGenericProjectile`, `_executeGenericMelee`, `_executeGenericAoE`, `_executeGenericHeal`)
+- ✅ Build verified clean (`flutter build web`)
+
+#### Buff/Debuff Icons in CombatHUD + Fix Fear Ability
+- ✅ Added `StatusEffect.fear` to enum in `ability_types.dart` — causes uncontrolled fleeing
+- ✅ Changed Fear ability in `necromancer_abilities.dart` to use `StatusEffect.fear` (was `StatusEffect.stun`)
+- ✅ Created `lib/models/active_effect.dart` — `ActiveEffect` class with type, remainingDuration, totalDuration, strength, isBuff/isDebuff, tick(), progress, iconFor(), colorFor()
+- ✅ Added `List<ActiveEffect> activeEffects` field to `Ally` model
+- ✅ Added `List<ActiveEffect> activeEffects` field to `Monster` model
+- ✅ Added `playerActiveEffects`, `monsterActiveEffects` lists to `GameState`
+- ✅ Added `updateActiveEffects(double dt)` to `GameState` — ticks and expires effects on player, boss, allies, and minions
+- ✅ Wired `updateActiveEffects(dt)` in `game3d_widget.dart` game loop after mana updates
+- ✅ Fixed `_executeFear()` in `ability_system.dart` — applies fear ActiveEffect to boss, generates flee BezierPath away from player, logs to combat log
+- ✅ Added fear/stun checks in `ai_system.dart` `updateMonsterAI()` — feared monster regenerates flee paths, stunned monster stops movement, both skip normal AI
+- ✅ Created `lib/game3d/ui/unit_frames/buff_debuff_icons.dart` — reusable widget showing buff row (top) and debuff row (bottom) with color-coded icons and progress ring overlay
+- ✅ Added BuffDebuffIcons to `combat_hud.dart` — LEFT of player frame, RIGHT of target frame
+- ✅ Added BuffDebuffIcons to `party_frames.dart` — LEFT of each ally frame (12px icons)
+- ✅ Extended `_buildBuffIndicators()` in `minion_frames.dart` — shows active effects from new system alongside existing DMG+/DMG-/DEF indicators
+- ✅ Exported `buff_debuff_icons.dart` from `unit_frames.dart` barrel file
+- ✅ Build verified clean (`flutter build web`)
+
+#### Add Category Filter to Abilities Codex
+- ✅ Added `_enabledCategories` set and `_filterExpanded` toggle state to `_AbilitiesModalState`
+- ✅ Added `_getAllCategories()` helper — collects built-in categories from `AbilityRegistry.categories` + custom categories from `globalCustomAbilityManager` + custom options from `globalCustomOptionsManager`
+- ✅ Built `_buildCategoryFilter()` — non-scrolling filter bar between header and content with: category count indicator, All/None quick-toggle buttons, expand/collapse toggle
+- ✅ Built `_buildFilterChip()` — tappable checkbox chips colored by `_getCategoryColor()`, toggling category in `_enabledCategories`
+- ✅ Applied filtering to "CURRENTLY ASSIGNED ABILITIES" — hides player/monster/ally sub-sections when unchecked, hides entire section header when all 3 disabled
+- ✅ Applied filtering to "POTENTIAL FUTURE ABILITIES" — skips categories not in `_enabledCategories`
+- ✅ Applied filtering to `_buildCustomCategorySections()` — skips custom categories not enabled
+- ✅ Build verified clean (`flutter build web`)
+
+#### Fix Custom Ability Double-Click Editing in Abilities Codex
+- ✅ Added `ValueKey` to `AbilityEditorPanel` in `abilities_modal.dart` — key based on ability name + isCreatingNew flag forces Flutter to recreate panel state when switching between abilities
+- ✅ Fixed `didUpdateWidget` in `ability_editor_panel.dart` — now also checks `isNewAbility` flag changes, not just ability name changes, ensuring fields repopulate when switching between override mode and full-save mode
+- ✅ Added `behavior: HitTestBehavior.opaque` to custom ability card `GestureDetector` — ensures double-tap gesture registers across the full card bounds
+- ✅ Build verified clean (`flutter build web`)
 
 #### Fix Macro Execution + Combat Log Tab
 - ✅ Made `getCooldownForSlot` public in `ability_system.dart` — renamed from `_getCooldownForSlot`, updated internal call site

@@ -13,6 +13,7 @@ import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
 import 'combat_system.dart';
+import '../../models/active_effect.dart';
 import '../ai/mcp_tools.dart';
 import '../ai/ally_behavior_tree.dart';
 import '../utils/bezier_path.dart';
@@ -303,6 +304,34 @@ class AISystem {
         gameState.monsterHealth > 0 &&
         gameState.monsterTransform != null &&
         gameState.playerTransform != null) {
+
+      // Skip AI decisions while stunned — monster frozen in place
+      final isStunned = gameState.monsterActiveEffects
+          .any((e) => e.type == StatusEffect.stun);
+      if (isStunned) {
+        gameState.monsterCurrentPath = null;
+        return;
+      }
+
+      // Skip AI decisions while feared — monster flees uncontrollably
+      final isFeared = gameState.monsterActiveEffects
+          .any((e) => e.type == StatusEffect.fear);
+      if (isFeared) {
+        // Regenerate flee path if current one completed
+        if (gameState.monsterCurrentPath == null) {
+          final awayFromPlayer = (gameState.monsterTransform!.position -
+                  gameState.playerTransform!.position)
+              .normalized();
+          final escapeTarget =
+              gameState.monsterTransform!.position + awayFromPlayer * 8.0;
+          gameState.monsterCurrentPath = BezierPath.interception(
+            start: gameState.monsterTransform!.position,
+            target: escapeTarget,
+            velocity: null,
+          );
+        }
+        return;
+      }
 
       // Create AI context
       final context = _createMonsterAIContext(gameState);

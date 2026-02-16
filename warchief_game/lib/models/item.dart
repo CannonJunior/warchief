@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../game3d/data/abilities/ability_types.dart' show ManaColor;
 
 /// Equipment slot types
 enum EquipmentSlot {
@@ -157,6 +158,8 @@ class ItemStats {
   final int blueManaRegen;
   final int redManaRegen;
   final int whiteManaRegen;
+  final int haste;
+  final int melt;
 
   const ItemStats({
     this.brawn = 0,
@@ -176,6 +179,8 @@ class ItemStats {
     this.blueManaRegen = 0,
     this.redManaRegen = 0,
     this.whiteManaRegen = 0,
+    this.haste = 0,
+    this.melt = 0,
   });
 
   factory ItemStats.fromJson(Map<String, dynamic> json) {
@@ -197,6 +202,8 @@ class ItemStats {
       blueManaRegen: json['blueManaRegen'] ?? 0,
       redManaRegen: json['redManaRegen'] ?? 0,
       whiteManaRegen: json['whiteManaRegen'] ?? 0,
+      haste: json['haste'] ?? 0,
+      melt: json['melt'] ?? 0,
     );
   }
 
@@ -218,6 +225,8 @@ class ItemStats {
     if (blueManaRegen != 0) 'blueManaRegen': blueManaRegen,
     if (redManaRegen != 0) 'redManaRegen': redManaRegen,
     if (whiteManaRegen != 0) 'whiteManaRegen': whiteManaRegen,
+    if (haste != 0) 'haste': haste,
+    if (melt != 0) 'melt': melt,
   };
 
   /// Get non-zero stats as a list of (name, value) pairs
@@ -240,6 +249,8 @@ class ItemStats {
     if (blueManaRegen != 0) stats.add(MapEntry('Blue Regen', blueManaRegen));
     if (redManaRegen != 0) stats.add(MapEntry('Red Regen', redManaRegen));
     if (whiteManaRegen != 0) stats.add(MapEntry('White Regen', whiteManaRegen));
+    if (haste != 0) stats.add(MapEntry('Haste', haste));
+    if (melt != 0) stats.add(MapEntry('Melt', melt));
     return stats;
   }
 }
@@ -270,6 +281,7 @@ class Item {
   final int sellValue;
   final int levelRequirement;
   final ItemSentience sentience;
+  final List<ManaColor> manaAttunement;
 
   const Item({
     required this.id,
@@ -285,6 +297,7 @@ class Item {
     this.sellValue = 0,
     this.levelRequirement = 1,
     this.sentience = ItemSentience.inanimate,
+    this.manaAttunement = const [],
   });
 
   /// Whether this item can be equipped
@@ -326,6 +339,15 @@ class Item {
               orElse: () => ItemSentience.inanimate,
             )
           : ItemSentience.inanimate,
+      manaAttunement: json['manaAttunement'] != null
+          ? (json['manaAttunement'] as List)
+              .map((c) => ManaColor.values.firstWhere(
+                    (m) => m.name == c,
+                    orElse: () => ManaColor.none,
+                  ))
+              .where((c) => c != ManaColor.none)
+              .toList()
+          : const [],
     );
   }
 
@@ -343,6 +365,7 @@ class Item {
     'sellValue': sellValue,
     'levelRequirement': levelRequirement,
     'sentience': sentience.name,
+    if (manaAttunement.isNotEmpty) 'manaAttunement': manaAttunement.map((c) => c.name).toList(),
   };
 
   /// Create a copy with modified stack size
@@ -361,6 +384,7 @@ class Item {
       sellValue: sellValue,
       levelRequirement: levelRequirement,
       sentience: sentience,
+      manaAttunement: manaAttunement,
     );
   }
 }

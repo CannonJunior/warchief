@@ -124,7 +124,7 @@ class DamageIndicatorOverlay extends StatelessWidget {
     }
 
     // Font size: starts large, shrinks slightly
-    final baseFontSize = indicator.isMelee ? 20.0 : 22.0;
+    final baseFontSize = indicator.isMelee ? 30.0 : 33.0;
     // Brief scale-up at the start
     final scaleT = progress < 0.1 ? 1.0 + (0.1 - progress) * 3.0 : 1.0;
     final fontSize = baseFontSize * scaleT;

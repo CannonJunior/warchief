@@ -36,6 +36,33 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
   /// Currently selected class in the "Load Class" dropdown
   String _selectedLoadClass = 'warrior';
 
+  /// Category filter state
+  late Set<String> _enabledCategories;
+  bool _filterExpanded = false;
+
+  /// Type filter state
+  late Set<AbilityType> _enabledTypes;
+  bool _typeFilterExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _enabledCategories = _getAllCategories();
+    _enabledTypes = Set<AbilityType>.from(AbilityType.values);
+  }
+
+  /// Collect all available categories (built-in + custom).
+  Set<String> _getAllCategories() {
+    final categories = <String>{...AbilityRegistry.categories};
+    final customAbilities = globalCustomAbilityManager?.getAll() ?? [];
+    for (final ability in customAbilities) {
+      categories.add(ability.category);
+    }
+    final customOptions = globalCustomOptionsManager?.getCustomValues('category') ?? [];
+    categories.addAll(customOptions);
+    return categories;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Total width includes editor panel when open
@@ -175,6 +202,12 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                     ),
                   ),
 
+                  // Category filter (non-scrolling)
+                  _buildCategoryFilter(),
+
+                  // Type filter (non-scrolling)
+                  _buildTypeFilter(),
+
                   // Content
                   Expanded(
                     child: SingleChildScrollView(
@@ -193,25 +226,40 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                           SizedBox(height: 16),
 
                           // Currently Assigned Abilities
-                          _buildSection(
-                            'CURRENTLY ASSIGNED ABILITIES',
-                            Colors.green,
-                            [
-                              _buildCategoryHeader('Player Abilities', Colors.blue),
-                              ...AbilitiesConfig.playerAbilities.map((ability) =>
-                                _buildAbilityCard(ability, Colors.blue.shade900, draggable: true)),
+                          if (_enabledCategories.contains('player') ||
+                              _enabledCategories.contains('monster') ||
+                              _enabledCategories.contains('ally'))
+                            _buildSection(
+                              'CURRENTLY ASSIGNED ABILITIES',
+                              Colors.green,
+                              [
+                                if (_enabledCategories.contains('player')) ...[
+                                  _buildCategoryHeader('Player Abilities', Colors.blue),
+                                  ...AbilitiesConfig.playerAbilities
+                                    .where((a) => _enabledTypes.contains(a.type))
+                                    .map((ability) =>
+                                      _buildAbilityCard(ability, Colors.blue.shade900, draggable: true)),
+                                  SizedBox(height: 16),
+                                ],
 
-                              SizedBox(height: 16),
-                              _buildCategoryHeader('Monster Abilities', Colors.purple),
-                              ...AbilitiesConfig.monsterAbilities.map((ability) =>
-                                _buildAbilityCard(ability, Colors.purple.shade900, draggable: false)),
+                                if (_enabledCategories.contains('monster')) ...[
+                                  _buildCategoryHeader('Monster Abilities', Colors.purple),
+                                  ...AbilitiesConfig.monsterAbilities
+                                    .where((a) => _enabledTypes.contains(a.type))
+                                    .map((ability) =>
+                                      _buildAbilityCard(ability, Colors.purple.shade900, draggable: false)),
+                                  SizedBox(height: 16),
+                                ],
 
-                              SizedBox(height: 16),
-                              _buildCategoryHeader('Ally Abilities', Colors.cyan),
-                              ...AbilitiesConfig.allyAbilities.map((ability) =>
-                                _buildAbilityCard(ability, Colors.cyan.shade900, draggable: false)),
-                            ],
-                          ),
+                                if (_enabledCategories.contains('ally')) ...[
+                                  _buildCategoryHeader('Ally Abilities', Colors.cyan),
+                                  ...AbilitiesConfig.allyAbilities
+                                    .where((a) => _enabledTypes.contains(a.type))
+                                    .map((ability) =>
+                                      _buildAbilityCard(ability, Colors.cyan.shade900, draggable: false)),
+                                ],
+                              ],
+                            ),
 
                           SizedBox(height: 24),
 
@@ -221,6 +269,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                             Colors.orange,
                             [
                               ...AbilitiesConfig.categories.map((category) {
+                                if (!_enabledCategories.contains(category)) return SizedBox.shrink();
                                 final abilities = AbilitiesConfig.getAbilitiesByCategory(category);
                                 final customInCategory = globalCustomAbilityManager?.getByCategory(category) ?? [];
                                 if (abilities.isEmpty && customInCategory.isEmpty) return SizedBox.shrink();
@@ -232,10 +281,14 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                                       category.toUpperCase(),
                                       _getCategoryColor(category),
                                     ),
-                                    ...abilities.map((ability) =>
-                                      _buildAbilityCard(ability, _getCategoryColor(category).withOpacity(0.3), draggable: true)),
-                                    ...customInCategory.map((ability) =>
-                                      _buildCustomAbilityCard(ability)),
+                                    ...abilities
+                                      .where((a) => _enabledTypes.contains(a.type))
+                                      .map((ability) =>
+                                        _buildAbilityCard(ability, _getCategoryColor(category).withOpacity(0.3), draggable: true)),
+                                    ...customInCategory
+                                      .where((a) => _enabledTypes.contains(a.type))
+                                      .map((ability) =>
+                                        _buildCustomAbilityCard(ability)),
                                     SizedBox(height: 16),
                                   ],
                                 );
@@ -255,6 +308,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
             if (_editingAbility != null) ...[
               SizedBox(width: 8),
               AbilityEditorPanel(
+                key: ValueKey('${_editingAbility!.name}_${_isCreatingNew}'),
                 ability: _editingAbility!,
                 isNewAbility: _isCreatingNew,
                 onClose: () {
@@ -476,7 +530,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
           // Ability type icon
           Center(
             child: Icon(
-              _getAbilityTypeIcon(ability.type),
+              ability.type.icon,
               color: Colors.white.withOpacity(0.9),
               size: 22,
             ),
@@ -537,7 +591,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
               ),
               child: Center(
                 child: Icon(
-                  _getAbilityTypeIcon(ability.type),
+                  ability.type.icon,
                   color: Colors.white,
                   size: 22,
                 ),
@@ -555,32 +609,6 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
         child: iconWidget,
       ),
     );
-  }
-
-  /// Get an icon for the ability type
-  IconData _getAbilityTypeIcon(AbilityType type) {
-    switch (type) {
-      case AbilityType.melee:
-        return Icons.sports_martial_arts;
-      case AbilityType.ranged:
-        return Icons.gps_fixed;
-      case AbilityType.heal:
-        return Icons.favorite;
-      case AbilityType.buff:
-        return Icons.arrow_upward;
-      case AbilityType.debuff:
-        return Icons.arrow_downward;
-      case AbilityType.aoe:
-        return Icons.blur_circular;
-      case AbilityType.dot:
-        return Icons.local_fire_department;
-      case AbilityType.channeled:
-        return Icons.stream;
-      case AbilityType.summon:
-        return Icons.pets;
-      case AbilityType.utility:
-        return Icons.build;
-    }
   }
 
   /// Abbreviate ability name for icon display
@@ -667,6 +695,296 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
     }
   }
 
+  /// Build the non-scrolling category filter bar.
+  Widget _buildCategoryFilter() {
+    final allCategories = _getAllCategories();
+    final enabledCount = _enabledCategories.length;
+    final totalCount = allCategories.length;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        border: Border(bottom: BorderSide(color: Colors.cyan.withOpacity(0.3), width: 1)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Collapsed bar: label + count + expand toggle + All/None
+          Row(
+            children: [
+              Icon(Icons.filter_list, color: Colors.cyan, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                'Categories',
+                style: TextStyle(color: Colors.cyan, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: enabledCount == totalCount
+                      ? Colors.cyan.withOpacity(0.15)
+                      : Colors.orange.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: Text(
+                  '$enabledCount/$totalCount',
+                  style: TextStyle(
+                    color: enabledCount == totalCount ? Colors.cyan : Colors.orange,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              // All button
+              GestureDetector(
+                onTap: () => setState(() => _enabledCategories = _getAllCategories()),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(3),
+                    border: Border.all(color: Colors.green.withOpacity(0.4), width: 1),
+                  ),
+                  child: Text('All', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 4),
+              // None button
+              GestureDetector(
+                onTap: () => setState(() => _enabledCategories = {}),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(3),
+                    border: Border.all(color: Colors.red.withOpacity(0.4), width: 1),
+                  ),
+                  child: Text('None', style: TextStyle(color: Colors.red.shade300, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Expand/collapse toggle
+              GestureDetector(
+                onTap: () => setState(() => _filterExpanded = !_filterExpanded),
+                child: Icon(
+                  _filterExpanded ? Icons.expand_less : Icons.expand_more,
+                  color: Colors.cyan,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+          // Expanded: category chips
+          if (_filterExpanded) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: allCategories.map((cat) => _buildFilterChip(cat)).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// A single tappable category chip with checkbox state.
+  Widget _buildFilterChip(String category) {
+    final isEnabled = _enabledCategories.contains(category);
+    final color = _getCategoryColor(category);
+    final label = category[0].toUpperCase() + category.substring(1);
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (isEnabled) {
+            _enabledCategories.remove(category);
+          } else {
+            _enabledCategories.add(category);
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isEnabled ? color.withOpacity(0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isEnabled ? color.withOpacity(0.6) : Colors.white24,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isEnabled ? Icons.check_box : Icons.check_box_outline_blank,
+              color: isEnabled ? color : Colors.white38,
+              size: 12,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isEnabled ? color : Colors.white38,
+                fontSize: 10,
+                fontWeight: isEnabled ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build the non-scrolling ability type filter bar.
+  Widget _buildTypeFilter() {
+    final enabledCount = _enabledTypes.length;
+    final totalCount = AbilityType.values.length;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        border: Border(bottom: BorderSide(color: Colors.orange.withOpacity(0.3), width: 1)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Collapsed bar: label + count + expand toggle + All/None
+          Row(
+            children: [
+              Icon(Icons.category, color: Colors.orange, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                'Types',
+                style: TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: enabledCount == totalCount
+                      ? Colors.orange.withOpacity(0.15)
+                      : Colors.red.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: Text(
+                  '$enabledCount/$totalCount',
+                  style: TextStyle(
+                    color: enabledCount == totalCount ? Colors.orange : Colors.red,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              // All button
+              GestureDetector(
+                onTap: () => setState(() => _enabledTypes = Set<AbilityType>.from(AbilityType.values)),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(3),
+                    border: Border.all(color: Colors.green.withOpacity(0.4), width: 1),
+                  ),
+                  child: Text('All', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 4),
+              // None button
+              GestureDetector(
+                onTap: () => setState(() => _enabledTypes = {}),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(3),
+                    border: Border.all(color: Colors.red.withOpacity(0.4), width: 1),
+                  ),
+                  child: Text('None', style: TextStyle(color: Colors.red.shade300, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Expand/collapse toggle
+              GestureDetector(
+                onTap: () => setState(() => _typeFilterExpanded = !_typeFilterExpanded),
+                child: Icon(
+                  _typeFilterExpanded ? Icons.expand_less : Icons.expand_more,
+                  color: Colors.orange,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+          // Expanded: type chips
+          if (_typeFilterExpanded) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: AbilityType.values.map((type) => _buildTypeFilterChip(type)).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// A single tappable type chip with checkbox state.
+  Widget _buildTypeFilterChip(AbilityType type) {
+    final isEnabled = _enabledTypes.contains(type);
+    final color = _getTypeColor(type);
+    final label = type.toString().split('.').last;
+    final capitalLabel = label[0].toUpperCase() + label.substring(1);
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (isEnabled) {
+            _enabledTypes.remove(type);
+          } else {
+            _enabledTypes.add(type);
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isEnabled ? color.withOpacity(0.3) : Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isEnabled ? color.withOpacity(0.7) : Colors.white24,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isEnabled ? Icons.check_box : Icons.check_box_outline_blank,
+              color: isEnabled ? color : Colors.white38,
+              size: 12,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              capitalLabel,
+              style: TextStyle(
+                color: isEnabled ? color : Colors.white38,
+                fontSize: 10,
+                fontWeight: isEnabled ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// Build the "+ Add New Ability" button
   Widget _buildAddNewAbilityButton() {
     return GestureDetector(
@@ -711,6 +1029,17 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
         .where((c) => c != 'player' && c != 'monster' && c != 'ally')
         .toList();
 
+    // Add custom-only categories (those not already in built-in list)
+    final customOnlyCategories = (globalCustomAbilityManager?.usedCategories ?? <String>{})
+        .where((c) => !AbilityRegistry.categories.contains(c))
+        .toList();
+    loadableCategories.addAll(customOnlyCategories);
+
+    // Ensure selected class is still valid
+    if (!loadableCategories.contains(_selectedLoadClass) && loadableCategories.isNotEmpty) {
+      _selectedLoadClass = loadableCategories.first;
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
@@ -745,7 +1074,8 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
               iconEnabledColor: Colors.cyan,
               isDense: true,
               items: loadableCategories.map((category) {
-                final count = AbilityRegistry.getByCategory(category).length;
+                final count = AbilityRegistry.getByCategory(category).length +
+                    (globalCustomAbilityManager?.getByCategory(category).length ?? 0);
                 return DropdownMenuItem(
                   value: category,
                   child: Text(
@@ -807,7 +1137,11 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
     final config = globalActionBarConfig;
     if (config == null) return;
 
-    final abilities = AbilityRegistry.getByCategory(category);
+    // Combine built-in + custom abilities for this category
+    final abilities = <AbilityData>[
+      ...AbilityRegistry.getByCategory(category),
+      ...(globalCustomAbilityManager?.getByCategory(category) ?? []),
+    ];
     if (abilities.isEmpty) return;
 
     for (int i = 0; i < 10; i++) {
@@ -895,6 +1229,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
           // Ability card - double-tap to edit
           Expanded(
             child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onDoubleTap: () {
                 setState(() {
                   // Custom abilities open in create mode (full save, not overrides)
@@ -905,10 +1240,10 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
               child: Container(
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.15),
+                  color: _getCategoryColor(ability.category).withOpacity(0.15),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: isEditing ? Colors.cyan : Colors.green.withOpacity(0.5),
+                    color: isEditing ? Colors.cyan : _getCategoryColor(ability.category).withOpacity(0.5),
                     width: isEditing ? 2 : 1,
                   ),
                 ),
@@ -917,7 +1252,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.star, color: Colors.green, size: 12),
+                        Icon(Icons.star, color: _getCategoryColor(ability.category), size: 12),
                         SizedBox(width: 4),
                         Expanded(
                           flex: 2,
@@ -1053,6 +1388,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
 
     final sections = <Widget>[];
     for (final category in extraCategories) {
+      if (!_enabledCategories.contains(category)) continue;
       // Built-in abilities overridden into this category
       final matchingBuiltIn = allBuiltIn.where((ability) {
         final effective = globalAbilityOverrideManager?.getEffectiveAbility(ability) ?? ability;
@@ -1080,10 +1416,14 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                   style: TextStyle(color: Colors.white38, fontSize: 11, fontStyle: FontStyle.italic),
                 ),
               ),
-            ...matchingBuiltIn.map((ability) =>
-              _buildAbilityCard(ability, _getCategoryColor(category).withOpacity(0.3), draggable: true)),
-            ...matchingCustom.map((ability) =>
-              _buildCustomAbilityCard(ability)),
+            ...matchingBuiltIn
+              .where((a) => _enabledTypes.contains(a.type))
+              .map((ability) =>
+                _buildAbilityCard(ability, _getCategoryColor(category).withOpacity(0.3), draggable: true)),
+            ...matchingCustom
+              .where((a) => _enabledTypes.contains(a.type))
+              .map((ability) =>
+                _buildCustomAbilityCard(ability)),
             SizedBox(height: 16),
           ],
         ),

@@ -15,6 +15,8 @@ import '../../models/impact_effect.dart';
 import 'combat_system.dart';
 import 'physics_system.dart';
 import '../../models/combat_log_entry.dart';
+import '../../models/active_effect.dart';
+import '../utils/bezier_path.dart';
 
 /// Mana type enumeration for abilities
 enum _ManaType { none, blue, red, white }
@@ -28,6 +30,10 @@ enum _ManaType { none, blue, red, white }
 /// - Impact effects (visual feedback for hits)
 class AbilitySystem {
   AbilitySystem._(); // Private constructor to prevent instantiation
+
+  /// Apply user overrides (from the Codex editor) to a raw ability definition.
+  static AbilityData _effective(AbilityData raw) =>
+      globalAbilityOverrideManager?.getEffectiveAbility(raw) ?? raw;
 
   /// Updates all ability systems
   ///
@@ -60,7 +66,9 @@ class AbilitySystem {
       final slotIndex = gameState.castingSlotIndex;
       final abilityName = gameState.castingAbilityName;
       final configuredTime = gameState.currentCastTime;
-      final actualProgress = gameState.castProgress;
+
+      // Clamp progress to configured time so logged duration matches config
+      gameState.castProgress = configuredTime;
 
       // Reset casting state
       gameState.isCasting = false;
@@ -69,8 +77,18 @@ class AbilitySystem {
       gameState.castingSlotIndex = null;
       gameState.castingAbilityName = '';
 
+      // Combat log entry for cast completion
+      gameState.combatLogMessages.add(CombatLogEntry(
+        source: 'Player',
+        action: '$abilityName cast (${configuredTime.toStringAsFixed(2)}s)',
+        type: CombatLogType.ability,
+      ));
+      if (gameState.combatLogMessages.length > 200) {
+        gameState.combatLogMessages.removeAt(0);
+      }
+
       // Execute the ability now
-      print('[CAST] $abilityName cast complete! (configured: ${configuredTime.toStringAsFixed(2)}s, actual: ${actualProgress.toStringAsFixed(3)}s)');
+      print('[CAST] $abilityName cast complete! (${configuredTime.toStringAsFixed(2)}s)');
       if (slotIndex != null) {
         _finishCastTimeAbility(slotIndex, gameState);
       }
@@ -89,7 +107,9 @@ class AbilitySystem {
       final slotIndex = gameState.windupSlotIndex;
       final abilityName = gameState.windupAbilityName;
       final configuredTime = gameState.currentWindupTime;
-      final actualProgress = gameState.windupProgress;
+
+      // Clamp progress to configured time so logged duration matches config
+      gameState.windupProgress = configuredTime;
 
       // Reset windup state
       gameState.isWindingUp = false;
@@ -99,8 +119,18 @@ class AbilitySystem {
       gameState.windupAbilityName = '';
       gameState.windupMovementSpeedModifier = 1.0;
 
+      // Combat log entry for windup completion
+      gameState.combatLogMessages.add(CombatLogEntry(
+        source: 'Player',
+        action: '$abilityName windup (${configuredTime.toStringAsFixed(2)}s)',
+        type: CombatLogType.ability,
+      ));
+      if (gameState.combatLogMessages.length > 200) {
+        gameState.combatLogMessages.removeAt(0);
+      }
+
       // Execute the ability now
-      print('[WINDUP] $abilityName windup complete! (configured: ${configuredTime.toStringAsFixed(2)}s, actual: ${actualProgress.toStringAsFixed(3)}s)');
+      print('[WINDUP] $abilityName windup complete! (${configuredTime.toStringAsFixed(2)}s)');
       if (slotIndex != null) {
         _finishWindupAbility(slotIndex, gameState);
       }
@@ -179,16 +209,18 @@ class AbilitySystem {
   /// - dt: Time elapsed since last frame (in seconds)
   /// - gameState: Current game state to update
   static void updateCooldowns(double dt, GameState gameState) {
-    if (gameState.ability1Cooldown > 0) gameState.ability1Cooldown -= dt;
-    if (gameState.ability2Cooldown > 0) gameState.ability2Cooldown -= dt;
-    if (gameState.ability3Cooldown > 0) gameState.ability3Cooldown -= dt;
-    if (gameState.ability4Cooldown > 0) gameState.ability4Cooldown -= dt;
-    if (gameState.ability5Cooldown > 0) gameState.ability5Cooldown -= dt;
-    if (gameState.ability6Cooldown > 0) gameState.ability6Cooldown -= dt;
-    if (gameState.ability7Cooldown > 0) gameState.ability7Cooldown -= dt;
-    if (gameState.ability8Cooldown > 0) gameState.ability8Cooldown -= dt;
-    if (gameState.ability9Cooldown > 0) gameState.ability9Cooldown -= dt;
-    if (gameState.ability10Cooldown > 0) gameState.ability10Cooldown -= dt;
+    // Tick Warchief cooldowns
+    final wCds = gameState.abilityCooldowns;
+    for (int i = 0; i < wCds.length; i++) {
+      if (wCds[i] > 0) wCds[i] -= dt;
+    }
+    // Tick each ally's independent cooldowns
+    for (final ally in gameState.allies) {
+      final aCds = ally.abilityCooldowns;
+      for (int i = 0; i < aCds.length; i++) {
+        if (aCds[i] > 0) aCds[i] -= dt;
+      }
+    }
   }
 
   // ==================== DYNAMIC ABILITY EXECUTION ====================
@@ -246,6 +278,15 @@ class AbilitySystem {
               : _ManaType.blue;
     } else {
       (manaCost, manaType) = _getManaCostAndType(abilityName);
+    }
+
+    // Attunement gate: character must be attuned to the required mana color
+    if (manaCost > 0 && manaType != _ManaType.none) {
+      final requiredColor = manaType == _ManaType.blue ? ManaColor.blue
+          : manaType == _ManaType.red ? ManaColor.red : ManaColor.white;
+      if (!gameState.activeManaAttunements.contains(requiredColor)) {
+        return; // Not attuned to required mana color
+      }
     }
 
     // Silent Mind: next white mana ability is free
@@ -431,6 +472,9 @@ class AbilitySystem {
       case 'Fear':
         _executeFear(slotIndex, gameState);
         break;
+      case 'Soul Rot':
+        _executeSoulRot(slotIndex, gameState);
+        break;
       case 'Summon Skeleton':
         _executeSummonSkeleton(slotIndex, gameState);
         break;
@@ -531,62 +575,32 @@ class AbilitySystem {
 
   /// Get cooldown for a slot (public for macro pre-checks)
   static double getCooldownForSlot(int slotIndex, GameState gameState) {
-    switch (slotIndex) {
-      case 0: return gameState.ability1Cooldown;
-      case 1: return gameState.ability2Cooldown;
-      case 2: return gameState.ability3Cooldown;
-      case 3: return gameState.ability4Cooldown;
-      case 4: return gameState.ability5Cooldown;
-      case 5: return gameState.ability6Cooldown;
-      case 6: return gameState.ability7Cooldown;
-      case 7: return gameState.ability8Cooldown;
-      case 8: return gameState.ability9Cooldown;
-      case 9: return gameState.ability10Cooldown;
-      default: return 0;
-    }
+    final cds = gameState.activeAbilityCooldowns;
+    if (slotIndex < 0 || slotIndex >= cds.length) return 0;
+    return cds[slotIndex];
   }
 
-  /// Set cooldown for a slot
+  /// Set cooldown for a slot, applying Melt reduction.
+  /// Formula: effectiveCooldown = baseCooldown / (1 + melt/100).
   static void _setCooldownForSlot(int slotIndex, double cooldown, GameState gameState) {
-    switch (slotIndex) {
-      case 0:
-        gameState.ability1Cooldown = cooldown;
-        break;
-      case 1:
-        gameState.ability2Cooldown = cooldown;
-        break;
-      case 2:
-        gameState.ability3Cooldown = cooldown;
-        break;
-      case 3:
-        gameState.ability4Cooldown = cooldown;
-        break;
-      case 4:
-        gameState.ability5Cooldown = cooldown;
-        break;
-      case 5:
-        gameState.ability6Cooldown = cooldown;
-        break;
-      case 6:
-        gameState.ability7Cooldown = cooldown;
-        break;
-      case 7:
-        gameState.ability8Cooldown = cooldown;
-        break;
-      case 8:
-        gameState.ability9Cooldown = cooldown;
-        break;
-      case 9:
-        gameState.ability10Cooldown = cooldown;
-        break;
+    final cds = gameState.activeAbilityCooldowns;
+    if (slotIndex < 0 || slotIndex >= cds.length) return;
+    // Apply Melt: reduces cooldown times
+    final melt = gameState.activeMelt;
+    if (melt > 0) {
+      cooldown = cooldown / (1 + melt / 100.0);
     }
+    cds[slotIndex] = cooldown;
   }
 
   // ==================== CAST TIME / WINDUP HANDLING ====================
 
   /// Start a cast-time ability — reads castTime from AbilityData (respects overrides)
   static void _startCastTimeAbility(AbilityData abilityData, int slotIndex, GameState gameState) {
-    final castTime = abilityData.castTime;
+    final baseCastTime = abilityData.castTime;
+    // Apply Haste: effectiveTime = baseTime / (1 + haste/100)
+    final haste = gameState.activeHaste;
+    final castTime = haste > 0 ? baseCastTime / (1 + haste / 100.0) : baseCastTime;
 
     gameState.isCasting = true;
     gameState.castProgress = 0.0;
@@ -598,13 +612,16 @@ class AbilitySystem {
     // _finishCastTimeAbility. If the cast is interrupted, the ability
     // remains available.
 
-    print('[CAST] Starting ${abilityData.name} (${castTime}s cast time)');
+    print('[CAST] Starting ${abilityData.name} (${castTime.toStringAsFixed(2)}s cast time${haste > 0 ? ', $haste% haste' : ''})');
   }
 
   /// Start a windup ability — reads windupTime/movementSpeed from AbilityData (respects overrides)
   static void _startWindupAbility(AbilityData abilityData, int slotIndex, GameState gameState) {
-    final windupTime = abilityData.windupTime;
+    final baseWindupTime = abilityData.windupTime;
     final movementSpeed = abilityData.windupMovementSpeed;
+    // Apply Haste: effectiveTime = baseTime / (1 + haste/100)
+    final haste = gameState.activeHaste;
+    final windupTime = haste > 0 ? baseWindupTime / (1 + haste / 100.0) : baseWindupTime;
 
     gameState.isWindingUp = true;
     gameState.windupProgress = 0.0;
@@ -617,7 +634,7 @@ class AbilitySystem {
     // _finishWindupAbility. If the windup is interrupted, the ability
     // remains available.
 
-    print('[WINDUP] Starting ${abilityData.name} (${windupTime}s windup, ${(movementSpeed * 100).toInt()}% movement)');
+    print('[WINDUP] Starting ${abilityData.name} (${windupTime.toStringAsFixed(2)}s windup${haste > 0 ? ', $haste% haste' : ''}, ${(movementSpeed * 100).toInt()}% movement)');
   }
 
   /// Get the cooldown for an ability by name
@@ -681,6 +698,7 @@ class AbilitySystem {
       // Utility (blue mana)
       case 'Teleport': return (25.0, _ManaType.blue);
       case 'Shadow Step': return (20.0, _ManaType.blue);
+      case 'Soul Rot': return (30.0, _ManaType.blue);
       case 'Summon Skeleton': return (50.0, _ManaType.blue);
 
       // Windup melee (RED mana)
@@ -1207,12 +1225,12 @@ class AbilitySystem {
   // ==================== WARRIOR ABILITIES ====================
 
   static void _executeShieldBash(int slotIndex, GameState gameState) {
-    final ability = WarriorAbilities.shieldBash;
+    final ability = _effective(WarriorAbilities.shieldBash);
     _executeGenericMelee(slotIndex, gameState, ability, 'Shield Bash activated!');
   }
 
   static void _executeWhirlwind(int slotIndex, GameState gameState) {
-    final ability = WarriorAbilities.whirlwind;
+    final ability = _effective(WarriorAbilities.whirlwind);
     _executeGenericAoE(slotIndex, gameState, ability, 'Whirlwind activated!');
   }
 
@@ -1227,13 +1245,13 @@ class AbilitySystem {
   }
 
   static void _executeTaunt(int slotIndex, GameState gameState) {
-    final ability = WarriorAbilities.taunt;
+    final ability = _effective(WarriorAbilities.taunt);
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Taunt activated! Enemies now focus you.');
   }
 
   static void _executeFortify(int slotIndex, GameState gameState) {
-    final ability = WarriorAbilities.fortify;
+    final ability = _effective(WarriorAbilities.fortify);
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Fortify activated! Defense increased.');
   }
@@ -1241,32 +1259,32 @@ class AbilitySystem {
   // ==================== MAGE ABILITIES ====================
 
   static void _executeFrostBolt(int slotIndex, GameState gameState) {
-    final ability = MageAbilities.frostBolt;
+    final ability = _effective(MageAbilities.frostBolt);
     _executeGenericProjectile(slotIndex, gameState, ability, 'Frost Bolt launched!');
   }
 
   static void _executeBlizzard(int slotIndex, GameState gameState) {
-    final ability = MageAbilities.blizzard;
+    final ability = _effective(MageAbilities.blizzard);
     _executeGenericAoE(slotIndex, gameState, ability, 'Blizzard activated!');
   }
 
   static void _executeLightningBolt(int slotIndex, GameState gameState) {
-    final ability = MageAbilities.lightningBolt;
+    final ability = _effective(MageAbilities.lightningBolt);
     _executeGenericProjectile(slotIndex, gameState, ability, 'Lightning Bolt launched!');
   }
 
   static void _executeChainLightning(int slotIndex, GameState gameState) {
-    final ability = MageAbilities.chainLightning;
+    final ability = _effective(MageAbilities.chainLightning);
     _executeGenericProjectile(slotIndex, gameState, ability, 'Chain Lightning launched!');
   }
 
   static void _executeMeteor(int slotIndex, GameState gameState) {
-    final ability = MageAbilities.meteor;
+    final ability = _effective(MageAbilities.meteor);
     _executeGenericAoE(slotIndex, gameState, ability, 'Meteor incoming!');
   }
 
   static void _executeArcaneShield(int slotIndex, GameState gameState) {
-    final ability = MageAbilities.arcaneShield;
+    final ability = _effective(MageAbilities.arcaneShield);
     gameState.ability3Active = true;
     gameState.ability3ActiveTime = 0.0;
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
@@ -1275,7 +1293,7 @@ class AbilitySystem {
 
   static void _executeTeleport(int slotIndex, GameState gameState) {
     if (gameState.activeTransform == null) return;
-    final ability = MageAbilities.teleport;
+    final ability = _effective(MageAbilities.teleport);
 
     // Teleport forward
     final forward = Vector3(
@@ -1292,23 +1310,23 @@ class AbilitySystem {
   // ==================== ROGUE ABILITIES ====================
 
   static void _executeBackstab(int slotIndex, GameState gameState) {
-    final ability = RogueAbilities.backstab;
+    final ability = _effective(RogueAbilities.backstab);
     _executeGenericMelee(slotIndex, gameState, ability, 'Backstab!');
   }
 
   static void _executePoisonBlade(int slotIndex, GameState gameState) {
-    final ability = RogueAbilities.poisonBlade;
+    final ability = _effective(RogueAbilities.poisonBlade);
     _executeGenericMelee(slotIndex, gameState, ability, 'Poison Blade!');
   }
 
   static void _executeSmokeBomb(int slotIndex, GameState gameState) {
-    final ability = RogueAbilities.smokeBomb;
+    final ability = _effective(RogueAbilities.smokeBomb);
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Smoke Bomb deployed!');
   }
 
   static void _executeFanOfKnives(int slotIndex, GameState gameState) {
-    final ability = RogueAbilities.fanOfKnives;
+    final ability = _effective(RogueAbilities.fanOfKnives);
     _executeGenericAoE(slotIndex, gameState, ability, 'Fan of Knives!');
   }
 
@@ -1320,28 +1338,28 @@ class AbilitySystem {
   // ==================== HEALER ABILITIES ====================
 
   static void _executeHolyLight(int slotIndex, GameState gameState) {
-    final ability = HealerAbilities.holyLight;
+    final ability = _effective(HealerAbilities.holyLight);
     _executeGenericHeal(slotIndex, gameState, ability, 'Holy Light!');
   }
 
   static void _executeRejuvenation(int slotIndex, GameState gameState) {
-    final ability = HealerAbilities.rejuvenation;
+    final ability = _effective(HealerAbilities.rejuvenation);
     _executeGenericHeal(slotIndex, gameState, ability, 'Rejuvenation!');
   }
 
   static void _executeCircleOfHealing(int slotIndex, GameState gameState) {
-    final ability = HealerAbilities.circleOfHealing;
+    final ability = _effective(HealerAbilities.circleOfHealing);
     _executeGenericHeal(slotIndex, gameState, ability, 'Circle of Healing!');
   }
 
   static void _executeBlessingOfStrength(int slotIndex, GameState gameState) {
-    final ability = HealerAbilities.blessingOfStrength;
+    final ability = _effective(HealerAbilities.blessingOfStrength);
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Blessing of Strength! Damage increased.');
   }
 
   static void _executePurify(int slotIndex, GameState gameState) {
-    final ability = HealerAbilities.purify;
+    final ability = _effective(HealerAbilities.purify);
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Purify! Debuffs removed.');
   }
@@ -1349,45 +1367,81 @@ class AbilitySystem {
   // ==================== NATURE ABILITIES ====================
 
   static void _executeEntanglingRoots(int slotIndex, GameState gameState) {
-    final ability = NatureAbilities.entanglingRoots;
+    final ability = _effective(NatureAbilities.entanglingRoots);
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Entangling Roots! Enemy immobilized.');
   }
 
   static void _executeThorns(int slotIndex, GameState gameState) {
-    final ability = NatureAbilities.thorns;
+    final ability = _effective(NatureAbilities.thorns);
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Thorns activated! Attackers take damage.');
   }
 
   static void _executeNaturesWrath(int slotIndex, GameState gameState) {
-    final ability = NatureAbilities.naturesWrath;
+    final ability = _effective(NatureAbilities.naturesWrath);
     _executeGenericProjectile(slotIndex, gameState, ability, 'Nature\'s Wrath!');
   }
 
   // ==================== NECROMANCER ABILITIES ====================
 
   static void _executeLifeDrain(int slotIndex, GameState gameState) {
-    final ability = NecromancerAbilities.lifeDrain;
+    final ability = _effective(NecromancerAbilities.lifeDrain);
     // Damage enemy and heal self
     _executeGenericProjectile(slotIndex, gameState, ability, 'Life Drain!');
     gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + ability.healAmount);
   }
 
   static void _executeCurseOfWeakness(int slotIndex, GameState gameState) {
-    final ability = NecromancerAbilities.curseOfWeakness;
+    final ability = _effective(NecromancerAbilities.curseOfWeakness);
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Curse of Weakness! Enemy damage reduced.');
   }
 
   static void _executeFear(int slotIndex, GameState gameState) {
-    final ability = NecromancerAbilities.fear;
+    final ability = _effective(NecromancerAbilities.fear);
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-    print('Fear! Enemy flees.');
+
+    // Apply fear effect to boss monster
+    if (gameState.monsterHealth > 0) {
+      gameState.monsterActiveEffects.add(ActiveEffect(
+        type: StatusEffect.fear,
+        remainingDuration: ability.statusDuration,
+        totalDuration: ability.statusDuration,
+      ));
+
+      // Force flee path immediately — monster runs away from player
+      if (gameState.monsterTransform != null &&
+          gameState.playerTransform != null) {
+        final awayFromPlayer = (gameState.monsterTransform!.position -
+                gameState.playerTransform!.position)
+            .normalized();
+        final escapeTarget =
+            gameState.monsterTransform!.position + awayFromPlayer * 8.0;
+        gameState.monsterCurrentPath = BezierPath.interception(
+          start: gameState.monsterTransform!.position,
+          target: escapeTarget,
+          velocity: null,
+        );
+      }
+
+      // Log to combat log
+      gameState.combatLogMessages.add(CombatLogEntry(
+        source: 'Player',
+        action: 'Fear',
+        type: CombatLogType.debuff,
+        target: 'Monster',
+      ));
+    }
+  }
+
+  static void _executeSoulRot(int slotIndex, GameState gameState) {
+    final ability = _effective(NecromancerAbilities.soulRot);
+    _executeGenericProjectile(slotIndex, gameState, ability, 'Soul Rot!');
   }
 
   static void _executeSummonSkeleton(int slotIndex, GameState gameState) {
-    final ability = NecromancerAbilities.summonSkeleton;
+    final ability = _effective(NecromancerAbilities.summonSkeleton);
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Summon Skeleton! A skeleton rises to aid you.');
   }
@@ -1395,30 +1449,30 @@ class AbilitySystem {
   // ==================== ELEMENTAL ABILITIES ====================
 
   static void _executeIceLance(int slotIndex, GameState gameState) {
-    final ability = ElementalAbilities.iceLance;
+    final ability = _effective(ElementalAbilities.iceLance);
     _executeGenericProjectile(slotIndex, gameState, ability, 'Ice Lance!');
   }
 
   static void _executeFlameWave(int slotIndex, GameState gameState) {
-    final ability = ElementalAbilities.flameWave;
+    final ability = _effective(ElementalAbilities.flameWave);
     _executeGenericAoE(slotIndex, gameState, ability, 'Flame Wave!');
   }
 
   static void _executeEarthquake(int slotIndex, GameState gameState) {
-    final ability = ElementalAbilities.earthquake;
+    final ability = _effective(ElementalAbilities.earthquake);
     _executeGenericAoE(slotIndex, gameState, ability, 'Earthquake!');
   }
 
   // ==================== UTILITY ABILITIES ====================
 
   static void _executeSprint(int slotIndex, GameState gameState) {
-    final ability = UtilityAbilities.sprint;
+    final ability = _effective(UtilityAbilities.sprint);
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Sprint! Movement speed increased.');
   }
 
   static void _executeBattleShout(int slotIndex, GameState gameState) {
-    final ability = UtilityAbilities.battleShout;
+    final ability = _effective(UtilityAbilities.battleShout);
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Battle Shout! Allies empowered.');
   }
@@ -1428,7 +1482,7 @@ class AbilitySystem {
   /// Gale Step — forward dash through enemies dealing damage (reuses Dash pattern)
   static void _executeGaleStep(int slotIndex, GameState gameState) {
     if (gameState.ability4Active) return;
-    final ability = WindWalkerAbilities.galeStep;
+    final ability = _effective(WindWalkerAbilities.galeStep);
     gameState.ability4Active = true;
     gameState.ability4ActiveTime = 0.0;
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
@@ -1439,7 +1493,7 @@ class AbilitySystem {
   /// Zephyr Roll — forward dodge-roll with brief invulnerability
   static void _executeZephyrRoll(int slotIndex, GameState gameState) {
     if (gameState.ability4Active) return;
-    final ability = WindWalkerAbilities.zephyrRoll;
+    final ability = _effective(WindWalkerAbilities.zephyrRoll);
     gameState.ability4Active = true;
     gameState.ability4ActiveTime = 0.0;
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
@@ -1450,7 +1504,7 @@ class AbilitySystem {
   /// Tailwind Retreat — backward movement + knockback nearby enemies
   static void _executeTailwindRetreat(int slotIndex, GameState gameState) {
     if (gameState.activeTransform == null) return;
-    final ability = WindWalkerAbilities.tailwindRetreat;
+    final ability = _effective(WindWalkerAbilities.tailwindRetreat);
 
     // Move player backward
     final backward = Vector3(
@@ -1480,7 +1534,7 @@ class AbilitySystem {
   /// Flying Serpent Strike — long dash with damage (longer range than Gale Step)
   static void _executeFlyingSerpentStrike(int slotIndex, GameState gameState) {
     if (gameState.ability4Active) return;
-    final ability = WindWalkerAbilities.flyingSerpentStrike;
+    final ability = _effective(WindWalkerAbilities.flyingSerpentStrike);
     gameState.ability4Active = true;
     gameState.ability4ActiveTime = 0.0;
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
@@ -1490,7 +1544,7 @@ class AbilitySystem {
 
   /// Take Flight — toggle flight mode on/off
   static void _executeTakeFlight(int slotIndex, GameState gameState) {
-    final ability = WindWalkerAbilities.takeFlight;
+    final ability = _effective(WindWalkerAbilities.takeFlight);
     gameState.toggleFlight();
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
   }
@@ -1498,7 +1552,7 @@ class AbilitySystem {
   /// Cyclone Dive — leap up then AoE slam dealing damage + stun
   static void _executeCycloneDive(int slotIndex, GameState gameState) {
     if (gameState.activeTransform == null) return;
-    final ability = WindWalkerAbilities.cycloneDive;
+    final ability = _effective(WindWalkerAbilities.cycloneDive);
 
     // Create impact effect at player location
     final impactMesh = Mesh.cube(
@@ -1533,26 +1587,26 @@ class AbilitySystem {
 
   /// Wind Wall — blocks projectiles (visual + cooldown; blocking deferred)
   static void _executeWindWall(int slotIndex, GameState gameState) {
-    final ability = WindWalkerAbilities.windWall;
+    final ability = _effective(WindWalkerAbilities.windWall);
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print('Wind Wall deployed! Blocking projectiles for ${ability.duration}s.');
   }
 
   /// Tempest Charge — charge to target with knockback (reuses generic melee)
   static void _executeTempestCharge(int slotIndex, GameState gameState) {
-    final ability = WindWalkerAbilities.tempestCharge;
+    final ability = _effective(WindWalkerAbilities.tempestCharge);
     _executeGenericMelee(slotIndex, gameState, ability, 'Tempest Charge!');
   }
 
   /// Healing Gale — heal self over time
   static void _executeHealingGale(int slotIndex, GameState gameState) {
-    final ability = WindWalkerAbilities.healingGale;
+    final ability = _effective(WindWalkerAbilities.healingGale);
     _executeGenericHeal(slotIndex, gameState, ability, 'Healing Gale!');
   }
 
   /// Sovereign of the Sky — 12s buff: enhanced flight speed, reduced mana costs
   static void _executeSovereignOfTheSky(int slotIndex, GameState gameState) {
-    final ability = WindWalkerAbilities.sovereignOfTheSky;
+    final ability = _effective(WindWalkerAbilities.sovereignOfTheSky);
     gameState.sovereignBuffActive = true;
     gameState.sovereignBuffTimer = ability.duration;
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
@@ -1561,7 +1615,7 @@ class AbilitySystem {
 
   /// Wind Affinity — doubles white mana regen rate for 15 seconds
   static void _executeWindAffinity(int slotIndex, GameState gameState) {
-    final ability = WindWalkerAbilities.windAffinity;
+    final ability = _effective(WindWalkerAbilities.windAffinity);
     gameState.windAffinityActive = true;
     gameState.windAffinityTimer = ability.duration;
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
@@ -1570,7 +1624,7 @@ class AbilitySystem {
 
   /// Silent Mind — fully restores white mana; next white ability is free + instant
   static void _executeSilentMind(int slotIndex, GameState gameState) {
-    final ability = WindWalkerAbilities.silentMind;
+    final ability = _effective(WindWalkerAbilities.silentMind);
     gameState.activeWhiteMana = gameState.activeMaxWhiteMana;
     gameState.silentMindActive = true;
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
@@ -1581,7 +1635,7 @@ class AbilitySystem {
   /// allies are healed
   static void _executeWindshear(int slotIndex, GameState gameState) {
     if (gameState.activeTransform == null) return;
-    final ability = WindWalkerAbilities.windshear;
+    final ability = _effective(WindWalkerAbilities.windshear);
 
     final playerPos = gameState.activeTransform!.position;
     final facingRad = gameState.activeRotation * math.pi / 180.0;
@@ -1651,7 +1705,7 @@ class AbilitySystem {
 
   /// Wind Warp — dash forward on ground; if flying, double flight speed for 5s
   static void _executeWindWarp(int slotIndex, GameState gameState) {
-    final ability = WindWalkerAbilities.windWarp;
+    final ability = _effective(WindWalkerAbilities.windWarp);
 
     if (gameState.isFlying) {
       // Flying: activate speed buff instead of dash
@@ -1689,7 +1743,9 @@ class AbilitySystem {
   // ==================== GENERIC ABILITY HELPERS ====================
 
   /// Generic melee attack execution
-  static void _executeGenericMelee(int slotIndex, GameState gameState, AbilityData ability, String message) {
+  static void _executeGenericMelee(int slotIndex, GameState gameState, AbilityData rawAbility, String message) {
+    // Reason: Named handlers pass raw static ability data; apply user overrides
+    final ability = globalAbilityOverrideManager?.getEffectiveAbility(rawAbility) ?? rawAbility;
     if (gameState.ability1Active) return;
 
     gameState.ability1Active = true;
@@ -1700,7 +1756,9 @@ class AbilitySystem {
   }
 
   /// Generic projectile attack execution (with homing toward current target)
-  static void _executeGenericProjectile(int slotIndex, GameState gameState, AbilityData ability, String message) {
+  static void _executeGenericProjectile(int slotIndex, GameState gameState, AbilityData rawAbility, String message) {
+    // Reason: Named handlers pass raw static ability data; apply user overrides
+    final ability = globalAbilityOverrideManager?.getEffectiveAbility(rawAbility) ?? rawAbility;
     if (gameState.activeTransform == null) return;
 
     final playerPos = gameState.activeTransform!.position;
@@ -1751,6 +1809,9 @@ class AbilitySystem {
       abilityName: ability.name,
       impactColor: ability.impactColor,
       impactSize: ability.impactSize,
+      statusEffect: ability.statusEffect,
+      statusDuration: ability.statusDuration > 0 ? ability.statusDuration : ability.duration,
+      dotTicks: ability.dotTicks,
     ));
 
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
@@ -1758,7 +1819,9 @@ class AbilitySystem {
   }
 
   /// Generic AoE attack execution
-  static void _executeGenericAoE(int slotIndex, GameState gameState, AbilityData ability, String message) {
+  static void _executeGenericAoE(int slotIndex, GameState gameState, AbilityData rawAbility, String message) {
+    // Reason: Named handlers pass raw static ability data; apply user overrides
+    final ability = globalAbilityOverrideManager?.getEffectiveAbility(rawAbility) ?? rawAbility;
     if (gameState.activeTransform == null) return;
 
     // Create impact effect at player location
@@ -1791,7 +1854,9 @@ class AbilitySystem {
   }
 
   /// Generic heal execution
-  static void _executeGenericHeal(int slotIndex, GameState gameState, AbilityData ability, String message) {
+  static void _executeGenericHeal(int slotIndex, GameState gameState, AbilityData rawAbility, String message) {
+    // Reason: Named handlers pass raw static ability data; apply user overrides
+    final ability = globalAbilityOverrideManager?.getEffectiveAbility(rawAbility) ?? rawAbility;
     if (gameState.ability3Active) return;
 
     gameState.ability3Active = true;
@@ -1846,7 +1911,7 @@ class AbilitySystem {
   /// Activates the sword attack if cooldown is ready and ability is not already active.
   static void handleAbility1Input(bool ability1KeyPressed, GameState gameState) {
     if (ability1KeyPressed &&
-        gameState.ability1Cooldown <= 0 &&
+        gameState.activeAbilityCooldowns[0] <= 0 &&
         !gameState.ability1Active) {
       executeSlotAbility(0, gameState);
     }
@@ -1901,7 +1966,7 @@ class AbilitySystem {
   /// Handles Ability 2 (Fireball) input
   static void handleAbility2Input(bool ability2KeyPressed, GameState gameState) {
     if (ability2KeyPressed &&
-        gameState.ability2Cooldown <= 0 &&
+        gameState.activeAbilityCooldowns[1] <= 0 &&
         gameState.activeTransform != null) {
       executeSlotAbility(1, gameState);
     }
@@ -1958,7 +2023,13 @@ class AbilitySystem {
         impactSize: projectile.impactSize,
       );
 
-      if (hitRegistered) return true;
+      if (hitRegistered) {
+        // Apply DoT to boss if projectile has DoT data (non-homing hit path)
+        if (projectile.dotTicks > 0 && projectile.statusDuration > 0) {
+          _applyDoTFromProjectile(gameState, 'boss', projectile);
+        }
+        return true;
+      }
 
       // Remove if lifetime expired
       return projectile.lifetime <= 0;
@@ -1989,6 +2060,38 @@ class AbilitySystem {
         showDamageIndicator: true,
       );
     }
+
+    // Apply DoT effect if projectile has ticks
+    _applyDoTFromProjectile(gameState, targetId, projectile);
+  }
+
+  /// Create a DoT ActiveEffect on the target from a projectile's DoT data
+  static void _applyDoTFromProjectile(GameState gameState, String targetId, Projectile projectile) {
+    if (projectile.dotTicks <= 0 || projectile.statusDuration <= 0) return;
+
+    final statusType = projectile.statusEffect != StatusEffect.none
+        ? projectile.statusEffect
+        : StatusEffect.burn; // Default DoT type
+    final tickInterval = projectile.statusDuration / projectile.dotTicks;
+    final damagePerTick = projectile.damage / projectile.dotTicks;
+
+    final effect = ActiveEffect(
+      type: statusType,
+      remainingDuration: projectile.statusDuration,
+      totalDuration: projectile.statusDuration,
+      damagePerTick: damagePerTick,
+      tickInterval: tickInterval,
+      sourceName: projectile.abilityName,
+    );
+
+    if (targetId == 'boss') {
+      gameState.monsterActiveEffects.add(effect);
+    } else {
+      final minion = gameState.minions.where((m) => m.instanceId == targetId).firstOrNull;
+      if (minion != null) minion.activeEffects.add(effect);
+    }
+
+    print('[DoT] Applied ${statusType.name} to $targetId: ${damagePerTick.toStringAsFixed(1)} dmg every ${tickInterval.toStringAsFixed(1)}s for ${projectile.statusDuration.toStringAsFixed(1)}s');
   }
 
   // ==================== ABILITY 3: HEAL ====================
@@ -1996,7 +2099,7 @@ class AbilitySystem {
   /// Handles Ability 3 (Heal) input
   static void handleAbility3Input(bool ability3KeyPressed, GameState gameState) {
     if (ability3KeyPressed &&
-        gameState.ability3Cooldown <= 0 &&
+        gameState.activeAbilityCooldowns[2] <= 0 &&
         !gameState.ability3Active) {
       executeSlotAbility(2, gameState);
     }
@@ -2023,7 +2126,7 @@ class AbilitySystem {
   /// Handles Ability 4 (Dash Attack) input
   static void handleAbility4Input(bool ability4KeyPressed, GameState gameState) {
     if (ability4KeyPressed &&
-        gameState.ability4Cooldown <= 0 &&
+        gameState.activeAbilityCooldowns[3] <= 0 &&
         !gameState.ability4Active) {
       executeSlotAbility(3, gameState);
     }
@@ -2095,42 +2198,42 @@ class AbilitySystem {
 
   /// Handles Ability 5 input
   static void handleAbility5Input(bool keyPressed, GameState gameState) {
-    if (keyPressed && gameState.ability5Cooldown <= 0) {
+    if (keyPressed && gameState.activeAbilityCooldowns[4] <= 0) {
       executeSlotAbility(4, gameState);
     }
   }
 
   /// Handles Ability 6 input
   static void handleAbility6Input(bool keyPressed, GameState gameState) {
-    if (keyPressed && gameState.ability6Cooldown <= 0) {
+    if (keyPressed && gameState.activeAbilityCooldowns[5] <= 0) {
       executeSlotAbility(5, gameState);
     }
   }
 
   /// Handles Ability 7 input
   static void handleAbility7Input(bool keyPressed, GameState gameState) {
-    if (keyPressed && gameState.ability7Cooldown <= 0) {
+    if (keyPressed && gameState.activeAbilityCooldowns[6] <= 0) {
       executeSlotAbility(6, gameState);
     }
   }
 
   /// Handles Ability 8 input
   static void handleAbility8Input(bool keyPressed, GameState gameState) {
-    if (keyPressed && gameState.ability8Cooldown <= 0) {
+    if (keyPressed && gameState.activeAbilityCooldowns[7] <= 0) {
       executeSlotAbility(7, gameState);
     }
   }
 
   /// Handles Ability 9 input
   static void handleAbility9Input(bool keyPressed, GameState gameState) {
-    if (keyPressed && gameState.ability9Cooldown <= 0) {
+    if (keyPressed && gameState.activeAbilityCooldowns[8] <= 0) {
       executeSlotAbility(8, gameState);
     }
   }
 
   /// Handles Ability 10 input
   static void handleAbility10Input(bool keyPressed, GameState gameState) {
-    if (keyPressed && gameState.ability10Cooldown <= 0) {
+    if (keyPressed && gameState.activeAbilityCooldowns[9] <= 0) {
       executeSlotAbility(9, gameState);
     }
   }
@@ -2171,8 +2274,4 @@ class AbilitySystem {
   /// Converts degrees to radians
   static double _radians(double degrees) => degrees * (math.pi / 180);
 
-  /// Returns the effective ability with user overrides applied
-  static AbilityData _effective(AbilityData original) {
-    return globalAbilityOverrideManager?.getEffectiveAbility(original) ?? original;
-  }
 }

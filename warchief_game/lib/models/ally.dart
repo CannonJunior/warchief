@@ -3,8 +3,10 @@ import '../rendering3d/mesh.dart';
 import '../rendering3d/math/transform3d.dart';
 import 'projectile.dart';
 import 'inventory.dart';
+import 'active_effect.dart';
 import '../game3d/utils/bezier_path.dart';
 import '../game3d/ai/ally_strategy.dart';
+import '../game3d/data/abilities/ability_types.dart' show ManaColor;
 
 /// Ally Movement Mode - Different ways an ally can move
 enum AllyMovementMode {
@@ -43,6 +45,11 @@ class Ally {
   int abilityIndex; // 0, 1, or 2 (which player ability they have)
   double abilityCooldown;
   double abilityCooldownMax;
+
+  /// Per-slot cooldowns for player-controlled 10-slot action bar.
+  final List<double> abilityCooldowns = List<double>.filled(10, 0.0);
+  final List<double> abilityCooldownMaxes = List<double>.filled(10, 5.0);
+
   double aiTimer;
   final double aiInterval = 1.0; // Think every 1 second for responsive AI
   List<Projectile> projectiles;
@@ -68,6 +75,12 @@ class Ally {
   Mesh? auraMesh;
   Transform3d auraTransform = Transform3d();
   Vector3? lastAuraColor;
+
+  // Active status effects (buff/debuff tracking)
+  List<ActiveEffect> activeEffects = [];
+
+  // Temporary mana attunements (from buffs/auras)
+  Set<ManaColor> temporaryAttunements = {};
 
   /// Get the current strategy configuration
   AllyStrategy get strategy => AllyStrategies.getStrategy(strategyType);

@@ -6,3 +6,4 @@ export 'vs_indicator.dart';
 export 'party_frames.dart';
 export 'minion_frames.dart';
 export 'combat_hud.dart';
+export 'buff_debuff_icons.dart';

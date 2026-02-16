@@ -108,23 +108,36 @@ class AbilityRegistry {
     return potentialAbilities.where((a) => a.type == type).toList();
   }
 
-  /// Find ability by name (case-insensitive), searching built-in and custom
+  /// Cache for findByName to avoid repeated linear scans.
+  static final Map<String, AbilityData?> _nameCache = {};
+
+  /// Clear the name cache (call after custom abilities change).
+  static void clearNameCache() => _nameCache.clear();
+
+  /// Find ability by name (case-insensitive), searching built-in and custom.
+  /// Results are cached for O(1) subsequent lookups.
   static AbilityData? findByName(String name) {
+    if (_nameCache.containsKey(name)) return _nameCache[name];
+
     final lowerName = name.toLowerCase();
     // Search player abilities first (Sword, Fireball, Heal, Dash Attack)
     for (final ability in PlayerAbilities.all) {
       if (ability.name.toLowerCase() == lowerName) {
+        _nameCache[name] = ability;
         return ability;
       }
     }
     // Search all potential abilities (warrior, mage, rogue, etc.)
     for (final ability in potentialAbilities) {
       if (ability.name.toLowerCase() == lowerName) {
+        _nameCache[name] = ability;
         return ability;
       }
     }
     // Search custom abilities
-    return globalCustomAbilityManager?.findByName(name);
+    final custom = globalCustomAbilityManager?.findByName(name);
+    _nameCache[name] = custom;
+    return custom;
   }
 
   /// Get count of abilities per category

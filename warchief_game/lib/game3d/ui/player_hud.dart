@@ -94,24 +94,24 @@ class PlayerHud extends StatelessWidget {
               AbilityButton(
                 label: '1',
                 color: Color(0xFFB3B3CC), // Gray (sword)
-                cooldown: gameState.ability1Cooldown,
-                maxCooldown: gameState.ability1CooldownMax,
+                cooldown: gameState.activeAbilityCooldowns[0],
+                maxCooldown: gameState.activeAbilityCooldownMaxes[0],
                 onPressed: onAbility1Pressed,
               ),
               SizedBox(width: 10),
               AbilityButton(
                 label: '2',
                 color: Color(0xFFFF6600), // Orange (fireball)
-                cooldown: gameState.ability2Cooldown,
-                maxCooldown: gameState.ability2CooldownMax,
+                cooldown: gameState.activeAbilityCooldowns[1],
+                maxCooldown: gameState.activeAbilityCooldownMaxes[1],
                 onPressed: onAbility2Pressed,
               ),
               SizedBox(width: 10),
               AbilityButton(
                 label: '3',
                 color: Color(0xFF80FF4D), // Green (heal)
-                cooldown: gameState.ability3Cooldown,
-                maxCooldown: gameState.ability3CooldownMax,
+                cooldown: gameState.activeAbilityCooldowns[2],
+                maxCooldown: gameState.activeAbilityCooldownMaxes[2],
                 onPressed: onAbility3Pressed,
               ),
               if (onAbility4Pressed != null) ...[
@@ -119,8 +119,8 @@ class PlayerHud extends StatelessWidget {
                 AbilityButton(
                   label: '4',
                   color: Color(0xFFE6B333), // Gold (dash attack)
-                  cooldown: gameState.ability4Cooldown,
-                  maxCooldown: gameState.ability4CooldownMax,
+                  cooldown: gameState.activeAbilityCooldowns[3],
+                  maxCooldown: gameState.activeAbilityCooldownMaxes[3],
                   onPressed: onAbility4Pressed!,
                 ),
               ],

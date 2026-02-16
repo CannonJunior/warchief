@@ -3,6 +3,7 @@ import '../ability_button.dart';
 import '../mana_bar.dart';
 import 'unit_frame.dart';
 import 'vs_indicator.dart';
+import 'buff_debuff_icons.dart';
 import '../../state/action_bar_config.dart';
 import '../../state/game_state.dart';
 import '../../data/abilities/ability_types.dart';
@@ -33,27 +34,9 @@ class CombatHUD extends StatelessWidget {
   final bool hasTarget;
   final Widget? targetPortraitWidget; // Custom portrait widget (e.g., 3D cube)
 
-  // Ability cooldowns (slots 1-10)
-  final double ability1Cooldown;
-  final double ability1CooldownMax;
-  final double ability2Cooldown;
-  final double ability2CooldownMax;
-  final double ability3Cooldown;
-  final double ability3CooldownMax;
-  final double ability4Cooldown;
-  final double ability4CooldownMax;
-  final double ability5Cooldown;
-  final double ability5CooldownMax;
-  final double ability6Cooldown;
-  final double ability6CooldownMax;
-  final double ability7Cooldown;
-  final double ability7CooldownMax;
-  final double ability8Cooldown;
-  final double ability8CooldownMax;
-  final double ability9Cooldown;
-  final double ability9CooldownMax;
-  final double ability10Cooldown;
-  final double ability10CooldownMax;
+  // Ability cooldowns (slots 0-9)
+  final List<double> abilityCooldowns;
+  final List<double> abilityCooldownMaxes;
 
   // Callbacks
   final VoidCallback onAbility1Pressed;
@@ -93,26 +76,8 @@ class CombatHUD extends StatelessWidget {
     this.targetLevel,
     this.hasTarget = true,
     this.targetPortraitWidget,
-    required this.ability1Cooldown,
-    required this.ability1CooldownMax,
-    required this.ability2Cooldown,
-    required this.ability2CooldownMax,
-    required this.ability3Cooldown,
-    required this.ability3CooldownMax,
-    required this.ability4Cooldown,
-    required this.ability4CooldownMax,
-    this.ability5Cooldown = 0.0,
-    this.ability5CooldownMax = 5.0,
-    this.ability6Cooldown = 0.0,
-    this.ability6CooldownMax = 5.0,
-    this.ability7Cooldown = 0.0,
-    this.ability7CooldownMax = 5.0,
-    this.ability8Cooldown = 0.0,
-    this.ability8CooldownMax = 5.0,
-    this.ability9Cooldown = 0.0,
-    this.ability9CooldownMax = 5.0,
-    this.ability10Cooldown = 0.0,
-    this.ability10CooldownMax = 5.0,
+    required this.abilityCooldowns,
+    required this.abilityCooldownMaxes,
     required this.onAbility1Pressed,
     required this.onAbility2Pressed,
     required this.onAbility3Pressed,
@@ -148,68 +113,90 @@ class CombatHUD extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start, // Align at top
       children: [
-        // Player frame with mana bar below
-        Column(
+        // Player frame with buff/debuff icons to the LEFT
+        Row(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Flight buff icon (above player frame when flying)
-            if (gameState != null && gameState!.isFlying)
+            if (gameState != null && gameState!.playerActiveEffects.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: FlightBuffIcon(gameState: gameState!),
+                padding: const EdgeInsets.only(right: 4),
+                child: BuffDebuffIcons(effects: gameState!.playerActiveEffects),
               ),
-            // Player frame (portrait on left)
-            UnitFrame(
-              name: playerName,
-              health: playerHealth,
-              maxHealth: playerMaxHealth,
-              power: playerPower,
-              maxPower: playerMaxPower,
-              isPlayer: true,
-              level: playerLevel,
-              portraitWidget: playerPortraitWidget,
-              borderColor: const Color(0xFF4cc9f0),
-              healthColor: const Color(0xFF4CAF50),
-              powerColor: const Color(0xFF2196F3),
-              width: 200,
-            ),
-            // Mana bar below player frame (same width)
-            if (gameState != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: ManaBar(
-                  gameState: gameState!,
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Flight buff icon (above player frame when flying)
+                if (gameState != null && gameState!.isFlying)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: FlightBuffIcon(gameState: gameState!),
+                  ),
+                // Player frame (portrait on left)
+                UnitFrame(
+                  name: playerName,
+                  health: playerHealth,
+                  maxHealth: playerMaxHealth,
+                  power: playerPower,
+                  maxPower: playerMaxPower,
+                  isPlayer: true,
+                  level: playerLevel,
+                  portraitWidget: playerPortraitWidget,
+                  borderColor: const Color(0xFF4cc9f0),
+                  healthColor: const Color(0xFF4CAF50),
+                  powerColor: const Color(0xFF2196F3),
                   width: 200,
-                  height: 14,
                 ),
-              ),
+                // Mana bar below player frame (same width)
+                if (gameState != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: ManaBar(
+                      gameState: gameState!,
+                      width: 200,
+                      height: 14,
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
         const SizedBox(width: 12),
         // VS indicator
         if (hasTarget) const VSIndicator(inCombat: true),
         if (hasTarget) const SizedBox(width: 12),
-        // Target frame with mana bar below (mirrored layout)
+        // Target frame with debuff icons to the RIGHT
         if (hasTarget)
-          Column(
+          Row(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              UnitFrame(
-                name: targetName ?? 'Unknown',
-                health: targetHealth,
-                maxHealth: targetMaxHealth,
-                isPlayer: false,
-                level: targetLevel,
-                portraitWidget: targetPortraitWidget,
-                borderColor: targetBorderColor,
-                healthColor: targetHealthColor,
-                width: 200,
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  UnitFrame(
+                    name: targetName ?? 'Unknown',
+                    health: targetHealth,
+                    maxHealth: targetMaxHealth,
+                    isPlayer: false,
+                    level: targetLevel,
+                    portraitWidget: targetPortraitWidget,
+                    borderColor: targetBorderColor,
+                    healthColor: targetHealthColor,
+                    width: 200,
+                  ),
+                  // Target mana bar below target frame (same width as player's)
+                  if (targetMaxMana > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: _buildTargetManaBar(),
+                    ),
+                ],
               ),
-              // Target mana bar below target frame (same width as player's)
-              if (targetMaxMana > 0)
+              if (gameState != null && gameState!.currentTargetActiveEffects.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: _buildTargetManaBar(),
+                  padding: const EdgeInsets.only(left: 4),
+                  child: BuffDebuffIcons(effects: gameState!.currentTargetActiveEffects),
                 ),
             ],
           ),
@@ -296,16 +283,16 @@ class CombatHUD extends StatelessWidget {
 
     // Define slot data for all 10 slots
     final slots = [
-      (label: '1', cooldown: ability1Cooldown, maxCooldown: ability1CooldownMax, onPressed: onAbility1Pressed),
-      (label: '2', cooldown: ability2Cooldown, maxCooldown: ability2CooldownMax, onPressed: onAbility2Pressed),
-      (label: '3', cooldown: ability3Cooldown, maxCooldown: ability3CooldownMax, onPressed: onAbility3Pressed),
-      (label: '4', cooldown: ability4Cooldown, maxCooldown: ability4CooldownMax, onPressed: onAbility4Pressed),
-      (label: '5', cooldown: ability5Cooldown, maxCooldown: ability5CooldownMax, onPressed: onAbility5Pressed),
-      (label: '6', cooldown: ability6Cooldown, maxCooldown: ability6CooldownMax, onPressed: onAbility6Pressed),
-      (label: '7', cooldown: ability7Cooldown, maxCooldown: ability7CooldownMax, onPressed: onAbility7Pressed),
-      (label: '8', cooldown: ability8Cooldown, maxCooldown: ability8CooldownMax, onPressed: onAbility8Pressed),
-      (label: '9', cooldown: ability9Cooldown, maxCooldown: ability9CooldownMax, onPressed: onAbility9Pressed),
-      (label: '0', cooldown: ability10Cooldown, maxCooldown: ability10CooldownMax, onPressed: onAbility10Pressed),
+      (label: '1', cooldown: abilityCooldowns[0], maxCooldown: abilityCooldownMaxes[0], onPressed: onAbility1Pressed),
+      (label: '2', cooldown: abilityCooldowns[1], maxCooldown: abilityCooldownMaxes[1], onPressed: onAbility2Pressed),
+      (label: '3', cooldown: abilityCooldowns[2], maxCooldown: abilityCooldownMaxes[2], onPressed: onAbility3Pressed),
+      (label: '4', cooldown: abilityCooldowns[3], maxCooldown: abilityCooldownMaxes[3], onPressed: onAbility4Pressed),
+      (label: '5', cooldown: abilityCooldowns[4], maxCooldown: abilityCooldownMaxes[4], onPressed: onAbility5Pressed),
+      (label: '6', cooldown: abilityCooldowns[5], maxCooldown: abilityCooldownMaxes[5], onPressed: onAbility6Pressed),
+      (label: '7', cooldown: abilityCooldowns[6], maxCooldown: abilityCooldownMaxes[6], onPressed: onAbility7Pressed),
+      (label: '8', cooldown: abilityCooldowns[7], maxCooldown: abilityCooldownMaxes[7], onPressed: onAbility8Pressed),
+      (label: '9', cooldown: abilityCooldowns[8], maxCooldown: abilityCooldownMaxes[8], onPressed: onAbility9Pressed),
+      (label: '0', cooldown: abilityCooldowns[9], maxCooldown: abilityCooldownMaxes[9], onPressed: onAbility10Pressed),
     ];
 
     return Container(

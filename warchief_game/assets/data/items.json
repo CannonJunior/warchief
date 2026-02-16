@@ -363,6 +363,76 @@
       "levelRequirement": 5
     },
     {
+      "id": "all_source_talisman",
+      "name": "All-Source Talisman",
+      "description": "A legendary talisman pulsing with every color of mana. Attunes the bearer to all known magical frequencies.",
+      "type": "accessory",
+      "rarity": "legendary",
+      "slot": "talisman",
+      "stats": {
+        "maxBlueMana": 25,
+        "maxRedMana": 25,
+        "maxWhiteMana": 25,
+        "zeal": 8,
+        "auspice": 8
+      },
+      "manaAttunement": ["blue", "red", "white"],
+      "iconName": "talisman_allsource",
+      "sellValue": 1200,
+      "levelRequirement": 10
+    },
+    {
+      "id": "talisman_of_ley",
+      "name": "Talisman of the Ley",
+      "description": "A crystal pendant that resonates with Ley Line energy, attuning the bearer to blue mana.",
+      "type": "accessory",
+      "rarity": "rare",
+      "slot": "talisman",
+      "stats": {
+        "maxBlueMana": 30,
+        "blueManaRegen": 2,
+        "auspice": 5
+      },
+      "manaAttunement": ["blue"],
+      "iconName": "talisman_ley",
+      "sellValue": 250,
+      "levelRequirement": 5
+    },
+    {
+      "id": "talisman_of_blood",
+      "name": "Talisman of Blood",
+      "description": "A crimson stone warm to the touch, attuning the bearer to the fury of red mana.",
+      "type": "accessory",
+      "rarity": "rare",
+      "slot": "talisman",
+      "stats": {
+        "maxRedMana": 30,
+        "redManaRegen": 2,
+        "brawn": 5
+      },
+      "manaAttunement": ["red"],
+      "iconName": "talisman_blood",
+      "sellValue": 250,
+      "levelRequirement": 5
+    },
+    {
+      "id": "talisman_of_wind",
+      "name": "Talisman of the Wind",
+      "description": "A feather-light charm that catches the breeze, attuning the bearer to white mana.",
+      "type": "accessory",
+      "rarity": "rare",
+      "slot": "talisman",
+      "stats": {
+        "maxWhiteMana": 30,
+        "whiteManaRegen": 2,
+        "yar": 5
+      },
+      "manaAttunement": ["white"],
+      "iconName": "talisman_wind",
+      "sellValue": 250,
+      "levelRequirement": 5
+    },
+    {
       "id": "health_potion",
       "name": "Health Potion",
       "description": "Restores 50 health when consumed.",

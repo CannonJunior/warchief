@@ -1,4 +1,5 @@
 import 'item.dart';
+import '../game3d/data/abilities/ability_types.dart' show ManaColor;
 
 /// Manages player equipment and bag inventory
 class Inventory {
@@ -120,6 +121,7 @@ class Inventory {
     int health = 0;
     int maxBlueMana = 0, maxRedMana = 0, maxWhiteMana = 0;
     int blueManaRegen = 0, redManaRegen = 0, whiteManaRegen = 0;
+    int haste = 0, melt = 0;
 
     for (final item in _equipment.values) {
       if (item != null) {
@@ -140,6 +142,8 @@ class Inventory {
         blueManaRegen += item.stats.blueManaRegen;
         redManaRegen += item.stats.redManaRegen;
         whiteManaRegen += item.stats.whiteManaRegen;
+        haste += item.stats.haste;
+        melt += item.stats.melt;
       }
     }
 
@@ -161,7 +165,18 @@ class Inventory {
       blueManaRegen: blueManaRegen,
       redManaRegen: redManaRegen,
       whiteManaRegen: whiteManaRegen,
+      haste: haste,
+      melt: melt,
     );
+  }
+
+  /// Mana colors the character is attuned to via equipped items.
+  Set<ManaColor> get manaAttunements {
+    final result = <ManaColor>{};
+    for (final item in _equipment.values) {
+      if (item != null) result.addAll(item.manaAttunement);
+    }
+    return result;
   }
 
   /// Count non-empty bag slots

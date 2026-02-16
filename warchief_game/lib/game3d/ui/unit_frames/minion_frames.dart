@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../models/monster.dart';
 import '../../../models/monster_ontology.dart';
+import '../../../models/active_effect.dart';
+import '../../data/abilities/ability_types.dart';
+import '../../data/abilities/abilities.dart' show AbilityRegistry;
 
 /// Vertical stack of minion frames (right side of boss frame)
 /// Symmetric to PartyFrames for allies
@@ -283,6 +286,17 @@ class MinionFrames extends StatelessWidget {
       buffs.add(_buildBuffIcon(Icons.shield, const Color(0xFF2196F3), 'DEF'));
     }
 
+    // Active status effects — use ability icon/color when available
+    for (final effect in monster.activeEffects) {
+      final ability = effect.sourceName.isNotEmpty
+          ? AbilityRegistry.findByName(effect.sourceName)
+          : null;
+      final icon = ability?.typeIcon ?? ActiveEffect.iconFor(effect.type);
+      final color = ability?.flutterColor ?? ActiveEffect.colorFor(effect.type);
+      final name = effect.sourceName.isNotEmpty ? effect.sourceName : effect.type.name;
+      buffs.add(_buildBuffIcon(icon, color, name));
+    }
+
     if (buffs.isEmpty) return const SizedBox.shrink();
 
     return Row(
@@ -292,16 +306,20 @@ class MinionFrames extends StatelessWidget {
   }
 
   Widget _buildBuffIcon(IconData icon, Color color, String tooltip) {
-    return Container(
-      width: 12,
-      height: 12,
-      margin: const EdgeInsets.only(left: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(2),
-        border: Border.all(color: color, width: 0.5),
+    return Tooltip(
+      message: tooltip,
+      waitDuration: const Duration(milliseconds: 200),
+      child: Container(
+        width: 12,
+        height: 12,
+        margin: const EdgeInsets.only(left: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(color: color, width: 0.5),
+        ),
+        child: Icon(icon, color: color, size: 8),
       ),
-      child: Icon(icon, color: color, size: 8),
     );
   }
 

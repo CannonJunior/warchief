@@ -66,6 +66,7 @@ import 'state/building_config.dart';
 import 'state/goals_config.dart';
 import 'state/macro_config.dart';
 import 'state/macro_manager.dart';
+import 'state/gameplay_settings.dart';
 import 'ui/minimap/minimap_widget.dart';
 import 'ui/minimap/minimap_ping_overlay.dart';
 import 'ui/building_panel.dart';
@@ -166,6 +167,9 @@ class _Game3DState extends State<Game3D> {
     // Initialize macro config and manager (macro system)
     _initializeMacroConfig();
 
+    // Initialize gameplay settings (attunement toggles, etc.)
+    _initializeGameplaySettings();
+
     // Initialize player inventory with sample items
     _initializeInventory();
 
@@ -255,6 +259,12 @@ class _Game3DState extends State<Game3D> {
     globalMacroConfig!.initialize();
     globalMacroManager ??= MacroManager();
     globalMacroManager!.loadMacros();
+  }
+
+  /// Initialize gameplay settings (attunement toggles, etc.)
+  void _initializeGameplaySettings() {
+    globalGameplaySettings ??= GameplaySettings();
+    globalGameplaySettings!.load();
   }
 
   /// Initialize player inventory with sample items from database
@@ -584,6 +594,9 @@ class _Game3DState extends State<Game3D> {
 
     // Update wind simulation and White Mana regeneration
     gameState.updateWindAndWhiteMana(dt);
+
+    // Tick and expire active status effects on all entities
+    gameState.updateActiveEffects(dt);
 
     // Apply building aura effects (health + mana regen near buildings)
     BuildingSystem.applyBuildingAuras(gameState, dt);
@@ -2260,26 +2273,8 @@ class _Game3DState extends State<Game3D> {
                   indicatorColor: Colors.green,
                 )
               : null,
-          ability1Cooldown: gameState.ability1Cooldown,
-          ability1CooldownMax: gameState.ability1CooldownMax,
-          ability2Cooldown: gameState.ability2Cooldown,
-          ability2CooldownMax: gameState.ability2CooldownMax,
-          ability3Cooldown: gameState.ability3Cooldown,
-          ability3CooldownMax: gameState.ability3CooldownMax,
-          ability4Cooldown: gameState.ability4Cooldown,
-          ability4CooldownMax: gameState.ability4CooldownMax,
-          ability5Cooldown: gameState.ability5Cooldown,
-          ability5CooldownMax: gameState.ability5CooldownMax,
-          ability6Cooldown: gameState.ability6Cooldown,
-          ability6CooldownMax: gameState.ability6CooldownMax,
-          ability7Cooldown: gameState.ability7Cooldown,
-          ability7CooldownMax: gameState.ability7CooldownMax,
-          ability8Cooldown: gameState.ability8Cooldown,
-          ability8CooldownMax: gameState.ability8CooldownMax,
-          ability9Cooldown: gameState.ability9Cooldown,
-          ability9CooldownMax: gameState.ability9CooldownMax,
-          ability10Cooldown: gameState.ability10Cooldown,
-          ability10CooldownMax: gameState.ability10CooldownMax,
+          abilityCooldowns: gameState.activeAbilityCooldowns,
+          abilityCooldownMaxes: gameState.activeAbilityCooldownMaxes,
           onAbility1Pressed: _activateAbility1,
           onAbility2Pressed: _activateAbility2,
           onAbility3Pressed: _activateAbility3,

@@ -49,8 +49,28 @@ class NecromancerAbilities {
     color: Vector3(0.2, 0.0, 0.2),
     impactColor: Vector3(0.3, 0.0, 0.3),
     impactSize: 0.7,
-    statusEffect: StatusEffect.stun,
+    statusEffect: StatusEffect.fear,
     statusDuration: 4.0,
+    category: 'necromancer',
+  );
+
+  /// Soul Rot - Dark projectile that applies a damage-over-time curse
+  static final soulRot = AbilityData(
+    name: 'Soul Rot',
+    description: 'Launches a bolt of necrotic energy that rots the target\'s soul, dealing damage over time',
+    type: AbilityType.dot,
+    damage: 60.0,
+    cooldown: 12.0,
+    duration: 10.0,
+    range: 40.0,
+    color: Vector3(0.4, 0.1, 0.5),
+    impactColor: Vector3(0.5, 0.2, 0.6),
+    impactSize: 0.6,
+    projectileSpeed: 10.0,
+    projectileSize: 0.35,
+    statusEffect: StatusEffect.poison,
+    statusDuration: 10.0,
+    dotTicks: 5,
     category: 'necromancer',
   );
 
@@ -69,6 +89,6 @@ class NecromancerAbilities {
 
   /// All necromancer abilities as a list
   static List<AbilityData> get all => [
-    lifeDrain, curseOfWeakness, fear, summonSkeleton,
+    lifeDrain, curseOfWeakness, fear, soulRot, summonSkeleton,
   ];
 }

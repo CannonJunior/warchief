@@ -1,4 +1,5 @@
-import 'package:vector_math/vector_math.dart';
+import 'package:flutter/material.dart';
+import 'package:vector_math/vector_math.dart' hide Colors;
 
 /// Ability type enumeration
 enum AbilityType {
@@ -12,6 +13,34 @@ enum AbilityType {
   channeled,  // Requires standing still to cast
   summon,     // Creates temporary units
   utility,    // Non-combat abilities (movement, vision, etc.)
+}
+
+/// Icon for each ability type — matches the Abilities Codex.
+extension AbilityTypeIcon on AbilityType {
+  IconData get icon {
+    switch (this) {
+      case AbilityType.melee:
+        return Icons.sports_martial_arts;
+      case AbilityType.ranged:
+        return Icons.gps_fixed;
+      case AbilityType.heal:
+        return Icons.favorite;
+      case AbilityType.buff:
+        return Icons.arrow_upward;
+      case AbilityType.debuff:
+        return Icons.arrow_downward;
+      case AbilityType.aoe:
+        return Icons.blur_circular;
+      case AbilityType.dot:
+        return Icons.local_fire_department;
+      case AbilityType.channeled:
+        return Icons.stream;
+      case AbilityType.summon:
+        return Icons.pets;
+      case AbilityType.utility:
+        return Icons.build;
+    }
+  }
 }
 
 /// Status effect type enumeration
@@ -31,6 +60,7 @@ enum StatusEffect {
   regen,      // Health over time
   strength,   // Increased damage
   weakness,   // Reduced damage output
+  fear,       // Causes uncontrolled fleeing
 }
 
 /// Mana color types for different magical energy sources
@@ -130,6 +160,17 @@ class AbilityData {
     this.manaColor = ManaColor.none,
     this.manaCost = 0.0,
   });
+
+  /// Icon for this ability's type (matches the Abilities Codex).
+  IconData get typeIcon => type.icon;
+
+  /// Ability color as a Flutter Color.
+  Color get flutterColor => Color.fromRGBO(
+    (color.x * 255).round(),
+    (color.y * 255).round(),
+    (color.z * 255).round(),
+    1.0,
+  );
 
   /// Whether this ability requires mana
   bool get requiresMana => manaColor != ManaColor.none && manaCost > 0;

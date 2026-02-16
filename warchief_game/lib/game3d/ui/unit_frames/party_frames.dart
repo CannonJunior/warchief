@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/ally.dart';
 import 'unit_frame.dart';
+import 'buff_debuff_icons.dart';
 
 /// Vertical stack of party/ally frames (left side of screen)
 class PartyFrames extends StatelessWidget {
@@ -88,7 +89,16 @@ class PartyFrames extends StatelessWidget {
         ? classColors[ally.abilityIndex]
         : Colors.grey;
 
-    return GestureDetector(
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        if (ally.activeEffects.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: BuffDebuffIcons(effects: ally.activeEffects, iconSize: 12),
+          ),
+        GestureDetector(
       onTap: () => onAllySelected?.call(index),
       onDoubleTap: () => onAllyAbilityActivate?.call(ally),
       child: Container(
@@ -159,6 +169,8 @@ class PartyFrames extends StatelessWidget {
           ],
         ),
       ),
+    ),
+      ],
     );
   }
 

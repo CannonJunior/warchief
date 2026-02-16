@@ -54,23 +54,23 @@ class InstructionsOverlay extends StatelessWidget {
             ),
             SizedBox(height: 2),
             Text(
-              '1: Sword ${gameState.ability1Cooldown > 0 ? "(${gameState.ability1Cooldown.toStringAsFixed(1)}s)" : "READY"}',
+              '1: Sword ${gameState.activeAbilityCooldowns[0] > 0 ? "(${gameState.activeAbilityCooldowns[0].toStringAsFixed(1)}s)" : "READY"}',
               style: TextStyle(
-                color: gameState.ability1Cooldown > 0 ? Colors.red : Colors.green,
+                color: gameState.activeAbilityCooldowns[0] > 0 ? Colors.red : Colors.green,
                 fontSize: 10,
               ),
             ),
             Text(
-              '2: Fireball ${gameState.ability2Cooldown > 0 ? "(${gameState.ability2Cooldown.toStringAsFixed(1)}s)" : "READY"} [15 mana]',
+              '2: Fireball ${gameState.activeAbilityCooldowns[1] > 0 ? "(${gameState.activeAbilityCooldowns[1].toStringAsFixed(1)}s)" : "READY"} [15 mana]',
               style: TextStyle(
-                color: gameState.ability2Cooldown > 0 ? Colors.red : Colors.green,
+                color: gameState.activeAbilityCooldowns[1] > 0 ? Colors.red : Colors.green,
                 fontSize: 10,
               ),
             ),
             Text(
-              '3: Heal ${gameState.ability3Cooldown > 0 ? "(${gameState.ability3Cooldown.toStringAsFixed(1)}s)" : "READY"} [20 mana]',
+              '3: Heal ${gameState.activeAbilityCooldowns[2] > 0 ? "(${gameState.activeAbilityCooldowns[2].toStringAsFixed(1)}s)" : "READY"} [20 mana]',
               style: TextStyle(
-                color: gameState.ability3Cooldown > 0 ? Colors.red : Colors.green,
+                color: gameState.activeAbilityCooldowns[2] > 0 ? Colors.red : Colors.green,
                 fontSize: 10,
               ),
             ),

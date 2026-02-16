@@ -10,6 +10,7 @@ import '../rendering3d/mesh.dart';
 import '../rendering3d/math/transform3d.dart';
 import 'monster_ontology.dart';
 import 'projectile.dart';
+import 'active_effect.dart';
 
 /// AI State for monster behavior
 enum MonsterAIState {
@@ -65,6 +66,9 @@ class Monster {
 
   /// Projectiles fired by this monster
   List<Projectile> projectiles;
+
+  /// Active status effects (buff/debuff tracking)
+  List<ActiveEffect> activeEffects = [];
 
   /// Active ability state
   bool isAbilityActive;

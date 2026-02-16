@@ -20,6 +20,7 @@ import '../../models/building.dart';
 import '../../models/goal.dart';
 import '../../models/raid_chat_message.dart';
 import '../../models/combat_log_entry.dart';
+import '../../models/active_effect.dart';
 import '../../rendering3d/building_mesh.dart';
 import '../../data/item_database.dart';
 import 'game_config.dart';
@@ -32,6 +33,8 @@ import '../utils/movement_prediction.dart';
 import '../utils/bezier_path.dart';
 import '../ai/tactical_positioning.dart';
 import '../data/monsters/minion_definitions.dart';
+import '../data/abilities/ability_types.dart' show ManaColor;
+import 'gameplay_settings.dart';
 
 /// Game State - Centralized state management for the 3D game
 ///
@@ -100,6 +103,19 @@ class GameState {
 
   /// Current white mana regeneration rate (from wind exposure)
   double currentWhiteManaRegenRate = 0.0;
+
+  /// Temporary mana attunements for Warchief (from buffs/auras)
+  Set<ManaColor> temporaryAttunements = {};
+
+  /// All three mana colors — returned when attunement is not required.
+  static const Set<ManaColor> _allManaColors = {ManaColor.blue, ManaColor.red, ManaColor.white};
+
+  /// Mana colors the Warchief is attuned to (equipped items + temporary).
+  /// When attunement requirement is disabled, returns all three colors.
+  Set<ManaColor> get playerManaAttunements {
+    if (!(globalGameplaySettings?.attunementRequired ?? true)) return _allManaColors;
+    return {...playerInventory.manaAttunements, ...temporaryAttunements};
+  }
 
   /// Wind state for wind simulation
   final WindState _windState = WindState();
@@ -190,37 +206,45 @@ class GameState {
     // Check if on a power node
     isOnPowerNode = leyLineManager!.isOnPowerNode(pos.x, pos.z);
 
+    final playerAttunements = playerManaAttunements;
+
     // Apply blue mana regeneration (Ley Lines + equipped item bonus)
-    final blueRegenBonus = playerInventory.totalEquippedStats.blueManaRegen;
-    final effectiveBlueRegen = currentManaRegenRate + blueRegenBonus;
-    if (effectiveBlueRegen > 0) {
-      blueMana = (blueMana + effectiveBlueRegen * dt).clamp(0.0, maxBlueMana);
+    if (playerAttunements.contains(ManaColor.blue)) {
+      final blueRegenBonus = playerInventory.totalEquippedStats.blueManaRegen;
+      final effectiveBlueRegen = currentManaRegenRate + blueRegenBonus;
+      if (effectiveBlueRegen > 0) {
+        blueMana = (blueMana + effectiveBlueRegen * dt).clamp(0.0, maxBlueMana);
+      }
     }
 
     // Apply red mana regeneration (power nodes + equipped item bonus)
-    final redRegenBonus = playerInventory.totalEquippedStats.redManaRegen;
-    if (isOnPowerNode) {
-      currentRedManaRegenRate = currentManaRegenRate + redRegenBonus;
-      redMana = (redMana + currentRedManaRegenRate * dt).clamp(0.0, maxRedMana);
-      _timeSinceLastRedManaChange = 0.0; // Power nodes pause decay
-    } else {
-      currentRedManaRegenRate = redRegenBonus.toDouble();
+    if (playerAttunements.contains(ManaColor.red)) {
+      final redRegenBonus = playerInventory.totalEquippedStats.redManaRegen;
+      if (isOnPowerNode) {
+        currentRedManaRegenRate = currentManaRegenRate + redRegenBonus;
+        redMana = (redMana + currentRedManaRegenRate * dt).clamp(0.0, maxRedMana);
+        _timeSinceLastRedManaChange = 0.0; // Power nodes pause decay
+      } else {
+        currentRedManaRegenRate = redRegenBonus.toDouble();
 
-      // Apply item-based red regen even off power nodes
-      if (redRegenBonus > 0) {
-        redMana = (redMana + redRegenBonus * dt).clamp(0.0, maxRedMana);
-        _timeSinceLastRedManaChange = 0.0;
-      }
+        // Apply item-based red regen even off power nodes
+        if (redRegenBonus > 0) {
+          redMana = (redMana + redRegenBonus * dt).clamp(0.0, maxRedMana);
+          _timeSinceLastRedManaChange = 0.0;
+        }
 
-      // Red mana decay (after grace period, when not on power node and no item regen)
-      if (redMana > 0 && redRegenBonus <= 0) {
-        _timeSinceLastRedManaChange += dt;
-        final decayDelay = globalManaConfig?.redManaDecayDelay ?? 5.0;
-        if (_timeSinceLastRedManaChange >= decayDelay) {
-          final decayRate = globalManaConfig?.redManaDecayRate ?? 3.0;
-          redMana = (redMana - decayRate * dt).clamp(0.0, maxRedMana);
+        // Red mana decay (after grace period, when not on power node and no item regen)
+        if (redMana > 0 && redRegenBonus <= 0) {
+          _timeSinceLastRedManaChange += dt;
+          final decayDelay = globalManaConfig?.redManaDecayDelay ?? 5.0;
+          if (_timeSinceLastRedManaChange >= decayDelay) {
+            final decayRate = globalManaConfig?.redManaDecayRate ?? 3.0;
+            redMana = (redMana - decayRate * dt).clamp(0.0, maxRedMana);
+          }
         }
       }
+    } else {
+      currentRedManaRegenRate = 0.0;
     }
 
     // ===== ALLY MANA REGEN =====
@@ -230,24 +254,31 @@ class GameState {
       final allyPos = ally.transform.position;
       final allyBlueRegen = leyLineManager!.calculateManaRegen(allyPos.x, allyPos.z);
       final allyOnPowerNode = leyLineManager!.isOnPowerNode(allyPos.x, allyPos.z);
+      final allyAttunements = (globalGameplaySettings?.attunementRequired ?? true)
+          ? {...ally.inventory.manaAttunements, ...ally.temporaryAttunements}
+          : _allManaColors;
       final allyItemBlueBonus = ally.inventory.totalEquippedStats.blueManaRegen;
       final allyItemRedBonus = ally.inventory.totalEquippedStats.redManaRegen;
 
-      // Ally blue mana regen (ley lines + item bonus)
-      final effectiveAllyBlueRegen = allyBlueRegen + allyItemBlueBonus;
-      if (effectiveAllyBlueRegen > 0) {
-        ally.blueMana = (ally.blueMana + effectiveAllyBlueRegen * dt)
-            .clamp(0.0, ally.maxBlueMana);
+      // Ally blue mana regen (ley lines + item bonus) — only if blue-attuned
+      if (allyAttunements.contains(ManaColor.blue)) {
+        final effectiveAllyBlueRegen = allyBlueRegen + allyItemBlueBonus;
+        if (effectiveAllyBlueRegen > 0) {
+          ally.blueMana = (ally.blueMana + effectiveAllyBlueRegen * dt)
+              .clamp(0.0, ally.maxBlueMana);
+        }
       }
 
-      // Ally red mana regen (power nodes + item bonus)
-      if (allyOnPowerNode) {
-        final allyRedRegen = allyBlueRegen + allyItemRedBonus;
-        ally.redMana = (ally.redMana + allyRedRegen * dt)
-            .clamp(0.0, ally.maxRedMana);
-      } else if (allyItemRedBonus > 0) {
-        ally.redMana = (ally.redMana + allyItemRedBonus * dt)
-            .clamp(0.0, ally.maxRedMana);
+      // Ally red mana regen (power nodes + item bonus) — only if red-attuned
+      if (allyAttunements.contains(ManaColor.red)) {
+        if (allyOnPowerNode) {
+          final allyRedRegen = allyBlueRegen + allyItemRedBonus;
+          ally.redMana = (ally.redMana + allyRedRegen * dt)
+              .clamp(0.0, ally.maxRedMana);
+        } else if (allyItemRedBonus > 0) {
+          ally.redMana = (ally.redMana + allyItemRedBonus * dt)
+              .clamp(0.0, ally.maxRedMana);
+        }
       }
     }
   }
@@ -275,51 +306,61 @@ class GameState {
     // Reason: derecho storms multiply white mana regen for massive gains
     final derechoManaMult = _windState.derechoManaMultiplier;
 
-    if (exposure >= shelterThresh) {
-      // Wind is blowing — regenerate white mana (wind + item bonus)
-      final regenRate = ((config?.windExposureRegen ?? 5.0) *
-          exposure *
-          (config?.windStrengthMultiplier ?? 1.0) +
-          whiteRegenBonus) * windAffinityMult * derechoManaMult;
-      currentWhiteManaRegenRate = regenRate;
-      whiteMana = (whiteMana + regenRate * dt).clamp(0.0, maxWhiteMana);
+    if (playerManaAttunements.contains(ManaColor.white)) {
+      if (exposure >= shelterThresh) {
+        // Wind is blowing — regenerate white mana (wind + item bonus)
+        final regenRate = ((config?.windExposureRegen ?? 5.0) *
+            exposure *
+            (config?.windStrengthMultiplier ?? 1.0) +
+            whiteRegenBonus) * windAffinityMult * derechoManaMult;
+        currentWhiteManaRegenRate = regenRate;
+        whiteMana = (whiteMana + regenRate * dt).clamp(0.0, maxWhiteMana);
+      } else {
+        // Sheltered — item regen still applies, but wind decay counteracts
+        currentWhiteManaRegenRate = whiteRegenBonus.toDouble() * windAffinityMult;
+        if (whiteRegenBonus > 0) {
+          whiteMana = (whiteMana + whiteRegenBonus * windAffinityMult * dt).clamp(0.0, maxWhiteMana);
+        }
+        if (whiteMana > 0 && whiteRegenBonus <= 0) {
+          final decay = config?.decayRate ?? 0.5;
+          whiteMana = (whiteMana - decay * dt).clamp(0.0, maxWhiteMana);
+        }
+      }
     } else {
-      // Sheltered — item regen still applies, but wind decay counteracts
-      currentWhiteManaRegenRate = whiteRegenBonus.toDouble() * windAffinityMult;
-      if (whiteRegenBonus > 0) {
-        whiteMana = (whiteMana + whiteRegenBonus * windAffinityMult * dt).clamp(0.0, maxWhiteMana);
-      }
-      if (whiteMana > 0 && whiteRegenBonus <= 0) {
-        final decay = config?.decayRate ?? 0.5;
-        whiteMana = (whiteMana - decay * dt).clamp(0.0, maxWhiteMana);
-      }
+      currentWhiteManaRegenRate = 0.0;
     }
 
     // ===== ALLY WHITE MANA REGEN =====
     // Allies share the global wind exposure level
     for (final ally in allies) {
       if (ally.health <= 0) continue;
-      final allyWhiteRegenBonus = ally.inventory.totalEquippedStats.whiteManaRegen;
+      final allyAttunements = (globalGameplaySettings?.attunementRequired ?? true)
+          ? {...ally.inventory.manaAttunements, ...ally.temporaryAttunements}
+          : _allManaColors;
 
-      if (exposure >= shelterThresh) {
-        // Wind is blowing — ally regenerates white mana
-        final allyRegenRate = (config?.windExposureRegen ?? 5.0) *
-            exposure *
-            (config?.windStrengthMultiplier ?? 1.0) +
-            allyWhiteRegenBonus;
-        ally.whiteMana = (ally.whiteMana + allyRegenRate * dt)
-            .clamp(0.0, ally.maxWhiteMana);
-      } else {
-        // Sheltered — item regen still applies
-        if (allyWhiteRegenBonus > 0) {
-          ally.whiteMana = (ally.whiteMana + allyWhiteRegenBonus * dt)
+      if (allyAttunements.contains(ManaColor.white)) {
+        final allyWhiteRegenBonus = ally.inventory.totalEquippedStats.whiteManaRegen;
+
+        if (exposure >= shelterThresh) {
+          // Wind is blowing — ally regenerates white mana
+          final allyRegenRate = (config?.windExposureRegen ?? 5.0) *
+              exposure *
+              (config?.windStrengthMultiplier ?? 1.0) +
+              allyWhiteRegenBonus;
+          ally.whiteMana = (ally.whiteMana + allyRegenRate * dt)
               .clamp(0.0, ally.maxWhiteMana);
-        }
-        // Ally white mana decay when sheltered
-        if (ally.whiteMana > 0 && allyWhiteRegenBonus <= 0) {
-          final decay = config?.decayRate ?? 0.5;
-          ally.whiteMana = (ally.whiteMana - decay * dt)
-              .clamp(0.0, ally.maxWhiteMana);
+        } else {
+          // Sheltered — item regen still applies
+          if (allyWhiteRegenBonus > 0) {
+            ally.whiteMana = (ally.whiteMana + allyWhiteRegenBonus * dt)
+                .clamp(0.0, ally.maxWhiteMana);
+          }
+          // Ally white mana decay when sheltered
+          if (ally.whiteMana > 0 && allyWhiteRegenBonus <= 0) {
+            final decay = config?.decayRate ?? 0.5;
+            ally.whiteMana = (ally.whiteMana - decay * dt)
+                .clamp(0.0, ally.maxWhiteMana);
+          }
         }
       }
     }
@@ -420,6 +461,105 @@ class GameState {
   double monsterMoveSpeed = 3.0; // Units per second
   String monsterCurrentStrategy = 'BALANCED'; // Current combat strategy
 
+  // ==================== ACTIVE STATUS EFFECTS ====================
+
+  /// Active status effects on the Warchief/player
+  List<ActiveEffect> playerActiveEffects = [];
+
+  /// Active status effects on the boss monster
+  List<ActiveEffect> monsterActiveEffects = [];
+
+  /// Tick and expire all active effects on all entities, applying DoT damage.
+  void updateActiveEffects(double dt) {
+    // Player effects
+    for (final effect in playerActiveEffects) {
+      effect.tick(dt);
+      if (effect.isDoT) {
+        effect.tickAccumulator += dt;
+        while (effect.tickAccumulator >= effect.tickInterval) {
+          effect.tickAccumulator -= effect.tickInterval;
+          playerHealth = (playerHealth - effect.damagePerTick).clamp(0.0, playerMaxHealth);
+          _logDoTTick(effect, 'Player', playerTransform?.position);
+        }
+      }
+    }
+    playerActiveEffects.removeWhere((e) => e.isExpired);
+
+    // Boss monster effects
+    for (final effect in monsterActiveEffects) {
+      effect.tick(dt);
+      if (effect.isDoT) {
+        effect.tickAccumulator += dt;
+        while (effect.tickAccumulator >= effect.tickInterval) {
+          effect.tickAccumulator -= effect.tickInterval;
+          monsterHealth = (monsterHealth - effect.damagePerTick).clamp(0.0, monsterMaxHealth);
+          _logDoTTick(effect, 'Monster', monsterTransform?.position);
+        }
+      }
+    }
+    monsterActiveEffects.removeWhere((e) => e.isExpired);
+
+    // Ally effects
+    for (int i = 0; i < allies.length; i++) {
+      final ally = allies[i];
+      for (final effect in ally.activeEffects) {
+        effect.tick(dt);
+        if (effect.isDoT) {
+          effect.tickAccumulator += dt;
+          while (effect.tickAccumulator >= effect.tickInterval) {
+            effect.tickAccumulator -= effect.tickInterval;
+            ally.health = (ally.health - effect.damagePerTick).clamp(0.0, ally.maxHealth);
+            _logDoTTick(effect, 'Ally ${i + 1}', ally.transform.position);
+          }
+        }
+      }
+      ally.activeEffects.removeWhere((e) => e.isExpired);
+    }
+
+    // Minion effects
+    for (final minion in minions) {
+      for (final effect in minion.activeEffects) {
+        effect.tick(dt);
+        if (effect.isDoT) {
+          effect.tickAccumulator += dt;
+          while (effect.tickAccumulator >= effect.tickInterval) {
+            effect.tickAccumulator -= effect.tickInterval;
+            minion.takeDamage(effect.damagePerTick);
+            _logDoTTick(effect, 'Minion', minion.transform.position);
+          }
+        }
+      }
+      minion.activeEffects.removeWhere((e) => e.isExpired);
+    }
+  }
+
+  /// Log a DoT tick as a floating damage number and a combat log entry.
+  void _logDoTTick(ActiveEffect effect, String target, Vector3? worldPos) {
+    final label = effect.sourceName.isNotEmpty
+        ? effect.sourceName
+        : effect.type.name;
+
+    // Floating damage number
+    if (worldPos != null) {
+      final indicatorPos = worldPos.clone();
+      indicatorPos.y += 2.0;
+      damageIndicators.add(DamageIndicator(
+        damage: effect.damagePerTick,
+        worldPosition: indicatorPos,
+      ));
+    }
+
+    // Combat log entry
+    combatLogMessages.add(CombatLogEntry(
+      source: label,
+      action: '$label (${effect.type.name})',
+      type: CombatLogType.damage,
+      amount: effect.damagePerTick,
+      target: target,
+    ));
+    if (combatLogMessages.length > 200) combatLogMessages.removeAt(0);
+  }
+
   // Monster sword state (for melee ability 1)
   Mesh? monsterSwordMesh;
   Transform3d? monsterSwordTransform;
@@ -487,6 +627,42 @@ class GameState {
   double get activeMaxBlueMana => isWarchiefActive ? maxBlueMana : (activeAlly?.maxBlueMana ?? 0.0);
   double get activeMaxRedMana => isWarchiefActive ? maxRedMana : (activeAlly?.maxRedMana ?? 0.0);
   double get activeMaxWhiteMana => isWarchiefActive ? maxWhiteMana : (activeAlly?.maxWhiteMana ?? 0.0);
+
+  /// Mana attunements for the active character (Warchief or ally).
+  /// When attunement requirement is disabled, returns all three colors.
+  Set<ManaColor> get activeManaAttunements {
+    if (!(globalGameplaySettings?.attunementRequired ?? true)) return _allManaColors;
+    if (isWarchiefActive) return playerManaAttunements;
+    final ally = activeAlly;
+    if (ally == null) return {};
+    return {...ally.inventory.manaAttunements, ...ally.temporaryAttunements};
+  }
+
+  /// Haste percentage for the active character (reduces cast/windup times).
+  /// Formula: effectiveTime = baseTime / (1 + haste/100).
+  int get activeHaste {
+    if (isWarchiefActive) return playerInventory.totalEquippedStats.haste;
+    return activeAlly?.inventory.totalEquippedStats.haste ?? 0;
+  }
+
+  /// Melt percentage for the active character (reduces cooldown times).
+  /// Formula: effectiveCooldown = baseCooldown / (1 + melt/100).
+  int get activeMelt {
+    if (isWarchiefActive) return playerInventory.totalEquippedStats.melt;
+    return activeAlly?.inventory.totalEquippedStats.melt ?? 0;
+  }
+
+  /// Active character's per-slot cooldown list (Warchief or ally).
+  List<double> get activeAbilityCooldowns {
+    if (isWarchiefActive) return abilityCooldowns;
+    return activeAlly?.abilityCooldowns ?? abilityCooldowns;
+  }
+
+  /// Active character's per-slot max cooldown list.
+  List<double> get activeAbilityCooldownMaxes {
+    if (isWarchiefActive) return abilityCooldownMaxes;
+    return activeAlly?.abilityCooldownMaxes ?? abilityCooldownMaxes;
+  }
 
   /// Check if active character has enough mana
   bool activeHasBlueMana(double amount) => isWarchiefActive ? hasBlueMana(amount) : (activeAlly?.blueMana ?? 0.0) >= amount;
@@ -685,6 +861,7 @@ class GameState {
     }
 
     minionsSpawned = true;
+    rebuildMinionIndex();
     print('[MINIONS] Total spawned: ${minions.length} minions');
     print('[MINIONS] Total Monster Power: ${DefaultMinionSpawns.totalMonsterPower}');
   }
@@ -798,6 +975,34 @@ class GameState {
     // Target is dead or invalid, clear it
     currentTargetId = null;
     return null;
+  }
+
+  /// Index of minions by instanceId for O(1) lookup.
+  final Map<String, Monster> _minionIndex = {};
+
+  /// Rebuild the minion index. Call after minions spawn/die.
+  void rebuildMinionIndex() {
+    _minionIndex.clear();
+    for (final minion in aliveMinions) {
+      _minionIndex[minion.instanceId] = minion;
+    }
+  }
+
+  /// Active effects on the current target (boss, minion, ally, or player).
+  /// Returns empty list if no target or target has no effects.
+  List<ActiveEffect> get currentTargetActiveEffects {
+    if (currentTargetId == null) return [];
+    if (currentTargetId == 'boss') return monsterActiveEffects;
+    if (currentTargetId == 'player') return playerActiveEffects;
+    if (currentTargetId!.startsWith('ally_')) {
+      final index = int.tryParse(currentTargetId!.substring(5));
+      if (index != null && index < allies.length) return allies[index].activeEffects;
+      return [];
+    }
+    // O(1) minion lookup by instance ID
+    final minion = _minionIndex[currentTargetId];
+    if (minion != null && minion.isAlive) return minion.activeEffects;
+    return [];
   }
 
   /// Get XZ-plane distance from active character to current target
@@ -1299,6 +1504,9 @@ class GameState {
       'wooden_shield',
       'ring_of_strength',
       'amulet_of_fortitude',
+      'talisman_of_ley',
+      'talisman_of_blood',
+      'talisman_of_wind',
       'iron_ore',
       'gold_coin',
       'dragon_scale',
@@ -1323,6 +1531,7 @@ class GameState {
       'cloak_of_shadows',
       'signet_of_the_warchief',
       'band_of_protection',
+      'all_source_talisman',
     ];
 
     for (final itemId in startingEquipment) {
@@ -1522,10 +1731,22 @@ class GameState {
   /// Get windup progress as percentage (0.0 to 1.0)
   double get windupPercentage => currentWindupTime > 0 ? windupProgress / currentWindupTime : 0.0;
 
+  // ==================== ABILITY COOLDOWNS (slots 0-9) ====================
+
+  /// Current cooldown remaining per slot (indexed 0-9).
+  final List<double> abilityCooldowns = List<double>.filled(10, 0.0);
+
+  /// Maximum cooldown per slot (indexed 0-9).
+  final List<double> abilityCooldownMaxes = [
+    GameConfig.ability1CooldownMax, // slot 0: Sword
+    GameConfig.ability2CooldownMax, // slot 1: Fireball
+    GameConfig.ability3CooldownMax, // slot 2: Heal
+    6.0,                            // slot 3: Dash Attack
+    5.0, 5.0, 5.0, 5.0, 5.0, 5.0,  // slots 4-9: Extended
+  ];
+
   // ==================== ABILITY 1: SWORD ====================
 
-  double ability1Cooldown = 0.0;
-  final double ability1CooldownMax = GameConfig.ability1CooldownMax;
   bool ability1Active = false;
   double ability1ActiveTime = 0.0;
   final double ability1Duration = GameConfig.ability1Duration;
@@ -1535,14 +1756,10 @@ class GameState {
 
   // ==================== ABILITY 2: FIREBALL ====================
 
-  double ability2Cooldown = 0.0;
-  final double ability2CooldownMax = GameConfig.ability2CooldownMax;
   List<Projectile> fireballs = []; // List of active fireballs
 
   // ==================== ABILITY 3: HEAL ====================
 
-  double ability3Cooldown = 0.0;
-  final double ability3CooldownMax = GameConfig.ability3CooldownMax;
   bool ability3Active = false;
   double ability3ActiveTime = 0.0;
   final double ability3Duration = 1.0; // Heal effect duration
@@ -1551,34 +1768,12 @@ class GameState {
 
   // ==================== ABILITY 4: DASH ATTACK ====================
 
-  double ability4Cooldown = 0.0;
-  final double ability4CooldownMax = 6.0; // 6 second cooldown
   bool ability4Active = false;
   double ability4ActiveTime = 0.0;
   final double ability4Duration = 0.4; // Dash duration
   bool ability4HitRegistered = false; // Prevent multiple hits per dash
   Mesh? dashTrailMesh;
   Transform3d? dashTrailTransform;
-
-  // ==================== ABILITIES 5-10 (Extended Action Bar) ====================
-
-  double ability5Cooldown = 0.0;
-  final double ability5CooldownMax = 5.0;
-
-  double ability6Cooldown = 0.0;
-  final double ability6CooldownMax = 5.0;
-
-  double ability7Cooldown = 0.0;
-  final double ability7CooldownMax = 5.0;
-
-  double ability8Cooldown = 0.0;
-  final double ability8CooldownMax = 5.0;
-
-  double ability9Cooldown = 0.0;
-  final double ability9CooldownMax = 5.0;
-
-  double ability10Cooldown = 0.0;
-  final double ability10CooldownMax = 5.0;
 
   // ==================== VISUAL EFFECTS ====================
 

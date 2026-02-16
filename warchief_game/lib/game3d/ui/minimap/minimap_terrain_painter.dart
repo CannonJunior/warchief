@@ -7,6 +7,7 @@ import '../../../rendering3d/heightmap.dart';
 import '../../state/game_config.dart';
 import '../../state/minimap_config.dart';
 import '../../state/minimap_state.dart';
+import '../../state/gameplay_settings.dart';
 
 /// CustomPainter that renders a top-down terrain color map on the minimap.
 ///
@@ -24,6 +25,7 @@ class MinimapTerrainPainter extends CustomPainter {
   final InfiniteTerrainManager? terrainManager;
   final LeyLineManager? leyLineManager;
   final MinimapState minimapState;
+  final bool hideLeyLinesByAttunement;
 
   MinimapTerrainPainter({
     required this.playerX,
@@ -33,6 +35,7 @@ class MinimapTerrainPainter extends CustomPainter {
     required this.terrainManager,
     required this.leyLineManager,
     required this.minimapState,
+    this.hideLeyLinesByAttunement = false,
   });
 
   @override
@@ -45,11 +48,22 @@ class MinimapTerrainPainter extends CustomPainter {
     // Draw terrain color grid
     _paintTerrain(canvas, size, resolution);
 
-    // Draw ley lines on top
-    if (config?.showLeyLines ?? true) {
+    // Draw ley lines on top (gated by attunement if visibility toggle is on)
+    if ((config?.showLeyLines ?? true) && !hideLeyLinesByAttunement) {
       _paintLeyLines(canvas, size);
     }
   }
+
+  /// Cached terrain color grid to avoid recomputing on every paint call.
+  /// Invalidated when player position, rotation, or zoom changes enough
+  /// to trigger shouldRepaint.
+  static List<Color>? _terrainColorCache;
+  static int _cacheResolution = 0;
+  static double _cachePlayerX = double.nan;
+  static double _cachePlayerZ = double.nan;
+  static double _cacheRotation = double.nan;
+  static double _cacheViewRadius = 0;
+  static bool _cacheIsRotating = false;
 
   /// Lazy-initialized noise generator for terrain beyond loaded chunks.
   /// Uses same seed and parameters as the infinite terrain manager.
@@ -83,7 +97,47 @@ class MinimapTerrainPainter extends CustomPainter {
   }
 
   /// Sample heightmap and paint terrain colors.
+  /// Uses a static color cache so heights are only sampled when the
+  /// player moves beyond the refresh threshold (same as shouldRepaint).
   void _paintTerrain(Canvas canvas, Size size, int resolution) {
+    final isRotating = minimapState.isRotatingMode;
+
+    // Check if the cached color grid is still valid
+    final needsRebuild = _terrainColorCache == null ||
+        _cacheResolution != resolution ||
+        _cacheViewRadius != viewRadius ||
+        _cacheIsRotating != isRotating ||
+        playerRotation != _cacheRotation ||
+        _cachePlayerX.isNaN;
+
+    if (needsRebuild) {
+      _rebuildTerrainCache(size, resolution, isRotating);
+    }
+
+    // Draw cached colors
+    final half = size.width / 2;
+    final pixelSize = size.width / resolution;
+    final halfRadius = half;
+    final paint = Paint()..style = PaintingStyle.fill;
+    final colors = _terrainColorCache!;
+
+    for (int py = 0; py < resolution; py++) {
+      for (int px = 0; px < resolution; px++) {
+        final idx = py * resolution + px;
+        final color = colors[idx];
+        if (color.a == 0) continue; // Outside circular mask
+
+        paint.color = color;
+        canvas.drawRect(
+          Rect.fromLTWH(px * pixelSize, py * pixelSize, pixelSize + 0.5, pixelSize + 0.5),
+          paint,
+        );
+      }
+    }
+  }
+
+  /// Rebuild the terrain color cache by sampling heights.
+  void _rebuildTerrainCache(Size size, int resolution, bool isRotating) {
     final config = globalMinimapConfig;
     final sandColor = _colorFromList(
         config?.sandColor ?? [0.76, 0.70, 0.50, 1.0]);
@@ -99,30 +153,33 @@ class MinimapTerrainPainter extends CustomPainter {
     final pixelSize = size.width / resolution;
     final halfRadius = half;
     final groundLevel = GameConfig.groundLevel;
+    final transparent = const Color(0x00000000);
 
-    final paint = Paint()..style = PaintingStyle.fill;
-    final isRotating = minimapState.isRotatingMode;
-
-    // Pre-compute rotation for player-relative minimap (forward = up)
     final rotRad = playerRotation * math.pi / 180.0;
     final cosR = math.cos(rotRad);
     final sinR = math.sin(rotRad);
 
+    final totalPixels = resolution * resolution;
+    if (_terrainColorCache == null || _terrainColorCache!.length != totalPixels) {
+      _terrainColorCache = List<Color>.filled(totalPixels, transparent);
+    }
+    final colors = _terrainColorCache!;
+
     for (int py = 0; py < resolution; py++) {
       for (int px = 0; px < resolution; px++) {
-        // Pixel center in minimap space
+        final idx = py * resolution + px;
         final cx = (px + 0.5) * pixelSize;
         final cy = (py + 0.5) * pixelSize;
 
-        // Check if within circular mask
         final dx = cx - half;
         final dy = cy - half;
-        if (dx * dx + dy * dy > halfRadius * halfRadius) continue;
+        if (dx * dx + dy * dy > halfRadius * halfRadius) {
+          colors[idx] = transparent;
+          continue;
+        }
 
-        // Convert to world coordinates
         double worldX, worldZ;
         if (isRotating) {
-          // Rotating minimap: up = forward direction
           final ndx = dx / halfRadius;
           final ndy = -dy / halfRadius;
           final rightComp = ndx * viewRadius;
@@ -130,18 +187,14 @@ class MinimapTerrainPainter extends CustomPainter {
           worldX = playerX + rightComp * cosR - fwdComp * sinR;
           worldZ = playerZ - rightComp * sinR - fwdComp * cosR;
         } else {
-          // Fixed-north with X negated to match screen-relative left/right
           worldX = playerX - (dx / halfRadius) * viewRadius;
           worldZ = playerZ - (dy / halfRadius) * viewRadius;
         }
 
-        // Sample terrain height from loaded chunks, fall back to direct
-        // noise when the chunk isn't loaded (zoomed out beyond render distance)
         double height;
         if (terrainManager != null) {
           height = terrainManager!.getTerrainHeight(worldX, worldZ);
           if (height == groundLevel) {
-            // Chunk not loaded — use noise directly
             height = _noiseHeight(worldX, worldZ);
           }
         } else {
@@ -149,14 +202,12 @@ class MinimapTerrainPainter extends CustomPainter {
         }
         final normalizedHeight = (height / maxHeight).clamp(0.0, 1.0);
 
-        // Map height to color
         Color color;
         if (normalizedHeight < sandThresh) {
           color = sandColor;
         } else if (normalizedHeight > rockThresh) {
           color = rockColor;
         } else {
-          // Interpolate between sand→grass→rock
           final grassRange = rockThresh - sandThresh;
           final grassT = (normalizedHeight - sandThresh) / grassRange;
           if (grassT < 0.5) {
@@ -165,14 +216,17 @@ class MinimapTerrainPainter extends CustomPainter {
             color = Color.lerp(grassColor, rockColor, (grassT - 0.5) * 2)!;
           }
         }
-
-        paint.color = color;
-        canvas.drawRect(
-          Rect.fromLTWH(px * pixelSize, py * pixelSize, pixelSize + 0.5, pixelSize + 0.5),
-          paint,
-        );
+        colors[idx] = color;
       }
     }
+
+    // Update cache metadata
+    _cacheResolution = resolution;
+    _cachePlayerX = playerX;
+    _cachePlayerZ = playerZ;
+    _cacheRotation = playerRotation;
+    _cacheViewRadius = viewRadius;
+    _cacheIsRotating = isRotating;
   }
 
   /// Draw ley line segments and power nodes within view.
@@ -277,6 +331,7 @@ class MinimapTerrainPainter extends CustomPainter {
         (globalMinimapConfig?.refreshThresholdFraction ?? 0.3);
     return moved > threshold ||
         playerRotation != oldDelegate.playerRotation ||
-        viewRadius != oldDelegate.viewRadius;
+        viewRadius != oldDelegate.viewRadius ||
+        hideLeyLinesByAttunement != oldDelegate.hideLeyLinesByAttunement;
   }
 }

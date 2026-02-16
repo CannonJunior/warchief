@@ -3,6 +3,7 @@ import 'source_tree_model.dart';
 import 'source_code_tab.dart';
 import 'interface_config.dart';
 import 'interfaces_tab.dart';
+import '../../state/gameplay_settings.dart';
 
 /// Settings panel with tabs for General, Interfaces, Source Code, and About
 class SettingsPanel extends StatefulWidget {
@@ -245,6 +246,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
   }
 
   Widget _buildGeneralTab() {
+    final settings = globalGameplaySettings;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -277,6 +280,33 @@ class _SettingsPanelState extends State<SettingsPanel> {
             false,
             (value) {},
           ),
+          const SizedBox(height: 20),
+          _buildSectionHeader('Mana Attunement', Icons.auto_awesome),
+          const SizedBox(height: 12),
+          _buildSettingToggle(
+            'Require Mana Attunement',
+            'Characters must equip a Talisman to access mana pools. '
+            'Disabling grants all characters full access to every mana type.',
+            settings?.attunementRequired ?? true,
+            (value) {
+              setState(() {
+                settings?.attunementRequired = value;
+                settings?.save();
+              });
+            },
+          ),
+          _buildSettingToggle(
+            'Gate Mana Source Visibility',
+            'Hide Ley Lines and wind particles when the active character '
+            'lacks attunement to the corresponding mana color.',
+            settings?.manaSourceVisibilityGated ?? false,
+            (value) {
+              setState(() {
+                settings?.manaSourceVisibilityGated = value;
+                settings?.save();
+              });
+            },
+          ),
         ],
       ),
     );
@@ -295,6 +325,30 @@ class _SettingsPanelState extends State<SettingsPanel> {
     return InterfacesTab(
       interfaceConfig: config,
       onVisibilityChanged: widget.onInterfaceVisibilityChanged,
+    );
+  }
+
+  Widget _buildSectionHeader(String label, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFF4cc9f0), size: 16),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF4cc9f0),
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Container(
+            height: 1,
+            color: const Color(0xFF4cc9f0).withValues(alpha: 0.3),
+          ),
+        ),
+      ],
     );
   }
 

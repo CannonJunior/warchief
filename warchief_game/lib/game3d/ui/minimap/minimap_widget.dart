@@ -5,6 +5,8 @@ import '../../state/game_state.dart';
 import '../../state/wind_state.dart';
 import '../../state/minimap_config.dart';
 import '../../state/minimap_state.dart';
+import '../../state/gameplay_settings.dart';
+import '../../data/abilities/ability_types.dart' show ManaColor;
 import 'minimap_terrain_painter.dart';
 import 'minimap_entity_painter.dart';
 import 'minimap_border_icons.dart';
@@ -99,6 +101,9 @@ class MinimapWidget extends StatelessWidget {
                                   gameState.infiniteTerrainManager,
                               leyLineManager: gameState.leyLineManager,
                               minimapState: minimapState,
+                              hideLeyLinesByAttunement:
+                                  (globalGameplaySettings?.manaSourceVisibilityGated ?? false) &&
+                                  !gameState.activeManaAttunements.contains(ManaColor.blue),
                             ),
                           ),
                           // Entity blips layer

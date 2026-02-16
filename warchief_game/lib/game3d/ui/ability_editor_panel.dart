@@ -121,7 +121,8 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
   @override
   void didUpdateWidget(AbilityEditorPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.ability.name != widget.ability.name) {
+    if (oldWidget.ability.name != widget.ability.name ||
+        oldWidget.isNewAbility != widget.isNewAbility) {
       _populateFromAbility(widget.ability);
     }
   }

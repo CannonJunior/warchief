@@ -14,12 +14,34 @@ echo "  Warchief 3D Isometric Game Launcher"
 echo "========================================="
 echo ""
 
-# Check if port 8008 is in use
+# Kill stale Flutter processes from previous sessions
+STALE_PIDS=$(ps aux | grep -E 'flutter.*(run|web-server|web-port)' | grep -v grep | awk '{print $2}' || true)
+if [ ! -z "$STALE_PIDS" ]; then
+    STALE_COUNT=$(echo "$STALE_PIDS" | wc -w)
+    echo "Found $STALE_COUNT stale Flutter process(es), cleaning up..."
+    echo "$STALE_PIDS" | xargs kill -9 2>/dev/null || true
+    sleep 1
+    echo "✅ Stale processes killed"
+else
+    echo "✅ No stale Flutter processes found"
+fi
+
+# Also kill any defunct dart processes from previous flutter runs
+DEFUNCT_PIDS=$(ps aux | grep -E 'dart.*(flutter_tool|frontend_server)' | grep -v grep | awk '{print $2}' || true)
+if [ ! -z "$DEFUNCT_PIDS" ]; then
+    DEFUNCT_COUNT=$(echo "$DEFUNCT_PIDS" | wc -w)
+    echo "Found $DEFUNCT_COUNT stale Dart subprocess(es), cleaning up..."
+    echo "$DEFUNCT_PIDS" | xargs kill -9 2>/dev/null || true
+    sleep 1
+    echo "✅ Stale Dart subprocesses killed"
+fi
+
+# Check if port 8008 is still in use after cleanup
 echo "Checking if port $PORT is available..."
 PORT_PID=$(lsof -ti:$PORT 2>/dev/null || echo "")
 
 if [ ! -z "$PORT_PID" ]; then
-    echo "⚠️  Port $PORT is currently in use by process $PORT_PID"
+    echo "⚠️  Port $PORT is still in use by process $PORT_PID"
     echo "Killing process $PORT_PID..."
     kill -9 $PORT_PID 2>/dev/null || true
     sleep 1

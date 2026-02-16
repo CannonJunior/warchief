@@ -8,6 +8,8 @@ import '../../rendering3d/math/transform3d.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/ley_lines.dart';
 import '../rendering/wind_particles.dart';
+import '../state/gameplay_settings.dart';
+import '../data/abilities/ability_types.dart' show ManaColor;
 
 /// Render System - Handles 3D scene rendering
 ///
@@ -213,6 +215,11 @@ class RenderSystem {
   ) {
     if (gameState.playerTransform == null) return;
 
+    // Hide wind particles when active character is not white-attuned (if gated)
+    if (globalGameplaySettings?.manaSourceVisibilityGated ?? false) {
+      if (!gameState.activeManaAttunements.contains(ManaColor.white)) return;
+    }
+
     // Initialize on first call
     if (!_windParticles.isInitialized) {
       _windParticles.init();
@@ -320,6 +327,11 @@ class RenderSystem {
     if (gameState.leyLineManager == null) return;
     if (gameState.playerTransform == null) return;
 
+    // Hide ley lines when active character is not blue-attuned (if gated)
+    if (globalGameplaySettings?.manaSourceVisibilityGated ?? false) {
+      if (!gameState.activeManaAttunements.contains(ManaColor.blue)) return;
+    }
+
     final playerPos = gameState.playerTransform!.position;
     final viewRadius = 100.0; // Only render Ley Lines within this radius
 
@@ -332,8 +344,15 @@ class RenderSystem {
 
     if (segments.isEmpty) return;
 
-    // Create a hash to detect changes
-    final hash = segments.length.hashCode;
+    // Hash based on segment count and endpoint positions for accurate
+    // cache invalidation (count-only hash missed content changes).
+    int hash = segments.length;
+    for (final seg in segments) {
+      hash = hash * 31 + seg.x1.hashCode;
+      hash = hash * 31 + seg.z1.hashCode;
+      hash = hash * 31 + seg.x2.hashCode;
+      hash = hash * 31 + seg.z2.hashCode;
+    }
 
     // Regenerate mesh if segments changed
     if (hash != _lastLeyLineHash || !_leyLineMeshCache.containsKey(hash)) {
