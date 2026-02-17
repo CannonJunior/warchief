@@ -142,38 +142,37 @@ class _AllyCommandsPanelState extends State<AllyCommandsPanel> {
             ),
           ),
           const SizedBox(height: 6),
-          Row(
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
             children: FormationType.values.map((formation) {
               final isSelected = widget.currentFormation == formation;
-              return Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: Tooltip(
-                  message: '${formation.name}\n${formation.description}',
-                  child: InkWell(
-                    onTap: () => widget.onFormationChanged(formation),
-                    borderRadius: BorderRadius.circular(4),
-                    child: Container(
-                      width: 36,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? Color(formation.color)
-                            : Color(formation.color).withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: isSelected ? Colors.white : Colors.white30,
-                          width: isSelected ? 2 : 1,
-                        ),
+              return Tooltip(
+                message: '${formation.name}\n${formation.description}',
+                child: InkWell(
+                  onTap: () => widget.onFormationChanged(formation),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    width: 36,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? Color(formation.color)
+                          : Color(formation.color).withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: isSelected ? Colors.white : Colors.white30,
+                        width: isSelected ? 2 : 1,
                       ),
-                      child: Center(
-                        child: Text(
-                          formation.shortLabel,
-                          style: TextStyle(
-                            color:
-                                isSelected ? Colors.white : Colors.white70,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        formation.shortLabel,
+                        style: TextStyle(
+                          color:
+                              isSelected ? Colors.white : Colors.white70,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),

@@ -54,6 +54,15 @@ class CombatHUD extends StatelessWidget {
   final Color targetBorderColor;
   final Color targetHealthColor;
 
+  // Target of Target (ToT) data
+  final String? totName;
+  final double totHealth;
+  final double totMaxHealth;
+  final int? totLevel;
+  final Widget? totPortraitWidget;
+  final Color totBorderColor;
+  final Color totHealthColor;
+
   // Action bar configuration (for drag-and-drop)
   final ActionBarConfig? actionBarConfig;
   final Function(int slotIndex, String abilityName)? onAbilityDropped;
@@ -90,6 +99,13 @@ class CombatHUD extends StatelessWidget {
     this.onAbility10Pressed,
     this.targetBorderColor = const Color(0xFFFF6B6B),
     this.targetHealthColor = const Color(0xFFEF5350),
+    this.totName,
+    this.totHealth = 0.0,
+    this.totMaxHealth = 1.0,
+    this.totLevel,
+    this.totPortraitWidget,
+    this.totBorderColor = const Color(0xFF888888),
+    this.totHealthColor = const Color(0xFF4CAF50),
     this.actionBarConfig,
     this.onAbilityDropped,
   }) : super(key: key);
@@ -121,7 +137,10 @@ class CombatHUD extends StatelessWidget {
             if (gameState != null && gameState!.playerActiveEffects.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(right: 4),
-                child: BuffDebuffIcons(effects: gameState!.playerActiveEffects),
+                child: BuffDebuffIcons(
+                  effects: gameState!.playerActiveEffects,
+                  maxWidth: 80,
+                ),
               ),
             Column(
               mainAxisSize: MainAxisSize.min,
@@ -173,6 +192,7 @@ class CombatHUD extends StatelessWidget {
             children: [
               Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   UnitFrame(
                     name: targetName ?? 'Unknown',
@@ -191,12 +211,31 @@ class CombatHUD extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 4),
                       child: _buildTargetManaBar(),
                     ),
+                  // Target of Target (33% smaller unit frame)
+                  if (totName != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: UnitFrame(
+                        name: totName!,
+                        health: totHealth,
+                        maxHealth: totMaxHealth,
+                        isPlayer: false,
+                        level: totLevel,
+                        portraitWidget: totPortraitWidget,
+                        borderColor: totBorderColor,
+                        healthColor: totHealthColor,
+                        width: 133,
+                      ),
+                    ),
                 ],
               ),
               if (gameState != null && gameState!.currentTargetActiveEffects.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(left: 4),
-                  child: BuffDebuffIcons(effects: gameState!.currentTargetActiveEffects),
+                  child: BuffDebuffIcons(
+                    effects: gameState!.currentTargetActiveEffects,
+                    maxWidth: 80,
+                  ),
                 ),
             ],
           ),

@@ -15,11 +15,13 @@ import '../../data/abilities/abilities.dart' show AbilityRegistry;
 class BuffDebuffIcons extends StatelessWidget {
   final List<ActiveEffect> effects;
   final double iconSize;
+  final double? maxWidth;
 
   const BuffDebuffIcons({
     Key? key,
     required this.effects,
     this.iconSize = 14,
+    this.maxWidth,
   }) : super(key: key);
 
   @override
@@ -29,7 +31,7 @@ class BuffDebuffIcons extends StatelessWidget {
     final buffs = effects.where((e) => e.isBuff).toList();
     final debuffs = effects.where((e) => e.isDebuff).toList();
 
-    return Column(
+    Widget content = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -39,16 +41,20 @@ class BuffDebuffIcons extends StatelessWidget {
         if (debuffs.isNotEmpty) _buildRow(debuffs),
       ],
     );
+
+    if (maxWidth != null) {
+      content = SizedBox(width: maxWidth, child: content);
+    }
+
+    return content;
   }
 
   Widget _buildRow(List<ActiveEffect> rowEffects) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      spacing: 2,
+      runSpacing: 2,
       children: rowEffects
-          .map((e) => Padding(
-                padding: const EdgeInsets.only(right: 2),
-                child: _buildIcon(e),
-              ))
+          .map((e) => _buildIcon(e))
           .toList(),
     );
   }

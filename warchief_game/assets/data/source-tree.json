@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-16T18:36:17.283551",
+  "generated_at": "2026-02-16T20:05:38.205954",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
     "files": 198,
     "directories": 35,
-    "lines": 55051,
-    "size": 1871051
+    "lines": 55154,
+    "size": 1874977
   },
   "tree": {
     "name": "warchief_game",
@@ -602,10 +602,10 @@
                     "name": "game_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state.dart",
-                    "size": 63264,
+                    "size": 63723,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 1814
+                    "lines": 1826
                   },
                   {
                     "name": "gameplay_settings.dart",
@@ -708,10 +708,10 @@
                     "name": "ability_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/ability_system.dart",
-                    "size": 82987,
+                    "size": 83321,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 2267
+                    "lines": 2277
                   },
                   {
                     "name": "ai_system.dart",
@@ -914,37 +914,37 @@
                         "name": "buff_debuff_icons.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/unit_frames/buff_debuff_icons.dart",
-                        "size": 4613,
+                        "size": 4678,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 158
+                        "lines": 164
                       },
                       {
                         "name": "combat_hud.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/unit_frames/combat_hud.dart",
-                        "size": 27874,
+                        "size": 29228,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 827
+                        "lines": 866
                       },
                       {
                         "name": "minion_frames.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/unit_frames/minion_frames.dart",
-                        "size": 19123,
+                        "size": 19125,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 591
+                        "lines": 592
                       },
                       {
                         "name": "party_frames.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/unit_frames/party_frames.dart",
-                        "size": 8254,
+                        "size": 8789,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 275
+                        "lines": 283
                       },
                       {
                         "name": "unit_frame.dart",
@@ -979,10 +979,10 @@
                     "name": "abilities_modal.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/abilities_modal.dart",
-                    "size": 53921,
+                    "size": 54095,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 1434
+                    "lines": 1439
                   },
                   {
                     "name": "ability_button.dart",
@@ -1015,10 +1015,10 @@
                     "name": "allies_panel.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/allies_panel.dart",
-                    "size": 11302,
+                    "size": 11321,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 286
+                    "lines": 288
                   },
                   {
                     "name": "ally_command_panels.dart",
@@ -1033,10 +1033,10 @@
                     "name": "ally_commands_panel.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/ally_commands_panel.dart",
-                    "size": 9753,
+                    "size": 9636,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 311
+                    "lines": 310
                   },
                   {
                     "name": "bag_panel.dart",
@@ -1186,7 +1186,7 @@
                     "name": "instructions_overlay.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/instructions_overlay.dart",
-                    "size": 7337,
+                    "size": 7391,
                     "extension": ".dart",
                     "icon": "🎯",
                     "lines": 190
@@ -1267,7 +1267,7 @@
                     "name": "player_hud.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/player_hud.dart",
-                    "size": 4633,
+                    "size": 4681,
                     "extension": ".dart",
                     "icon": "🎯",
                     "lines": 133
@@ -1348,10 +1348,10 @@
                 "name": "game3d_widget.dart",
                 "type": "file",
                 "path": "warchief_game/lib/game3d/game3d_widget.dart",
-                "size": 89726,
+                "size": 90512,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 2459
+                "lines": 2475
               }
             ]
           },
@@ -1382,10 +1382,10 @@
                 "name": "ally.dart",
                 "type": "file",
                 "path": "warchief_game/lib/models/ally.dart",
-                "size": 3156,
+                "size": 3369,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 110
+                "lines": 115
               },
               {
                 "name": "building.dart",

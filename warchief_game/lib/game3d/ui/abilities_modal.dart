@@ -17,10 +17,12 @@ import 'ui_config.dart';
 /// - Draggable icons that can be dropped onto the action bar
 class AbilitiesModal extends StatefulWidget {
   final VoidCallback onClose;
+  final void Function(String category)? onClassLoaded;
 
   const AbilitiesModal({
     Key? key,
     required this.onClose,
+    this.onClassLoaded,
   }) : super(key: key);
 
   @override
@@ -1152,6 +1154,9 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
 
     print('[CODEX] Loaded ${category} class abilities to action bar '
         '(${abilities.length > 10 ? 10 : abilities.length} abilities)');
+
+    // Notify parent to update character mesh color
+    widget.onClassLoaded?.call(category);
 
     // Refresh UI
     setState(() {});

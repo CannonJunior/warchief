@@ -1192,6 +1192,21 @@ class _Game3DState extends State<Game3D> {
     }
   }
 
+  /// Handle class loaded to action bar — update active character mesh color
+  void _handleClassLoaded(String category) {
+    final color = AuraSystem.getCategoryColorVec3(category);
+    if (gameState.isWarchiefActive) {
+      gameState.playerMesh = PlayerMesh.createSimpleCharacter(bodyColor: color);
+    } else {
+      final ally = gameState.activeAlly;
+      if (ally != null) {
+        ally.mesh = Mesh.cube(size: 0.8, color: color);
+      }
+    }
+    _refreshAllAuraColors();
+    setState(() {});
+  }
+
   // ===== ALLY COMMAND METHODS =====
 
   /// Flight duration accumulator for goals tracking
@@ -1906,6 +1921,7 @@ class _Game3DState extends State<Game3D> {
                   });
                   _gameFocusNode.requestFocus();
                 },
+                onClassLoaded: _handleClassLoaded,
               ),
 
             // Bag Panel (Press B to toggle)
@@ -2187,33 +2203,58 @@ class _Game3DState extends State<Game3D> {
     }
   }
 
-  /// Get target-of-target info
-  String? _getTargetOfTargetInfo() {
+  /// Get target-of-target data for the ToT unit frame.
+  /// Returns null if no target-of-target exists.
+  Map<String, dynamic>? _getTargetOfTargetData() {
     final tot = gameState.getTargetOfTarget();
-    if (tot == null) return null;
+    if (tot == null || tot == 'none') return null;
 
-    if (tot == 'player') return 'You';
-    if (tot == 'none') return null;
+    if (tot == 'player') {
+      return {
+        'name': 'You',
+        'health': gameState.playerHealth,
+        'maxHealth': gameState.playerMaxHealth,
+        'level': 10,
+        'color': const Color(0xFF4D80CC),
+        'isFriendly': true,
+      };
+    }
 
-    // Check if it's an ally (allies are identified by index like "ally_0", "ally_1")
     if (tot.startsWith('ally_')) {
       final index = int.tryParse(tot.substring(5));
       if (index != null && index < gameState.allies.length) {
-        return 'Ally ${index + 1}';
+        final ally = gameState.allies[index];
+        return {
+          'name': 'Ally ${index + 1}',
+          'health': ally.health,
+          'maxHealth': ally.maxHealth,
+          'level': 5 + index + 1,
+          'color': const Color(0xFF66CC66),
+          'isFriendly': true,
+        };
       }
     }
 
-    // Check if it's a minion
+    // Check minions
     final minion = gameState.minions.where((m) => m.instanceId == tot).firstOrNull;
-    if (minion != null) return minion.definition.name;
+    if (minion != null) {
+      return {
+        'name': minion.definition.name,
+        'health': minion.health,
+        'maxHealth': minion.maxHealth,
+        'level': minion.definition.monsterPower,
+        'color': Color(minion.healthBarColor),
+        'isFriendly': false,
+      };
+    }
 
-    return tot;
+    return null;
   }
 
   /// Build Combat HUD with current target data
   Widget _buildCombatHUD() {
     final targetData = _getTargetData();
-    final totInfo = _getTargetOfTargetInfo();
+    final totData = _getTargetOfTargetData();
 
     // Determine friendly/enemy colors for target frame
     final isFriendly = targetData['isFriendly'] as bool? ?? false;
@@ -2288,58 +2329,33 @@ class _Game3DState extends State<Game3D> {
           actionBarConfig: globalActionBarConfigManager?.activeConfig,
           targetBorderColor: targetBorderColor,
           targetHealthColor: targetHealthColor,
+          totName: totData?['name'] as String?,
+          totHealth: (totData?['health'] as num?)?.toDouble() ?? 0.0,
+          totMaxHealth: (totData?['maxHealth'] as num?)?.toDouble() ?? 1.0,
+          totLevel: totData?['level'] as int?,
+          totPortraitWidget: totData != null
+              ? CubePortrait(
+                  color: totData['color'] as Color,
+                  size: 24,
+                  hasDirectionIndicator: false,
+                )
+              : null,
+          totBorderColor: totData != null
+              ? ((totData['isFriendly'] as bool)
+                  ? const Color(0xFF4CAF50)
+                  : const Color(0xFFFF6B6B))
+              : const Color(0xFF888888),
+          totHealthColor: totData != null
+              ? ((totData['isFriendly'] as bool)
+                  ? const Color(0xFF66BB6A)
+                  : const Color(0xFFEF5350))
+              : const Color(0xFF4CAF50),
           onAbilityDropped: _handleAbilityDropped,
         ),
-        // Target of Target display
-        if (targetData['hasTarget'] as bool && totInfo != null)
-          _buildTargetOfTarget(totInfo),
       ],
     );
   }
 
-  /// Build Target of Target (ToT) display
-  Widget _buildTargetOfTarget(String totName) {
-    return Container(
-      margin: const EdgeInsets.only(top: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1a1a2e).withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: const Color(0xFF252542),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.arrow_forward,
-            size: 12,
-            color: Color(0xFF888888),
-          ),
-          const SizedBox(width: 4),
-          const Text(
-            'Target:',
-            style: TextStyle(
-              color: Color(0xFF888888),
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            totName,
-            style: TextStyle(
-              color: totName == 'You' ? const Color(0xFFFF6B6B) : const Color(0xFFCCCCCC),
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   /// Build ally control button (+/- ally)
   Widget _buildAllyControlButton({

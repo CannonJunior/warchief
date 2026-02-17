@@ -299,8 +299,9 @@ class MinionFrames extends StatelessWidget {
 
     if (buffs.isEmpty) return const SizedBox.shrink();
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      spacing: 0,
+      runSpacing: 2,
       children: buffs,
     );
   }

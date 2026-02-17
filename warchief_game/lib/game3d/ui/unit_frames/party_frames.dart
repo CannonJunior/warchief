@@ -89,16 +89,7 @@ class PartyFrames extends StatelessWidget {
         ? classColors[ally.abilityIndex]
         : Colors.grey;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        if (ally.activeEffects.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: BuffDebuffIcons(effects: ally.activeEffects, iconSize: 12),
-          ),
-        GestureDetector(
+    return GestureDetector(
       onTap: () => onAllySelected?.call(index),
       onDoubleTap: () => onAllyAbilityActivate?.call(ally),
       child: Container(
@@ -117,60 +108,77 @@ class PartyFrames extends StatelessWidget {
             width: isSelected ? 2 : 1,
           ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Class color bar
-            Container(
-              width: 3,
-              height: 36,
-              decoration: BoxDecoration(
-                color: classColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 6),
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name and ability
-                  Row(
+            Row(
+              children: [
+                // Class color bar
+                Container(
+                  width: 3,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: classColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Ally ${index + 1}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      // Name and ability
+                      Row(
+                        children: [
+                          Text(
+                            'Ally ${index + 1}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              '($abilityName)',
+                              style: TextStyle(
+                                color: classColor,
+                                fontSize: 9,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '($abilityName)',
-                        style: TextStyle(
-                          color: classColor,
-                          fontSize: 9,
-                        ),
-                      ),
+                      const SizedBox(height: 4),
+                      // Health bar
+                      _buildHealthBar(ally.health, ally.maxHealth),
+                      const SizedBox(height: 3),
+                      // Ability cooldown bar
+                      _buildCooldownBar(ally.abilityCooldown, ally.abilityCooldownMax),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  // Health bar
-                  _buildHealthBar(ally.health, ally.maxHealth),
-                  const SizedBox(height: 3),
-                  // Ability cooldown bar
-                  _buildCooldownBar(ally.abilityCooldown, ally.abilityCooldownMax),
-                ],
-              ),
+                ),
+                // Command indicator
+                _buildCommandIndicator(ally.currentCommand),
+              ],
             ),
-            // Command indicator
-            _buildCommandIndicator(ally.currentCommand),
+            // Buff/debuff icons below the ally info
+            if (ally.activeEffects.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: BuffDebuffIcons(
+                  effects: ally.activeEffects,
+                  iconSize: 12,
+                  maxWidth: 144,
+                ),
+              ),
           ],
         ),
       ),
-    ),
-      ],
     );
   }
 

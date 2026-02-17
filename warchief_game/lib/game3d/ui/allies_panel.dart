@@ -242,12 +242,14 @@ class AlliesPanel extends StatelessWidget {
   Widget _buildStrategySelector(Ally ally) {
     final strategies = AllyStrategies.allStrategies;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+    return Wrap(
+      alignment: WrapAlignment.end,
+      spacing: 3,
+      runSpacing: 3,
       children: strategies.map((strategy) {
         final isSelected = ally.strategyType == strategy.type;
         return Padding(
-          padding: EdgeInsets.only(left: 3),
+          padding: EdgeInsets.zero,
           child: Tooltip(
             message: '${strategy.name}\n${strategy.description}',
             child: InkWell(
