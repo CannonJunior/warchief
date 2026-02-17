@@ -28,6 +28,19 @@ class RenderSystem {
   /// Green mana sparkle particle system (initialized on first use)
   static final GreenManaSparkleSystem _greenSparkles = GreenManaSparkleSystem();
 
+  /// Cached transforms for terrain chunks (keyed by world position hash).
+  /// Avoids per-frame Transform3d allocation for each chunk.
+  static final Map<int, Transform3d> _chunkTransformCache = {};
+
+  /// Reusable transform for ley line rendering (position always origin).
+  static final Transform3d _originTransform = Transform3d(position: Vector3(0, 0, 0));
+
+  /// Get or create a cached transform for a chunk position.
+  static Transform3d _getChunkTransform(Vector3 worldPos) {
+    final key = worldPos.x.hashCode ^ (worldPos.z.hashCode * 31);
+    return _chunkTransformCache.putIfAbsent(key, () => Transform3d(position: worldPos));
+  }
+
   /// Renders the entire 3D scene
   ///
   /// Parameters:
@@ -46,10 +59,8 @@ class RenderSystem {
     if (gameState.infiniteTerrainManager != null) {
       final chunks = gameState.infiniteTerrainManager!.getLoadedChunks();
       for (final chunk in chunks) {
-        // Create transform for chunk
-        final chunkTransform = Transform3d(
-          position: chunk.worldPosition,
-        );
+        // Reason: Reuse cached transform per chunk to avoid per-frame allocation
+        final chunkTransform = _getChunkTransform(chunk.worldPosition);
 
         // Render terrain with texture splatting (if enabled)
         // Falls back to regular rendering if texturing not initialized
@@ -391,8 +402,7 @@ class RenderSystem {
     if (mesh == null) return;
 
     // Render at world origin (positions are absolute)
-    final transform = Transform3d(position: Vector3(0, 0, 0));
-    renderer.render(mesh, transform, camera);
+    renderer.render(mesh, _originTransform, camera);
   }
 
   /// Create a mesh for the visible Ley Line segments

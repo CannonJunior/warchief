@@ -38,6 +38,17 @@ class TerrainLOD {
     }
   }
 
+  /// Squared distance LOD thresholds (precomputed)
+  static const double _lodDistSq0 = lodDistance0 * lodDistance0;
+  static const double _lodDistSq1 = lodDistance1 * lodDistance1;
+
+  /// Calculate LOD level using squared distance (avoids sqrt for LOD decision)
+  static int calculateLODLevelSq(double distSq) {
+    if (distSq < _lodDistSq0) return 0;
+    if (distSq < _lodDistSq1) return 1;
+    return 2;
+  }
+
   /// Get vertex spacing for LOD level
   ///
   /// Parameters:
@@ -441,8 +452,12 @@ class TerrainChunkWithLOD {
 
   /// Update distance from camera and select appropriate LOD
   void updateLOD(Vector3 cameraPosition) {
-    distanceFromCamera = (worldPosition - cameraPosition).length;
-    currentLOD = TerrainLOD.calculateLODLevel(distanceFromCamera);
+    final dx = worldPosition.x - cameraPosition.x;
+    final dy = worldPosition.y - cameraPosition.y;
+    final dz = worldPosition.z - cameraPosition.z;
+    final distSq = dx * dx + dy * dy + dz * dz;
+    currentLOD = TerrainLOD.calculateLODLevelSq(distSq);
+    distanceFromCamera = math.sqrt(distSq);
   }
 
   /// Get current LOD mesh

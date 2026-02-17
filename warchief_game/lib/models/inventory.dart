@@ -26,6 +26,7 @@ class Inventory {
     final slot = item.slot!;
     final previousItem = _equipment[slot];
     _equipment[slot] = item;
+    _invalidateEquipmentCaches();
     return previousItem;
   }
 
@@ -37,6 +38,7 @@ class Inventory {
   Item? equipToSlot(EquipmentSlot slot, Item item) {
     final previousItem = _equipment[slot];
     _equipment[slot] = item;
+    _invalidateEquipmentCaches();
     return previousItem;
   }
 
@@ -44,6 +46,7 @@ class Inventory {
   Item? unequip(EquipmentSlot slot) {
     final item = _equipment[slot];
     _equipment[slot] = null;
+    _invalidateEquipmentCaches();
     return item;
   }
 
@@ -113,8 +116,21 @@ class Inventory {
     _bag[index2] = temp;
   }
 
-  /// Get total stats from all equipped items
+  /// Cached equipped stats, invalidated on equip/unequip.
+  ItemStats? _cachedEquippedStats;
+
+  /// Cached mana attunements, invalidated on equip/unequip.
+  Set<ManaColor>? _cachedManaAttunements;
+
+  /// Invalidate caches when equipment changes.
+  void _invalidateEquipmentCaches() {
+    _cachedEquippedStats = null;
+    _cachedManaAttunements = null;
+  }
+
+  /// Get total stats from all equipped items (cached until equipment changes).
   ItemStats get totalEquippedStats {
+    if (_cachedEquippedStats != null) return _cachedEquippedStats!;
     int brawn = 0, yar = 0, auspice = 0, valor = 0;
     int chuff = 0, xVal = 0, zeal = 0;
     int armor = 0, damage = 0, critChance = 0;
@@ -149,7 +165,7 @@ class Inventory {
       }
     }
 
-    return ItemStats(
+    final result = ItemStats(
       brawn: brawn,
       yar: yar,
       auspice: auspice,
@@ -172,14 +188,18 @@ class Inventory {
       haste: haste,
       melt: melt,
     );
+    _cachedEquippedStats = result;
+    return result;
   }
 
-  /// Mana colors the character is attuned to via equipped items.
+  /// Mana colors the character is attuned to via equipped items (cached until equipment changes).
   Set<ManaColor> get manaAttunements {
+    if (_cachedManaAttunements != null) return _cachedManaAttunements!;
     final result = <ManaColor>{};
     for (final item in _equipment.values) {
       if (item != null) result.addAll(item.manaAttunement);
     }
+    _cachedManaAttunements = result;
     return result;
   }
 

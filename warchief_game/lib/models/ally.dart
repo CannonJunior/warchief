@@ -87,6 +87,22 @@ class Ally {
   // Temporary mana attunements (from buffs/auras)
   Set<ManaColor> temporaryAttunements = {};
 
+  /// Cached combined mana attunements (equipment + temporary).
+  /// Invalidated by [invalidateAttunementCache].
+  Set<ManaColor>? _cachedManaAttunements;
+
+  /// Get combined mana attunements (cached).
+  Set<ManaColor> get combinedManaAttunements {
+    if (_cachedManaAttunements != null) return _cachedManaAttunements!;
+    _cachedManaAttunements = {...inventory.manaAttunements, ...temporaryAttunements};
+    return _cachedManaAttunements!;
+  }
+
+  /// Invalidate cached attunements (call on equip/unequip/buff change).
+  void invalidateAttunementCache() {
+    _cachedManaAttunements = null;
+  }
+
   /// Get the current strategy configuration
   AllyStrategy get strategy => AllyStrategies.getStrategy(strategyType);
 

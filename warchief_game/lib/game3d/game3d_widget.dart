@@ -494,7 +494,7 @@ class _Game3DState extends State<Game3D> {
         _refreshAllAuraColors();
       }
 
-      _update(dt);
+      _update(dt, tsMs / 1000.0);
       _render();
 
       // Update UI — every frame during active casts/windups for smooth
@@ -555,8 +555,11 @@ class _Game3DState extends State<Game3D> {
     }
   }
 
-  void _update(double dt) {
+  void _update(double dt, double gameTimeSec) {
     if (inputManager == null || camera == null || gameState.activeTransform == null) return;
+
+    // Refresh per-frame caches before any system reads them
+    gameState.refreshAliveMinions();
 
     // Process player and camera input
     InputSystem.update(dt, inputManager!, camera!, gameState);
@@ -568,12 +571,11 @@ class _Game3DState extends State<Game3D> {
     // Update physics (gravity, vertical movement, ground collision)
     PhysicsSystem.update(dt, gameState);
 
-    // Track player movement for AI prediction
+    // Track player movement for AI prediction using rAF timestamp (no DateTime.now() overhead)
     if (gameState.playerTransform != null) {
-      final currentTime = DateTime.now().millisecondsSinceEpoch / 1000.0;
       gameState.playerMovementTracker.update(
         gameState.playerTransform!.position,
-        currentTime,
+        gameTimeSec,
       );
     }
 
@@ -1612,8 +1614,8 @@ class _Game3DState extends State<Game3D> {
 
   /// Position all aura discs at their unit's base on terrain each frame.
   void _updateAuraPositions() {
-    // Player aura
-    if (gameState.playerAuraTransform != null && gameState.activeTransform != null) {
+    // Player aura — update position in-place to avoid Vector3 allocation
+    if (gameState.playerAuraTransform != null && gameState.playerTransform != null) {
       double auraY = 0.02;
       if (gameState.infiniteTerrainManager != null) {
         auraY = gameState.infiniteTerrainManager!.getTerrainHeight(
@@ -1621,14 +1623,12 @@ class _Game3DState extends State<Game3D> {
           gameState.playerTransform!.position.z,
         ) + 0.02;
       }
-      gameState.playerAuraTransform!.position = Vector3(
-        gameState.playerTransform!.position.x,
-        auraY,
-        gameState.playerTransform!.position.z,
-      );
+      gameState.playerAuraTransform!.position.x = gameState.playerTransform!.position.x;
+      gameState.playerAuraTransform!.position.y = auraY;
+      gameState.playerAuraTransform!.position.z = gameState.playerTransform!.position.z;
     }
 
-    // Ally auras
+    // Ally auras — update position in-place
     for (final ally in gameState.allies) {
       if (ally.auraMesh != null) {
         double auraY = 0.02;
@@ -1638,11 +1638,9 @@ class _Game3DState extends State<Game3D> {
             ally.transform.position.z,
           ) + 0.02;
         }
-        ally.auraTransform.position = Vector3(
-          ally.transform.position.x,
-          auraY,
-          ally.transform.position.z,
-        );
+        ally.auraTransform.position.x = ally.transform.position.x;
+        ally.auraTransform.position.y = auraY;
+        ally.auraTransform.position.z = ally.transform.position.z;
       }
     }
   }

@@ -80,10 +80,10 @@ class PartyFrames extends StatelessWidget {
         : 'Unknown';
 
     // Class colors based on ability
-    final classColors = [
-      const Color(0xFFC79C6E), // Warrior (brown/tan)
-      const Color(0xFF3FC7EB), // Mage (light blue)
-      const Color(0xFFFF7C0A), // Druid/Healer (orange)
+    const classColors = [
+      Color(0xFFC79C6E), // Warrior (brown/tan)
+      Color(0xFF3FC7EB), // Mage (light blue)
+      Color(0xFFFF7C0A), // Druid/Healer (orange)
     ];
     final classColor = ally.abilityIndex < classColors.length
         ? classColors[ally.abilityIndex]

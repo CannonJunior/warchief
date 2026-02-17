@@ -160,5 +160,5 @@ class _ProgressRingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ProgressRingPainter oldDelegate) =>
-      (progress - oldDelegate.progress).abs() > 0.02;
+      (progress - oldDelegate.progress).abs() > 0.05;
 }

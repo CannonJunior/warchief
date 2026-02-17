@@ -246,8 +246,20 @@ class InfiniteTerrainManager {
     }
   }
 
+  /// Last camera position used for LOD update (skip if camera hasn't moved enough)
+  double _lastLodCamX = double.nan;
+  double _lastLodCamZ = double.nan;
+  static const double _lodUpdateThresholdSq = 4.0; // Update LOD every 2 units of camera movement
+
   /// Update LOD for all chunks based on camera distance
   void _updateAllLODs(Vector3 cameraPosition) {
+    // Skip LOD recalculation if camera hasn't moved significantly
+    final camDx = cameraPosition.x - _lastLodCamX;
+    final camDz = cameraPosition.z - _lastLodCamZ;
+    if (camDx * camDx + camDz * camDz < _lodUpdateThresholdSq) return;
+    _lastLodCamX = cameraPosition.x;
+    _lastLodCamZ = cameraPosition.z;
+
     totalLOD0 = 0;
     totalLOD1 = 0;
     totalLOD2 = 0;

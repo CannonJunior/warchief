@@ -8,6 +8,7 @@ import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/impact_effect.dart';
 import '../../models/combat_log_entry.dart';
+import '../../models/monster.dart';
 import 'goal_system.dart';
 
 /// Target types for damage application
@@ -85,9 +86,12 @@ class CombatSystem {
     bool showDamageIndicator = false,
     bool isMelee = false,
   }) {
-    final distance = (attackerPosition - targetPosition).length;
+    final dx = attackerPosition.x - targetPosition.x;
+    final dy = attackerPosition.y - targetPosition.y;
+    final dz = attackerPosition.z - targetPosition.z;
+    final distSq = dx * dx + dy * dy + dz * dz;
 
-    if (distance < collisionThreshold) {
+    if (distSq < collisionThreshold * collisionThreshold) {
       // Create impact effect at collision point
       createImpactEffect(
         gameState,
@@ -105,10 +109,12 @@ class CombatSystem {
             break;
           case DamageTarget.minion:
             if (minionInstanceId != null) {
-              final m = gameState.minions.where(
-                (m) => m.instanceId == minionInstanceId && m.isAlive
-              ).firstOrNull;
-              healthBefore = m?.health ?? 0.0;
+              for (final m in gameState.minions) {
+                if (m.instanceId == minionInstanceId && m.isAlive) {
+                  healthBefore = m.health;
+                  break;
+                }
+              }
             }
             break;
           case DamageTarget.dummy:
@@ -124,35 +130,35 @@ class CombatSystem {
         case DamageTarget.player:
           gameState.playerHealth = (gameState.playerHealth - damage)
               .clamp(0.0, gameState.playerMaxHealth);
-          print('$attackType hit player for $damage damage! '
-                'Player health: ${gameState.playerHealth.toStringAsFixed(1)}');
+          assert(() { print('$attackType hit player for $damage damage! '
+                'Player health: ${gameState.playerHealth.toStringAsFixed(1)}'); return true; }());
           break;
 
         case DamageTarget.monster:
           gameState.monsterHealth = (gameState.monsterHealth - damage)
               .clamp(0.0, gameState.monsterMaxHealth);
-          print('$attackType hit monster for $damage damage! '
-                'Monster health: ${gameState.monsterHealth.toStringAsFixed(1)}');
+          assert(() { print('$attackType hit monster for $damage damage! '
+                'Monster health: ${gameState.monsterHealth.toStringAsFixed(1)}'); return true; }());
           break;
 
         case DamageTarget.ally:
           if (allyIndex != null && allyIndex < gameState.allies.length) {
             final ally = gameState.allies[allyIndex];
             ally.health = (ally.health - damage).clamp(0.0, ally.maxHealth);
-            print('$attackType hit ally ${allyIndex + 1} for $damage damage! '
-                  'Ally health: ${ally.health.toStringAsFixed(1)}');
+            assert(() { print('$attackType hit ally ${allyIndex + 1} for $damage damage! '
+                  'Ally health: ${ally.health.toStringAsFixed(1)}'); return true; }());
           }
           break;
 
         case DamageTarget.minion:
           if (minionInstanceId != null) {
-            final minion = gameState.minions.where(
-              (m) => m.instanceId == minionInstanceId && m.isAlive
-            ).firstOrNull;
-            if (minion != null) {
-              minion.takeDamage(damage);
-              print('$attackType hit ${minion.definition.name} for $damage damage! '
-                    'Minion health: ${minion.health.toStringAsFixed(1)}/${minion.maxHealth}');
+            for (final minion in gameState.minions) {
+              if (minion.instanceId == minionInstanceId && minion.isAlive) {
+                minion.takeDamage(damage);
+                assert(() { print('$attackType hit ${minion.definition.name} for $damage damage! '
+                      'Minion health: ${minion.health.toStringAsFixed(1)}/${minion.maxHealth}'); return true; }());
+                break;
+              }
             }
           }
           break;
@@ -160,8 +166,8 @@ class CombatSystem {
         case DamageTarget.dummy:
           if (gameState.targetDummy != null && gameState.targetDummy!.isSpawned) {
             gameState.targetDummy!.takeDamage(damage);
-            print('$attackType hit Target Dummy for $damage damage! '
-                  'Total: ${gameState.targetDummy!.totalDamageTaken.toStringAsFixed(1)}');
+            assert(() { print('$attackType hit Target Dummy for $damage damage! '
+                  'Total: ${gameState.targetDummy!.totalDamageTaken.toStringAsFixed(1)}'); return true; }());
           }
           break;
       }
@@ -175,10 +181,14 @@ class CombatSystem {
         if (targetType == DamageTarget.monster) {
           isKill = healthBefore > 0 && gameState.monsterHealth <= 0;
         } else if (targetType == DamageTarget.minion && minionInstanceId != null) {
-          final m = gameState.minions.where(
-            (m) => m.instanceId == minionInstanceId
-          ).firstOrNull;
-          isKill = healthBefore > 0 && (m == null || !m.isAlive);
+          bool minionAlive = false;
+          for (final m in gameState.minions) {
+            if (m.instanceId == minionInstanceId) {
+              minionAlive = m.isAlive;
+              break;
+            }
+          }
+          isKill = healthBefore > 0 && !minionAlive;
         }
 
         // Position the indicator above the target
@@ -461,9 +471,11 @@ class CombatSystem {
     if (gameState.isTargetingDummy && gameState.targetDummy != null) {
       final dummy = gameState.targetDummy!;
       final threshold = collisionThreshold ?? 1.8;
-      final distance = (attackerPosition - dummy.position).length;
+      final ddx = attackerPosition.x - dummy.position.x;
+      final ddy = attackerPosition.y - dummy.position.y;
+      final ddz = attackerPosition.z - dummy.position.z;
 
-      if (distance < threshold) {
+      if (ddx * ddx + ddy * ddy + ddz * ddz < threshold * threshold) {
         // Use ability color if provided, otherwise derive from impact color
         final trackingColor = abilityColor ?? _vectorToColor(impactColor);
 
@@ -513,10 +525,8 @@ class CombatSystem {
       return true;
     }
 
-    // Then check minions — snapshot alive status before damage
-    final aliveBeforeIds = gameState.aliveMinions
-        .map((m) => m.instanceId)
-        .toSet();
+    // Then check minions — snapshot alive count before damage
+    final aliveCountBefore = gameState.aliveMinions.length;
     final minionHit = checkAndDamageMinions(
       gameState,
       attackerPosition: attackerPosition,
@@ -538,12 +548,19 @@ class CombatSystem {
         GoalSystem.processEvent(gameState, 'consecutive_melee_hits',
             metadata: {'streak': gameState.consecutiveMeleeHits});
       }
-      // Check for minion kills — emit goal events
-      for (final minion in gameState.minions) {
-        if (aliveBeforeIds.contains(minion.instanceId) && !minion.isAlive) {
-          GoalSystem.processEvent(gameState, 'enemy_killed');
-          GoalSystem.processEvent(
-              gameState, 'kill_${minion.definition.id}');
+      // Check for minion kills — scan for newly dead minions
+      // checkAndDamageMinions hits at most one, so at most one kill per call
+      gameState.refreshAliveMinions();
+      if (gameState.aliveMinions.length < aliveCountBefore) {
+        GoalSystem.processEvent(gameState, 'enemy_killed');
+        // Find the killed minion to emit type-specific goal event
+        for (final minion in gameState.minions) {
+          if (!minion.isAlive && minion.health <= 0) {
+            // Heuristic: recently killed minion (health exactly 0 or below)
+            GoalSystem.processEvent(
+                gameState, 'kill_${minion.definition.id}');
+            break;
+          }
         }
       }
     }
@@ -579,8 +596,10 @@ class CombatSystem {
       amount: damage,
       target: target,
     ));
-    // Cap at 200 entries to prevent memory leak
-    if (gs.combatLogMessages.length > 200) gs.combatLogMessages.removeAt(0);
+    // Cap at 250 entries, batch-trim to 200 to amortize removeRange cost
+    if (gs.combatLogMessages.length > 250) {
+      gs.combatLogMessages.removeRange(0, gs.combatLogMessages.length - 200);
+    }
   }
 
   /// Convert Vector3 color to Flutter Color
@@ -604,11 +623,16 @@ class CombatSystem {
     bool showDamageIndicator = false,
     bool isMelee = false,
   }) {
-    final minion = gameState.minions.where(
-      (m) => m.instanceId == minionInstanceId && m.isAlive
-    ).firstOrNull;
+    Monster? foundMinion;
+    for (final m in gameState.minions) {
+      if (m.instanceId == minionInstanceId && m.isAlive) {
+        foundMinion = m;
+        break;
+      }
+    }
 
-    if (minion == null) return false;
+    if (foundMinion == null) return false;
+    final minion = foundMinion;
 
     final healthBefore = minion.health;
 
@@ -620,8 +644,8 @@ class CombatSystem {
     );
 
     minion.takeDamage(damage);
-    print('$attackType hit ${minion.definition.name} for $damage damage! '
-          'Health: ${minion.health.toStringAsFixed(1)}/${minion.maxHealth}');
+    assert(() { print('$attackType hit ${minion.definition.name} for $damage damage! '
+          'Health: ${minion.health.toStringAsFixed(1)}/${minion.maxHealth}'); return true; }());
 
     if (showDamageIndicator && damage > 0) {
       final indicatorPos = minion.transform.position.clone();
@@ -701,9 +725,9 @@ class CombatSystem {
         ));
       }
 
-      print('[DPS] $abilityName hit Target Dummy for $damage damage${isCritical ? " (CRIT!)" : ""}');
+      assert(() { print('[DPS] $abilityName hit Target Dummy for $damage damage${isCritical ? " (CRIT!)" : ""}'); return true; }());
     } else {
-      print('[DPS] $abilityName missed Target Dummy');
+      assert(() { print('[DPS] $abilityName missed Target Dummy'); return true; }());
     }
 
     return true;
@@ -733,9 +757,11 @@ class CombatSystem {
     if (dummy == null || !dummy.isSpawned) return false;
 
     final threshold = collisionThreshold ?? 1.5;
-    final distance = (attackerPosition - dummy.position).length;
+    final tdx = attackerPosition.x - dummy.position.x;
+    final tdy = attackerPosition.y - dummy.position.y;
+    final tdz = attackerPosition.z - dummy.position.z;
 
-    if (distance < threshold) {
+    if (tdx * tdx + tdy * tdy + tdz * tdz < threshold * threshold) {
       return damageTargetDummy(
         gameState,
         damage: damage,

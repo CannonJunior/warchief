@@ -207,12 +207,20 @@ class Monster {
     return (transform.position - position).length;
   }
 
+  /// Get squared distance to a position (avoids sqrt, use for threshold comparisons)
+  double distanceToSq(Vector3 position) {
+    final dx = transform.position.x - position.x;
+    final dy = transform.position.y - position.y;
+    final dz = transform.position.z - position.z;
+    return dx * dx + dy * dy + dz * dz;
+  }
+
   /// Check if target is in range for an ability
   bool isInRange(Vector3 targetPos, int abilityIndex) {
-    if (abilityIndex < 0 || abilityIndex >= definition.abilities.length) {
-      return distanceTo(targetPos) <= definition.attackRange;
-    }
-    return distanceTo(targetPos) <= definition.abilities[abilityIndex].range;
+    final range = (abilityIndex < 0 || abilityIndex >= definition.abilities.length)
+        ? definition.attackRange
+        : definition.abilities[abilityIndex].range;
+    return distanceToSq(targetPos) <= range * range;
   }
 
   /// Get color for UI health bar based on archetype

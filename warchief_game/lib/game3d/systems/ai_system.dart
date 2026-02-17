@@ -204,15 +204,20 @@ class AISystem {
   /// Helper to update ally in follow mode
   ///
   /// Ally Y position is set to terrain height for proper terrain following.
+  static final math.Random _rng = math.Random();
+
   static void _updateAllyFollowMode(double dt, Ally ally, GameState gameState) {
     final playerPos = gameState.playerTransform!.position;
-    final distanceToPlayer = (ally.transform.position - playerPos).length;
+    final dx = ally.transform.position.x - playerPos.x;
+    final dz = ally.transform.position.z - playerPos.z;
+    final distSq = dx * dx + dz * dz;
     final playerVelocity = gameState.playerMovementTracker.getVelocity();
-    final playerIsMoving = playerVelocity.length > 0.1;
+    final playerIsMoving = playerVelocity.length2 > 0.01; // 0.1^2
 
     // If player is moving and ally is too far, create follow path
     // Reduced from 1.3x to 1.1x for more responsive following
-    if (playerIsMoving && distanceToPlayer > ally.followBufferDistance * 1.1) {
+    final followThreshold = ally.followBufferDistance * 1.1;
+    if (playerIsMoving && distSq > followThreshold * followThreshold) {
       // Calculate target position - predict where player will be
       final predictedPlayerPos = playerPos + playerVelocity * 0.5; // 0.5s prediction
       final toAlly = (ally.transform.position - predictedPlayerPos).normalized();
@@ -228,7 +233,8 @@ class AISystem {
     }
 
     // If ally is very far from player (>2x buffer), immediately start following
-    if (distanceToPlayer > ally.followBufferDistance * 2.0 && ally.currentPath == null) {
+    final farThreshold = ally.followBufferDistance * 2.0;
+    if (distSq > farThreshold * farThreshold && ally.currentPath == null) {
       final toPlayer = (playerPos - ally.transform.position).normalized();
       final targetPos = playerPos - toPlayer * ally.followBufferDistance;
       ally.currentPath = BezierPath.interception(
@@ -240,11 +246,11 @@ class AISystem {
     }
 
     // If player stopped and ally is close enough, stop and re-randomize buffer
-    if (!playerIsMoving && distanceToPlayer <= ally.followBufferDistance * 1.1) {
+    if (!playerIsMoving && distSq <= followThreshold * followThreshold) {
       ally.currentPath = null;
       ally.isMoving = false;
       // Re-randomize buffer distance for next movement (3-5 units)
-      ally.followBufferDistance = math.Random().nextDouble() * 2.0 + 3.0;
+      ally.followBufferDistance = _rng.nextDouble() * 2.0 + 3.0;
     }
 
     // Continue moving along existing path if one exists
@@ -305,17 +311,18 @@ class AISystem {
         gameState.monsterTransform != null &&
         gameState.playerTransform != null) {
 
-      // Skip AI decisions while stunned — monster frozen in place
-      final isStunned = gameState.monsterActiveEffects
-          .any((e) => e.type == StatusEffect.stun);
+      // Single pass to check stun + fear (avoids two separate .any() scans)
+      bool isStunned = false;
+      bool isFeared = false;
+      for (final e in gameState.monsterActiveEffects) {
+        if (e.type == StatusEffect.stun) { isStunned = true; break; }
+        if (e.type == StatusEffect.fear) { isFeared = true; }
+      }
       if (isStunned) {
         gameState.monsterCurrentPath = null;
         return;
       }
 
-      // Skip AI decisions while feared — monster flees uncontrollably
-      final isFeared = gameState.monsterActiveEffects
-          .any((e) => e.type == StatusEffect.fear);
       if (isFeared) {
         // Regenerate flee path if current one completed
         if (gameState.monsterCurrentPath == null) {
@@ -385,15 +392,21 @@ class AISystem {
 
   /// Creates AI context from game state
   static AIContext _createMonsterAIContext(GameState gameState) {
-    final distanceToPlayer = (gameState.monsterTransform!.position - gameState.playerTransform!.position).length;
+    final monsterPos = gameState.monsterTransform!.position;
+    final playerPos = gameState.playerTransform!.position;
+    final mdx = monsterPos.x - playerPos.x;
+    final mdz = monsterPos.z - playerPos.z;
+    final distanceToPlayer = math.sqrt(mdx * mdx + mdz * mdz);
     final playerVelocity = gameState.playerMovementTracker.getVelocity();
 
     // Build ally context list
     final allyContexts = gameState.allies.map((ally) {
+      final adx = ally.transform.position.x - monsterPos.x;
+      final adz = ally.transform.position.z - monsterPos.z;
       return AllyContext(
         position: ally.transform.position,
         health: ally.health,
-        distanceToSelf: (ally.transform.position - gameState.monsterTransform!.position).length,
+        distanceToSelf: math.sqrt(adx * adx + adz * adz),
       );
     }).toList();
 
@@ -881,11 +894,12 @@ class AISystem {
       if (minion.aiTimer >= minion.aiInterval) {
         minion.aiTimer = 0.0;
 
-        // Get distance to player
-        final distanceToPlayer = minion.distanceTo(playerPos);
+        // Get squared distance to player (avoid sqrt for threshold check)
+        final distSqToPlayer = minion.distanceToSq(playerPos);
+        final aggroRange = minion.definition.aggroRange;
 
         // Check if in aggro range
-        if (distanceToPlayer <= minion.definition.aggroRange) {
+        if (distSqToPlayer <= aggroRange * aggroRange) {
           minion.isInCombat = true;
 
           // Execute archetype-specific behavior
@@ -922,20 +936,20 @@ class AISystem {
 
   /// DPS minion AI - aggressive damage dealer
   static void _executeDPSMinionAI(Monster minion, GameState gameState, Vector3 playerPos) {
-    final distanceToPlayer = minion.distanceTo(playerPos);
+    final distSqToPlayer = minion.distanceToSq(playerPos);
 
-    // Find nearest target (player or ally)
+    // Find nearest target (player or ally) using squared distance
     Vector3 targetPos = playerPos;
-    double nearestDist = distanceToPlayer;
+    double nearestDistSq = distSqToPlayer;
     String targetId = 'player'; // Track who we're targeting
 
     // Check if any ally is closer
     for (int i = 0; i < gameState.allies.length; i++) {
       final ally = gameState.allies[i];
       if (ally.health <= 0) continue;
-      final dist = minion.distanceTo(ally.transform.position);
-      if (dist < nearestDist) {
-        nearestDist = dist;
+      final distSq = minion.distanceToSq(ally.transform.position);
+      if (distSq < nearestDistSq) {
+        nearestDistSq = distSq;
         targetPos = ally.transform.position;
         targetId = 'ally_$i';
       }
@@ -944,7 +958,8 @@ class AISystem {
     // Update minion's target tracking
     minion.targetId = targetId;
 
-    if (nearestDist <= minion.definition.attackRange) {
+    final attackRange = minion.definition.attackRange;
+    if (nearestDistSq <= attackRange * attackRange) {
       // In range - attack
       minion.aiState = MonsterAIState.attacking;
       _minionAttack(minion, gameState, targetPos, 0); // Use primary ability
@@ -957,7 +972,7 @@ class AISystem {
 
   /// Support minion AI - buffs allies, debuffs enemies
   static void _executeSupportMinionAI(Monster minion, GameState gameState, Vector3 playerPos) {
-    final distanceToPlayer = minion.distanceTo(playerPos);
+    final distSqToPlayer = minion.distanceToSq(playerPos);
 
     // Default to targeting player
     minion.targetId = 'player';
@@ -981,7 +996,7 @@ class AISystem {
       minion.useAbility(0);
     }
     // Priority 2: Debuff player if in range
-    else if (distanceToPlayer <= minion.definition.attackRange && minion.isAbilityReady(1)) {
+    else if (distSqToPlayer <= minion.definition.attackRange * minion.definition.attackRange && minion.isAbilityReady(1)) {
       minion.aiState = MonsterAIState.casting;
       minion.targetId = 'player';
       // Apply debuff (Curse of Weakness)
@@ -992,6 +1007,7 @@ class AISystem {
     else {
       minion.aiState = MonsterAIState.supporting;
       final optimalRange = 7.0;
+      final distanceToPlayer = math.sqrt(distSqToPlayer);
       if (distanceToPlayer < optimalRange - 1) {
         // Too close - back up
         final awayFromPlayer = (minion.transform.position - playerPos).normalized();
@@ -1006,7 +1022,7 @@ class AISystem {
 
   /// Healer minion AI - heals wounded allies
   static void _executeHealerMinionAI(Monster minion, GameState gameState, Vector3 playerPos) {
-    final distanceToPlayer = minion.distanceTo(playerPos);
+    final distSqToPlayer = minion.distanceToSq(playerPos);
 
     // Find most wounded ally
     Monster? mostWounded;
@@ -1075,7 +1091,7 @@ class AISystem {
       minion.aiState = MonsterAIState.supporting;
       minion.targetId = 'none'; // No target while retreating
       final safeRange = 10.0;
-      if (distanceToPlayer < safeRange) {
+      if (distSqToPlayer < safeRange * safeRange) {
         // Too close - run away
         final awayFromPlayer = (minion.transform.position - playerPos).normalized();
         minion.targetPosition = minion.transform.position + awayFromPlayer * 3.0;
@@ -1085,7 +1101,7 @@ class AISystem {
 
   /// Tank minion AI - engages player, protects allies
   static void _executeTankMinionAI(Monster minion, GameState gameState, Vector3 playerPos) {
-    final distanceToPlayer = minion.distanceTo(playerPos);
+    final distSqToPlayer = minion.distanceToSq(playerPos);
 
     // Tank always targets player
     minion.targetId = 'player';
@@ -1103,7 +1119,7 @@ class AISystem {
       minion.useAbility(2);
     }
     // Priority 3: Attack if in range
-    else if (distanceToPlayer <= minion.definition.attackRange) {
+    else if (distSqToPlayer <= minion.definition.attackRange * minion.definition.attackRange) {
       if (minion.isAbilityReady(0)) {
         // Shield Bash
         minion.aiState = MonsterAIState.attacking;
@@ -1169,10 +1185,12 @@ class AISystem {
         }
         // Damage allies in AoE
         if (ability.targetType == AbilityTargetType.areaOfEffect) {
+          final rangeSq = ability.range * ability.range;
           for (final ally in gameState.allies) {
             if (ally.health <= 0) continue;
-            final distToAlly = (ally.transform.position - minion.transform.position).length;
-            if (distToAlly <= ability.range) {
+            final adx = ally.transform.position.x - minion.transform.position.x;
+            final adz = ally.transform.position.z - minion.transform.position.z;
+            if (adx * adx + adz * adz <= rangeSq) {
               ally.health = math.max(0, ally.health - ability.damage);
             }
           }
@@ -1183,34 +1201,43 @@ class AISystem {
 
   /// Update minion projectiles
   static void updateMinionProjectiles(double dt, GameState gameState) {
+    // Cache wind force once per frame
+    final hasWind = globalWindState != null;
+    final windForceX = hasWind ? globalWindState!.getProjectileForce()[0] : 0.0;
+    final windForceZ = hasWind ? globalWindState!.getProjectileForce()[1] : 0.0;
+    final playerPos = gameState.playerTransform?.position;
+
     for (final minion in gameState.aliveMinions) {
       minion.projectiles.removeWhere((projectile) {
-        // Apply wind force to minion projectile velocity
-        if (globalWindState != null) {
-          final windForce = globalWindState!.getProjectileForce();
-          projectile.velocity.x += windForce[0] * dt;
-          projectile.velocity.z += windForce[1] * dt;
+        // Apply cached wind force to minion projectile velocity
+        if (hasWind) {
+          projectile.velocity.x += windForceX * dt;
+          projectile.velocity.z += windForceZ * dt;
         }
         projectile.transform.position += projectile.velocity * dt;
         projectile.lifetime -= dt;
 
-        // Check collision with player
-        if (gameState.playerTransform != null) {
-          final distToPlayer = (projectile.transform.position - gameState.playerTransform!.position).length;
-          if (distToPlayer < 1.0) {
-            // Hit player
+        final projPos = projectile.transform.position;
+
+        // Check collision with player (squared distance, threshold 1.0^2 = 1.0)
+        if (playerPos != null) {
+          final pdx = projPos.x - playerPos.x;
+          final pdy = projPos.y - playerPos.y;
+          final pdz = projPos.z - playerPos.z;
+          if (pdx * pdx + pdy * pdy + pdz * pdz < 1.0) {
             final damage = minion.definition.effectiveDamage;
             gameState.playerHealth = math.max(0, gameState.playerHealth - damage);
             return true;
           }
         }
 
-        // Check collision with allies
+        // Check collision with allies (squared distance, threshold 0.8^2 = 0.64)
         for (final ally in gameState.allies) {
           if (ally.health <= 0) continue;
-          final distToAlly = (projectile.transform.position - ally.transform.position).length;
-          if (distToAlly < 0.8) {
-            // Hit ally
+          final adx = projPos.x - ally.transform.position.x;
+          final ady = projPos.y - ally.transform.position.y;
+          final adz = projPos.z - ally.transform.position.z;
+          if (adx * adx + ady * ady + adz * adz < 0.64) {
             final damage = minion.definition.effectiveDamage;
             ally.health = math.max(0, ally.health - damage);
             return true;

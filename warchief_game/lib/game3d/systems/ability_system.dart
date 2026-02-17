@@ -1863,15 +1863,16 @@ class AbilitySystem {
   static bool _isInCone(Vector3 origin, double facingX, double facingZ, Vector3 target, double halfAngleDeg, double range) {
     final dx = target.x - origin.x;
     final dz = target.z - origin.z;
-    final dist = math.sqrt(dx * dx + dz * dz);
-    if (dist > range || dist < 0.001) return false;
+    final distSq = dx * dx + dz * dz;
+    if (distSq > range * range || distSq < 0.000001) return false;
 
-    // Dot product for angle check
+    // Compare dot product directly to cos(halfAngle) — avoids expensive acos()
+    final dist = math.sqrt(distSq);
     final dirX = dx / dist;
     final dirZ = dz / dist;
     final dot = (facingX * dirX + facingZ * dirZ).clamp(-1.0, 1.0);
-    final angleDeg = math.acos(dot) * 180.0 / math.pi;
-    return angleDeg <= halfAngleDeg;
+    final minDot = math.cos(halfAngleDeg * math.pi / 180.0);
+    return dot >= minDot;
   }
 
   // ==================== GENERIC ABILITY HELPERS ====================
@@ -2108,10 +2109,20 @@ class AbilitySystem {
 
   /// Updates all ranged projectiles (fireballs, frost bolts, etc.) with homing and collision
   static void updateAbility2(double dt, GameState gameState) {
+    // Cache wind force once per frame instead of per projectile
+    final hasWind = globalWindState != null;
+    final windForceX = hasWind ? globalWindState!.getProjectileForce()[0] : 0.0;
+    final windForceZ = hasWind ? globalWindState!.getProjectileForce()[1] : 0.0;
+
     gameState.fireballs.removeWhere((projectile) {
+      // Lookup target position once and reuse for homing + collision
+      Vector3? targetPos;
+      if (projectile.targetId != null) {
+        targetPos = _getTargetPosition(gameState, projectile.targetId!);
+      }
+
       // Update homing behavior if projectile is tracking a target
       if (projectile.isHoming && projectile.targetId != null) {
-        final targetPos = _getTargetPosition(gameState, projectile.targetId!);
         if (targetPos != null) {
           // Recalculate velocity toward target
           final direction = (targetPos - projectile.transform.position).normalized();
@@ -2122,11 +2133,10 @@ class AbilitySystem {
         }
       }
 
-      // Apply wind force to projectile trajectory
-      if (globalWindState != null) {
-        final windForce = globalWindState!.getProjectileForce();
-        projectile.velocity.x += windForce[0] * dt;
-        projectile.velocity.z += windForce[1] * dt;
+      // Apply cached wind force to projectile trajectory
+      if (hasWind) {
+        projectile.velocity.x += windForceX * dt;
+        projectile.velocity.z += windForceZ * dt;
       }
 
       // Move projectile
@@ -2134,17 +2144,16 @@ class AbilitySystem {
       projectile.lifetime -= dt;
 
       // Check collision with the specific target first (for homing projectiles)
-      if (projectile.targetId != null) {
-        final targetPos = _getTargetPosition(gameState, projectile.targetId!);
-        if (targetPos != null) {
-          final distance = (projectile.transform.position - targetPos).length;
-          // Use a generous collision threshold for homing projectiles
-          if (distance < 1.0) {
+      if (targetPos != null) {
+          final dx = projectile.transform.position.x - targetPos.x;
+          final dy = projectile.transform.position.y - targetPos.y;
+          final dz = projectile.transform.position.z - targetPos.z;
+          // Use a generous collision threshold for homing projectiles (1.0 squared = 1.0)
+          if (dx * dx + dy * dy + dz * dz < 1.0) {
             // Direct hit on target - use projectile's stored damage data
             _damageTargetWithProjectile(gameState, projectile.targetId!, projectile);
             return true;
           }
-        }
       }
 
       // Also check collision with any enemy (in case projectile passes near others)

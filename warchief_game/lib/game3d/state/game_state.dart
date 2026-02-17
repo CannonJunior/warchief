@@ -125,11 +125,22 @@ class GameState {
   /// All four mana colors — returned when attunement is not required.
   static const Set<ManaColor> _allManaColors = {ManaColor.blue, ManaColor.red, ManaColor.white, ManaColor.green};
 
+  /// Cached player mana attunements. Invalidated when equipment or temporary attunements change.
+  Set<ManaColor>? _cachedPlayerManaAttunements;
+
+  /// Invalidate cached player mana attunements (call on equip/unequip/buff change).
+  void invalidatePlayerAttunementCache() {
+    _cachedPlayerManaAttunements = null;
+  }
+
   /// Mana colors the Warchief is attuned to (equipped items + temporary).
-  /// When attunement requirement is disabled, returns all three colors.
+  /// When attunement requirement is disabled, returns all four colors.
+  /// Cached until equipment or temporary attunements change.
   Set<ManaColor> get playerManaAttunements {
     if (!(globalGameplaySettings?.attunementRequired ?? true)) return _allManaColors;
-    return {...playerInventory.manaAttunements, ...temporaryAttunements};
+    if (_cachedPlayerManaAttunements != null) return _cachedPlayerManaAttunements!;
+    _cachedPlayerManaAttunements = {...playerInventory.manaAttunements, ...temporaryAttunements};
+    return _cachedPlayerManaAttunements!;
   }
 
   /// Wind state for wind simulation
@@ -288,7 +299,7 @@ class GameState {
       final allyBlueRegen = leyLineManager!.calculateManaRegen(allyPos.x, allyPos.z);
       final allyOnPowerNode = leyLineManager!.isOnPowerNode(allyPos.x, allyPos.z);
       final allyAttunements = (globalGameplaySettings?.attunementRequired ?? true)
-          ? {...ally.inventory.manaAttunements, ...ally.temporaryAttunements}
+          ? ally.combinedManaAttunements
           : _allManaColors;
       final allyItemBlueBonus = ally.inventory.totalEquippedStats.blueManaRegen;
       final allyItemRedBonus = ally.inventory.totalEquippedStats.redManaRegen;
@@ -368,7 +379,7 @@ class GameState {
     for (final ally in allies) {
       if (ally.health <= 0) continue;
       final allyAttunements = (globalGameplaySettings?.attunementRequired ?? true)
-          ? {...ally.inventory.manaAttunements, ...ally.temporaryAttunements}
+          ? ally.combinedManaAttunements
           : _allManaColors;
 
       if (allyAttunements.contains(ManaColor.white)) {
@@ -490,27 +501,27 @@ class GameState {
 
       // 2. Proximity regen: count green-attuned characters within range
       int proximityCount = 0;
+      final proximityRadiusSq = proximityRadius * proximityRadius;
       for (final ally in allies) {
         if (ally.health <= 0) continue;
         final allyAttunements = (globalGameplaySettings?.attunementRequired ?? true)
-            ? {...ally.inventory.manaAttunements, ...ally.temporaryAttunements}
+            ? ally.combinedManaAttunements
             : _allManaColors;
         if (!allyAttunements.contains(ManaColor.green)) continue;
         final dx = ally.transform.position.x - px;
         final dz = ally.transform.position.z - pz;
-        final dist = sqrt(dx * dx + dz * dz);
-        if (dist <= proximityRadius) proximityCount++;
+        if (dx * dx + dz * dz <= proximityRadiusSq) proximityCount++;
       }
       final proximityRegen = proximityCount * proximityRegenPerUser;
 
       // 3. Spirit being regen: count spirit beings nearby (not self)
       int spiritCount = 0;
+      final spiritBeingRadiusSq = spiritBeingRadius * spiritBeingRadius;
       for (final ally in allies) {
         if (ally.health <= 0 || !ally.inSpiritForm) continue;
         final dx = ally.transform.position.x - px;
         final dz = ally.transform.position.z - pz;
-        final dist = sqrt(dx * dx + dz * dz);
-        if (dist <= spiritBeingRadius) spiritCount++;
+        if (dx * dx + dz * dz <= spiritBeingRadiusSq) spiritCount++;
       }
       final spiritRegen = spiritCount * spiritBeingRegenBonus;
 
@@ -535,7 +546,7 @@ class GameState {
     for (final ally in allies) {
       if (ally.health <= 0) continue;
       final allyAttunements = (globalGameplaySettings?.attunementRequired ?? true)
-          ? {...ally.inventory.manaAttunements, ...ally.temporaryAttunements}
+          ? ally.combinedManaAttunements
           : _allManaColors;
       if (!allyAttunements.contains(ManaColor.green)) continue;
 
@@ -554,37 +565,39 @@ class GameState {
 
       // Proximity regen from other green characters
       int allyProxCount = 0;
+      final proxRadSq = proximityRadius * proximityRadius;
       // Check warchief
       if (hasGreen && playerTransform != null) {
         final dx = playerTransform!.position.x - ax;
         final dz = playerTransform!.position.z - az;
-        if (sqrt(dx * dx + dz * dz) <= proximityRadius) allyProxCount++;
+        if (dx * dx + dz * dz <= proxRadSq) allyProxCount++;
       }
       // Check other allies
       for (final otherAlly in allies) {
         if (otherAlly == ally || otherAlly.health <= 0) continue;
         final otherAttunements = (globalGameplaySettings?.attunementRequired ?? true)
-            ? {...otherAlly.inventory.manaAttunements, ...otherAlly.temporaryAttunements}
+            ? otherAlly.combinedManaAttunements
             : _allManaColors;
         if (!otherAttunements.contains(ManaColor.green)) continue;
         final dx = otherAlly.transform.position.x - ax;
         final dz = otherAlly.transform.position.z - az;
-        if (sqrt(dx * dx + dz * dz) <= proximityRadius) allyProxCount++;
+        if (dx * dx + dz * dz <= proxRadSq) allyProxCount++;
       }
       final allyProxRegen = allyProxCount * proximityRegenPerUser;
 
       // Spirit being regen (not self)
       int allySpiritCount = 0;
+      final spiritRadSq = spiritBeingRadius * spiritBeingRadius;
       if (playerInSpiritForm && playerTransform != null) {
         final dx = playerTransform!.position.x - ax;
         final dz = playerTransform!.position.z - az;
-        if (sqrt(dx * dx + dz * dz) <= spiritBeingRadius) allySpiritCount++;
+        if (dx * dx + dz * dz <= spiritRadSq) allySpiritCount++;
       }
       for (final otherAlly in allies) {
         if (otherAlly == ally || otherAlly.health <= 0 || !otherAlly.inSpiritForm) continue;
         final dx = otherAlly.transform.position.x - ax;
         final dz = otherAlly.transform.position.z - az;
-        if (sqrt(dx * dx + dz * dz) <= spiritBeingRadius) allySpiritCount++;
+        if (dx * dx + dz * dz <= spiritRadSq) allySpiritCount++;
       }
       final allySpiritRegen = allySpiritCount * spiritBeingRegenBonus;
 
@@ -817,7 +830,7 @@ class GameState {
     if (isWarchiefActive) return playerManaAttunements;
     final ally = activeAlly;
     if (ally == null) return {};
-    return {...ally.inventory.manaAttunements, ...ally.temporaryAttunements};
+    return ally.combinedManaAttunements;
   }
 
   /// Haste percentage for the active character (reduces cast/windup times).
@@ -1056,8 +1069,18 @@ class GameState {
     print('[MINIONS] Total Monster Power: ${DefaultMinionSpawns.totalMonsterPower}');
   }
 
-  /// Get all alive minions
-  List<Monster> get aliveMinions => minions.where((m) => m.isAlive).toList();
+  /// Cached list of alive minions, rebuilt once per frame via [refreshAliveMinions].
+  List<Monster> _cachedAliveMinions = [];
+  int _aliveMinionsFrame = -1;
+
+  /// Get all alive minions (cached per frame).
+  /// Call [refreshAliveMinions] once at the start of each game loop tick.
+  List<Monster> get aliveMinions => _cachedAliveMinions;
+
+  /// Rebuild the alive minions cache. Call once per frame at the start of the update loop.
+  void refreshAliveMinions() {
+    _cachedAliveMinions = minions.where((m) => m.isAlive).toList();
+  }
 
   /// Get minions by archetype
   List<Monster> getMinionsByArchetype(MonsterArchetype archetype) {

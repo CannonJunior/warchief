@@ -15,6 +15,12 @@ class VoronoiSite {
     final dz = z - pz;
     return math.sqrt(dx * dx + dz * dz);
   }
+
+  double distanceToSq(double px, double pz) {
+    final dx = x - px;
+    final dz = z - pz;
+    return dx * dx + dz * dz;
+  }
 }
 
 /// An edge in the Voronoi diagram representing a Ley Line segment
@@ -85,8 +91,20 @@ class LeyLineSegment {
     return math.sqrt(dx * dx + dz * dz);
   }
 
+  /// Get squared distance from a point to this segment (avoids sqrt)
+  double distanceToSq(double px, double pz) {
+    final closest = closestPointTo(px, pz);
+    final dx = px - closest.x;
+    final dz = pz - closest.z;
+    return dx * dx + dz * dz;
+  }
+
+  /// Cached center X/Z (avoids Vector3 allocation per access)
+  late final double centerX = (x1 + x2) / 2;
+  late final double centerZ = (z1 + z2) / 2;
+
   /// Get the center point of this segment
-  Vector3 get center => Vector3((x1 + x2) / 2, 0, (z1 + z2) / 2);
+  Vector3 get center => Vector3(centerX, 0, centerZ);
 
   /// Get start point as Vector3
   Vector3 get start => Vector3(x1, 0, z1);
@@ -201,12 +219,13 @@ class LeyLineManager {
         // Check if these sites are "neighbors" (no other site closer to midpoint)
         final midX = (siteA.x + siteB.x) / 2;
         final midZ = (siteA.z + siteB.z) / 2;
-        final distToMid = siteA.distanceTo(midX, midZ);
+        final distToMidSq = siteA.distanceToSq(midX, midZ);
+        final thresholdSq = distToMidSq * 0.81; // 0.9^2
 
         bool isNeighbor = true;
         for (int k = 0; k < _sites.length; k++) {
           if (k == i || k == j) continue;
-          if (_sites[k].distanceTo(midX, midZ) < distToMid * 0.9) {
+          if (_sites[k].distanceToSq(midX, midZ) < thresholdSq) {
             isNeighbor = false;
             break;
           }
@@ -377,16 +396,22 @@ class LeyLineManager {
     );
   }
 
+  /// Reusable list for getVisibleSegments to avoid per-frame allocation
+  final List<LeyLineSegment> _visibleSegmentsCache = [];
+
   /// Get segments visible within a certain radius of a position
   List<LeyLineSegment> getVisibleSegments(double x, double z, double radius) {
-    return _segments.where((seg) {
-      // Check if segment center is within view radius
-      final center = seg.center;
-      final dx = center.x - x;
-      final dz = center.z - z;
-      final dist = math.sqrt(dx * dx + dz * dz);
-      return dist < radius + seg.length / 2;
-    }).toList();
+    _visibleSegmentsCache.clear();
+    for (final seg in _segments) {
+      // Use cached center coords and squared distance (no Vector3 alloc, no sqrt)
+      final dx = seg.centerX - x;
+      final dz = seg.centerZ - z;
+      final threshold = radius + seg.length / 2;
+      if (dx * dx + dz * dz < threshold * threshold) {
+        _visibleSegmentsCache.add(seg);
+      }
+    }
+    return _visibleSegmentsCache;
   }
 
   /// Find the closest Ley Line to a position
@@ -394,12 +419,12 @@ class LeyLineManager {
     if (_segments.isEmpty) return null;
 
     LeyLineSegment? closest;
-    double closestDist = double.infinity;
+    double closestDistSq = double.infinity;
 
     for (final seg in _segments) {
-      final dist = seg.distanceTo(x, z);
-      if (dist < closestDist) {
-        closestDist = dist;
+      final distSq = seg.distanceToSq(x, z);
+      if (distSq < closestDistSq) {
+        closestDistSq = distSq;
         closest = seg;
       }
     }
@@ -408,7 +433,7 @@ class LeyLineManager {
 
     return LeyLineResult(
       segment: closest,
-      distance: closestDist,
+      distance: math.sqrt(closestDistSq),
       closestPoint: closest.closestPointTo(x, z),
     );
   }
