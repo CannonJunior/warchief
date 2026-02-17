@@ -59,6 +59,32 @@ class ManaConfig extends ChangeNotifier {
   double get redManaDecayDelay =>
       _resolve('red_mana.decay_delay', 5.0);
 
+  // ==================== GREEN MANA GETTERS ====================
+
+  double get maxGreenMana =>
+      _resolve('green_mana.max', 100.0);
+
+  double get grassBaseRegen =>
+      _resolve('green_mana.grass_base_regen', 1.0);
+
+  double get proximityRegenPerUser =>
+      _resolve('green_mana.proximity_regen_per_user', 1.0);
+
+  double get proximityRadius =>
+      _resolve('green_mana.proximity_radius', 2.0);
+
+  double get spiritBeingRegenBonus =>
+      _resolve('green_mana.spirit_being_regen_bonus', 3.0);
+
+  double get spiritBeingRadius =>
+      _resolve('green_mana.spirit_being_radius', 6.0);
+
+  double get greenManaDecayRate =>
+      _resolve('green_mana.decay_rate', 0.5);
+
+  double get greenManaDecayDelay =>
+      _resolve('green_mana.decay_delay', 3.0);
+
   // ==================== INITIALIZATION ====================
 
   /// Load defaults from JSON asset, then overrides from SharedPreferences.

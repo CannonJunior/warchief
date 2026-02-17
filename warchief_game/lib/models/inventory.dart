@@ -119,8 +119,8 @@ class Inventory {
     int chuff = 0, xVal = 0, zeal = 0;
     int armor = 0, damage = 0, critChance = 0;
     int health = 0;
-    int maxBlueMana = 0, maxRedMana = 0, maxWhiteMana = 0;
-    int blueManaRegen = 0, redManaRegen = 0, whiteManaRegen = 0;
+    int maxBlueMana = 0, maxRedMana = 0, maxWhiteMana = 0, maxGreenMana = 0;
+    int blueManaRegen = 0, redManaRegen = 0, whiteManaRegen = 0, greenManaRegen = 0;
     int haste = 0, melt = 0;
 
     for (final item in _equipment.values) {
@@ -139,9 +139,11 @@ class Inventory {
         maxBlueMana += item.stats.maxBlueMana;
         maxRedMana += item.stats.maxRedMana;
         maxWhiteMana += item.stats.maxWhiteMana;
+        maxGreenMana += item.stats.maxGreenMana;
         blueManaRegen += item.stats.blueManaRegen;
         redManaRegen += item.stats.redManaRegen;
         whiteManaRegen += item.stats.whiteManaRegen;
+        greenManaRegen += item.stats.greenManaRegen;
         haste += item.stats.haste;
         melt += item.stats.melt;
       }
@@ -162,9 +164,11 @@ class Inventory {
       maxBlueMana: maxBlueMana,
       maxRedMana: maxRedMana,
       maxWhiteMana: maxWhiteMana,
+      maxGreenMana: maxGreenMana,
       blueManaRegen: blueManaRegen,
       redManaRegen: redManaRegen,
       whiteManaRegen: whiteManaRegen,
+      greenManaRegen: greenManaRegen,
       haste: haste,
       melt: melt,
     );

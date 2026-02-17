@@ -78,6 +78,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
   late TextEditingController _rangeCtrl;
   late TextEditingController _healAmountCtrl;
   late TextEditingController _manaCostCtrl;
+  late TextEditingController _secondaryManaCostCtrl;
   late TextEditingController _projectileSpeedCtrl;
   late TextEditingController _projectileSizeCtrl;
   late TextEditingController _impactSizeCtrl;
@@ -102,6 +103,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
   // Dropdown values (stored as strings for custom value support)
   late String _selectedType;
   late String _selectedManaColor;
+  late String _selectedSecondaryManaColor;
   late String _selectedStatusEffect;
   late String _selectedCategory;
   late bool _piercing;
@@ -138,6 +140,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
     _rangeCtrl = TextEditingController(text: effective.range.toString());
     _healAmountCtrl = TextEditingController(text: effective.healAmount.toString());
     _manaCostCtrl = TextEditingController(text: effective.manaCost.toString());
+    _secondaryManaCostCtrl = TextEditingController(text: effective.secondaryManaCost.toString());
     _projectileSpeedCtrl = TextEditingController(text: effective.projectileSpeed.toString());
     _projectileSizeCtrl = TextEditingController(text: effective.projectileSize.toString());
     _impactSizeCtrl = TextEditingController(text: effective.impactSize.toString());
@@ -166,6 +169,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
 
     _selectedType = effective.type.name;
     _selectedManaColor = effective.manaColor.name;
+    _selectedSecondaryManaColor = effective.secondaryManaColor.name;
     _selectedStatusEffect = effective.statusEffect.name;
     _selectedCategory = effective.category;
     _piercing = effective.piercing;
@@ -182,6 +186,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
     _rangeCtrl.dispose();
     _healAmountCtrl.dispose();
     _manaCostCtrl.dispose();
+    _secondaryManaCostCtrl.dispose();
     _projectileSpeedCtrl.dispose();
     _projectileSizeCtrl.dispose();
     _impactSizeCtrl.dispose();
@@ -244,6 +249,13 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
     }
 
     checkDbl('manaCost', _manaCostCtrl.text, original.manaCost);
+
+    final secManaEnum = ManaColor.values.where((m) => m.name == _selectedSecondaryManaColor);
+    if (secManaEnum.isNotEmpty && secManaEnum.first != original.secondaryManaColor) {
+      overrides['secondaryManaColor'] = secManaEnum.first.index;
+    }
+    checkDbl('secondaryManaCost', _secondaryManaCostCtrl.text, original.secondaryManaCost);
+
     checkDbl('projectileSpeed', _projectileSpeedCtrl.text, original.projectileSpeed);
     checkDbl('projectileSize', _projectileSizeCtrl.text, original.projectileSize);
     checkDbl('impactSize', _impactSizeCtrl.text, original.impactSize);
@@ -326,6 +338,8 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
       healAmount: double.tryParse(_healAmountCtrl.text) ?? 0.0,
       manaColor: ManaColor.values.firstWhere((m) => m.name == _selectedManaColor, orElse: () => ManaColor.none),
       manaCost: double.tryParse(_manaCostCtrl.text) ?? 0.0,
+      secondaryManaColor: ManaColor.values.firstWhere((m) => m.name == _selectedSecondaryManaColor, orElse: () => ManaColor.none),
+      secondaryManaCost: double.tryParse(_secondaryManaCostCtrl.text) ?? 0.0,
       projectileSpeed: double.tryParse(_projectileSpeedCtrl.text) ?? 0.0,
       projectileSize: double.tryParse(_projectileSizeCtrl.text) ?? 0.0,
       impactSize: double.tryParse(_impactSizeCtrl.text) ?? 0.5,
@@ -572,6 +586,15 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
         onChanged: (v) => setState(() => _selectedManaColor = v),
       ),
       _buildNumericRow('Mana Cost', _manaCostCtrl, 'manaCost'),
+      _buildDropdownWithAddNew(
+        label: 'Secondary Mana Color',
+        tooltipKey: 'manaColor',
+        builtInValues: ManaColor.values.map((m) => m.name).toList(),
+        customKey: 'secondaryManaColor',
+        selectedValue: _selectedSecondaryManaColor,
+        onChanged: (v) => setState(() => _selectedSecondaryManaColor = v),
+      ),
+      _buildNumericRow('Secondary Mana Cost', _secondaryManaCostCtrl, 'secondaryManaCost'),
     ]);
   }
 

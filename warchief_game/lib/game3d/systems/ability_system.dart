@@ -19,7 +19,7 @@ import '../../models/active_effect.dart';
 import '../utils/bezier_path.dart';
 
 /// Mana type enumeration for abilities
-enum _ManaType { none, blue, red, white }
+enum _ManaType { none, blue, red, white, green }
 
 /// Ability System - Handles all player ability logic
 ///
@@ -271,21 +271,30 @@ class AbilitySystem {
     _ManaType manaType;
     if (abilityData != null && abilityData.requiresMana) {
       manaCost = abilityData.manaCost;
-      manaType = abilityData.manaColor == ManaColor.red
-          ? _ManaType.red
-          : abilityData.manaColor == ManaColor.white
-              ? _ManaType.white
-              : _ManaType.blue;
+      manaType = _manaColorToType(abilityData.manaColor);
     } else {
       (manaCost, manaType) = _getManaCostAndType(abilityName);
     }
 
-    // Attunement gate: character must be attuned to the required mana color
+    // Secondary mana (dual-mana abilities)
+    double secondaryManaCost = 0.0;
+    _ManaType secondaryManaType = _ManaType.none;
+    if (abilityData != null && abilityData.requiresDualMana) {
+      secondaryManaCost = abilityData.secondaryManaCost;
+      secondaryManaType = _manaColorToType(abilityData.secondaryManaColor);
+    }
+
+    // Attunement gate: character must be attuned to ALL required mana colors
     if (manaCost > 0 && manaType != _ManaType.none) {
-      final requiredColor = manaType == _ManaType.blue ? ManaColor.blue
-          : manaType == _ManaType.red ? ManaColor.red : ManaColor.white;
+      final requiredColor = _manaTypeToColor(manaType);
       if (!gameState.activeManaAttunements.contains(requiredColor)) {
         return; // Not attuned to required mana color
+      }
+    }
+    if (secondaryManaCost > 0 && secondaryManaType != _ManaType.none) {
+      final requiredColor = _manaTypeToColor(secondaryManaType);
+      if (!gameState.activeManaAttunements.contains(requiredColor)) {
+        return; // Not attuned to required secondary mana color
       }
     }
 
@@ -295,24 +304,10 @@ class AbilitySystem {
       manaCost = 0;
     }
 
-    if (manaCost > 0) {
-      if (manaType == _ManaType.blue) {
-        if (!gameState.activeHasBlueMana(manaCost)) {
-          print('[MANA] Not enough blue mana for $abilityName (need $manaCost, have ${gameState.activeBlueMana.toStringAsFixed(0)})');
-          return;
-        }
-      } else if (manaType == _ManaType.red) {
-        if (!gameState.activeHasRedMana(manaCost)) {
-          print('[MANA] Not enough red mana for $abilityName (need $manaCost, have ${gameState.activeRedMana.toStringAsFixed(0)})');
-          return;
-        }
-      } else if (manaType == _ManaType.white) {
-        if (!gameState.activeHasWhiteMana(manaCost)) {
-          print('[MANA] Not enough white mana for $abilityName (need $manaCost, have ${gameState.activeWhiteMana.toStringAsFixed(0)})');
-          return;
-        }
-      }
-    }
+    // Check primary mana availability
+    if (manaCost > 0 && !_activeHasMana(gameState, manaType, manaCost, abilityName)) return;
+    // Check secondary mana availability
+    if (secondaryManaCost > 0 && !_activeHasMana(gameState, secondaryManaType, secondaryManaCost, abilityName)) return;
 
     // Check for cast-time abilities (must be stationary)
     // Silent Mind: skip cast time for white mana abilities, execute instantly
@@ -325,7 +320,9 @@ class AbilitySystem {
         // the mana is never spent and the ability remains available.
         gameState.pendingManaCost = manaCost;
         gameState.pendingManaIsBlue = manaType == _ManaType.blue;
-        gameState.pendingManaType = manaType == _ManaType.blue ? 0 : manaType == _ManaType.red ? 1 : 2;
+        gameState.pendingManaType = _manaTypeToIndex(manaType);
+        _pendingSecondaryManaCost = secondaryManaCost;
+        _pendingSecondaryManaType = _manaTypeToIndex(secondaryManaType);
         _startCastTimeAbility(abilityData, slotIndex, gameState);
         return;
       }
@@ -336,24 +333,16 @@ class AbilitySystem {
       // Defer mana spending until the windup completes.
       gameState.pendingManaCost = manaCost;
       gameState.pendingManaIsBlue = manaType == _ManaType.blue;
-      gameState.pendingManaType = manaType == _ManaType.blue ? 0 : manaType == _ManaType.red ? 1 : 2;
+      gameState.pendingManaType = _manaTypeToIndex(manaType);
+      _pendingSecondaryManaCost = secondaryManaCost;
+      _pendingSecondaryManaType = _manaTypeToIndex(secondaryManaType);
       _startWindupAbility(abilityData, slotIndex, gameState);
       return;
     }
 
     // Spend mana for instant abilities
-    if (manaCost > 0) {
-      if (manaType == _ManaType.blue) {
-        gameState.activeSpendBlueMana(manaCost);
-        print('[MANA] Spent $manaCost blue mana for $abilityName');
-      } else if (manaType == _ManaType.red) {
-        gameState.activeSpendRedMana(manaCost);
-        print('[MANA] Spent $manaCost red mana for $abilityName');
-      } else if (manaType == _ManaType.white) {
-        gameState.activeSpendWhiteMana(manaCost);
-        print('[MANA] Spent $manaCost white mana for $abilityName');
-      }
-    }
+    _spendManaByType(gameState, manaType, manaCost, abilityName);
+    _spendManaByType(gameState, secondaryManaType, secondaryManaCost, abilityName);
 
     // Consume Silent Mind after a white mana ability is used
     if (gameState.silentMindActive && manaType == _ManaType.white) {
@@ -434,32 +423,53 @@ class AbilitySystem {
         _executeShadowStep(slotIndex, gameState);
         break;
 
-      // Healer abilities
-      case 'Holy Light':
-        _executeHolyLight(slotIndex, gameState);
-        break;
-      case 'Rejuvenation':
-        _executeRejuvenation(slotIndex, gameState);
-        break;
-      case 'Circle of Healing':
-        _executeCircleOfHealing(slotIndex, gameState);
-        break;
-      case 'Blessing of Strength':
-        _executeBlessingOfStrength(slotIndex, gameState);
-        break;
-      case 'Purify':
-        _executePurify(slotIndex, gameState);
+      // Spiritkin abilities (green + red)
+      case 'Primal Roar':
+      case 'Spirit Claws':
+      case 'Verdant Bulwark':
+      case 'Bloodroot Surge':
+      case 'Feral Lunge':
+      case 'Aspect of the Beast':
+      case 'Vine Lash':
+      case 'Nature\'s Cataclysm':
+      case 'Regenerative Bark':
+      case 'Totem of the Wild':
+        // Data-driven execution via generic handler
+        if (abilityData != null) {
+          _executeGenericAbility(slotIndex, gameState, abilityData);
+        }
         break;
 
-      // Nature abilities
-      case 'Entangling Roots':
-        _executeEntanglingRoots(slotIndex, gameState);
+      // Stormheart abilities (white + red)
+      case 'Thunder Strike':
+      case 'Storm Bolt':
+      case 'Tempest Fury':
+      case 'Eye of the Storm':
+      case 'Blood Thunder':
+      case 'Avatar of Storms':
+      case 'Lightning Dash':
+      case 'Static Charge':
+      case 'Thunderclap':
+      case 'Conduit':
+        if (abilityData != null) {
+          _executeGenericAbility(slotIndex, gameState, abilityData);
+        }
         break;
-      case 'Thorns':
-        _executeThorns(slotIndex, gameState);
-        break;
-      case 'Nature\'s Wrath':
-        _executeNaturesWrath(slotIndex, gameState);
+
+      // Greenseer abilities (green healer)
+      case 'Life Thread':
+      case 'Spirit Bloom':
+      case 'Verdant Embrace':
+      case 'Soul Shield':
+      case 'Nature\'s Grace':
+      case 'Ethereal Form':
+      case 'Cleansing Rain':
+      case 'Rejuvenating Roots':
+      case 'Harmony':
+      case 'Awakening':
+        if (abilityData != null) {
+          _executeGenericAbility(slotIndex, gameState, abilityData);
+        }
         break;
 
       // Necromancer abilities
@@ -637,6 +647,102 @@ class AbilitySystem {
     print('[WINDUP] Starting ${abilityData.name} (${windupTime.toStringAsFixed(2)}s windup${haste > 0 ? ', $haste% haste' : ''}, ${(movementSpeed * 100).toInt()}% movement)');
   }
 
+  /// Pending secondary mana cost for dual-mana abilities (deferred during cast/windup).
+  static double _pendingSecondaryManaCost = 0.0;
+  /// Pending secondary mana type index (0=blue, 1=red, 2=white, 3=green).
+  static int _pendingSecondaryManaType = 0;
+
+  /// Convert ManaColor to internal _ManaType.
+  static _ManaType _manaColorToType(ManaColor color) {
+    switch (color) {
+      case ManaColor.blue: return _ManaType.blue;
+      case ManaColor.red: return _ManaType.red;
+      case ManaColor.white: return _ManaType.white;
+      case ManaColor.green: return _ManaType.green;
+      case ManaColor.none: return _ManaType.none;
+    }
+  }
+
+  /// Convert _ManaType to ManaColor.
+  static ManaColor _manaTypeToColor(_ManaType type) {
+    switch (type) {
+      case _ManaType.blue: return ManaColor.blue;
+      case _ManaType.red: return ManaColor.red;
+      case _ManaType.white: return ManaColor.white;
+      case _ManaType.green: return ManaColor.green;
+      case _ManaType.none: return ManaColor.none;
+    }
+  }
+
+  /// Convert _ManaType to index (0=blue, 1=red, 2=white, 3=green).
+  static int _manaTypeToIndex(_ManaType type) {
+    switch (type) {
+      case _ManaType.blue: return 0;
+      case _ManaType.red: return 1;
+      case _ManaType.white: return 2;
+      case _ManaType.green: return 3;
+      case _ManaType.none: return 0;
+    }
+  }
+
+  /// Check if active character has enough mana of a given type.
+  static bool _activeHasMana(GameState gameState, _ManaType type, double cost, String abilityName) {
+    if (cost <= 0) return true;
+    switch (type) {
+      case _ManaType.blue:
+        if (!gameState.activeHasBlueMana(cost)) {
+          print('[MANA] Not enough blue mana for $abilityName (need $cost, have ${gameState.activeBlueMana.toStringAsFixed(0)})');
+          return false;
+        }
+        return true;
+      case _ManaType.red:
+        if (!gameState.activeHasRedMana(cost)) {
+          print('[MANA] Not enough red mana for $abilityName (need $cost, have ${gameState.activeRedMana.toStringAsFixed(0)})');
+          return false;
+        }
+        return true;
+      case _ManaType.white:
+        if (!gameState.activeHasWhiteMana(cost)) {
+          print('[MANA] Not enough white mana for $abilityName (need $cost, have ${gameState.activeWhiteMana.toStringAsFixed(0)})');
+          return false;
+        }
+        return true;
+      case _ManaType.green:
+        if (!gameState.activeHasGreenMana(cost)) {
+          print('[MANA] Not enough green mana for $abilityName (need $cost, have ${gameState.activeGreenMana.toStringAsFixed(0)})');
+          return false;
+        }
+        return true;
+      case _ManaType.none:
+        return true;
+    }
+  }
+
+  /// Spend mana from the active character's pool by type.
+  static void _spendManaByType(GameState gameState, _ManaType type, double cost, String abilityName) {
+    if (cost <= 0) return;
+    switch (type) {
+      case _ManaType.blue:
+        gameState.activeSpendBlueMana(cost);
+        print('[MANA] Spent $cost blue mana for $abilityName');
+        break;
+      case _ManaType.red:
+        gameState.activeSpendRedMana(cost);
+        print('[MANA] Spent $cost red mana for $abilityName');
+        break;
+      case _ManaType.white:
+        gameState.activeSpendWhiteMana(cost);
+        print('[MANA] Spent $cost white mana for $abilityName');
+        break;
+      case _ManaType.green:
+        gameState.activeSpendGreenMana(cost);
+        print('[MANA] Spent $cost green mana for $abilityName');
+        break;
+      case _ManaType.none:
+        break;
+    }
+  }
+
   /// Get the cooldown for an ability by name
   static double _getAbilityCooldown(String abilityName) {
     switch (abilityName) {
@@ -742,24 +848,52 @@ class AbilitySystem {
   /// Spend the pending mana stored in gameState (deferred from cast/windup start)
   static void _spendPendingMana(GameState gameState, String abilityName) {
     final cost = gameState.pendingManaCost;
-    if (cost <= 0) return;
-
-    // Reason: pendingManaType distinguishes blue(0), red(1), white(2)
-    switch (gameState.pendingManaType) {
-      case 2:
-        gameState.activeSpendWhiteMana(cost);
-        print('[MANA] Spent $cost white mana for $abilityName');
-        break;
-      case 1:
-        gameState.activeSpendRedMana(cost);
-        print('[MANA] Spent $cost red mana for $abilityName');
-        break;
-      default:
-        gameState.activeSpendBlueMana(cost);
-        print('[MANA] Spent $cost blue mana for $abilityName');
-        break;
+    if (cost > 0) {
+      // Reason: pendingManaType distinguishes blue(0), red(1), white(2), green(3)
+      switch (gameState.pendingManaType) {
+        case 3:
+          gameState.activeSpendGreenMana(cost);
+          print('[MANA] Spent $cost green mana for $abilityName');
+          break;
+        case 2:
+          gameState.activeSpendWhiteMana(cost);
+          print('[MANA] Spent $cost white mana for $abilityName');
+          break;
+        case 1:
+          gameState.activeSpendRedMana(cost);
+          print('[MANA] Spent $cost red mana for $abilityName');
+          break;
+        default:
+          gameState.activeSpendBlueMana(cost);
+          print('[MANA] Spent $cost blue mana for $abilityName');
+          break;
+      }
+      gameState.pendingManaCost = 0.0;
     }
-    gameState.pendingManaCost = 0.0;
+
+    // Spend secondary mana (dual-mana abilities)
+    final secondaryCost = _pendingSecondaryManaCost;
+    if (secondaryCost > 0) {
+      switch (_pendingSecondaryManaType) {
+        case 3:
+          gameState.activeSpendGreenMana(secondaryCost);
+          print('[MANA] Spent $secondaryCost green mana (secondary) for $abilityName');
+          break;
+        case 2:
+          gameState.activeSpendWhiteMana(secondaryCost);
+          print('[MANA] Spent $secondaryCost white mana (secondary) for $abilityName');
+          break;
+        case 1:
+          gameState.activeSpendRedMana(secondaryCost);
+          print('[MANA] Spent $secondaryCost red mana (secondary) for $abilityName');
+          break;
+        default:
+          gameState.activeSpendBlueMana(secondaryCost);
+          print('[MANA] Spent $secondaryCost blue mana (secondary) for $abilityName');
+          break;
+      }
+      _pendingSecondaryManaCost = 0.0;
+    }
   }
 
   // ==================== CAST TIME ABILITY EFFECTS ====================

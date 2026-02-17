@@ -32,6 +32,9 @@ export 'necromancer_abilities.dart';
 export 'elemental_abilities.dart';
 export 'utility_abilities.dart';
 export 'windwalker_abilities.dart';
+export 'spiritkin_abilities.dart';
+export 'stormheart_abilities.dart';
+export 'greenseer_abilities.dart';
 
 import 'ability_types.dart';
 import '../../state/custom_ability_manager.dart';
@@ -47,6 +50,9 @@ import 'necromancer_abilities.dart';
 import 'elemental_abilities.dart';
 import 'utility_abilities.dart';
 import 'windwalker_abilities.dart';
+import 'spiritkin_abilities.dart';
+import 'stormheart_abilities.dart';
+import 'greenseer_abilities.dart';
 
 /// Ability Registry - Central access point for all abilities
 ///
@@ -69,6 +75,9 @@ class AbilityRegistry {
     'elemental',
     'utility',
     'windwalker',
+    'spiritkin',
+    'stormheart',
+    'greenseer',
   ];
 
   /// Get all abilities for a category
@@ -86,6 +95,9 @@ class AbilityRegistry {
       case 'elemental': return ElementalAbilities.all;
       case 'utility': return UtilityAbilities.all;
       case 'windwalker': return WindWalkerAbilities.all;
+      case 'spiritkin': return SpiritkinAbilities.all;
+      case 'stormheart': return StormheartAbilities.all;
+      case 'greenseer': return GreenseerAbilities.all;
       default: return [];
     }
   }
@@ -101,6 +113,9 @@ class AbilityRegistry {
     ...ElementalAbilities.all,
     ...UtilityAbilities.all,
     ...WindWalkerAbilities.all,
+    ...SpiritkinAbilities.all,
+    ...StormheartAbilities.all,
+    ...GreenseerAbilities.all,
   ];
 
   /// Get all abilities of a specific type
@@ -154,5 +169,8 @@ class AbilityRegistry {
     'elemental': ElementalAbilities.all.length,
     'utility': UtilityAbilities.all.length,
     'windwalker': WindWalkerAbilities.all.length,
+    'spiritkin': SpiritkinAbilities.all.length,
+    'stormheart': StormheartAbilities.all.length,
+    'greenseer': GreenseerAbilities.all.length,
   };
 }

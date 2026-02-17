@@ -4,6 +4,30 @@
 
 ### ✅ Completed - 2026-02-16
 
+#### Green Mana System + Dual-Mana Abilities + 3 New Character Classes
+- ✅ Added `green` to `ManaColor` enum, added `secondaryManaColor`/`secondaryManaCost` dual-mana fields to `AbilityData` (constructor, copyWith, toJson, fromJson, applyOverrides, getters)
+- ✅ Added green mana fields to `GameState` (greenMana, maxGreenMana, regen rate, spirit form, spend/has/generate methods, active character delegates)
+- ✅ Added green mana fields to `Ally` model (greenMana, maxGreenMana, inSpiritForm)
+- ✅ Added `maxGreenMana`/`greenManaRegen` to `ItemStats` (item.dart, inventory.dart)
+- ✅ Added green mana config to `mana_config.dart` (8 getters) and `mana_config.json` (grass regen, proximity, spirit being, decay)
+- ✅ Implemented `updateGreenManaRegen(dt)` — grass-based regen, proximity regen from green-attuned allies, spirit being regen bonus, decay logic
+- ✅ Updated `ability_system.dart` — added `green` to `_ManaType`, dual-mana check/spend logic, 30 new ability handlers (spiritkin/stormheart/greenseer)
+- ✅ Created `spiritkin_abilities.dart` (10 abilities: green+red primal nature warriors)
+- ✅ Created `stormheart_abilities.dart` (10 abilities: white+red lightning warriors)
+- ✅ Created `greenseer_abilities.dart` (10 abilities: green druidic oracle-healers)
+- ✅ Updated `abilities.dart` registry with new categories, imports, exports, getByCategory, potentialAbilities, categoryCounts
+- ✅ Updated `action_bar_config.dart` — added new ability classes to search list
+- ✅ Updated `mana_bar.dart` — green mana bar display with nature regen info widget
+- ✅ Updated `aura_system.dart` — spiritkin/stormheart/greenseer category colors
+- ✅ Updated `abilities_modal.dart` — new category colors in `_getCategoryColor`
+- ✅ Updated `ability_editor_panel.dart` — secondary mana color dropdown + secondary mana cost field
+- ✅ Created `green_mana_sparkles.dart` — arc-sparkle particle system between mana sources and green mana users
+- ✅ Updated `render_system.dart` — green sparkle rendering with attunement visibility gating
+- ✅ Added Talisman of Growth to `items.json` (rare, green attunement, +30 maxGreenMana, +2 regen)
+- ✅ Updated All-Source Talisman to include green attunement + maxGreenMana
+- ✅ Added Talisman of Growth to sample items in `game_state.dart`
+- ✅ Wired `updateGreenManaRegen(dt)` into game loop in `game3d_widget.dart`
+
 #### Talisman-Based Mana Attunement System
 - ✅ Added `manaAttunement` field (`List<ManaColor>`) to `Item` model — fromJson parses string array, toJson serializes, copyWithStackSize passes through
 - ✅ Added `manaAttunements` getter to `Inventory` — scans equipped items and collects all mana colors

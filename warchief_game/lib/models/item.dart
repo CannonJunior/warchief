@@ -158,6 +158,8 @@ class ItemStats {
   final int blueManaRegen;
   final int redManaRegen;
   final int whiteManaRegen;
+  final int maxGreenMana;
+  final int greenManaRegen;
   final int haste;
   final int melt;
 
@@ -179,6 +181,8 @@ class ItemStats {
     this.blueManaRegen = 0,
     this.redManaRegen = 0,
     this.whiteManaRegen = 0,
+    this.maxGreenMana = 0,
+    this.greenManaRegen = 0,
     this.haste = 0,
     this.melt = 0,
   });
@@ -202,6 +206,8 @@ class ItemStats {
       blueManaRegen: json['blueManaRegen'] ?? 0,
       redManaRegen: json['redManaRegen'] ?? 0,
       whiteManaRegen: json['whiteManaRegen'] ?? 0,
+      maxGreenMana: json['maxGreenMana'] ?? 0,
+      greenManaRegen: json['greenManaRegen'] ?? 0,
       haste: json['haste'] ?? 0,
       melt: json['melt'] ?? 0,
     );
@@ -225,6 +231,8 @@ class ItemStats {
     if (blueManaRegen != 0) 'blueManaRegen': blueManaRegen,
     if (redManaRegen != 0) 'redManaRegen': redManaRegen,
     if (whiteManaRegen != 0) 'whiteManaRegen': whiteManaRegen,
+    if (maxGreenMana != 0) 'maxGreenMana': maxGreenMana,
+    if (greenManaRegen != 0) 'greenManaRegen': greenManaRegen,
     if (haste != 0) 'haste': haste,
     if (melt != 0) 'melt': melt,
   };
@@ -249,6 +257,8 @@ class ItemStats {
     if (blueManaRegen != 0) stats.add(MapEntry('Blue Regen', blueManaRegen));
     if (redManaRegen != 0) stats.add(MapEntry('Red Regen', redManaRegen));
     if (whiteManaRegen != 0) stats.add(MapEntry('White Regen', whiteManaRegen));
+    if (maxGreenMana != 0) stats.add(MapEntry('Green Mana', maxGreenMana));
+    if (greenManaRegen != 0) stats.add(MapEntry('Green Regen', greenManaRegen));
     if (haste != 0) stats.add(MapEntry('Haste', haste));
     if (melt != 0) stats.add(MapEntry('Melt', melt));
     return stats;

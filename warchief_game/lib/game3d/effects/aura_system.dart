@@ -37,6 +37,12 @@ class AuraSystem {
         return Vector3(0.2, 0.8, 0.2); // Green
       case 'nature':
         return Vector3(0.4, 0.9, 0.4); // Light green
+      case 'spiritkin':
+        return Vector3(0.5, 0.9, 0.3); // Yellow-green (nature+blood)
+      case 'stormheart':
+        return Vector3(0.7, 0.7, 1.0); // Blue-white (storm)
+      case 'greenseer':
+        return Vector3(0.2, 1.0, 0.5); // Bright green (oracle/life)
       case 'necromancer':
         return Vector3(0.6, 0.2, 0.8); // Purple
       case 'elemental':

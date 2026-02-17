@@ -691,6 +691,12 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
         return Colors.yellow;
       case 'windwalker':
         return Colors.white;
+      case 'spiritkin':
+        return const Color(0xFF80E030); // Yellow-green (nature+blood)
+      case 'stormheart':
+        return const Color(0xFFB0B0FF); // Blue-white (storm)
+      case 'greenseer':
+        return const Color(0xFF30FF80); // Bright green (oracle/life)
       default:
         // Custom categories get a distinct teal color
         return Colors.tealAccent;

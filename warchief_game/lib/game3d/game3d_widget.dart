@@ -595,6 +595,9 @@ class _Game3DState extends State<Game3D> {
     // Update wind simulation and White Mana regeneration
     gameState.updateWindAndWhiteMana(dt);
 
+    // Update green mana regeneration (grass proximity, ally proximity, spirit beings)
+    gameState.updateGreenManaRegen(dt);
+
     // Tick and expire active status effects on all entities
     gameState.updateActiveEffects(dt);
 

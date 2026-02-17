@@ -36,6 +36,10 @@ class ManaBar extends StatelessWidget {
     final hasBlue = attunements.contains(ManaColor.blue);
     final hasRed = attunements.contains(ManaColor.red);
     final hasWhite = attunements.contains(ManaColor.white);
+    final hasGreen = attunements.contains(ManaColor.green);
+    final greenManaPercent = gameState.activeMaxGreenMana > 0
+        ? gameState.activeGreenMana / gameState.activeMaxGreenMana : 0.0;
+    final greenRegenRate = gameState.currentGreenManaRegenRate;
 
     // Border color: purple for power node, blue for ley line, gray default
     final borderColor = isOnPowerNode
@@ -73,8 +77,20 @@ class ManaBar extends StatelessWidget {
         isRegenerating: whiteRegenRate > 0,
       ));
     }
+    if (hasGreen) {
+      children.add(_buildManaBar(
+        percent: greenManaPercent,
+        current: gameState.activeGreenMana,
+        max: gameState.activeMaxGreenMana,
+        colors: const [Color(0xFF208020), Color(0xFF40CC40), Color(0xFF60FF60)],
+        isRegenerating: greenRegenRate > 0,
+      ));
+    }
 
     // Info widgets gated by attunement
+    if (hasGreen && greenRegenRate > 0) {
+      children.add(_buildGreenManaInfo(greenRegenRate));
+    }
     if (hasWhite && whiteRegenRate > 0) {
       children.add(_buildWindInfo(whiteRegenRate));
     } else if (isOnPowerNode && (hasBlue || hasRed)) {
@@ -205,6 +221,49 @@ class ManaBar extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildGreenManaInfo(double regenRate) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Nature icon (green circle)
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: const Color(0xFF40CC40),
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF40CC40).withOpacity(0.6),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '+${regenRate.toStringAsFixed(1)}/s',
+            style: const TextStyle(
+              color: Color(0xFF80FF80),
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Nature',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 8,
+            ),
+          ),
+        ],
       ),
     );
   }

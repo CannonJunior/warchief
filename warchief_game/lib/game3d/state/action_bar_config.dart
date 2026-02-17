@@ -84,12 +84,13 @@ class ActionBarConfig extends ChangeNotifier {
       ...WarriorAbilities.all,
       ...MageAbilities.all,
       ...RogueAbilities.all,
-      ...HealerAbilities.all,
-      ...NatureAbilities.all,
       ...NecromancerAbilities.all,
       ...ElementalAbilities.all,
       ...UtilityAbilities.all,
       ...WindWalkerAbilities.all,
+      ...SpiritkinAbilities.all,
+      ...StormheartAbilities.all,
+      ...GreenseerAbilities.all,
     ];
 
     for (final ability in allAbilities) {

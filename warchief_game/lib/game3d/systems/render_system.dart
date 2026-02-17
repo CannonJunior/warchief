@@ -8,6 +8,7 @@ import '../../rendering3d/math/transform3d.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/ley_lines.dart';
 import '../rendering/wind_particles.dart';
+import '../rendering/green_mana_sparkles.dart';
 import '../state/gameplay_settings.dart';
 import '../data/abilities/ability_types.dart' show ManaColor;
 
@@ -23,6 +24,9 @@ class RenderSystem {
 
   /// Wind particle system (initialized on first use)
   static final WindParticleSystem _windParticles = WindParticleSystem();
+
+  /// Green mana sparkle particle system (initialized on first use)
+  static final GreenManaSparkleSystem _greenSparkles = GreenManaSparkleSystem();
 
   /// Renders the entire 3D scene
   ///
@@ -171,6 +175,9 @@ class RenderSystem {
 
     // Render wind particles (Effects pass)
     _renderWindParticles(renderer, camera, gameState);
+
+    // Render green mana sparkles (Effects pass)
+    _renderGreenManaSparkles(renderer, camera, gameState);
   }
 
   /// Render aura glow discs at unit bases with additive blending.
@@ -234,6 +241,25 @@ class RenderSystem {
 
     // Render as single batched mesh
     _windParticles.render(renderer, camera);
+  }
+
+  /// Update and render green mana sparkle particles.
+  static void _renderGreenManaSparkles(
+    WebGLRenderer renderer,
+    Camera3D camera,
+    GameState gameState,
+  ) {
+    // Gate visibility by green mana attunement if setting is enabled
+    if (globalGameplaySettings?.manaSourceVisibilityGated ?? false) {
+      if (!gameState.activeManaAttunements.contains(ManaColor.green)) return;
+    }
+
+    if (!_greenSparkles.isInitialized) {
+      _greenSparkles.init();
+    }
+
+    _greenSparkles.update(0.016, gameState);
+    _greenSparkles.render(renderer, camera);
   }
 
   /// Render target indicator around the current target

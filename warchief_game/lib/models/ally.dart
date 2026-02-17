@@ -34,13 +34,18 @@ class Ally {
   double health;
   double maxHealth;
 
-  // Mana pools (same triple-mana system as Warchief)
+  // Mana pools (same quad-mana system as Warchief)
   double blueMana;
   double maxBlueMana;
   double redMana;
   double maxRedMana;
   double whiteMana;
   double maxWhiteMana;
+  double greenMana;
+  double maxGreenMana;
+
+  /// Whether this ally is currently in spirit form (broadcasts green mana regen)
+  bool inSpiritForm;
 
   int abilityIndex; // 0, 1, or 2 (which player ability they have)
   double abilityCooldown;
@@ -98,6 +103,9 @@ class Ally {
     this.maxRedMana = 50.0,
     this.whiteMana = 0.0,
     this.maxWhiteMana = 50.0,
+    this.greenMana = 0.0,
+    this.maxGreenMana = 50.0,
+    this.inSpiritForm = false,
     required this.abilityIndex,
     this.abilityCooldown = 0.0,
     this.abilityCooldownMax = 5.0,
