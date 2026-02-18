@@ -19,12 +19,12 @@ class ManaBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final attunements = gameState.activeManaAttunements;
 
-    final blueManaPercent = gameState.maxBlueMana > 0
-        ? gameState.blueMana / gameState.maxBlueMana : 0.0;
-    final redManaPercent = gameState.maxRedMana > 0
-        ? gameState.redMana / gameState.maxRedMana : 0.0;
-    final whiteManaPercent = gameState.maxWhiteMana > 0
-        ? gameState.whiteMana / gameState.maxWhiteMana
+    final blueManaPercent = gameState.activeMaxBlueMana > 0
+        ? gameState.activeBlueMana / gameState.activeMaxBlueMana : 0.0;
+    final redManaPercent = gameState.activeMaxRedMana > 0
+        ? gameState.activeRedMana / gameState.activeMaxRedMana : 0.0;
+    final whiteManaPercent = gameState.activeMaxWhiteMana > 0
+        ? gameState.activeWhiteMana / gameState.activeMaxWhiteMana
         : 0.0;
     final leyLineInfo = gameState.currentLeyLineInfo;
     final isNearLeyLine = leyLineInfo?.isInRange ?? false;
@@ -53,8 +53,8 @@ class ManaBar extends StatelessWidget {
     if (hasBlue) {
       children.add(_buildManaBar(
         percent: blueManaPercent,
-        current: gameState.blueMana,
-        max: gameState.maxBlueMana,
+        current: gameState.activeBlueMana,
+        max: gameState.activeMaxBlueMana,
         colors: const [Color(0xFF2060CC), Color(0xFF4080FF), Color(0xFF60A0FF)],
         isRegenerating: blueRegenRate > 0,
       ));
@@ -62,8 +62,8 @@ class ManaBar extends StatelessWidget {
     if (hasRed) {
       children.add(_buildManaBar(
         percent: redManaPercent,
-        current: gameState.redMana,
-        max: gameState.maxRedMana,
+        current: gameState.activeRedMana,
+        max: gameState.activeMaxRedMana,
         colors: const [Color(0xFFCC2020), Color(0xFFFF4040), Color(0xFFFF6060)],
         isRegenerating: redRegenRate > 0,
       ));
@@ -71,8 +71,8 @@ class ManaBar extends StatelessWidget {
     if (hasWhite) {
       children.add(_buildManaBar(
         percent: whiteManaPercent,
-        current: gameState.whiteMana,
-        max: gameState.maxWhiteMana,
+        current: gameState.activeWhiteMana,
+        max: gameState.activeMaxWhiteMana,
         colors: const [Color(0xFFA0A0B0), Color(0xFFE0E0E0), Color(0xFFF0F0FF)],
         isRegenerating: whiteRegenRate > 0,
       ));

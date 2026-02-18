@@ -137,7 +137,12 @@ class GameState {
   /// When attunement requirement is disabled, returns all four colors.
   /// Cached until equipment or temporary attunements change.
   Set<ManaColor> get playerManaAttunements {
-    if (!(globalGameplaySettings?.attunementRequired ?? true)) return _allManaColors;
+    if (!(globalGameplaySettings?.attunementRequired ?? true)) {
+      // Reason: clear cache while attunement is off so toggling it back on
+      // forces a fresh computation from current equipment.
+      _cachedPlayerManaAttunements = null;
+      return _allManaColors;
+    }
     if (_cachedPlayerManaAttunements != null) return _cachedPlayerManaAttunements!;
     _cachedPlayerManaAttunements = {...playerInventory.manaAttunements, ...temporaryAttunements};
     return _cachedPlayerManaAttunements!;
@@ -1757,6 +1762,9 @@ class GameState {
 
     // Set player health to full after equipping starting gear
     playerHealth = playerMaxHealth;
+
+    // Reason: attunement cache may have been populated before equipment was loaded
+    invalidatePlayerAttunementCache();
 
     inventoryInitialized = true;
     print('[GameState] Inventory initialized with ${playerInventory.usedBagSlots} bag items and equipment');

@@ -22,13 +22,13 @@ Widget buildStatsColumn({
       ? gameState.playerMaxHealth
       : (ally?.maxHealth ?? 100);
 
-  // Use real mana values from gameState
-  final blueMana = isPlayer ? gameState.blueMana : 60.0;
-  final maxBlueMana = isPlayer ? gameState.maxBlueMana : 100.0;
-  final redMana = isPlayer ? gameState.redMana : 0.0;
-  final maxRedMana = isPlayer ? gameState.maxRedMana : 100.0;
-  final whiteMana = isPlayer ? gameState.whiteMana : 0.0;
-  final maxWhiteMana = isPlayer ? gameState.maxWhiteMana : 100.0;
+  // Use real mana values from gameState / ally
+  final blueMana = isPlayer ? gameState.blueMana : (ally?.blueMana ?? 0.0);
+  final maxBlueMana = isPlayer ? gameState.maxBlueMana : (ally?.maxBlueMana ?? 100.0);
+  final redMana = isPlayer ? gameState.redMana : (ally?.redMana ?? 0.0);
+  final maxRedMana = isPlayer ? gameState.maxRedMana : (ally?.maxRedMana ?? 100.0);
+  final whiteMana = isPlayer ? gameState.whiteMana : (ally?.whiteMana ?? 0.0);
+  final maxWhiteMana = isPlayer ? gameState.maxWhiteMana : (ally?.maxWhiteMana ?? 100.0);
 
   // Combat stats
   final damage = isPlayer

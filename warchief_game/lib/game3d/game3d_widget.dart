@@ -1940,7 +1940,9 @@ class _Game3DState extends State<Game3D> {
                     print('[Bag] Clicked item at slot $index: ${item.name}');
                   }
                 },
-                onItemEquipped: () => setState(() {}),
+                onItemEquipped: () => setState(() {
+                  gameState.invalidatePlayerAttunementCache();
+                }),
                 onUnequipToBag: (slot, item) {
                   setState(() {
                     final inventory = gameState.playerInventory;
@@ -1952,6 +1954,7 @@ class _Game3DState extends State<Game3D> {
                     final healthDelta = gameState.playerMaxHealth - oldMaxHealth;
                     gameState.playerHealth = (gameState.playerHealth + healthDelta)
                         .clamp(0.0, gameState.playerMaxHealth);
+                    gameState.invalidatePlayerAttunementCache();
                   });
                 },
                 onItemCreated: (item) {

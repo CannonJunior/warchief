@@ -110,6 +110,9 @@ class _CharacterPanelState extends State<CharacterPanel> {
         final healthDelta = gs.playerMaxHealth - oldMaxHealth;
         gs.playerHealth =
             (gs.playerHealth + healthDelta).clamp(0.0, gs.playerMaxHealth);
+        gs.invalidatePlayerAttunementCache();
+      } else {
+        _currentAlly?.invalidateAttunementCache();
       }
     });
   }
@@ -131,6 +134,9 @@ class _CharacterPanelState extends State<CharacterPanel> {
         final healthDelta = gs.playerMaxHealth - oldMaxHealth;
         gs.playerHealth =
             (gs.playerHealth + healthDelta).clamp(0.0, gs.playerMaxHealth);
+        gs.invalidatePlayerAttunementCache();
+      } else {
+        _currentAlly?.invalidateAttunementCache();
       }
     });
   }
@@ -231,28 +237,25 @@ class _CharacterPanelState extends State<CharacterPanel> {
                   ),
                   // Center column: Paper doll with rotation gesture
                   Expanded(
-                    child: GestureDetector(
-                      onHorizontalDragUpdate: (details) {
+                    child: buildPaperDollColumn(
+                      isPlayer: _isViewingPlayer,
+                      currentIndex: _currentIndex,
+                      ally: _currentAlly,
+                      cubeRotation: _cubeRotation,
+                      portraitColor: _isViewingPlayer
+                          ? const Color(0xFF4D80CC)
+                          : _getAllyColor(_currentIndex - 1),
+                      inventory: _isViewingPlayer
+                          ? widget.gameState.playerInventory
+                          : (_currentAlly?.inventory ?? Inventory()),
+                      onEquipItem: _handleEquipFromBag,
+                      onUnequipItem: _handleUnequipToBag,
+                      onRotationUpdate: (delta) {
                         setState(() {
-                          _cubeRotation += details.delta.dx * 1.5;
-                          // Keep within 0-360 range
+                          _cubeRotation += delta * 1.5;
                           _cubeRotation = _cubeRotation % 360;
                         });
                       },
-                      child: buildPaperDollColumn(
-                        isPlayer: _isViewingPlayer,
-                        currentIndex: _currentIndex,
-                        ally: _currentAlly,
-                        cubeRotation: _cubeRotation,
-                        portraitColor: _isViewingPlayer
-                            ? const Color(0xFF4D80CC)
-                            : _getAllyColor(_currentIndex - 1),
-                        inventory: _isViewingPlayer
-                            ? widget.gameState.playerInventory
-                            : (_currentAlly?.inventory ?? Inventory()),
-                        onEquipItem: _handleEquipFromBag,
-                        onUnequipItem: _handleUnequipToBag,
-                      ),
                     ),
                   ),
                   // Vertical divider

@@ -165,6 +165,7 @@ Widget buildPaperDollColumn({
   required Inventory inventory,
   void Function(EquipmentSlot slot, Item item)? onEquipItem,
   void Function(EquipmentSlot slot, Item item)? onUnequipItem,
+  void Function(double delta)? onRotationUpdate,
 }) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
@@ -173,11 +174,16 @@ Widget buildPaperDollColumn({
         // Helm - top center
         _equipSlot(EquipmentSlot.helm, inventory, onEquipItem: onEquipItem, onUnequipItem: onUnequipItem),
         const SizedBox(height: 8),
-        // Central cube portrait (smaller for allies to leave room for status)
-        RotatableCubePortrait(
-          color: portraitColor,
-          size: isPlayer ? 120 : 100,
-          rotation: cubeRotation,
+        // Central cube portrait with rotation gesture (only on the portrait)
+        GestureDetector(
+          onHorizontalDragUpdate: onRotationUpdate != null
+              ? (details) => onRotationUpdate(details.delta.dx)
+              : null,
+          child: RotatableCubePortrait(
+            color: portraitColor,
+            size: isPlayer ? 120 : 100,
+            rotation: cubeRotation,
+          ),
         ),
         const SizedBox(height: 8),
         // Row 1: Back, Gloves, Armor, Legs, Boots
