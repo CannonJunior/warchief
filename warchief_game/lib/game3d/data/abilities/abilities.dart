@@ -35,6 +35,7 @@ export 'windwalker_abilities.dart';
 export 'spiritkin_abilities.dart';
 export 'stormheart_abilities.dart';
 export 'greenseer_abilities.dart';
+export 'ability_balance.dart';
 
 import 'ability_types.dart';
 import '../../state/custom_ability_manager.dart';

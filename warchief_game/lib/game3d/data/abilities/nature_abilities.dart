@@ -52,8 +52,44 @@ class NatureAbilities {
     category: 'nature',
   );
 
+  // ==================== MELEE ABILITIES ====================
+
+  /// Briar Lash — Thorn whip strike with bleed
+  static final briarLash = AbilityData(
+    name: 'Briar Lash',
+    description: 'Lash out with a thorned vine whip, causing bleeding wounds',
+    type: AbilityType.melee,
+    damage: 15.0,
+    cooldown: 3.5,
+    range: 3.0,
+    color: Vector3(0.4, 0.6, 0.2),
+    impactColor: Vector3(0.6, 0.3, 0.2),
+    impactSize: 0.5,
+    statusEffect: StatusEffect.bleed,
+    statusDuration: 3.0,
+    dotTicks: 2,
+    category: 'nature',
+  );
+
+  /// Ironwood Smash — Bark-encased slam that roots the target
+  static final ironwoodSmash = AbilityData(
+    name: 'Ironwood Smash',
+    description: 'Smash with an ironwood-hardened fist, rooting the target in place',
+    type: AbilityType.melee,
+    damage: 25.0,
+    cooldown: 6.0,
+    range: 2.5,
+    color: Vector3(0.45, 0.55, 0.25),
+    impactColor: Vector3(0.55, 0.65, 0.3),
+    impactSize: 0.7,
+    statusEffect: StatusEffect.root,
+    statusDuration: 1.5,
+    category: 'nature',
+  );
+
   /// All nature abilities as a list
   static List<AbilityData> get all => [
     entanglingRoots, thorns, naturesWrath,
+    briarLash, ironwoodSmash,
   ];
 }

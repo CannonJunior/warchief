@@ -195,6 +195,45 @@ class GreenseerAbilities {
     category: 'greenseer',
   );
 
+  // ==================== MELEE ABILITIES ====================
+
+  /// Lifebloom Touch — Melee that also triggers self-heal
+  static final lifebloomTouch = AbilityData(
+    name: 'Lifebloom Touch',
+    description: 'Touch the target with life energy, dealing damage while healing yourself',
+    type: AbilityType.melee,
+    damage: 8.0,
+    cooldown: 3.0,
+    range: 2.0,
+    color: Vector3(0.4, 0.9, 0.5),
+    impactColor: Vector3(0.5, 1.0, 0.6),
+    impactSize: 0.5,
+    statusEffect: StatusEffect.regen,
+    statusDuration: 4.0,
+    manaColor: ManaColor.green,
+    manaCost: 8.0,
+    category: 'greenseer',
+  );
+
+  /// Thornguard Strike — Defensive thorn attack with poison
+  static final thornguardStrike = AbilityData(
+    name: 'Thornguard Strike',
+    description: 'Strike with thorn-covered fists, poisoning the target',
+    type: AbilityType.melee,
+    damage: 16.0,
+    cooldown: 5.0,
+    range: 2.5,
+    color: Vector3(0.35, 0.7, 0.3),
+    impactColor: Vector3(0.45, 0.8, 0.4),
+    impactSize: 0.5,
+    statusEffect: StatusEffect.poison,
+    statusDuration: 3.0,
+    dotTicks: 2,
+    manaColor: ManaColor.green,
+    manaCost: 12.0,
+    category: 'greenseer',
+  );
+
   /// All greenseer abilities as a list
   static List<AbilityData> get all => [
     lifeThread,
@@ -207,5 +246,7 @@ class GreenseerAbilities {
     rejuvenatingRoots,
     harmony,
     awakening,
+    lifebloomTouch,
+    thornguardStrike,
   ];
 }

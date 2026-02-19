@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-17T23:20:05.684754",
+  "generated_at": "2026-02-18T23:53:41.051302",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
-    "files": 202,
+    "files": 203,
     "directories": 35,
-    "lines": 56889,
-    "size": 1938679
+    "lines": 57956,
+    "size": 1972929
   },
   "tree": {
     "name": "warchief_game",
@@ -338,10 +338,19 @@
                         "name": "abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/abilities.dart",
-                        "size": 6289,
+                        "size": 6320,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 176
+                        "lines": 177
+                      },
+                      {
+                        "name": "ability_balance.dart",
+                        "type": "file",
+                        "path": "warchief_game/lib/game3d/data/abilities/ability_balance.dart",
+                        "size": 5226,
+                        "extension": ".dart",
+                        "icon": "🎯",
+                        "lines": 160
                       },
                       {
                         "name": "ability_types.dart",
@@ -365,37 +374,37 @@
                         "name": "elemental_abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/elemental_abilities.dart",
-                        "size": 1783,
+                        "size": 2839,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 68
+                        "lines": 103
                       },
                       {
                         "name": "greenseer_abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/greenseer_abilities.dart",
-                        "size": 6967,
+                        "size": 8188,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 211
+                        "lines": 252
                       },
                       {
                         "name": "healer_abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/healer_abilities.dart",
-                        "size": 2420,
+                        "size": 3367,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 91
+                        "lines": 124
                       },
                       {
                         "name": "mage_abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/mage_abilities.dart",
-                        "size": 3615,
+                        "size": 4589,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 133
+                        "lines": 166
                       },
                       {
                         "name": "monster_abilities.dart",
@@ -410,19 +419,19 @@
                         "name": "nature_abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/nature_abilities.dart",
-                        "size": 1580,
+                        "size": 2655,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 59
+                        "lines": 95
                       },
                       {
                         "name": "necromancer_abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/necromancer_abilities.dart",
-                        "size": 2675,
+                        "size": 3796,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 94
+                        "lines": 131
                       },
                       {
                         "name": "player_abilities.dart",
@@ -437,55 +446,55 @@
                         "name": "rogue_abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/rogue_abilities.dart",
-                        "size": 2513,
+                        "size": 4937,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 92
+                        "lines": 173
                       },
                       {
                         "name": "spiritkin_abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/spiritkin_abilities.dart",
-                        "size": 7251,
+                        "size": 9683,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 222
+                        "lines": 305
                       },
                       {
                         "name": "stormheart_abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/stormheart_abilities.dart",
-                        "size": 7607,
+                        "size": 9975,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 229
+                        "lines": 309
                       },
                       {
                         "name": "utility_abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/utility_abilities.dart",
-                        "size": 1165,
+                        "size": 2119,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 42
+                        "lines": 76
                       },
                       {
                         "name": "warrior_abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/warrior_abilities.dart",
-                        "size": 2491,
+                        "size": 5130,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 93
+                        "lines": 177
                       },
                       {
                         "name": "windwalker_abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/windwalker_abilities.dart",
-                        "size": 8579,
+                        "size": 10344,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 275
+                        "lines": 334
                       }
                     ]
                   },
@@ -638,10 +647,10 @@
                     "name": "game_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state.dart",
-                    "size": 73379,
+                    "size": 73683,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 2048
+                    "lines": 2054
                   },
                   {
                     "name": "gameplay_settings.dart",
@@ -744,10 +753,10 @@
                     "name": "ability_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/ability_system.dart",
-                    "size": 88726,
+                    "size": 92366,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 2420
+                    "lines": 2526
                   },
                   {
                     "name": "ai_system.dart",
@@ -1015,10 +1024,10 @@
                     "name": "abilities_modal.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/abilities_modal.dart",
-                    "size": 54371,
+                    "size": 56598,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 1445
+                    "lines": 1513
                   },
                   {
                     "name": "ability_button.dart",
@@ -1033,10 +1042,10 @@
                     "name": "ability_editor_panel.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/ability_editor_panel.dart",
-                    "size": 38533,
+                    "size": 42379,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 939
+                    "lines": 1029
                   },
                   {
                     "name": "ai_chat_panel.dart",

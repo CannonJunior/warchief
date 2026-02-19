@@ -255,6 +255,62 @@ class WindWalkerAbilities {
     category: 'windwalker',
   );
 
+  // ==================== MELEE COMBO ABILITIES ====================
+  // Combo: Zephyr Palm -> Cyclone Kick -> Stormfist Barrage
+
+  /// Zephyr Palm — Quick palm strike, combo starter
+  static final zephyrPalm = AbilityData(
+    name: 'Zephyr Palm',
+    description: 'Swift wind-charged palm strike — quick combo opener',
+    type: AbilityType.melee,
+    damage: 14.0,
+    cooldown: 2.5,
+    range: 2.0,
+    color: Vector3(0.9, 0.95, 1.0),
+    impactColor: Vector3(0.85, 0.9, 1.0),
+    impactSize: 0.4,
+    manaColor: ManaColor.white,
+    manaCost: 8.0,
+    category: 'windwalker',
+  );
+
+  /// Cyclone Kick — Spinning kick with knockback displacement
+  static final cycloneKick = AbilityData(
+    name: 'Cyclone Kick',
+    description: 'Spinning wind-powered kick that knocks enemies away',
+    type: AbilityType.melee,
+    damage: 22.0,
+    cooldown: 5.0,
+    range: 3.0,
+    color: Vector3(0.8, 0.88, 1.0),
+    impactColor: Vector3(0.75, 0.85, 1.0),
+    impactSize: 0.6,
+    knockbackForce: 2.5,
+    manaColor: ManaColor.white,
+    manaCost: 12.0,
+    category: 'windwalker',
+  );
+
+  /// Stormfist Barrage — Triple-punch finisher with windup and stun
+  static final stormfistBarrage = AbilityData(
+    name: 'Stormfist Barrage',
+    description: 'Channel the storm into a three-hit punch barrage that stuns on impact',
+    type: AbilityType.melee,
+    damage: 30.0,
+    cooldown: 7.0,
+    range: 2.5,
+    color: Vector3(0.7, 0.82, 1.0),
+    impactColor: Vector3(0.65, 0.78, 1.0),
+    impactSize: 0.7,
+    statusEffect: StatusEffect.stun,
+    statusDuration: 1.0,
+    windupTime: 0.5,
+    windupMovementSpeed: 0.4,
+    manaColor: ManaColor.white,
+    manaCost: 18.0,
+    category: 'windwalker',
+  );
+
   /// All Wind Walker abilities as a list
   static List<AbilityData> get all => [
     galeStep,
@@ -271,5 +327,8 @@ class WindWalkerAbilities {
     silentMind,
     windshear,
     windWarp,
+    zephyrPalm,
+    cycloneKick,
+    stormfistBarrage,
   ];
 }

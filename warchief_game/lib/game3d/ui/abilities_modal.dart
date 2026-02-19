@@ -8,6 +8,7 @@ import '../state/action_bar_config.dart';
 import '../data/abilities/abilities.dart' show AbilityRegistry;
 import 'ability_editor_panel.dart';
 import 'ui_config.dart';
+import '../data/abilities/ability_balance.dart';
 
 /// Abilities Panel - Draggable panel displaying all available abilities in the game
 ///
@@ -496,8 +497,14 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                           _buildStat('AOE', effective.aoeRadius.toStringAsFixed(0), Colors.yellow.shade300),
                         if (effective.statusEffect != StatusEffect.none)
                           _buildStat('FX', effective.statusEffect.toString().split('.').last.toUpperCase(), Colors.pink.shade300),
+                        if (effective.requiresMana)
+                          _buildManaStat(effective.manaColor, effective.manaCost),
+                        if (effective.requiresDualMana)
+                          _buildManaStat(effective.secondaryManaColor, effective.secondaryManaCost),
                       ],
                     ),
+                    SizedBox(height: 4),
+                    _buildBalanceIndicator(effective),
                   ],
                 ),
               ),
@@ -639,6 +646,61 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
           style: TextStyle(
             color: color,
             fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Mana cost chip: colored circle + cost number
+  Widget _buildManaStat(ManaColor color, double cost) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color.displayColor,
+            shape: BoxShape.circle,
+          ),
+        ),
+        SizedBox(width: 3),
+        Text(
+          cost.toStringAsFixed(0),
+          style: TextStyle(
+            color: color.displayColor,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Balance score indicator: colored dot + numeric score + label
+  Widget _buildBalanceIndicator(AbilityData ability) {
+    final score = computeBalanceScore(ability);
+    final color = balanceScoreColor(score);
+    final label = balanceScoreLabel(score);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        SizedBox(width: 4),
+        Text(
+          '${score.toStringAsFixed(2)} $label',
+          style: TextStyle(
+            color: color.withOpacity(0.8),
+            fontSize: 9,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -1321,8 +1383,14 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                           _buildStat('DUR', '${ability.duration.toStringAsFixed(1)}s', Colors.purple.shade300),
                         if (ability.aoeRadius > 0)
                           _buildStat('AOE', ability.aoeRadius.toStringAsFixed(0), Colors.yellow.shade300),
+                        if (ability.requiresMana)
+                          _buildManaStat(ability.manaColor, ability.manaCost),
+                        if (ability.requiresDualMana)
+                          _buildManaStat(ability.secondaryManaColor, ability.secondaryManaCost),
                       ],
                     ),
+                    SizedBox(height: 4),
+                    _buildBalanceIndicator(ability),
                   ],
                 ),
               ),

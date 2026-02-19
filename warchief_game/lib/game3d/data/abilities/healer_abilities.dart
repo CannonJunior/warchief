@@ -84,8 +84,41 @@ class HealerAbilities {
     category: 'healer',
   );
 
+  // ==================== MELEE ABILITIES ====================
+
+  /// Holy Smite — Divine palm strike
+  static final holySmite = AbilityData(
+    name: 'Holy Smite',
+    description: 'Strike with divine radiance at close range',
+    type: AbilityType.melee,
+    damage: 12.0,
+    cooldown: 3.0,
+    range: 2.0,
+    color: Vector3(1.0, 1.0, 0.6),
+    impactColor: Vector3(1.0, 1.0, 0.8),
+    impactSize: 0.5,
+    category: 'healer',
+  );
+
+  /// Judgment Hammer — Holy mace slam with stun
+  static final judgmentHammer = AbilityData(
+    name: 'Judgment Hammer',
+    description: 'Slam down a hammer of divine judgment, stunning the target',
+    type: AbilityType.melee,
+    damage: 24.0,
+    cooldown: 6.0,
+    range: 2.5,
+    color: Vector3(1.0, 0.9, 0.4),
+    impactColor: Vector3(1.0, 0.95, 0.6),
+    impactSize: 0.7,
+    statusEffect: StatusEffect.stun,
+    statusDuration: 1.0,
+    category: 'healer',
+  );
+
   /// All healer abilities as a list
   static List<AbilityData> get all => [
     holyLight, rejuvenation, circleOfHealing, blessingOfStrength, purify,
+    holySmite, judgmentHammer,
   ];
 }

@@ -213,6 +213,82 @@ class StormheartAbilities {
     category: 'stormheart',
   );
 
+  // ==================== MELEE COMBO ABILITIES ====================
+  // Combo: Spark Jab -> Chain Shock -> Storm Surge -> Thundergod Fist
+
+  /// Spark Jab — Lightning-fast jab, combo starter
+  static final sparkJab = AbilityData(
+    name: 'Spark Jab',
+    description: 'Lightning-quick electrified jab — fast combo opener',
+    type: AbilityType.melee,
+    damage: 14.0,
+    cooldown: 2.5,
+    range: 2.0,
+    color: Vector3(0.75, 0.85, 1.0),
+    impactColor: Vector3(0.85, 0.9, 1.0),
+    impactSize: 0.4,
+    manaColor: ManaColor.white,
+    manaCost: 8.0,
+    category: 'stormheart',
+  );
+
+  /// Chain Shock — Chain punch with brief stun
+  static final chainShock = AbilityData(
+    name: 'Chain Shock',
+    description: 'Rapid chain punches charged with lightning, briefly stunning the target',
+    type: AbilityType.melee,
+    damage: 18.0,
+    cooldown: 4.0,
+    range: 3.0,
+    color: Vector3(0.7, 0.8, 1.0),
+    impactColor: Vector3(0.8, 0.88, 1.0),
+    impactSize: 0.5,
+    statusEffect: StatusEffect.stun,
+    statusDuration: 0.5,
+    manaColor: ManaColor.white,
+    manaCost: 12.0,
+    category: 'stormheart',
+  );
+
+  /// Storm Surge — Lightning dash-punch gap-closer
+  static final stormSurge = AbilityData(
+    name: 'Storm Surge',
+    description: 'Surge forward in a burst of lightning to close the gap',
+    type: AbilityType.melee,
+    damage: 22.0,
+    cooldown: 6.0,
+    range: 6.0,
+    color: Vector3(0.6, 0.75, 1.0),
+    impactColor: Vector3(0.7, 0.82, 1.0),
+    impactSize: 0.5,
+    manaColor: ManaColor.white,
+    manaCost: 15.0,
+    category: 'stormheart',
+  );
+
+  /// Thundergod Fist — Dual-mana finisher with windup, stun, and knockback
+  static final thundergodFist = AbilityData(
+    name: 'Thundergod Fist',
+    description: 'Channel the fury of the storm into a devastating fist strike',
+    type: AbilityType.melee,
+    damage: 40.0,
+    cooldown: 10.0,
+    range: 2.5,
+    color: Vector3(0.5, 0.6, 1.0),
+    impactColor: Vector3(0.7, 0.75, 1.0),
+    impactSize: 0.9,
+    statusEffect: StatusEffect.stun,
+    statusDuration: 1.0,
+    knockbackForce: 2.5,
+    windupTime: 0.7,
+    windupMovementSpeed: 0.3,
+    manaColor: ManaColor.white,
+    manaCost: 20.0,
+    secondaryManaColor: ManaColor.red,
+    secondaryManaCost: 12.0,
+    category: 'stormheart',
+  );
+
   /// All stormheart abilities as a list
   static List<AbilityData> get all => [
     thunderStrike,
@@ -225,5 +301,9 @@ class StormheartAbilities {
     staticCharge,
     thunderclap,
     conduit,
+    sparkJab,
+    chainShock,
+    stormSurge,
+    thundergodFist,
   ];
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math.dart' hide Colors;
 
 import '../data/abilities/ability_types.dart';
+import '../data/abilities/ability_balance.dart';
 import '../state/ability_override_manager.dart';
 import '../state/custom_options_manager.dart';
 import '../state/custom_ability_manager.dart';
@@ -174,10 +175,32 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
     _selectedCategory = effective.category;
     _piercing = effective.piercing;
     _requiresStationary = effective.requiresStationary;
+
+    // Attach listeners to balance-relevant fields for live preview updates
+    for (final ctrl in _balanceRelevantControllers) {
+      ctrl.addListener(_onBalanceFieldChanged);
+    }
+  }
+
+  /// Controllers whose values affect the balance score.
+  List<TextEditingController> get _balanceRelevantControllers => [
+    _damageCtrl, _cooldownCtrl, _rangeCtrl, _healAmountCtrl,
+    _manaCostCtrl, _secondaryManaCostCtrl, _statusDurationCtrl,
+    _aoeRadiusCtrl, _maxTargetsCtrl, _dotTicksCtrl,
+    _knockbackForceCtrl, _castTimeCtrl, _windupTimeCtrl,
+    _windupMovementSpeedCtrl,
+  ];
+
+  /// Triggers a rebuild so the balance preview badge updates.
+  void _onBalanceFieldChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    for (final ctrl in _balanceRelevantControllers) {
+      ctrl.removeListener(_onBalanceFieldChanged);
+    }
     _nameCtrl.dispose();
     _descriptionCtrl.dispose();
     _damageCtrl.dispose();
@@ -431,6 +454,71 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
     );
   }
 
+  // ==================== BALANCE PREVIEW ====================
+
+  /// Constructs a temporary AbilityData from current editor field values
+  /// for live balance score computation.
+  AbilityData _buildPreviewAbility() {
+    return AbilityData(
+      name: _nameCtrl.text,
+      description: _descriptionCtrl.text,
+      type: AbilityType.values.firstWhere(
+        (t) => t.name == _selectedType, orElse: () => AbilityType.melee),
+      damage: double.tryParse(_damageCtrl.text) ?? 0.0,
+      cooldown: double.tryParse(_cooldownCtrl.text) ?? 1.0,
+      duration: double.tryParse(_durationCtrl.text) ?? 0.0,
+      range: double.tryParse(_rangeCtrl.text) ?? 0.0,
+      healAmount: double.tryParse(_healAmountCtrl.text) ?? 0.0,
+      manaColor: ManaColor.values.firstWhere(
+        (m) => m.name == _selectedManaColor, orElse: () => ManaColor.none),
+      manaCost: double.tryParse(_manaCostCtrl.text) ?? 0.0,
+      secondaryManaColor: ManaColor.values.firstWhere(
+        (m) => m.name == _selectedSecondaryManaColor, orElse: () => ManaColor.none),
+      secondaryManaCost: double.tryParse(_secondaryManaCostCtrl.text) ?? 0.0,
+      color: Vector3(1, 1, 1),
+      impactColor: Vector3(1, 1, 1),
+      statusEffect: StatusEffect.values.firstWhere(
+        (s) => s.name == _selectedStatusEffect, orElse: () => StatusEffect.none),
+      statusDuration: double.tryParse(_statusDurationCtrl.text) ?? 0.0,
+      statusStrength: double.tryParse(_statusStrengthCtrl.text) ?? 0.0,
+      aoeRadius: double.tryParse(_aoeRadiusCtrl.text) ?? 0.0,
+      maxTargets: int.tryParse(_maxTargetsCtrl.text) ?? 1,
+      dotTicks: int.tryParse(_dotTicksCtrl.text) ?? 0,
+      knockbackForce: double.tryParse(_knockbackForceCtrl.text) ?? 0.0,
+      castTime: double.tryParse(_castTimeCtrl.text) ?? 0.0,
+      windupTime: double.tryParse(_windupTimeCtrl.text) ?? 0.0,
+      windupMovementSpeed: double.tryParse(_windupMovementSpeedCtrl.text) ?? 1.0,
+      hitRadius: double.tryParse(_hitRadiusCtrl.text),
+      piercing: _piercing,
+      requiresStationary: _requiresStationary,
+      category: _selectedCategory,
+    );
+  }
+
+  /// Colored badge showing live balance score in the editor header.
+  Widget _buildEditorBalancePreview() {
+    final preview = _buildPreviewAbility();
+    final score = computeBalanceScore(preview);
+    final color = balanceScoreColor(score);
+    final label = balanceScoreLabel(score);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withOpacity(0.5), width: 1),
+      ),
+      child: Text(
+        'BAL: ${score.toStringAsFixed(2)} $label',
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   // ==================== HEADER / FOOTER ====================
 
   Widget _buildHeader(bool hasOverrides) {
@@ -462,6 +550,8 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
                 fontWeight: FontWeight.bold, letterSpacing: 1),
               overflow: TextOverflow.ellipsis),
           ),
+          _buildEditorBalancePreview(),
+          const SizedBox(width: 6),
           IconButton(
             icon: const Icon(Icons.close, color: Colors.red, size: 18),
             padding: EdgeInsets.zero, constraints: const BoxConstraints(),

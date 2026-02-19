@@ -86,8 +86,92 @@ class WarriorAbilities {
     category: 'warrior',
   );
 
+  // ==================== MELEE COMBO ABILITIES ====================
+  // Combo: Gauntlet Jab -> Iron Sweep -> Rending Chains -> Warcry Uppercut -> Execution Strike
+
+  /// Gauntlet Jab — Fast combo starter, short cooldown
+  static final gauntletJab = AbilityData(
+    name: 'Gauntlet Jab',
+    description: 'Quick armored fist jab — fast combo starter',
+    type: AbilityType.melee,
+    damage: 12.0,
+    cooldown: 2.0,
+    range: 2.0,
+    color: Vector3(0.7, 0.7, 0.7),
+    impactColor: Vector3(0.8, 0.8, 0.8),
+    impactSize: 0.4,
+    category: 'warrior',
+  );
+
+  /// Iron Sweep — Low sweep that slows the target
+  static final ironSweep = AbilityData(
+    name: 'Iron Sweep',
+    description: 'Low sweeping kick with iron greaves, slowing the target',
+    type: AbilityType.melee,
+    damage: 18.0,
+    cooldown: 4.0,
+    range: 2.5,
+    color: Vector3(0.6, 0.6, 0.65),
+    impactColor: Vector3(0.7, 0.7, 0.75),
+    impactSize: 0.5,
+    statusEffect: StatusEffect.slow,
+    statusDuration: 2.0,
+    category: 'warrior',
+  );
+
+  /// Rending Chains — Chain whip with extended reach and bleed DoT
+  static final rendingChains = AbilityData(
+    name: 'Rending Chains',
+    description: 'Lash out with spiked chains, rending flesh and causing bleed',
+    type: AbilityType.melee,
+    damage: 22.0,
+    cooldown: 6.0,
+    range: 3.5,
+    color: Vector3(0.5, 0.5, 0.55),
+    impactColor: Vector3(0.8, 0.3, 0.2),
+    impactSize: 0.6,
+    statusEffect: StatusEffect.bleed,
+    statusDuration: 4.0,
+    dotTicks: 2,
+    category: 'warrior',
+  );
+
+  /// Warcry Uppercut — Launcher with stun and knockback, moves forward
+  static final warcryUppercut = AbilityData(
+    name: 'Warcry Uppercut',
+    description: 'Bellowing war cry followed by a devastating uppercut that launches the target',
+    type: AbilityType.melee,
+    damage: 28.0,
+    cooldown: 7.0,
+    range: 2.0,
+    color: Vector3(0.9, 0.7, 0.3),
+    impactColor: Vector3(1.0, 0.8, 0.4),
+    impactSize: 0.7,
+    statusEffect: StatusEffect.stun,
+    statusDuration: 1.0,
+    knockbackForce: 2.0,
+    category: 'warrior',
+  );
+
+  /// Execution Strike — Heavy windup combo finisher
+  static final executionStrike = AbilityData(
+    name: 'Execution Strike',
+    description: 'Wind up a devastating overhead strike to finish the combo',
+    type: AbilityType.melee,
+    damage: 45.0,
+    cooldown: 10.0,
+    range: 2.5,
+    color: Vector3(0.8, 0.2, 0.2),
+    impactColor: Vector3(1.0, 0.3, 0.1),
+    impactSize: 0.9,
+    windupTime: 0.8,
+    windupMovementSpeed: 0.3,
+    category: 'warrior',
+  );
+
   /// All warrior abilities as a list
   static List<AbilityData> get all => [
     shieldBash, whirlwind, charge, taunt, fortify,
+    gauntletJab, ironSweep, rendingChains, warcryUppercut, executionStrike,
   ];
 }

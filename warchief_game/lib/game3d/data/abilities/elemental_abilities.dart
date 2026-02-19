@@ -61,8 +61,43 @@ class ElementalAbilities {
     category: 'elemental',
   );
 
+  // ==================== MELEE ABILITIES ====================
+
+  /// Frostbite Slash — Ice-enchanted blade that slows
+  static final frostbiteSlash = AbilityData(
+    name: 'Frostbite Slash',
+    description: 'Slash with an ice-enchanted blade, chilling the target',
+    type: AbilityType.melee,
+    damage: 18.0,
+    cooldown: 4.0,
+    range: 2.5,
+    color: Vector3(0.6, 0.85, 1.0),
+    impactColor: Vector3(0.7, 0.9, 1.0),
+    impactSize: 0.5,
+    statusEffect: StatusEffect.slow,
+    statusDuration: 2.0,
+    category: 'elemental',
+  );
+
+  /// Magma Strike — Molten fist slam with burn
+  static final magmaStrike = AbilityData(
+    name: 'Magma Strike',
+    description: 'Slam with a molten fist, searing the target with lingering flames',
+    type: AbilityType.melee,
+    damage: 28.0,
+    cooldown: 7.0,
+    range: 2.5,
+    color: Vector3(1.0, 0.4, 0.1),
+    impactColor: Vector3(1.0, 0.5, 0.2),
+    impactSize: 0.7,
+    statusEffect: StatusEffect.burn,
+    statusDuration: 3.0,
+    category: 'elemental',
+  );
+
   /// All elemental abilities as a list
   static List<AbilityData> get all => [
     iceLance, flameWave, earthquake,
+    frostbiteSlash, magmaStrike,
   ];
 }

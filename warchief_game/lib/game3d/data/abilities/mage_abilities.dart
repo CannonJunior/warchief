@@ -125,9 +125,42 @@ class MageAbilities {
     category: 'mage',
   );
 
+  // ==================== MELEE ABILITIES ====================
+
+  /// Arcane Pulse — Close-range arcane energy burst
+  static final arcanePulse = AbilityData(
+    name: 'Arcane Pulse',
+    description: 'Release a burst of arcane energy at close range',
+    type: AbilityType.melee,
+    damage: 15.0,
+    cooldown: 3.0,
+    range: 2.5,
+    color: Vector3(0.6, 0.3, 0.9),
+    impactColor: Vector3(0.7, 0.4, 1.0),
+    impactSize: 0.5,
+    category: 'mage',
+  );
+
+  /// Rift Blade — Dimensional slash that slows
+  static final riftBlade = AbilityData(
+    name: 'Rift Blade',
+    description: 'Slash through dimensional space, slowing the target as reality warps around them',
+    type: AbilityType.melee,
+    damage: 22.0,
+    cooldown: 5.5,
+    range: 3.0,
+    color: Vector3(0.5, 0.2, 0.8),
+    impactColor: Vector3(0.6, 0.3, 0.9),
+    impactSize: 0.6,
+    statusEffect: StatusEffect.slow,
+    statusDuration: 2.0,
+    category: 'mage',
+  );
+
   /// All mage abilities as a list
   static List<AbilityData> get all => [
     frostBolt, blizzard, lightningBolt, chainLightning,
     meteor, arcaneShield, teleport,
+    arcanePulse, riftBlade,
   ];
 }

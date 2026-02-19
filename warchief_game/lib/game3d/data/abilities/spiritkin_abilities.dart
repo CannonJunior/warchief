@@ -206,6 +206,85 @@ class SpiritkinAbilities {
     category: 'spiritkin',
   );
 
+  // ==================== MELEE COMBO ABILITIES ====================
+  // Combo: Thornbite -> Barkhide Slam -> Bloodfang Rush -> Primal Rend
+
+  /// Thornbite — Quick bite with nature DoT
+  static final thornbite = AbilityData(
+    name: 'Thornbite',
+    description: 'Snap with thorn-laced jaws, applying a nature poison',
+    type: AbilityType.melee,
+    damage: 12.0,
+    cooldown: 2.0,
+    range: 2.0,
+    color: Vector3(0.4, 0.65, 0.2),
+    impactColor: Vector3(0.5, 0.75, 0.3),
+    impactSize: 0.4,
+    statusEffect: StatusEffect.poison,
+    statusDuration: 3.0,
+    dotTicks: 2,
+    manaColor: ManaColor.green,
+    manaCost: 6.0,
+    category: 'spiritkin',
+  );
+
+  /// Barkhide Slam — Bark-hardened fist slam that slows
+  static final barkhideSlam = AbilityData(
+    name: 'Barkhide Slam',
+    description: 'Slam with a bark-encased fist, slowing the target',
+    type: AbilityType.melee,
+    damage: 20.0,
+    cooldown: 4.5,
+    range: 2.5,
+    color: Vector3(0.45, 0.55, 0.25),
+    impactColor: Vector3(0.55, 0.65, 0.3),
+    impactSize: 0.6,
+    statusEffect: StatusEffect.slow,
+    statusDuration: 2.0,
+    manaColor: ManaColor.green,
+    manaCost: 10.0,
+    category: 'spiritkin',
+  );
+
+  /// Bloodfang Rush — Gap-closer with forward movement
+  static final bloodfangRush = AbilityData(
+    name: 'Bloodfang Rush',
+    description: 'Charge forward in a blood-fueled feral rush to close the gap',
+    type: AbilityType.melee,
+    damage: 18.0,
+    cooldown: 5.0,
+    range: 7.0,
+    color: Vector3(0.7, 0.25, 0.2),
+    impactColor: Vector3(0.8, 0.3, 0.25),
+    impactSize: 0.5,
+    manaColor: ManaColor.red,
+    manaCost: 15.0,
+    category: 'spiritkin',
+  );
+
+  /// Primal Rend — Dual-mana finisher with windup and bleed
+  static final primalRend = AbilityData(
+    name: 'Primal Rend',
+    description: 'Channel primal fury into a savage rending strike that causes deep bleeding',
+    type: AbilityType.melee,
+    damage: 38.0,
+    cooldown: 9.0,
+    range: 3.0,
+    color: Vector3(0.6, 0.5, 0.2),
+    impactColor: Vector3(0.7, 0.3, 0.15),
+    impactSize: 0.8,
+    statusEffect: StatusEffect.bleed,
+    statusDuration: 5.0,
+    dotTicks: 3,
+    windupTime: 0.6,
+    windupMovementSpeed: 0.4,
+    manaColor: ManaColor.green,
+    manaCost: 15.0,
+    secondaryManaColor: ManaColor.red,
+    secondaryManaCost: 10.0,
+    category: 'spiritkin',
+  );
+
   /// All spiritkin abilities as a list
   static List<AbilityData> get all => [
     primalRoar,
@@ -218,5 +297,9 @@ class SpiritkinAbilities {
     naturesCataclysm,
     regenerativeBark,
     totemOfTheWild,
+    thornbite,
+    barkhideSlam,
+    bloodfangRush,
+    primalRend,
   ];
 }

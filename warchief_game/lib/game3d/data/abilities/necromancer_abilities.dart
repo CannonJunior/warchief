@@ -87,8 +87,45 @@ class NecromancerAbilities {
     category: 'necromancer',
   );
 
+  // ==================== MELEE ABILITIES ====================
+
+  /// Grave Touch — Necrotic palm strike with weakness debuff
+  static final graveTouch = AbilityData(
+    name: 'Grave Touch',
+    description: 'Touch the target with grave-cold hands, sapping their strength',
+    type: AbilityType.melee,
+    damage: 14.0,
+    cooldown: 3.0,
+    range: 2.0,
+    color: Vector3(0.4, 0.15, 0.3),
+    impactColor: Vector3(0.5, 0.2, 0.4),
+    impactSize: 0.5,
+    statusEffect: StatusEffect.weakness,
+    statusStrength: 0.8,
+    statusDuration: 4.0,
+    category: 'necromancer',
+  );
+
+  /// Soul Scythe — Spectral scythe swing with bleed
+  static final soulScythe = AbilityData(
+    name: 'Soul Scythe',
+    description: 'Sweep a spectral scythe through the target, causing deep bleeding wounds',
+    type: AbilityType.melee,
+    damage: 28.0,
+    cooldown: 7.0,
+    range: 3.0,
+    color: Vector3(0.3, 0.05, 0.25),
+    impactColor: Vector3(0.5, 0.1, 0.4),
+    impactSize: 0.7,
+    statusEffect: StatusEffect.bleed,
+    statusDuration: 4.0,
+    dotTicks: 2,
+    category: 'necromancer',
+  );
+
   /// All necromancer abilities as a list
   static List<AbilityData> get all => [
     lifeDrain, curseOfWeakness, fear, soulRot, summonSkeleton,
+    graveTouch, soulScythe,
   ];
 }

@@ -37,6 +37,40 @@ class UtilityAbilities {
     category: 'utility',
   );
 
+  // ==================== MELEE ABILITIES ====================
+
+  /// Quick Slash — Basic fast slash
+  static final quickSlash = AbilityData(
+    name: 'Quick Slash',
+    description: 'A swift, efficient slash — nothing fancy, just fast',
+    type: AbilityType.melee,
+    damage: 10.0,
+    cooldown: 2.0,
+    range: 2.0,
+    color: Vector3(0.8, 0.8, 0.8),
+    impactColor: Vector3(0.9, 0.9, 0.9),
+    impactSize: 0.4,
+    category: 'utility',
+  );
+
+  /// Shoulder Charge — Short charge with knockback and movement
+  static final shoulderCharge = AbilityData(
+    name: 'Shoulder Charge',
+    description: 'Charge forward and slam into the target, knocking them back',
+    type: AbilityType.melee,
+    damage: 18.0,
+    cooldown: 5.0,
+    range: 5.0,
+    color: Vector3(0.85, 0.75, 0.4),
+    impactColor: Vector3(0.95, 0.85, 0.5),
+    impactSize: 0.6,
+    knockbackForce: 2.0,
+    category: 'utility',
+  );
+
   /// All utility abilities as a list
-  static List<AbilityData> get all => [sprint, battleShout];
+  static List<AbilityData> get all => [
+    sprint, battleShout,
+    quickSlash, shoulderCharge,
+  ];
 }

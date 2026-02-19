@@ -2,6 +2,34 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-18
+
+#### Fighting Game Melee Abilities + Generic Melee Damage Fix
+- ✅ **Part A: Fixed generic melee damage system** — `_executeGenericMelee()` now stores active ability on `gameState.activeGenericMeleeAbility` so `updateAbility1()` reads damage/range/impactColor from AbilityData instead of hardcoded `playerSword` values; `_executeGenericWindupMelee()` now reads damage/range/impact from AbilityData instead of hardcoded 40.0/2.5/3.5; added `activeGenericMeleeAbility` nullable field to `GameState`
+- ✅ **Part B: Added 35 new melee abilities across 12 categories** — fighting game-inspired combo abilities:
+  - Warrior (5): Gauntlet Jab, Iron Sweep, Rending Chains, Warcry Uppercut, Execution Strike
+  - Rogue (5): Shiv, Shadowfang Rake, Shadow Spike, Umbral Lunge, Death Mark
+  - Windwalker (3): Zephyr Palm, Cyclone Kick, Stormfist Barrage
+  - Spiritkin (4): Thornbite, Barkhide Slam, Bloodfang Rush, Primal Rend
+  - Stormheart (4): Spark Jab, Chain Shock, Storm Surge, Thundergod Fist
+  - Elemental (2): Frostbite Slash, Magma Strike
+  - Nature (2): Briar Lash, Ironwood Smash
+  - Mage (2): Arcane Pulse, Rift Blade
+  - Necromancer (2): Grave Touch, Soul Scythe
+  - Healer (2): Holy Smite, Judgment Hammer
+  - Utility (2): Quick Slash, Shoulder Charge
+  - Greenseer (2): Lifebloom Touch, Thornguard Strike
+- ✅ **Part C: Added case labels in ability_system.dart** — all 35 new abilities routed through `_executeGenericAbility()` via data-driven dispatch
+- ✅ Build verified clean (`flutter build web`)
+- ✅ All category files remain under 500 lines
+
+#### Abilities Codex: Mana Cost Display + Balance Rating System
+- ✅ Created `ability_balance.dart` — `ManaColorDisplay` extension (display colors matching mana bar midpoints), `computeBalanceScore()` pure function (power vs cost, clamped -1..1), `_statusEffectValue()` helper, `balanceScoreColor()` (red→yellow→green), `balanceScoreLabel()` (WEAK/BELOW AVG/BALANCED/ABOVE AVG/STRONG/OP)
+- ✅ Added `export 'ability_balance.dart'` to `abilities.dart` barrel file
+- ✅ Updated `abilities_modal.dart` — added mana color dots + cost to both `_buildAbilityCard` and `_buildCustomAbilityCard` stats rows, added balance indicator row below stats, added `_buildManaStat()` and `_buildBalanceIndicator()` helper widgets
+- ✅ Updated `ability_editor_panel.dart` — added `_buildPreviewAbility()` (constructs AbilityData from current editor fields), `_buildEditorBalancePreview()` colored badge in header, live-update listeners on all balance-relevant text controllers
+- ✅ Build verified clean (`flutter build web`)
+
 ### ✅ Completed - 2026-02-16
 
 #### Green Mana System + Dual-Mana Abilities + 3 New Character Classes

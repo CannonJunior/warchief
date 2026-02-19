@@ -383,6 +383,17 @@ class AbilitySystem {
         _executeFortify(slotIndex, gameState);
         break;
 
+      // Warrior melee combo abilities (data-driven)
+      case 'Gauntlet Jab':
+      case 'Iron Sweep':
+      case 'Rending Chains':
+      case 'Warcry Uppercut':
+      case 'Execution Strike':
+        if (abilityData != null) {
+          _executeGenericAbility(slotIndex, gameState, abilityData);
+        }
+        break;
+
       // Mage abilities
       case 'Frost Bolt':
         _executeFrostBolt(slotIndex, gameState);
@@ -406,6 +417,14 @@ class AbilitySystem {
         _executeTeleport(slotIndex, gameState);
         break;
 
+      // Mage melee abilities (data-driven)
+      case 'Arcane Pulse':
+      case 'Rift Blade':
+        if (abilityData != null) {
+          _executeGenericAbility(slotIndex, gameState, abilityData);
+        }
+        break;
+
       // Rogue abilities
       case 'Backstab':
         _executeBackstab(slotIndex, gameState);
@@ -423,6 +442,17 @@ class AbilitySystem {
         _executeShadowStep(slotIndex, gameState);
         break;
 
+      // Rogue melee combo abilities (data-driven)
+      case 'Shiv':
+      case 'Shadowfang Rake':
+      case 'Shadow Spike':
+      case 'Umbral Lunge':
+      case 'Death Mark':
+        if (abilityData != null) {
+          _executeGenericAbility(slotIndex, gameState, abilityData);
+        }
+        break;
+
       // Spiritkin abilities (green + red)
       case 'Primal Roar':
       case 'Spirit Claws':
@@ -434,6 +464,10 @@ class AbilitySystem {
       case 'Nature\'s Cataclysm':
       case 'Regenerative Bark':
       case 'Totem of the Wild':
+      case 'Thornbite':
+      case 'Barkhide Slam':
+      case 'Bloodfang Rush':
+      case 'Primal Rend':
         // Data-driven execution via generic handler
         if (abilityData != null) {
           _executeGenericAbility(slotIndex, gameState, abilityData);
@@ -451,6 +485,10 @@ class AbilitySystem {
       case 'Static Charge':
       case 'Thunderclap':
       case 'Conduit':
+      case 'Spark Jab':
+      case 'Chain Shock':
+      case 'Storm Surge':
+      case 'Thundergod Fist':
         if (abilityData != null) {
           _executeGenericAbility(slotIndex, gameState, abilityData);
         }
@@ -467,6 +505,8 @@ class AbilitySystem {
       case 'Rejuvenating Roots':
       case 'Harmony':
       case 'Awakening':
+      case 'Lifebloom Touch':
+      case 'Thornguard Strike':
         if (abilityData != null) {
           _executeGenericAbility(slotIndex, gameState, abilityData);
         }
@@ -489,6 +529,14 @@ class AbilitySystem {
         _executeSummonSkeleton(slotIndex, gameState);
         break;
 
+      // Necromancer melee abilities (data-driven)
+      case 'Grave Touch':
+      case 'Soul Scythe':
+        if (abilityData != null) {
+          _executeGenericAbility(slotIndex, gameState, abilityData);
+        }
+        break;
+
       // Elemental abilities
       case 'Ice Lance':
         _executeIceLance(slotIndex, gameState);
@@ -500,12 +548,28 @@ class AbilitySystem {
         _executeEarthquake(slotIndex, gameState);
         break;
 
+      // Elemental melee abilities (data-driven)
+      case 'Frostbite Slash':
+      case 'Magma Strike':
+        if (abilityData != null) {
+          _executeGenericAbility(slotIndex, gameState, abilityData);
+        }
+        break;
+
       // Utility abilities
       case 'Sprint':
         _executeSprint(slotIndex, gameState);
         break;
       case 'Battle Shout':
         _executeBattleShout(slotIndex, gameState);
+        break;
+
+      // Utility melee abilities (data-driven)
+      case 'Quick Slash':
+      case 'Shoulder Charge':
+        if (abilityData != null) {
+          _executeGenericAbility(slotIndex, gameState, abilityData);
+        }
         break;
 
       // Wind Walker abilities
@@ -550,6 +614,31 @@ class AbilitySystem {
         break;
       case 'Wind Warp':
         _executeWindWarp(slotIndex, gameState);
+        break;
+
+      // Windwalker melee combo abilities (data-driven)
+      case 'Zephyr Palm':
+      case 'Cyclone Kick':
+      case 'Stormfist Barrage':
+        if (abilityData != null) {
+          _executeGenericAbility(slotIndex, gameState, abilityData);
+        }
+        break;
+
+      // Healer melee abilities (data-driven)
+      case 'Holy Smite':
+      case 'Judgment Hammer':
+        if (abilityData != null) {
+          _executeGenericAbility(slotIndex, gameState, abilityData);
+        }
+        break;
+
+      // Nature melee abilities (data-driven)
+      case 'Briar Lash':
+      case 'Ironwood Smash':
+        if (abilityData != null) {
+          _executeGenericAbility(slotIndex, gameState, abilityData);
+        }
         break;
 
       default:
@@ -1199,25 +1288,35 @@ class AbilitySystem {
     }
   }
 
-  /// Generic windup melee for unknown windup abilities
+  /// Generic windup melee for unknown windup abilities.
+  /// Reads damage, range, and impact from the AbilityData when available.
   static void _executeGenericWindupMelee(int slotIndex, GameState gameState, String abilityName) {
     if (gameState.activeTransform == null) return;
+
+    // Reason: Read ability data from the action bar so windup melee abilities
+    // use their configured damage/range instead of hardcoded fallbacks.
+    final abilityData = globalActionBarConfig?.getSlotAbilityData(slotIndex);
+    final ability = abilityData != null
+        ? (globalAbilityOverrideManager?.getEffectiveAbility(abilityData) ?? abilityData)
+        : null;
 
     final forward = Vector3(
       -math.sin(_radians(gameState.activeRotation)),
       0,
       -math.cos(_radians(gameState.activeRotation)),
     );
-    final strikePosition = gameState.activeTransform!.position + forward * 2.5;
+    final strikeRange = ability?.range ?? 2.5;
+    final strikePosition = gameState.activeTransform!.position + forward * strikeRange;
 
     CombatSystem.checkAndDamageEnemies(
       gameState,
       attackerPosition: strikePosition,
-      damage: 40.0,
+      damage: ability?.damage ?? 40.0,
       attackType: abilityName,
-      impactColor: Vector3(0.8, 0.8, 0.8),
-      impactSize: 0.8,
-      collisionThreshold: 3.5,
+      impactColor: ability?.impactColor ?? Vector3(0.8, 0.8, 0.8),
+      impactSize: ability?.impactSize ?? 0.8,
+      collisionThreshold: ability?.effectiveHitRadius ?? 3.5,
+      isMeleeDamage: true,
     );
 
     print('$abilityName!');
@@ -1883,6 +1982,9 @@ class AbilitySystem {
     final ability = globalAbilityOverrideManager?.getEffectiveAbility(rawAbility) ?? rawAbility;
     if (gameState.ability1Active) return;
 
+    // Reason: Store the active ability so updateAbility1() uses its damage/range
+    // instead of the hardcoded playerSword values.
+    gameState.activeGenericMeleeAbility = ability;
     gameState.ability1Active = true;
     gameState.ability1ActiveTime = 0.0;
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
@@ -2060,6 +2162,7 @@ class AbilitySystem {
 
     if (gameState.ability1ActiveTime >= gameState.ability1Duration) {
       gameState.ability1Active = false;
+      gameState.activeGenericMeleeAbility = null;
     } else if (gameState.swordTransform != null && gameState.activeTransform != null) {
       // Position sword in front of player, rotating during swing
       final forward = Vector3(
@@ -2076,17 +2179,20 @@ class AbilitySystem {
 
       // Check collision with monster (only once per swing)
       if (!gameState.ability1HitRegistered) {
-        final sword = _effective(AbilitiesConfig.playerSword);
-        final swordTipPosition = gameState.activeTransform!.position + forward * sword.range;
+        // Reason: Use stored generic melee ability data if available,
+        // otherwise fall back to default playerSword for the basic Sword attack.
+        final melee = gameState.activeGenericMeleeAbility
+            ?? _effective(AbilitiesConfig.playerSword);
+        final swordTipPosition = gameState.activeTransform!.position + forward * melee.range;
 
         final hitRegistered = CombatSystem.checkAndDamageEnemies(
           gameState,
           attackerPosition: swordTipPosition,
-          damage: sword.damage,
-          attackType: sword.name,
-          impactColor: sword.impactColor,
-          impactSize: sword.impactSize,
-          isMeleeDamage: true, // Generate red mana from sword attacks
+          damage: melee.damage,
+          attackType: melee.name,
+          impactColor: melee.impactColor,
+          impactSize: melee.impactSize,
+          isMeleeDamage: true, // Generate red mana from melee attacks
         );
 
         if (hitRegistered) {

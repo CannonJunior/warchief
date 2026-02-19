@@ -33,7 +33,7 @@ import '../utils/movement_prediction.dart';
 import '../utils/bezier_path.dart';
 import '../ai/tactical_positioning.dart';
 import '../data/monsters/minion_definitions.dart';
-import '../data/abilities/ability_types.dart' show ManaColor;
+import '../data/abilities/ability_types.dart' show ManaColor, AbilityData;
 import 'gameplay_settings.dart';
 
 /// Game State - Centralized state management for the 3D game
@@ -1973,6 +1973,12 @@ class GameState {
   double ability1ActiveTime = 0.0;
   final double ability1Duration = GameConfig.ability1Duration;
   bool ability1HitRegistered = false; // Prevent multiple hits per swing
+
+  /// Tracks the currently-active generic melee ability data so that
+  /// updateAbility1() can read damage/range/impact from it instead of
+  /// always using the hardcoded playerSword values.  Null means the
+  /// default Sword ability is active.
+  AbilityData? activeGenericMeleeAbility;
   Mesh? swordMesh;
   Transform3d? swordTransform;
 
