@@ -67,12 +67,15 @@ import 'state/goals_config.dart';
 import 'state/macro_config.dart';
 import 'state/macro_manager.dart';
 import 'state/gameplay_settings.dart';
+import 'data/stances/stances.dart';
 import 'ui/minimap/minimap_widget.dart';
 import 'ui/minimap/minimap_ping_overlay.dart';
 import 'ui/building_panel.dart';
 import 'ui/goals_panel.dart';
 import 'ui/warrior_spirit_panel.dart';
 import 'ui/chat_panel.dart';
+import 'ui/stance_selector.dart';
+import 'ui/stance_effects_overlay.dart';
 import 'ui/macro_builder_panel.dart';
 import 'systems/entity_picking_system.dart';
 import 'systems/building_system.dart';
@@ -170,6 +173,9 @@ class _Game3DState extends State<Game3D> {
     // Initialize gameplay settings (attunement toggles, etc.)
     _initializeGameplaySettings();
 
+    // Initialize stance registry (JSON definitions for exotic stances)
+    _initializeStanceRegistry();
+
     // Initialize player inventory with sample items
     _initializeInventory();
 
@@ -265,6 +271,17 @@ class _Game3DState extends State<Game3D> {
   void _initializeGameplaySettings() {
     globalGameplaySettings ??= GameplaySettings();
     globalGameplaySettings!.load();
+  }
+
+  /// Initialize the global stance registry (JSON definitions)
+  void _initializeStanceRegistry() {
+    globalStanceRegistry ??= StanceRegistry();
+    globalStanceRegistry!.initialize().then((_) {
+      // Reason: load saved stance selections after registry is ready
+      gameState.loadStanceConfig().then((_) {
+        if (mounted) setState(() {});
+      });
+    });
   }
 
   /// Initialize player inventory with sample items from database
@@ -603,6 +620,9 @@ class _Game3DState extends State<Game3D> {
     // Tick and expire active status effects on all entities
     gameState.updateActiveEffects(dt);
 
+    // Update stance timers (Fury drain, Drunken re-rolls, switch cooldown)
+    gameState.updateStanceTimers(dt);
+
     // Apply building aura effects (health + mana regen near buildings)
     BuildingSystem.applyBuildingAuras(gameState, dt);
 
@@ -880,6 +900,23 @@ class _Game3DState extends State<Game3D> {
           }
         }
       });
+      return;
+    }
+
+    // Handle X key for stances: Shift+X cycles, X toggles selector panel
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyX) {
+      final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+      if (isShiftPressed) {
+        // Shift+X: cycle to next stance
+        setState(() {
+          gameState.cycleStance();
+        });
+      } else {
+        // X: toggle stance selector panel
+        setState(() {
+          gameState.stanceSelectorOpen = !gameState.stanceSelectorOpen;
+        });
+      }
       return;
     }
 
@@ -1702,6 +1739,9 @@ class _Game3DState extends State<Game3D> {
                 screenSize: MediaQuery.of(context).size,
               ),
 
+            // Stance visual effects (Drunken pulse, Fury vignette)
+            StanceEffectsOverlay(gameState: gameState),
+
             // Minimap (draggable, replaces standalone WindIndicator)
             if (gameState.minimapOpen && _isVisible('minimap'))
               _draggable('minimap',
@@ -1713,6 +1753,16 @@ class _Game3DState extends State<Game3D> {
                 ),
                 width: 180, height: 200,
               ),
+
+            // Stance selector (left side, vertically centered)
+            Positioned(
+              left: 12,
+              top: MediaQuery.of(context).size.height * 0.35,
+              child: StanceSelector(
+                gameState: gameState,
+                onStateChanged: () => setState(() {}),
+              ),
+            ),
 
             // Instructions overlay (draggable)
             if (_isVisible('instructions'))
@@ -1923,6 +1973,7 @@ class _Game3DState extends State<Game3D> {
                   _gameFocusNode.requestFocus();
                 },
                 onClassLoaded: _handleClassLoaded,
+                gameState: gameState,
               ),
 
             // Bag Panel (Press B to toggle)

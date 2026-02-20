@@ -2,6 +2,36 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-19
+
+#### Exotic Stance System
+- ✅ **Data Layer**: Created `assets/data/stance_config.json` with 5 exotic stances (Drunken Master, Blood Weave, Tide, Phantom Dance, Fury of the Ancestors) — all values config-driven, not hardcoded
+- ✅ **Stance Types**: Created `lib/game3d/data/stances/stance_types.dart` — `StanceId` enum, `StanceData` class with all modifiers, passive mechanics, modifier summary builder
+- ✅ **Stance Registry**: Created `lib/game3d/data/stances/stance_definitions.dart` — `StanceRegistry` singleton loading from JSON config, icon/color parsing, global accessor
+- ✅ **Barrel Export**: Created `lib/game3d/data/stances/stances.dart`
+- ✅ **GameState Integration**: Added stance fields (`playerStance`, `stanceSwitchCooldown`, `stanceActiveTime`, Drunken re-roll fields), `activeStance` getter (with Drunken random modifier substitution), `switchStance()` (with HP proportion scaling), `cycleStance()`, `updateStanceTimers()` (Fury drain, Drunken re-rolls, cooldown ticking), `generateManaFromDamageTaken()` (Tide passive)
+- ✅ **Ally Model**: Added `currentStance` field to `Ally`
+- ✅ **Movement Speed**: Applied `movementSpeedMultiplier` in `effectivePlayerSpeed` getter
+- ✅ **Max Health**: Applied `maxHealthMultiplier` in `playerMaxHealth` getter
+- ✅ **Damage Output**: Applied `damageMultiplier` in melee hits (`updateAbility1`), projectile impacts (`_damageTargetWithProjectile`, `updateAbility2` collision), AoE (`_executeGenericAoE`)
+- ✅ **Damage Taken**: Applied `damageTakenMultiplier` in `combat_system.dart` for `DamageTarget.player`
+- ✅ **Tide Passive**: Damage-to-mana conversion in combat_system after player damage
+- ✅ **Cooldowns**: Applied `cooldownMultiplier` in `_setCooldownForSlot()`
+- ✅ **Cast/Windup Time**: Applied `castTimeMultiplier` in `_startCastTimeAbility()` and `_startWindupAbility()`
+- ✅ **Healing**: Applied `healingMultiplier` in `_executeHeal()` and `_executeGenericHeal()`
+- ✅ **Mana Costs**: Applied `manaCostMultiplier` in `_executeAbilityByName()`, Blood Weave HP-for-mana substitution for instant and deferred (cast/windup) abilities
+- ✅ **Mana Regen**: Applied `manaRegenMultiplier` in `updateManaRegen()`, `updateWindAndWhiteMana()`, `updateGreenManaRegen()`; Blood Weave `convertsManaRegenToHeal` converts all mana regen to HP healing
+- ✅ **Fury Health Drain**: 2% max HP/second in `updateStanceTimers()`, clamped to 1 HP, combat log on critical threshold
+- ✅ **Drunken Re-rolls**: Independent damage/damageTaken re-rolls every 3s in `updateStanceTimers()`, combat log on re-roll
+- ✅ **Stance Selector UI**: Created `lib/game3d/ui/stance_selector.dart` — compact icon (always visible) + expandable vertical list (X key), click to select, cooldown overlay, tooltips with modifier summary
+- ✅ **Stance Cards in Abilities Modal**: Added `StanceCardsSection` to abilities modal (P key) showing all 5 stances as cards with descriptions and modifier breakdowns
+- ✅ **Keyboard Controls**: X key toggles stance selector, Shift+X cycles stances
+- ✅ **Combat Log**: Stance switch logging, Drunken re-roll logging, Fury critical HP logging
+- ✅ **Game Loop**: `updateStanceTimers(dt)` wired into `_update()`, stance registry initialized in `initState()`
+- ✅ **Persistence**: Stance selections saved/loaded via SharedPreferences (`stance_player`, `stance_ally_N` keys), auto-saves on switch, loads after stance registry initialization
+- ✅ **Visual Effects**: Created `lib/game3d/ui/stance_effects_overlay.dart` — Drunken Master purple tint pulse on re-roll (0.4s fade), Fury of the Ancestors red vignette intensifying as HP drops (visible below 80% HP)
+- ✅ Build verified clean (`flutter build web`)
+
 ### ✅ Completed - 2026-02-18
 
 #### Fighting Game Melee Abilities + Generic Melee Damage Fix

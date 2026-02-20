@@ -7,6 +7,7 @@ import 'active_effect.dart';
 import '../game3d/utils/bezier_path.dart';
 import '../game3d/ai/ally_strategy.dart';
 import '../game3d/data/abilities/ability_types.dart' show ManaColor;
+import '../game3d/data/stances/stance_types.dart' show StanceId;
 
 /// Ally Movement Mode - Different ways an ally can move
 enum AllyMovementMode {
@@ -76,6 +77,9 @@ class Ally {
   // Strategy system
   AllyStrategyType strategyType;
 
+  // Stance system
+  StanceId currentStance;
+
   // Aura glow effect
   Mesh? auraMesh;
   Transform3d auraTransform = Transform3d();
@@ -134,6 +138,7 @@ class Ally {
     this.currentCommand = AllyCommand.none,
     this.commandTimer = 0.0,
     this.strategyType = AllyStrategyType.balanced,
+    this.currentStance = StanceId.none,
   })  : inventory = inventory ?? Inventory(),
         projectiles = [];
 }

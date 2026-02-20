@@ -10,6 +10,7 @@ import '../../models/impact_effect.dart';
 import '../../models/combat_log_entry.dart';
 import '../../models/monster.dart';
 import 'goal_system.dart';
+import '../data/stances/stances.dart';
 
 /// Target types for damage application
 enum DamageTarget { player, monster, ally, minion, dummy }
@@ -128,9 +129,16 @@ class CombatSystem {
       // Apply damage based on target type
       switch (targetType) {
         case DamageTarget.player:
-          gameState.playerHealth = (gameState.playerHealth - damage)
+          // Apply stance damageTakenMultiplier
+          final stance = gameState.activeStance;
+          final effectiveDamage = damage * stance.damageTakenMultiplier;
+          gameState.playerHealth = (gameState.playerHealth - effectiveDamage)
               .clamp(0.0, gameState.playerMaxHealth);
-          assert(() { print('$attackType hit player for $damage damage! '
+          // Tide stance: convert portion of damage taken into primary attuned mana
+          if (stance.damageTakenToManaRatio > 0) {
+            gameState.generateManaFromDamageTaken(effectiveDamage * stance.damageTakenToManaRatio);
+          }
+          assert(() { print('$attackType hit player for ${effectiveDamage.toStringAsFixed(1)} damage! '
                 'Player health: ${gameState.playerHealth.toStringAsFixed(1)}'); return true; }());
           break;
 

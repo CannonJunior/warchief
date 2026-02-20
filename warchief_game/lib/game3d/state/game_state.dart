@@ -34,7 +34,10 @@ import '../utils/bezier_path.dart';
 import '../ai/tactical_positioning.dart';
 import '../data/monsters/minion_definitions.dart';
 import '../data/abilities/ability_types.dart' show ManaColor, AbilityData;
+import '../data/stances/stances.dart';
 import 'gameplay_settings.dart';
+import 'dart:math' as math;
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Game State - Centralized state management for the 3D game
 ///
@@ -75,10 +78,292 @@ class GameState {
   double playerHealth = 100.0;
   static const double basePlayerMaxHealth = 100.0;
 
-  /// Max health is base + total health bonus from all equipped items.
-  /// This auto-recalculates whenever equipment changes.
+  /// Max health is base + total health bonus from all equipped items,
+  /// then multiplied by the active stance's maxHealthMultiplier.
   double get playerMaxHealth =>
-      basePlayerMaxHealth + playerInventory.totalEquippedStats.health;
+      (basePlayerMaxHealth + playerInventory.totalEquippedStats.health) *
+      activeStance.maxHealthMultiplier;
+
+  // ==================== STANCE STATE ====================
+
+  /// Current stance for the Warchief.
+  StanceId playerStance = StanceId.none;
+
+  /// Cooldown remaining before the active character can switch stances.
+  double stanceSwitchCooldown = 0.0;
+
+  /// How long the current stance has been active (for Fury timer display).
+  double stanceActiveTime = 0.0;
+
+  /// Drunken Master: current re-rolled damage multiplier.
+  double drunkenDamageRoll = 1.0;
+
+  /// Drunken Master: current re-rolled damage-taken multiplier.
+  double drunkenDamageTakenRoll = 1.0;
+
+  /// Drunken Master: accumulator for re-roll interval timing.
+  double stanceRerollAccumulator = 0.0;
+
+  /// Random number generator for Drunken Master re-rolls.
+  final math.Random _stanceRng = math.Random();
+
+  /// Drunken Master: visual pulse timer (counts down from ~0.4s on each re-roll).
+  double drunkenRerollPulseTimer = 0.0;
+
+  /// Whether the stance selector UI is expanded.
+  bool stanceSelectorOpen = false;
+
+  /// Get the [StanceData] for the currently active character.
+  ///
+  /// For the Warchief, reads [playerStance]. For allies, reads their
+  /// [Ally.currentStance]. If the stance registry is not loaded yet,
+  /// returns the neutral [StanceData.none].
+  StanceData get activeStance {
+    final registry = globalStanceRegistry;
+    if (registry == null) return StanceData.none;
+    final id = isWarchiefActive ? playerStance : (activeAlly?.currentStance ?? StanceId.none);
+    final base = registry.getStance(id);
+
+    // Reason: Drunken Master overrides damageMultiplier and damageTakenMultiplier
+    // with independently re-rolled random values. We return a modified copy.
+    if (base.hasRandomModifiers) {
+      return StanceData(
+        id: base.id,
+        name: base.name,
+        description: base.description,
+        icon: base.icon,
+        color: base.color,
+        damageMultiplier: drunkenDamageRoll,
+        damageTakenMultiplier: drunkenDamageTakenRoll,
+        movementSpeedMultiplier: base.movementSpeedMultiplier,
+        cooldownMultiplier: base.cooldownMultiplier,
+        manaRegenMultiplier: base.manaRegenMultiplier,
+        manaCostMultiplier: base.manaCostMultiplier,
+        healingMultiplier: base.healingMultiplier,
+        maxHealthMultiplier: base.maxHealthMultiplier,
+        castTimeMultiplier: base.castTimeMultiplier,
+        healthDrainPerSecond: base.healthDrainPerSecond,
+        damageTakenToManaRatio: base.damageTakenToManaRatio,
+        usesHpForMana: base.usesHpForMana,
+        hpForManaRatio: base.hpForManaRatio,
+        convertsManaRegenToHeal: base.convertsManaRegenToHeal,
+        rerollInterval: base.rerollInterval,
+        hasRandomModifiers: base.hasRandomModifiers,
+        rerollDamageMin: base.rerollDamageMin,
+        rerollDamageMax: base.rerollDamageMax,
+        rerollDamageTakenMin: base.rerollDamageTakenMin,
+        rerollDamageTakenMax: base.rerollDamageTakenMax,
+        switchCooldown: base.switchCooldown,
+      );
+    }
+    return base;
+  }
+
+  /// Switch the active character to a new stance.
+  ///
+  /// Proportionally scales current HP when maxHealth changes.
+  /// Respects switch cooldown (cannot switch during cooldown).
+  void switchStance(StanceId newStance) {
+    if (stanceSwitchCooldown > 0) {
+      print('[STANCE] Cannot switch yet — ${stanceSwitchCooldown.toStringAsFixed(1)}s remaining');
+      return;
+    }
+
+    final oldMaxHealth = activeMaxHealth;
+    if (isWarchiefActive) {
+      playerStance = newStance;
+    } else if (activeAlly != null) {
+      activeAlly!.currentStance = newStance;
+    }
+    final newMaxHealth = activeMaxHealth;
+
+    // Proportionally scale current HP so switching doesn't instakill or overheal
+    if (oldMaxHealth > 0 && newMaxHealth != oldMaxHealth) {
+      final ratio = activeHealth / oldMaxHealth;
+      activeHealth = (ratio * newMaxHealth).clamp(1.0, newMaxHealth);
+    }
+
+    // Set switch cooldown from the new stance
+    stanceSwitchCooldown = activeStance.switchCooldown;
+    stanceActiveTime = 0.0;
+
+    // Reset Drunken Master accumulators if switching to it
+    if (activeStance.hasRandomModifiers) {
+      stanceRerollAccumulator = 0.0;
+      drunkenDamageRoll = 1.0;
+      drunkenDamageTakenRoll = 1.0;
+    }
+
+    // Combat log
+    combatLogMessages.add(CombatLogEntry(
+      source: 'Player',
+      action: 'Switched to ${activeStance.name} stance',
+      type: CombatLogType.ability,
+    ));
+    if (combatLogMessages.length > 200) combatLogMessages.removeAt(0);
+
+    print('[STANCE] Switched to ${activeStance.name}');
+    saveStanceConfig();
+  }
+
+  /// Cycle to the next selectable stance (for Shift+X).
+  void cycleStance() {
+    final registry = globalStanceRegistry;
+    if (registry == null) return;
+    final stances = [StanceId.none, ...registry.selectableStances.map((s) => s.id)];
+    final currentId = isWarchiefActive ? playerStance : (activeAlly?.currentStance ?? StanceId.none);
+    final idx = stances.indexOf(currentId);
+    // Skip stances that are on switch cooldown — try each one
+    for (int i = 1; i <= stances.length; i++) {
+      final nextIdx = (idx + i) % stances.length;
+      final nextId = stances[nextIdx];
+      // Reason: switching resets cooldown, so we only check if cooldown blocks us
+      if (stanceSwitchCooldown <= 0 || nextId == currentId) {
+        switchStance(nextId);
+        return;
+      }
+    }
+  }
+
+  /// Update stance timers each frame: Fury drain, Drunken re-rolls, switch cooldown.
+  void updateStanceTimers(double dt) {
+    // Tick switch cooldown
+    if (stanceSwitchCooldown > 0) {
+      stanceSwitchCooldown = (stanceSwitchCooldown - dt).clamp(0.0, double.infinity);
+    }
+
+    final stance = activeStance;
+    stanceActiveTime += dt;
+
+    // Fury of the Ancestors: health drain
+    if (stance.healthDrainPerSecond > 0) {
+      final maxHp = activeMaxHealth;
+      final drain = maxHp * stance.healthDrainPerSecond * dt;
+      activeHealth = (activeHealth - drain).clamp(1.0, maxHp);
+
+      // Log when HP reaches critical (<20%)
+      final hpPct = activeHealth / maxHp;
+      // Reason: only log once when crossing the 20% threshold
+      if (hpPct < 0.20 && (activeHealth + drain) / maxHp >= 0.20) {
+        combatLogMessages.add(CombatLogEntry(
+          source: stance.name,
+          action: '${stance.name}: HP critical!',
+          type: CombatLogType.damage,
+          amount: activeHealth,
+        ));
+        if (combatLogMessages.length > 200) combatLogMessages.removeAt(0);
+      }
+    }
+
+    // Drunken Master: periodic re-rolls
+    if (stance.hasRandomModifiers && stance.rerollInterval > 0) {
+      stanceRerollAccumulator += dt;
+      if (stanceRerollAccumulator >= stance.rerollInterval) {
+        stanceRerollAccumulator -= stance.rerollInterval;
+        final range = stance.rerollDamageMax - stance.rerollDamageMin;
+        drunkenDamageRoll = stance.rerollDamageMin + _stanceRng.nextDouble() * range;
+        final takenRange = stance.rerollDamageTakenMax - stance.rerollDamageTakenMin;
+        drunkenDamageTakenRoll = stance.rerollDamageTakenMin + _stanceRng.nextDouble() * takenRange;
+
+        final dmgPct = ((drunkenDamageRoll - 1.0) * 100).round();
+        final takenPct = ((drunkenDamageTakenRoll - 1.0) * 100).round();
+        final dmgSign = dmgPct >= 0 ? '+' : '';
+        final takenSign = takenPct >= 0 ? '+' : '';
+
+        combatLogMessages.add(CombatLogEntry(
+          source: stance.name,
+          action: '${stance.name}: Power surges! ($dmgSign$dmgPct% damage, $takenSign$takenPct% damage taken)',
+          type: CombatLogType.ability,
+        ));
+        if (combatLogMessages.length > 200) combatLogMessages.removeAt(0);
+
+        // Trigger visual pulse for UI overlay
+        drunkenRerollPulseTimer = 0.4;
+      }
+    }
+
+    // Tick down the Drunken re-roll visual pulse
+    if (drunkenRerollPulseTimer > 0) {
+      drunkenRerollPulseTimer = (drunkenRerollPulseTimer - dt).clamp(0.0, double.infinity);
+    }
+  }
+
+  /// Generate mana from damage taken (Tide stance passive).
+  ///
+  /// Adds mana to the primary attuned color of the active character.
+  void generateManaFromDamageTaken(double manaAmount) {
+    if (manaAmount <= 0) return;
+    final attunements = activeManaAttunements;
+    // Reason: pick the first attuned color as "primary"
+    if (attunements.contains(ManaColor.red)) {
+      if (isWarchiefActive) {
+        redMana = (redMana + manaAmount).clamp(0.0, maxRedMana);
+      } else if (activeAlly != null) {
+        activeAlly!.redMana = (activeAlly!.redMana + manaAmount).clamp(0.0, activeAlly!.maxRedMana);
+      }
+    } else if (attunements.contains(ManaColor.blue)) {
+      if (isWarchiefActive) {
+        blueMana = (blueMana + manaAmount).clamp(0.0, maxBlueMana);
+      } else if (activeAlly != null) {
+        activeAlly!.blueMana = (activeAlly!.blueMana + manaAmount).clamp(0.0, activeAlly!.maxBlueMana);
+      }
+    } else if (attunements.contains(ManaColor.green)) {
+      if (isWarchiefActive) {
+        greenMana = (greenMana + manaAmount).clamp(0.0, maxGreenMana);
+      } else if (activeAlly != null) {
+        activeAlly!.greenMana = (activeAlly!.greenMana + manaAmount).clamp(0.0, activeAlly!.maxGreenMana);
+      }
+    } else if (attunements.contains(ManaColor.white)) {
+      if (isWarchiefActive) {
+        whiteMana = (whiteMana + manaAmount).clamp(0.0, maxWhiteMana);
+      } else if (activeAlly != null) {
+        activeAlly!.whiteMana = (activeAlly!.whiteMana + manaAmount).clamp(0.0, activeAlly!.maxWhiteMana);
+      }
+    }
+    print('[TIDE] Converted damage to ${manaAmount.toStringAsFixed(1)} mana');
+  }
+
+  /// Save current stance selections to SharedPreferences.
+  Future<void> saveStanceConfig() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('stance_player', playerStance.name);
+      for (int i = 0; i < allies.length; i++) {
+        await prefs.setString('stance_ally_$i', allies[i].currentStance.name);
+      }
+    } catch (e) {
+      print('[STANCE] Failed to save stance config: $e');
+    }
+  }
+
+  /// Load saved stance selections from SharedPreferences.
+  Future<void> loadStanceConfig() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final playerStanceName = prefs.getString('stance_player');
+      if (playerStanceName != null) {
+        final id = _parseStanceIdFromName(playerStanceName);
+        if (id != null) playerStance = id;
+      }
+      for (int i = 0; i < allies.length; i++) {
+        final allyStanceName = prefs.getString('stance_ally_$i');
+        if (allyStanceName != null) {
+          final id = _parseStanceIdFromName(allyStanceName);
+          if (id != null) allies[i].currentStance = id;
+        }
+      }
+    } catch (e) {
+      print('[STANCE] Failed to load stance config: $e');
+    }
+  }
+
+  /// Parse a StanceId from its enum name string.
+  StanceId? _parseStanceIdFromName(String name) {
+    for (final id in StanceId.values) {
+      if (id.name == name) return id;
+    }
+    return null;
+  }
 
   // ==================== PLAYER MANA ====================
 
@@ -257,12 +542,21 @@ class GameState {
 
     final playerAttunements = playerManaAttunements;
 
+    // Stance mana regen modifier and Blood Weave conversion
+    final stanceManaRegenMult = activeStance.manaRegenMultiplier;
+    final stanceConvertsToHeal = activeStance.convertsManaRegenToHeal;
+
     // Apply blue mana regeneration (Ley Lines + equipped item bonus)
     if (playerAttunements.contains(ManaColor.blue)) {
       final blueRegenBonus = playerInventory.totalEquippedStats.blueManaRegen;
-      final effectiveBlueRegen = currentManaRegenRate + blueRegenBonus;
+      final effectiveBlueRegen = (currentManaRegenRate + blueRegenBonus) * stanceManaRegenMult;
       if (effectiveBlueRegen > 0) {
-        blueMana = (blueMana + effectiveBlueRegen * dt).clamp(0.0, maxBlueMana);
+        if (stanceConvertsToHeal) {
+          // Blood Weave: mana regen heals HP instead
+          playerHealth = (playerHealth + effectiveBlueRegen * dt).clamp(0.0, playerMaxHealth);
+        } else {
+          blueMana = (blueMana + effectiveBlueRegen * dt).clamp(0.0, maxBlueMana);
+        }
       }
     }
 
@@ -270,15 +564,24 @@ class GameState {
     if (playerAttunements.contains(ManaColor.red)) {
       final redRegenBonus = playerInventory.totalEquippedStats.redManaRegen;
       if (isOnPowerNode) {
-        currentRedManaRegenRate = currentManaRegenRate + redRegenBonus;
-        redMana = (redMana + currentRedManaRegenRate * dt).clamp(0.0, maxRedMana);
+        currentRedManaRegenRate = (currentManaRegenRate + redRegenBonus) * stanceManaRegenMult;
+        if (stanceConvertsToHeal) {
+          playerHealth = (playerHealth + currentRedManaRegenRate * dt).clamp(0.0, playerMaxHealth);
+        } else {
+          redMana = (redMana + currentRedManaRegenRate * dt).clamp(0.0, maxRedMana);
+        }
         _timeSinceLastRedManaChange = 0.0; // Power nodes pause decay
       } else {
-        currentRedManaRegenRate = redRegenBonus.toDouble();
+        currentRedManaRegenRate = redRegenBonus.toDouble() * stanceManaRegenMult;
 
         // Apply item-based red regen even off power nodes
         if (redRegenBonus > 0) {
-          redMana = (redMana + redRegenBonus * dt).clamp(0.0, maxRedMana);
+          final effectiveRedRegen = redRegenBonus * stanceManaRegenMult;
+          if (stanceConvertsToHeal) {
+            playerHealth = (playerHealth + effectiveRedRegen * dt).clamp(0.0, playerMaxHealth);
+          } else {
+            redMana = (redMana + effectiveRedRegen * dt).clamp(0.0, maxRedMana);
+          }
           _timeSinceLastRedManaChange = 0.0;
         }
 
@@ -355,20 +658,33 @@ class GameState {
     // Reason: derecho storms multiply white mana regen for massive gains
     final derechoManaMult = _windState.derechoManaMultiplier;
 
+    // Stance modifiers for white mana regen
+    final whiteStanceMult = activeStance.manaRegenMultiplier;
+    final whiteStanceConverts = activeStance.convertsManaRegenToHeal;
+
     if (playerManaAttunements.contains(ManaColor.white)) {
       if (exposure >= shelterThresh) {
         // Wind is blowing — regenerate white mana (wind + item bonus)
         final regenRate = ((config?.windExposureRegen ?? 5.0) *
             exposure *
             (config?.windStrengthMultiplier ?? 1.0) +
-            whiteRegenBonus) * windAffinityMult * derechoManaMult;
+            whiteRegenBonus) * windAffinityMult * derechoManaMult * whiteStanceMult;
         currentWhiteManaRegenRate = regenRate;
-        whiteMana = (whiteMana + regenRate * dt).clamp(0.0, maxWhiteMana);
+        if (whiteStanceConverts) {
+          playerHealth = (playerHealth + regenRate * dt).clamp(0.0, playerMaxHealth);
+        } else {
+          whiteMana = (whiteMana + regenRate * dt).clamp(0.0, maxWhiteMana);
+        }
       } else {
         // Sheltered — item regen still applies, but wind decay counteracts
-        currentWhiteManaRegenRate = whiteRegenBonus.toDouble() * windAffinityMult;
+        currentWhiteManaRegenRate = whiteRegenBonus.toDouble() * windAffinityMult * whiteStanceMult;
         if (whiteRegenBonus > 0) {
-          whiteMana = (whiteMana + whiteRegenBonus * windAffinityMult * dt).clamp(0.0, maxWhiteMana);
+          final effectiveWhiteRegen = whiteRegenBonus * windAffinityMult * whiteStanceMult;
+          if (whiteStanceConverts) {
+            playerHealth = (playerHealth + effectiveWhiteRegen * dt).clamp(0.0, playerMaxHealth);
+          } else {
+            whiteMana = (whiteMana + effectiveWhiteRegen * dt).clamp(0.0, maxWhiteMana);
+          }
         }
         if (whiteMana > 0 && whiteRegenBonus <= 0) {
           final decay = config?.decayRate ?? 0.5;
@@ -530,11 +846,15 @@ class GameState {
       }
       final spiritRegen = spiritCount * spiritBeingRegenBonus;
 
-      final totalRegen = grassRegen + proximityRegen + spiritRegen + greenRegenBonus;
+      final totalRegen = (grassRegen + proximityRegen + spiritRegen + greenRegenBonus) * activeStance.manaRegenMultiplier;
       currentGreenManaRegenRate = totalRegen;
 
       if (totalRegen > 0) {
-        greenMana = (greenMana + totalRegen * dt).clamp(0.0, maxGreenMana);
+        if (activeStance.convertsManaRegenToHeal) {
+          playerHealth = (playerHealth + totalRegen * dt).clamp(0.0, playerMaxHealth);
+        } else {
+          greenMana = (greenMana + totalRegen * dt).clamp(0.0, maxGreenMana);
+        }
         _timeSinceLastGreenManaSource = 0.0;
       } else {
         // Decay when no regen sources
@@ -1914,8 +2234,9 @@ class GameState {
   /// Pending mana type: 0=blue, 1=red, 2=white
   int pendingManaType = 0;
 
-  /// Get the effective movement speed considering windup modifier
-  double get effectivePlayerSpeed => playerSpeed * windupMovementSpeedModifier;
+  /// Get the effective movement speed considering windup modifier and stance.
+  double get effectivePlayerSpeed =>
+      playerSpeed * windupMovementSpeedModifier * activeStance.movementSpeedMultiplier;
 
   /// Cancel any active cast (called when player moves during stationary cast)
   void cancelCast() {

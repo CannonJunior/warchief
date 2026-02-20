@@ -9,6 +9,8 @@ import '../data/abilities/abilities.dart' show AbilityRegistry;
 import 'ability_editor_panel.dart';
 import 'ui_config.dart';
 import '../data/abilities/ability_balance.dart';
+import '../state/game_state.dart';
+import 'stance_selector.dart';
 
 /// Abilities Panel - Draggable panel displaying all available abilities in the game
 ///
@@ -19,11 +21,13 @@ import '../data/abilities/ability_balance.dart';
 class AbilitiesModal extends StatefulWidget {
   final VoidCallback onClose;
   final void Function(String category)? onClassLoaded;
+  final GameState? gameState;
 
   const AbilitiesModal({
     Key? key,
     required this.onClose,
     this.onClassLoaded,
+    this.gameState,
   }) : super(key: key);
 
   @override
@@ -218,6 +222,16 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Exotic Stances section
+                          if (widget.gameState != null)
+                            StanceCardsSection(
+                              gameState: widget.gameState!,
+                              onStateChanged: () => setState(() {}),
+                            ),
+
+                          if (widget.gameState != null)
+                            SizedBox(height: 16),
+
                           // "+ Add New Ability" button at the top
                           _buildAddNewAbilityButton(),
 

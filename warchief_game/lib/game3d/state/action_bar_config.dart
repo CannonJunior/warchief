@@ -91,6 +91,8 @@ class ActionBarConfig extends ChangeNotifier {
       ...SpiritkinAbilities.all,
       ...StormheartAbilities.all,
       ...GreenseerAbilities.all,
+      ...HealerAbilities.all,
+      ...NatureAbilities.all,
     ];
 
     for (final ability in allAbilities) {

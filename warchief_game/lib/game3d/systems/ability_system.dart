@@ -17,6 +17,7 @@ import 'physics_system.dart';
 import '../../models/combat_log_entry.dart';
 import '../../models/active_effect.dart';
 import '../utils/bezier_path.dart';
+import '../data/stances/stances.dart';
 
 /// Mana type enumeration for abilities
 enum _ManaType { none, blue, red, white, green }
@@ -298,16 +299,33 @@ class AbilitySystem {
       }
     }
 
+    // Stance: apply mana cost multiplier
+    final stance = gameState.activeStance;
+    if (stance.manaCostMultiplier != 1.0 && !stance.usesHpForMana) {
+      manaCost *= stance.manaCostMultiplier;
+      secondaryManaCost *= stance.manaCostMultiplier;
+    }
+
     // Silent Mind: next white mana ability is free
     if (gameState.silentMindActive && manaType == _ManaType.white && manaCost > 0) {
       print('[SILENT MIND] $abilityName mana cost overridden to 0 (was $manaCost)');
       manaCost = 0;
     }
 
-    // Check primary mana availability
-    if (manaCost > 0 && !_activeHasMana(gameState, manaType, manaCost, abilityName)) return;
-    // Check secondary mana availability
-    if (secondaryManaCost > 0 && !_activeHasMana(gameState, secondaryManaType, secondaryManaCost, abilityName)) return;
+    // Blood Weave: abilities cost HP instead of mana
+    if (stance.usesHpForMana && manaCost > 0) {
+      final hpCost = manaCost * stance.hpForManaRatio;
+      if (gameState.activeHealth <= hpCost) {
+        print('[BLOOD WEAVE] Not enough HP for $abilityName (need ${hpCost.toStringAsFixed(1)} HP, have ${gameState.activeHealth.toStringAsFixed(1)})');
+        return;
+      }
+      // HP will be spent below after cast/windup completes or instantly
+    } else {
+      // Check primary mana availability
+      if (manaCost > 0 && !_activeHasMana(gameState, manaType, manaCost, abilityName)) return;
+    }
+    // Check secondary mana availability (Blood Weave still skips secondary mana cost)
+    if (secondaryManaCost > 0 && !stance.usesHpForMana && !_activeHasMana(gameState, secondaryManaType, secondaryManaCost, abilityName)) return;
 
     // Check for cast-time abilities (must be stationary)
     // Silent Mind: skip cast time for white mana abilities, execute instantly
@@ -340,9 +358,17 @@ class AbilitySystem {
       return;
     }
 
-    // Spend mana for instant abilities
-    _spendManaByType(gameState, manaType, manaCost, abilityName);
-    _spendManaByType(gameState, secondaryManaType, secondaryManaCost, abilityName);
+    // Spend mana (or HP for Blood Weave) for instant abilities
+    if (stance.usesHpForMana && manaCost > 0) {
+      final hpCost = manaCost * stance.hpForManaRatio;
+      gameState.activeHealth = (gameState.activeHealth - hpCost).clamp(1.0, gameState.activeMaxHealth);
+      print('[BLOOD WEAVE] $abilityName spent ${hpCost.toStringAsFixed(1)} HP instead of mana');
+    } else {
+      _spendManaByType(gameState, manaType, manaCost, abilityName);
+    }
+    if (!stance.usesHpForMana) {
+      _spendManaByType(gameState, secondaryManaType, secondaryManaCost, abilityName);
+    }
 
     // Consume Silent Mind after a white mana ability is used
     if (gameState.silentMindActive && manaType == _ManaType.white) {
@@ -679,8 +705,8 @@ class AbilitySystem {
     return cds[slotIndex];
   }
 
-  /// Set cooldown for a slot, applying Melt reduction.
-  /// Formula: effectiveCooldown = baseCooldown / (1 + melt/100).
+  /// Set cooldown for a slot, applying Melt reduction and stance cooldown multiplier.
+  /// Formula: effectiveCooldown = baseCooldown / (1 + melt/100) * stanceMultiplier.
   static void _setCooldownForSlot(int slotIndex, double cooldown, GameState gameState) {
     final cds = gameState.activeAbilityCooldowns;
     if (slotIndex < 0 || slotIndex >= cds.length) return;
@@ -689,6 +715,8 @@ class AbilitySystem {
     if (melt > 0) {
       cooldown = cooldown / (1 + melt / 100.0);
     }
+    // Apply stance cooldown multiplier
+    cooldown *= gameState.activeStance.cooldownMultiplier;
     cds[slotIndex] = cooldown;
   }
 
@@ -699,7 +727,9 @@ class AbilitySystem {
     final baseCastTime = abilityData.castTime;
     // Apply Haste: effectiveTime = baseTime / (1 + haste/100)
     final haste = gameState.activeHaste;
-    final castTime = haste > 0 ? baseCastTime / (1 + haste / 100.0) : baseCastTime;
+    double castTime = haste > 0 ? baseCastTime / (1 + haste / 100.0) : baseCastTime;
+    // Apply stance cast time multiplier
+    castTime *= gameState.activeStance.castTimeMultiplier;
 
     gameState.isCasting = true;
     gameState.castProgress = 0.0;
@@ -720,7 +750,9 @@ class AbilitySystem {
     final movementSpeed = abilityData.windupMovementSpeed;
     // Apply Haste: effectiveTime = baseTime / (1 + haste/100)
     final haste = gameState.activeHaste;
-    final windupTime = haste > 0 ? baseWindupTime / (1 + haste / 100.0) : baseWindupTime;
+    double windupTime = haste > 0 ? baseWindupTime / (1 + haste / 100.0) : baseWindupTime;
+    // Apply stance cast time multiplier (affects windups too)
+    windupTime *= gameState.activeStance.castTimeMultiplier;
 
     gameState.isWindingUp = true;
     gameState.windupProgress = 0.0;
@@ -938,6 +970,16 @@ class AbilitySystem {
   static void _spendPendingMana(GameState gameState, String abilityName) {
     final cost = gameState.pendingManaCost;
     if (cost > 0) {
+      // Blood Weave: spend HP instead of mana for deferred costs
+      final stance = gameState.activeStance;
+      if (stance.usesHpForMana) {
+        final hpCost = cost * stance.hpForManaRatio;
+        gameState.activeHealth = (gameState.activeHealth - hpCost).clamp(1.0, gameState.activeMaxHealth);
+        print('[BLOOD WEAVE] $abilityName spent ${hpCost.toStringAsFixed(1)} HP instead of mana');
+        gameState.pendingManaCost = 0.0;
+        _pendingSecondaryManaCost = 0.0;
+        return;
+      }
       // Reason: pendingManaType distinguishes blue(0), red(1), white(2), green(3)
       switch (gameState.pendingManaType) {
         case 3:
@@ -1308,7 +1350,7 @@ class AbilitySystem {
     final strikeRange = ability?.range ?? 2.5;
     final strikePosition = gameState.activeTransform!.position + forward * strikeRange;
 
-    CombatSystem.checkAndDamageEnemies(
+    final hitRegistered = CombatSystem.checkAndDamageEnemies(
       gameState,
       attackerPosition: strikePosition,
       damage: ability?.damage ?? 40.0,
@@ -1318,6 +1360,11 @@ class AbilitySystem {
       collisionThreshold: ability?.effectiveHitRadius ?? 3.5,
       isMeleeDamage: true,
     );
+
+    // Apply status effects and knockback from windup melee abilities
+    if (hitRegistered && ability != null) {
+      _applyMeleeStatusEffect(gameState, ability);
+    }
 
     print('$abilityName!');
   }
@@ -1435,8 +1482,10 @@ class AbilitySystem {
     gameState.ability3ActiveTime = 0.0;
 
     final healAbility = _effective(AbilitiesConfig.playerHeal);
+    // Apply stance healing multiplier
+    final effectiveHeal = healAbility.healAmount * gameState.activeStance.healingMultiplier;
     final oldHealth = gameState.activeHealth;
-    gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + healAbility.healAmount);
+    gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + effectiveHeal);
     final healedAmount = gameState.activeHealth - oldHealth;
 
     _setCooldownForSlot(slotIndex, healAbility.cooldown, gameState);
@@ -1992,6 +2041,76 @@ class AbilitySystem {
     print(message);
   }
 
+  /// Apply melee status effects and knockback to the hit target after a confirmed hit.
+  ///
+  /// Called from updateAbility1() and _executeGenericWindupMelee() when a melee
+  /// hit is registered. Applies the ability's statusEffect (stun, slow, bleed,
+  /// poison, etc.) and knockbackForce to the current target.
+  static void _applyMeleeStatusEffect(GameState gameState, AbilityData ability) {
+    if (ability.statusEffect == StatusEffect.none && ability.knockbackForce <= 0) return;
+
+    final targetId = gameState.currentTargetId;
+    if (targetId == null) return;
+
+    // Apply knockback
+    if (ability.knockbackForce > 0 && gameState.activeTransform != null) {
+      final forward = Vector3(
+        -math.sin(_radians(gameState.activeRotation)),
+        0,
+        -math.cos(_radians(gameState.activeRotation)),
+      );
+      if (targetId == 'boss' && gameState.monsterTransform != null) {
+        gameState.monsterTransform!.position += forward * ability.knockbackForce;
+      } else {
+        final minion = gameState.minions.where(
+          (m) => m.instanceId == targetId && m.isAlive,
+        ).firstOrNull;
+        if (minion != null) {
+          minion.transform.position += forward * ability.knockbackForce;
+        }
+      }
+    }
+
+    // Apply status effect
+    if (ability.statusEffect != StatusEffect.none && ability.statusDuration > 0) {
+      double damagePerTick = 0;
+      double tickInterval = 0;
+
+      // Reason: DoT effects (bleed, poison, burn) deal ability damage split across ticks
+      if (ability.dotTicks > 0) {
+        tickInterval = ability.statusDuration / ability.dotTicks;
+        damagePerTick = ability.damage / ability.dotTicks;
+      }
+
+      final effect = ActiveEffect(
+        type: ability.statusEffect,
+        remainingDuration: ability.statusDuration,
+        totalDuration: ability.statusDuration,
+        strength: ability.statusStrength > 0 ? ability.statusStrength : 1.0,
+        damagePerTick: damagePerTick,
+        tickInterval: tickInterval,
+        sourceName: ability.name,
+      );
+
+      if (targetId == 'boss') {
+        gameState.monsterActiveEffects.add(effect);
+      } else {
+        final minion = gameState.minions.where(
+          (m) => m.instanceId == targetId && m.isAlive,
+        ).firstOrNull;
+        if (minion != null) minion.activeEffects.add(effect);
+      }
+
+      gameState.combatLogMessages.add(CombatLogEntry(
+        source: ability.name,
+        action: '${ability.name} applied ${ability.statusEffect.name}',
+        type: CombatLogType.ability,
+      ));
+
+      print('[Status] Applied ${ability.statusEffect.name} to $targetId from ${ability.name}');
+    }
+  }
+
   /// Generic projectile attack execution (with homing toward current target)
   static void _executeGenericProjectile(int slotIndex, GameState gameState, AbilityData rawAbility, String message) {
     // Reason: Named handlers pass raw static ability data; apply user overrides
@@ -2076,11 +2195,11 @@ class AbilitySystem {
       lifetime: 0.5,
     ));
 
-    // Damage nearby enemies
+    // Damage nearby enemies (apply stance damage multiplier)
     CombatSystem.checkAndDamageEnemies(
       gameState,
       attackerPosition: gameState.activeTransform!.position,
-      damage: ability.damage,
+      damage: ability.damage * gameState.activeStance.damageMultiplier,
       attackType: ability.name,
       impactColor: ability.impactColor,
       impactSize: ability.impactSize,
@@ -2099,8 +2218,10 @@ class AbilitySystem {
     gameState.ability3Active = true;
     gameState.ability3ActiveTime = 0.0;
 
+    // Apply stance healing multiplier
+    final effectiveHeal = ability.healAmount * gameState.activeStance.healingMultiplier;
     final oldHealth = gameState.activeHealth;
-    gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + ability.healAmount);
+    gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + effectiveHeal);
     final healedAmount = gameState.activeHealth - oldHealth;
 
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
@@ -2185,10 +2306,12 @@ class AbilitySystem {
             ?? _effective(AbilitiesConfig.playerSword);
         final swordTipPosition = gameState.activeTransform!.position + forward * melee.range;
 
+        // Apply stance damage multiplier to melee damage
+        final stanceDmg = melee.damage * gameState.activeStance.damageMultiplier;
         final hitRegistered = CombatSystem.checkAndDamageEnemies(
           gameState,
           attackerPosition: swordTipPosition,
-          damage: melee.damage,
+          damage: stanceDmg,
           attackType: melee.name,
           impactColor: melee.impactColor,
           impactSize: melee.impactSize,
@@ -2197,6 +2320,10 @@ class AbilitySystem {
 
         if (hitRegistered) {
           gameState.ability1HitRegistered = true;
+          // Apply status effects and knockback from generic melee abilities
+          if (gameState.activeGenericMeleeAbility != null) {
+            _applyMeleeStatusEffect(gameState, melee);
+          }
         }
       }
     }
@@ -2263,10 +2390,11 @@ class AbilitySystem {
       }
 
       // Also check collision with any enemy (in case projectile passes near others)
+      // Stance damage multiplier applied at collision time
       final hitRegistered = CombatSystem.checkAndDamageEnemies(
         gameState,
         attackerPosition: projectile.transform.position,
-        damage: projectile.damage,
+        damage: projectile.damage * gameState.activeStance.damageMultiplier,
         attackType: projectile.abilityName,
         impactColor: projectile.impactColor,
         impactSize: projectile.impactSize,
@@ -2287,11 +2415,13 @@ class AbilitySystem {
 
   /// Apply damage to a specific target by ID using projectile's damage data
   static void _damageTargetWithProjectile(GameState gameState, String targetId, Projectile projectile) {
+    // Apply stance damage multiplier at impact
+    final effectiveDamage = projectile.damage * gameState.activeStance.damageMultiplier;
     if (targetId == 'boss') {
       CombatSystem.checkAndDamageMonster(
         gameState,
         attackerPosition: gameState.monsterTransform!.position,
-        damage: projectile.damage,
+        damage: effectiveDamage,
         attackType: projectile.abilityName,
         impactColor: projectile.impactColor,
         impactSize: projectile.impactSize,
@@ -2302,7 +2432,7 @@ class AbilitySystem {
       CombatSystem.damageMinion(
         gameState,
         minionInstanceId: targetId,
-        damage: projectile.damage,
+        damage: effectiveDamage,
         attackType: projectile.abilityName,
         impactColor: projectile.impactColor,
         impactSize: projectile.impactSize,
