@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-/// Manages building configuration with JSON asset defaults.
+/// Manages building configuration with JSON asset defaults and
+/// SharedPreferences overrides.
 ///
 /// Architecture:
 /// - JSON asset file (`assets/data/building_config.json`) = shipped defaults
-/// - Runtime getters resolve values from the loaded defaults
+/// - SharedPreferences = sparse user overrides (only changed fields)
+/// - Runtime = overrides merged on top of defaults
 ///
 /// Follows the same pattern as [ManaConfig] and [WindConfig].
 class BuildingConfig extends ChangeNotifier {
   static const String _assetPath = 'assets/data/building_config.json';
+  static const String _storageKey = 'building_config_overrides';
 
   /// Defaults loaded from JSON asset file.
   Map<String, dynamic> _defaults = {};
+
+  /// Sparse user overrides stored in SharedPreferences.
+  Map<String, dynamic> _overrides = {};
 
   // ==================== TOP-LEVEL GETTERS ====================
 
@@ -54,9 +61,10 @@ class BuildingConfig extends ChangeNotifier {
 
   // ==================== INITIALIZATION ====================
 
-  /// Load defaults from JSON asset.
+  /// Load defaults from JSON asset, then overrides from SharedPreferences.
   Future<void> initialize() async {
     await _loadDefaults();
+    await _loadOverrides();
   }
 
   /// Load default values from the bundled JSON asset file.
@@ -72,10 +80,67 @@ class BuildingConfig extends ChangeNotifier {
     }
   }
 
+  /// Load user overrides from SharedPreferences.
+  Future<void> _loadOverrides() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = prefs.getString(_storageKey);
+      if (json != null) {
+        _overrides = Map<String, dynamic>.from(
+          jsonDecode(json) as Map<String, dynamic>,
+        );
+        notifyListeners();
+        print('[BuildingConfig] Loaded ${_overrides.length} overrides');
+      }
+    } catch (e) {
+      print('[BuildingConfig] Failed to load overrides: $e');
+    }
+  }
+
+  /// Save overrides to SharedPreferences.
+  Future<void> _saveOverrides() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_storageKey, jsonEncode(_overrides));
+    } catch (e) {
+      print('[BuildingConfig] Failed to save overrides: $e');
+    }
+  }
+
+  // ==================== OVERRIDE MANAGEMENT ====================
+
+  void setOverride(String key, dynamic value) {
+    _overrides[key] = value;
+    notifyListeners();
+    _saveOverrides();
+  }
+
+  void clearOverride(String key) {
+    _overrides.remove(key);
+    notifyListeners();
+    _saveOverrides();
+  }
+
+  void clearAllOverrides() {
+    _overrides.clear();
+    notifyListeners();
+    _saveOverrides();
+  }
+
+  bool hasOverride(String key) => _overrides.containsKey(key);
+
+  Map<String, dynamic> get overrides => Map.unmodifiable(_overrides);
+
+  dynamic getDefault(String key) => _defaults[key];
+
   // ==================== RESOLUTION HELPERS ====================
 
-  /// Resolve a value from defaults with hardcoded fallback.
+  /// Resolve a value: override -> default -> hardcoded fallback.
   double _resolve(String key, double fallback) {
+    if (_overrides.containsKey(key)) {
+      final val = _overrides[key];
+      if (val is num) return val.toDouble();
+    }
     final val = _defaults[key];
     if (val is num) return val.toDouble();
     return fallback;

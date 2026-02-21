@@ -13,6 +13,9 @@ class StanceRegistry {
   /// All registered stances keyed by [StanceId].
   final Map<StanceId, StanceData> _stances = {};
 
+  /// Default stance for new characters, loaded from config.
+  StanceId defaultStance = StanceId.none;
+
   /// Ordered list of selectable stances (excludes [StanceId.none]).
   List<StanceData> get selectableStances =>
       _stances.values.where((s) => s.id != StanceId.none).toList();
@@ -43,7 +46,13 @@ class StanceRegistry {
         _stances[id] = _parseStance(id, data);
       }
 
-      print('[STANCE] Loaded ${_stances.length} stances (including none)');
+      // Load default stance from config
+      final defaultKey = json['defaultStance'] as String?;
+      if (defaultKey != null) {
+        defaultStance = _parseStanceId(defaultKey) ?? StanceId.none;
+      }
+
+      print('[STANCE] Loaded ${_stances.length} stances (including none), default: ${defaultStance.name}');
     } catch (e) {
       print('[STANCE] Error loading stance config: $e');
       // Ensure none is always available
@@ -54,6 +63,7 @@ class StanceRegistry {
   /// Parse a JSON key like "drunken_master" into a [StanceId].
   static StanceId? _parseStanceId(String key) {
     switch (key) {
+      case 'none': return StanceId.none;
       case 'drunken_master': return StanceId.drunkenMaster;
       case 'blood_weave': return StanceId.bloodWeave;
       case 'tide': return StanceId.tide;

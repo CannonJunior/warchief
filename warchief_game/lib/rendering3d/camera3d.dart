@@ -66,6 +66,9 @@ class Camera3D {
   /// Camera roll angle in degrees (for cockpit-style banking tilt)
   double rollAngle = 0.0;
 
+  /// Y-offset added to the look-at target for flight pitch following.
+  double targetPitchOffset = 0.0;
+
   /// Smooth camera interpolation speed
   final double _cameraLerpSpeed = 8.0;
 
@@ -91,10 +94,13 @@ class Camera3D {
     final up = _getCameraUpVector();
 
     if (_target != null) {
-      // Look-at mode: camera looks at target
+      // Look-at mode: camera looks at target (with optional pitch offset)
+      final effectiveTarget = targetPitchOffset != 0.0
+          ? Vector3(_target!.x, _target!.y + targetPitchOffset, _target!.z)
+          : _target!;
       return makeViewMatrix(
         transform.position,
-        _target!,
+        effectiveTarget,
         up,
       );
     } else {

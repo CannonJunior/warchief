@@ -3,6 +3,7 @@ import 'source_tree_model.dart';
 import 'source_code_tab.dart';
 import 'interface_config.dart';
 import 'interfaces_tab.dart';
+import 'tuning_tab.dart';
 import '../../state/gameplay_settings.dart';
 
 /// Settings panel with tabs for General, Interfaces, Source Code, and About
@@ -29,6 +30,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
 
   final List<_TabItem> _tabs = [
     _TabItem(id: 'general', label: 'General', icon: Icons.settings),
+    _TabItem(id: 'tuning', label: 'Tuning', icon: Icons.tune),
     _TabItem(id: 'interfaces', label: 'Interfaces', icon: Icons.dashboard),
     _TabItem(id: 'source', label: 'Source Code', icon: Icons.folder_open),
     _TabItem(id: 'about', label: 'About', icon: Icons.info_outline),
@@ -234,6 +236,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
     switch (_tabs[_currentTabIndex].id) {
       case 'general':
         return _buildGeneralTab();
+      case 'tuning':
+        return const TuningTab();
       case 'interfaces':
         return _buildInterfacesTab();
       case 'source':

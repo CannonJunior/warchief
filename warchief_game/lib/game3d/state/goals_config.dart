@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-/// Manages goals configuration with JSON asset defaults.
+/// Manages goals configuration with JSON asset defaults and
+/// SharedPreferences overrides.
 ///
 /// Architecture:
 /// - JSON asset file (`assets/data/goals_config.json`) = shipped defaults
-/// - Runtime getters resolve values from the loaded defaults
+/// - SharedPreferences = sparse user overrides (only changed fields)
+/// - Runtime = overrides merged on top of defaults
 ///
-/// Follows the same pattern as [BuildingConfig] and [ManaConfig].
+/// Follows the same pattern as [ManaConfig].
 class GoalsConfig extends ChangeNotifier {
   static const String _assetPath = 'assets/data/goals_config.json';
+  static const String _storageKey = 'goals_config_overrides';
 
   /// Defaults loaded from JSON asset file.
   Map<String, dynamic> _defaults = {};
+
+  /// Sparse user overrides stored in SharedPreferences.
+  Map<String, dynamic> _overrides = {};
 
   // ==================== WARRIOR SPIRIT GETTERS ====================
 
@@ -93,9 +100,10 @@ class GoalsConfig extends ChangeNotifier {
 
   // ==================== INITIALIZATION ====================
 
-  /// Load defaults from JSON asset.
+  /// Load defaults from JSON asset, then overrides from SharedPreferences.
   Future<void> initialize() async {
     await _loadDefaults();
+    await _loadOverrides();
   }
 
   /// Load default values from the bundled JSON asset file.
@@ -112,24 +120,87 @@ class GoalsConfig extends ChangeNotifier {
     }
   }
 
+  Future<void> _loadOverrides() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = prefs.getString(_storageKey);
+      if (json != null) {
+        _overrides = Map<String, dynamic>.from(
+          jsonDecode(json) as Map<String, dynamic>,
+        );
+        notifyListeners();
+        print('[GoalsConfig] Loaded ${_overrides.length} overrides');
+      }
+    } catch (e) {
+      print('[GoalsConfig] Failed to load overrides: $e');
+    }
+  }
+
+  Future<void> _saveOverrides() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_storageKey, jsonEncode(_overrides));
+    } catch (e) {
+      print('[GoalsConfig] Failed to save overrides: $e');
+    }
+  }
+
+  // ==================== OVERRIDE MANAGEMENT ====================
+
+  void setOverride(String key, dynamic value) {
+    _overrides[key] = value;
+    notifyListeners();
+    _saveOverrides();
+  }
+
+  void clearOverride(String key) {
+    _overrides.remove(key);
+    notifyListeners();
+    _saveOverrides();
+  }
+
+  void clearAllOverrides() {
+    _overrides.clear();
+    notifyListeners();
+    _saveOverrides();
+  }
+
+  bool hasOverride(String key) => _overrides.containsKey(key);
+
+  Map<String, dynamic> get overrides => Map.unmodifiable(_overrides);
+
+  dynamic getDefault(String key) => _resolveFromNestedMap(_defaults, key);
+
   // ==================== RESOLUTION HELPERS ====================
 
-  /// Resolve a double value using dot-notation key.
+  /// Resolve a double: override -> default -> hardcoded fallback.
   double _resolveDouble(String dotKey, double fallback) {
+    if (_overrides.containsKey(dotKey)) {
+      final val = _overrides[dotKey];
+      if (val is num) return val.toDouble();
+    }
     final val = _resolveFromNestedMap(_defaults, dotKey);
     if (val is num) return val.toDouble();
     return fallback;
   }
 
-  /// Resolve an int value using dot-notation key.
+  /// Resolve an int: override -> default -> hardcoded fallback.
   int _resolveInt(String dotKey, int fallback) {
+    if (_overrides.containsKey(dotKey)) {
+      final val = _overrides[dotKey];
+      if (val is num) return val.toInt();
+    }
     final val = _resolveFromNestedMap(_defaults, dotKey);
     if (val is num) return val.toInt();
     return fallback;
   }
 
-  /// Resolve a string value using dot-notation key.
+  /// Resolve a string: override -> default -> hardcoded fallback.
   String _resolveString(String dotKey, String fallback) {
+    if (_overrides.containsKey(dotKey)) {
+      final val = _overrides[dotKey];
+      if (val is String) return val;
+    }
     final val = _resolveFromNestedMap(_defaults, dotKey);
     if (val is String) return val;
     return fallback;

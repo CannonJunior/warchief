@@ -7,9 +7,11 @@ import '../state/custom_ability_manager.dart';
 import '../state/action_bar_config.dart';
 import '../data/abilities/abilities.dart' show AbilityRegistry;
 import 'ability_editor_panel.dart';
+import 'stance_editor_panel.dart';
 import 'ui_config.dart';
 import '../data/abilities/ability_balance.dart';
 import '../state/game_state.dart';
+import '../data/stances/stances.dart' show StanceData, globalStanceOverrideManager;
 import 'stance_selector.dart';
 
 /// Abilities Panel - Draggable panel displaying all available abilities in the game
@@ -39,6 +41,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
   double _yPos = 50.0;
   AbilityData? _editingAbility;
   bool _isCreatingNew = false;
+  StanceData? _editingStance;
 
   /// Currently selected class in the "Load Class" dropdown
   String _selectedLoadClass = 'warrior';
@@ -72,8 +75,9 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
 
   @override
   Widget build(BuildContext context) {
-    // Total width includes editor panel when open
-    final totalWidth = _editingAbility != null ? 750.0 + 8.0 + 320.0 : 750.0;
+    // Total width includes editor panel when open (ability or stance, mutually exclusive)
+    final hasEditor = _editingAbility != null || _editingStance != null;
+    final totalWidth = hasEditor ? 750.0 + 8.0 + 320.0 : 750.0;
 
     return Positioned(
       left: _xPos,
@@ -227,6 +231,14 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                             StanceCardsSection(
                               gameState: widget.gameState!,
                               onStateChanged: () => setState(() {}),
+                              onDoubleTap: (stance) {
+                                setState(() {
+                                  // Reason: Close ability editor when opening stance editor (mutually exclusive)
+                                  _editingAbility = null;
+                                  _isCreatingNew = false;
+                                  _editingStance = stance;
+                                });
+                              },
                             ),
 
                           if (widget.gameState != null)
@@ -321,7 +333,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                 ],
               ),
             ),
-            // Editor panel (side-by-side)
+            // Editor panel (side-by-side) — ability or stance, mutually exclusive
             if (_editingAbility != null) ...[
               SizedBox(width: 8),
               AbilityEditorPanel(
@@ -342,6 +354,19 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                       _isCreatingNew = false;
                     }
                   });
+                },
+              ),
+            ],
+            if (_editingStance != null) ...[
+              SizedBox(width: 8),
+              StanceEditorPanel(
+                key: ValueKey('stance_${_editingStance!.id.name}'),
+                stance: _editingStance!,
+                onClose: () {
+                  setState(() => _editingStance = null);
+                },
+                onSaved: () {
+                  setState(() {});
                 },
               ),
             ],
@@ -425,6 +450,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                 setState(() {
                   _isCreatingNew = false;
                   _editingAbility = ability;
+                  _editingStance = null;
                 });
               },
               child: Container(
@@ -1076,6 +1102,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
         setState(() {
           _isCreatingNew = true;
           _editingAbility = _createBlankAbility();
+          _editingStance = null;
         });
       },
       child: Container(
@@ -1322,6 +1349,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                   // Custom abilities open in create mode (full save, not overrides)
                   _isCreatingNew = true;
                   _editingAbility = ability;
+                  _editingStance = null;
                 });
               },
               child: Container(

@@ -122,38 +122,20 @@ class GameState {
     final registry = globalStanceRegistry;
     if (registry == null) return StanceData.none;
     final id = isWarchiefActive ? playerStance : (activeAlly?.currentStance ?? StanceId.none);
-    final base = registry.getStance(id);
+    var base = registry.getStance(id);
+
+    // Reason: Apply user overrides (sparse merge) before random roll logic
+    final overrideMgr = globalStanceOverrideManager;
+    if (overrideMgr != null) {
+      base = overrideMgr.getEffectiveStance(base);
+    }
 
     // Reason: Drunken Master overrides damageMultiplier and damageTakenMultiplier
     // with independently re-rolled random values. We return a modified copy.
     if (base.hasRandomModifiers) {
-      return StanceData(
-        id: base.id,
-        name: base.name,
-        description: base.description,
-        icon: base.icon,
-        color: base.color,
+      return base.copyWith(
         damageMultiplier: drunkenDamageRoll,
         damageTakenMultiplier: drunkenDamageTakenRoll,
-        movementSpeedMultiplier: base.movementSpeedMultiplier,
-        cooldownMultiplier: base.cooldownMultiplier,
-        manaRegenMultiplier: base.manaRegenMultiplier,
-        manaCostMultiplier: base.manaCostMultiplier,
-        healingMultiplier: base.healingMultiplier,
-        maxHealthMultiplier: base.maxHealthMultiplier,
-        castTimeMultiplier: base.castTimeMultiplier,
-        healthDrainPerSecond: base.healthDrainPerSecond,
-        damageTakenToManaRatio: base.damageTakenToManaRatio,
-        usesHpForMana: base.usesHpForMana,
-        hpForManaRatio: base.hpForManaRatio,
-        convertsManaRegenToHeal: base.convertsManaRegenToHeal,
-        rerollInterval: base.rerollInterval,
-        hasRandomModifiers: base.hasRandomModifiers,
-        rerollDamageMin: base.rerollDamageMin,
-        rerollDamageMax: base.rerollDamageMax,
-        rerollDamageTakenMin: base.rerollDamageTakenMin,
-        rerollDamageTakenMax: base.rerollDamageTakenMax,
-        switchCooldown: base.switchCooldown,
       );
     }
     return base;
@@ -337,23 +319,36 @@ class GameState {
   }
 
   /// Load saved stance selections from SharedPreferences.
+  ///
+  /// If no saved preference exists, applies the registry's [defaultStance].
   Future<void> loadStanceConfig() async {
+    final registry = globalStanceRegistry;
+    final fallback = registry?.defaultStance ?? StanceId.none;
     try {
       final prefs = await SharedPreferences.getInstance();
       final playerStanceName = prefs.getString('stance_player');
       if (playerStanceName != null) {
         final id = _parseStanceIdFromName(playerStanceName);
-        if (id != null) playerStance = id;
+        playerStance = id ?? fallback;
+      } else {
+        playerStance = fallback;
       }
       for (int i = 0; i < allies.length; i++) {
         final allyStanceName = prefs.getString('stance_ally_$i');
         if (allyStanceName != null) {
           final id = _parseStanceIdFromName(allyStanceName);
-          if (id != null) allies[i].currentStance = id;
+          allies[i].currentStance = id ?? fallback;
+        } else {
+          allies[i].currentStance = fallback;
         }
       }
     } catch (e) {
       print('[STANCE] Failed to load stance config: $e');
+      // Still apply default on failure
+      playerStance = fallback;
+      for (final ally in allies) {
+        ally.currentStance = fallback;
+      }
     }
   }
 
@@ -1132,9 +1127,11 @@ class GameState {
     }
   }
 
-  /// Effective speed of the currently controlled character
+  /// Effective speed of the currently controlled character (includes stance).
   double get activeEffectiveSpeed =>
-      isWarchiefActive ? effectivePlayerSpeed : (activeAlly?.moveSpeed ?? 2.5);
+      isWarchiefActive
+          ? effectivePlayerSpeed
+          : (activeAlly?.moveSpeed ?? 2.5) * activeStance.movementSpeedMultiplier;
 
   // ==================== ACTIVE CHARACTER MANA ====================
 
@@ -1541,6 +1538,39 @@ class GameState {
     final minion = _minionIndex[currentTargetId];
     if (minion != null && minion.isAlive) return minion.activeEffects;
     return [];
+  }
+
+  /// Get the world position of the current target.
+  /// Returns null if no target or target is dead/missing.
+  Vector3? getCurrentTargetPosition() {
+    if (currentTargetId == null) return null;
+
+    if (currentTargetId == 'boss') {
+      if (monsterTransform != null && monsterHealth > 0) {
+        return monsterTransform!.position;
+      }
+      return null;
+    }
+
+    if (currentTargetId == TargetDummy.instanceId && targetDummy != null && targetDummy!.isSpawned) {
+      return targetDummy!.transform.position;
+    }
+
+    if (currentTargetId!.startsWith('ally_')) {
+      final index = int.tryParse(currentTargetId!.substring(5));
+      if (index != null && index < allies.length && allies[index].health > 0) {
+        return allies[index].transform.position;
+      }
+      return null;
+    }
+
+    // Check minions via O(1) index lookup
+    final minion = _minionIndex[currentTargetId];
+    if (minion != null && minion.isAlive) {
+      return minion.transform.position;
+    }
+
+    return null;
   }
 
   /// Get XZ-plane distance from active character to current target
@@ -2108,6 +2138,9 @@ class GameState {
   /// Current height above terrain (computed each frame by physics system)
   double flightAltitude = 0.0;
 
+  /// Current horizontal ground speed (for HUD display)
+  double flightGroundSpeed = 0.0;
+
   /// Whether the Sovereign of the Sky buff is active
   bool sovereignBuffActive = false;
 
@@ -2144,8 +2177,10 @@ class GameState {
     flightPitchAngle = 0.0;
     flightBankAngle = 0.0;
     flightSpeed = config?.flightSpeed ?? 7.0;
-    // Reset visual roll
+    flightGroundSpeed = 0.0;
+    // Reset visual pitch and roll
     if (playerTransform != null) {
+      playerTransform!.rotation.x = 0.0;
       playerTransform!.rotation.z = 0.0;
     }
     // Cancel any cast/windup when entering flight
@@ -2160,8 +2195,10 @@ class GameState {
     flightPitchAngle = 0.0;
     flightBankAngle = 0.0;
     flightSpeed = globalWindConfig?.flightSpeed ?? 7.0;
-    // Reset visual roll
+    flightGroundSpeed = 0.0;
+    // Reset visual pitch and roll
     if (playerTransform != null) {
+      playerTransform!.rotation.x = 0.0;
       playerTransform!.rotation.z = 0.0;
     }
     print('[FLIGHT] Flight ended');
@@ -2319,8 +2356,15 @@ class GameState {
 
   bool ability4Active = false;
   double ability4ActiveTime = 0.0;
-  final double ability4Duration = 0.4; // Dash duration
+  double ability4Duration = 0.4; // Dash duration (set per ability)
   bool ability4HitRegistered = false; // Prevent multiple hits per dash
+
+  /// The ability data driving the current dash (null = legacy playerDashAttack)
+  AbilityData? activeDashAbility;
+
+  /// Snapshot of the target position when the dash started (move toward this)
+  Vector3? dashTargetPosition;
+
   Mesh? dashTrailMesh;
   Transform3d? dashTrailTransform;
 

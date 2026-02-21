@@ -1163,7 +1163,7 @@ class AbilitySystem {
     CombatSystem.checkAndDamageEnemies(
       gameState,
       attackerPosition: gameState.activeTransform!.position,
-      damage: 20.0,
+      damage: 20.0 * gameState.activeStance.damageMultiplier,
       attackType: 'Frost Nova',
       impactColor: Vector3(0.5, 0.8, 1.0),
       impactSize: 0.5,
@@ -1176,7 +1176,8 @@ class AbilitySystem {
   /// Execute Greater Heal effect after cast completes
   static void _executeGreaterHealEffect(int slotIndex, GameState gameState) {
     final oldHealth = gameState.activeHealth;
-    gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + 50.0);
+    final effectiveHeal = 50.0 * gameState.activeStance.healingMultiplier;
+    gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + effectiveHeal);
     final healedAmount = gameState.activeHealth - oldHealth;
 
     gameState.ability3Active = true;
@@ -1240,7 +1241,7 @@ class AbilitySystem {
     final hitRegistered = CombatSystem.checkAndDamageEnemies(
       gameState,
       attackerPosition: strikePosition,
-      damage: 75.0,
+      damage: 75.0 * gameState.activeStance.damageMultiplier,
       attackType: 'Heavy Strike',
       impactColor: Vector3(1.0, 0.4, 0.2),
       impactSize: 1.0,
@@ -1276,7 +1277,7 @@ class AbilitySystem {
     CombatSystem.checkAndDamageEnemies(
       gameState,
       attackerPosition: gameState.activeTransform!.position,
-      damage: 48.0,
+      damage: 48.0 * gameState.activeStance.damageMultiplier,
       attackType: 'Whirlwind',
       impactColor: Vector3(0.7, 0.7, 0.8),
       impactSize: 0.6,
@@ -1317,7 +1318,7 @@ class AbilitySystem {
     final hitRegistered = CombatSystem.checkAndDamageEnemies(
       gameState,
       attackerPosition: strikePosition,
-      damage: 110.0,
+      damage: 110.0 * gameState.activeStance.damageMultiplier,
       attackType: 'Crushing Blow',
       impactColor: Vector3(0.7, 0.3, 0.1),
       impactSize: 1.2,
@@ -1353,7 +1354,7 @@ class AbilitySystem {
     final hitRegistered = CombatSystem.checkAndDamageEnemies(
       gameState,
       attackerPosition: strikePosition,
-      damage: ability?.damage ?? 40.0,
+      damage: (ability?.damage ?? 40.0) * gameState.activeStance.damageMultiplier,
       attackType: abilityName,
       impactColor: ability?.impactColor ?? Vector3(0.8, 0.8, 0.8),
       impactSize: ability?.impactSize ?? 0.8,
@@ -1495,13 +1496,8 @@ class AbilitySystem {
 
   /// Execute Dash Attack (movement + damage)
   static void _executeDashAttack(int slotIndex, GameState gameState) {
-    if (gameState.ability4Active) return;
-
-    gameState.ability4Active = true;
-    gameState.ability4ActiveTime = 0.0;
-    _setCooldownForSlot(slotIndex, _effective(AbilitiesConfig.playerDashAttack).cooldown, gameState);
-    gameState.ability4HitRegistered = false;
-    print('Dash Attack activated!');
+    final ability = _effective(AbilitiesConfig.playerDashAttack);
+    _startDash(slotIndex, gameState, ability, 'Dash Attack activated!');
   }
 
   // ==================== WARRIOR ABILITIES ====================
@@ -1517,13 +1513,8 @@ class AbilitySystem {
   }
 
   static void _executeCharge(int slotIndex, GameState gameState) {
-    // Similar to dash attack
-    if (gameState.ability4Active) return;
-    gameState.ability4Active = true;
-    gameState.ability4ActiveTime = 0.0;
-    _setCooldownForSlot(slotIndex, WarriorAbilities.charge.cooldown, gameState);
-    gameState.ability4HitRegistered = false;
-    print('Charge activated!');
+    final ability = _effective(WarriorAbilities.charge);
+    _startDash(slotIndex, gameState, ability, 'Charge activated!');
   }
 
   static void _executeTaunt(int slotIndex, GameState gameState) {
@@ -1763,13 +1754,8 @@ class AbilitySystem {
 
   /// Gale Step — forward dash through enemies dealing damage (reuses Dash pattern)
   static void _executeGaleStep(int slotIndex, GameState gameState) {
-    if (gameState.ability4Active) return;
     final ability = _effective(WindWalkerAbilities.galeStep);
-    gameState.ability4Active = true;
-    gameState.ability4ActiveTime = 0.0;
-    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-    gameState.ability4HitRegistered = false;
-    print('Gale Step activated!');
+    _startDash(slotIndex, gameState, ability, 'Gale Step activated!');
   }
 
   /// Zephyr Roll — forward dodge-roll with brief invulnerability
@@ -1815,13 +1801,8 @@ class AbilitySystem {
 
   /// Flying Serpent Strike — long dash with damage (longer range than Gale Step)
   static void _executeFlyingSerpentStrike(int slotIndex, GameState gameState) {
-    if (gameState.ability4Active) return;
     final ability = _effective(WindWalkerAbilities.flyingSerpentStrike);
-    gameState.ability4Active = true;
-    gameState.ability4ActiveTime = 0.0;
-    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-    gameState.ability4HitRegistered = false;
-    print('Flying Serpent Strike activated!');
+    _startDash(slotIndex, gameState, ability, 'Flying Serpent Strike activated!');
   }
 
   /// Take Flight — toggle flight mode on/off
@@ -1855,7 +1836,7 @@ class AbilitySystem {
     CombatSystem.checkAndDamageEnemies(
       gameState,
       attackerPosition: gameState.activeTransform!.position,
-      damage: ability.damage,
+      damage: ability.damage * gameState.activeStance.damageMultiplier,
       attackType: ability.name,
       impactColor: ability.impactColor,
       impactSize: ability.impactSize,
@@ -1996,13 +1977,8 @@ class AbilitySystem {
       _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
       print('Wind Warp! Flight speed doubled for 5s.');
     } else {
-      // Ground: use dash pattern (same as Gale Step / ability4)
-      if (gameState.ability4Active) return;
-      gameState.ability4Active = true;
-      gameState.ability4ActiveTime = 0.0;
-      _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-      gameState.ability4HitRegistered = false;
-      print('Wind Warp! Dashing forward.');
+      // Ground: dash toward target (or forward if no target)
+      _startDash(slotIndex, gameState, ability, 'Wind Warp! Dashing forward.');
     }
   }
 
@@ -2025,10 +2001,44 @@ class AbilitySystem {
 
   // ==================== GENERIC ABILITY HELPERS ====================
 
+  /// Threshold above which a melee ability is treated as a gap-closer dash
+  /// rather than a standing melee swing (normal melee range is ~2–3 units).
+  static const double _gapCloserRangeThreshold = 4.0;
+
+  /// Start a dash toward the current target (or straight ahead if no target).
+  ///
+  /// Used by Dash Attack, Charge, and any melee gap-closer with range >= 4.
+  /// The dash always moves toward the targeted enemy and always hits on arrival.
+  static void _startDash(int slotIndex, GameState gameState, AbilityData ability, String message) {
+    if (gameState.ability4Active) return;
+
+    gameState.ability4Active = true;
+    gameState.ability4ActiveTime = 0.0;
+    gameState.ability4HitRegistered = false;
+    gameState.activeDashAbility = ability;
+    gameState.ability4Duration = ability.duration > 0 ? ability.duration : 0.4;
+
+    // Reason: snapshot target position now so the dash moves toward the
+    // enemy even if the enemy moves during the dash
+    gameState.dashTargetPosition = gameState.getCurrentTargetPosition()?.clone();
+
+    _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+    print(message);
+  }
+
   /// Generic melee attack execution
   static void _executeGenericMelee(int slotIndex, GameState gameState, AbilityData rawAbility, String message) {
     // Reason: Named handlers pass raw static ability data; apply user overrides
     final ability = globalAbilityOverrideManager?.getEffectiveAbility(rawAbility) ?? rawAbility;
+
+    // Reason: melee abilities with long range (>= 4 units) are gap-closers
+    // that should dash toward the target and guarantee a hit, not do a
+    // standing sword swing.
+    if (ability.range >= _gapCloserRangeThreshold && ability.type != AbilityType.aoe) {
+      _startDash(slotIndex, gameState, ability, message);
+      return;
+    }
+
     if (gameState.ability1Active) return;
 
     // Reason: Store the active ability so updateAbility1() uses its damage/range
@@ -2511,31 +2521,104 @@ class AbilitySystem {
     }
   }
 
-  /// Updates Ability 4 (Dash Attack) movement and collision detection
+  /// Updates Ability 4 (Dash / Gap-closer) movement and damage.
+  ///
+  /// If a target exists, the character moves toward the target and damage is
+  /// applied automatically on arrival (no collision check). If no target, the
+  /// character dashes straight forward and the original collision check is used.
   static void updateAbility4(double dt, GameState gameState) {
     if (!gameState.ability4Active) return;
 
     gameState.ability4ActiveTime += dt;
 
     if (gameState.ability4ActiveTime >= gameState.ability4Duration) {
-      gameState.ability4Active = false;
+      _endDash(gameState);
     } else if (gameState.activeTransform != null) {
-      final dashConfig = _effective(AbilitiesConfig.playerDashAttack);
+      final dashConfig = gameState.activeDashAbility
+          ?? _effective(AbilitiesConfig.playerDashAttack);
 
-      // Calculate forward direction based on player rotation
-      final forward = Vector3(
-        -math.sin(_radians(gameState.activeRotation)),
-        0,
-        -math.cos(_radians(gameState.activeRotation)),
-      );
+      final dashSpeed = (dashConfig.range / dashConfig.duration)
+          * gameState.activeStance.movementSpeedMultiplier;
 
-      // Calculate dash speed (total distance / duration)
-      final dashSpeed = dashConfig.range / dashConfig.duration;
+      final targetPos = gameState.dashTargetPosition;
 
-      // Move player forward at dash speed
-      gameState.activeTransform!.position += forward * dashSpeed * dt;
+      if (targetPos != null) {
+        // ---- TARGETED DASH: move toward the enemy ----
+        final dx = targetPos.x - gameState.activeTransform!.position.x;
+        final dz = targetPos.z - gameState.activeTransform!.position.z;
+        final distSq = dx * dx + dz * dz;
+        final arrivalThreshold = 1.5; // Close enough to count as arrived
 
-      // Get terrain height at new position and apply it
+        if (distSq > arrivalThreshold * arrivalThreshold) {
+          // Still traveling — move toward target
+          final dist = math.sqrt(distSq);
+          final dirX = dx / dist;
+          final dirZ = dz / dist;
+          gameState.activeTransform!.position.x += dirX * dashSpeed * dt;
+          gameState.activeTransform!.position.z += dirZ * dashSpeed * dt;
+
+          // Rotate to face target
+          final targetYaw = -math.atan2(dirX, dirZ) * (180.0 / math.pi);
+          gameState.activeRotation = targetYaw;
+          gameState.activeTransform!.rotation.y = targetYaw;
+        }
+
+        // Reason: always deal damage once during a targeted dash — the
+        // ability is guaranteed to hit the target, no collision check needed
+        if (!gameState.ability4HitRegistered) {
+          final arrived = distSq <= arrivalThreshold * arrivalThreshold;
+          // Deliver damage either on arrival or at end of duration
+          if (arrived || gameState.ability4ActiveTime >= gameState.ability4Duration * 0.9) {
+            final stanceDmg = dashConfig.damage * gameState.activeStance.damageMultiplier;
+            CombatSystem.checkAndDamageEnemies(
+              gameState,
+              attackerPosition: targetPos,
+              damage: stanceDmg,
+              attackType: dashConfig.name,
+              impactColor: dashConfig.impactColor,
+              impactSize: dashConfig.impactSize,
+              isMeleeDamage: true,
+              collisionThreshold: 999.0, // Reason: guaranteed hit — huge threshold
+            );
+            gameState.ability4HitRegistered = true;
+
+            // Apply knockback and status effects
+            _applyDashEffects(gameState, dashConfig);
+
+            // Snap to target on arrival
+            if (arrived) {
+              _endDash(gameState);
+            }
+          }
+        }
+      } else {
+        // ---- NO TARGET: dash straight forward (legacy behavior) ----
+        final forward = Vector3(
+          -math.sin(_radians(gameState.activeRotation)),
+          0,
+          -math.cos(_radians(gameState.activeRotation)),
+        );
+        gameState.activeTransform!.position += forward * dashSpeed * dt;
+
+        if (!gameState.ability4HitRegistered) {
+          final stanceDmg = dashConfig.damage * gameState.activeStance.damageMultiplier;
+          final hitRegistered = CombatSystem.checkAndDamageEnemies(
+            gameState,
+            attackerPosition: gameState.activeTransform!.position,
+            damage: stanceDmg,
+            attackType: dashConfig.name,
+            impactColor: dashConfig.impactColor,
+            impactSize: dashConfig.impactSize,
+            isMeleeDamage: true,
+          );
+          if (hitRegistered) {
+            gameState.ability4HitRegistered = true;
+            _applyDashEffects(gameState, dashConfig);
+          }
+        }
+      }
+
+      // Snap to terrain height
       if (gameState.infiniteTerrainManager != null) {
         final terrainHeight = gameState.infiniteTerrainManager!.getTerrainHeight(
           gameState.activeTransform!.position.x,
@@ -2544,33 +2627,36 @@ class AbilitySystem {
         gameState.activeTransform!.position.y = terrainHeight;
       }
 
-      // Check collision with monster during dash
-      if (!gameState.ability4HitRegistered) {
-        final hitRegistered = CombatSystem.checkAndDamageEnemies(
-          gameState,
-          attackerPosition: gameState.activeTransform!.position,
-          damage: dashConfig.damage,
-          attackType: dashConfig.name,
-          impactColor: dashConfig.impactColor,
-          impactSize: dashConfig.impactSize,
-          isMeleeDamage: true, // Generate red mana from dash attack
-        );
-
-        if (hitRegistered) {
-          gameState.ability4HitRegistered = true;
-          // Apply knockback to monster
-          if (gameState.monsterTransform != null && dashConfig.knockbackForce > 0) {
-            gameState.monsterTransform!.position += forward * dashConfig.knockbackForce;
-          }
-        }
-      }
-
-      // Update dash trail visual effect if it exists
+      // Update dash trail visual
       if (gameState.dashTrailTransform != null) {
         gameState.dashTrailTransform!.position = gameState.activeTransform!.position.clone();
         gameState.dashTrailTransform!.rotation.y = gameState.activeRotation;
       }
     }
+  }
+
+  /// End a dash and clean up state.
+  static void _endDash(GameState gameState) {
+    gameState.ability4Active = false;
+    gameState.activeDashAbility = null;
+    gameState.dashTargetPosition = null;
+  }
+
+  /// Apply knockback and status effects after a dash hit.
+  static void _applyDashEffects(GameState gameState, AbilityData dashConfig) {
+    if (dashConfig.knockbackForce > 0 && gameState.activeTransform != null) {
+      final forward = Vector3(
+        -math.sin(_radians(gameState.activeRotation)),
+        0,
+        -math.cos(_radians(gameState.activeRotation)),
+      );
+      // Apply knockback to whatever is targeted
+      if (gameState.currentTargetId == 'boss' && gameState.monsterTransform != null) {
+        gameState.monsterTransform!.position += forward * dashConfig.knockbackForce;
+      }
+    }
+    // Apply status effects (stun, slow, etc.)
+    _applyMeleeStatusEffect(gameState, dashConfig);
   }
 
   // ==================== ABILITIES 5-10 INPUT HANDLERS ====================

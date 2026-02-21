@@ -2,6 +2,47 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-20
+
+#### Simplify Movement+Damage Abilities
+- ✅ **Target-seeking dashes**: Non-AOE abilities with movement+damage now move the character toward the targeted enemy instead of dashing straight forward. Dash snaps player rotation to face target during travel.
+- ✅ **Guaranteed hits**: Targeted dashes always deal damage on arrival — no collision check needed (uses `collisionThreshold: 999.0`). Damage applies when player arrives within 1.5 units or at 90% of dash duration, whichever comes first.
+- ✅ **Unified `_startDash()` helper**: All dash-type abilities now go through a single `_startDash()` method that stores the ability data, duration, and snapshot of target position. Replaces 6 separate manual ability4 setups.
+- ✅ **Auto-routing for generic melee gap-closers**: `_executeGenericMelee()` detects abilities with range >= 4.0 (non-AOE) and routes them through the dash system automatically. Covers Umbral Lunge, Storm Surge, Shoulder Charge, and any future gap-closers.
+- ✅ **`getCurrentTargetPosition()`**: New GameState method returning the world position of the current target (boss, minion, dummy, or ally), used by dash targeting.
+- ✅ **Abilities converted**: Dash Attack, Charge, Gale Step, Flying Serpent Strike, Wind Warp (ground), plus all data-driven melee gap-closers via the generic routing.
+- ✅ **No-target fallback**: If no target is selected, dashes move straight forward with original collision detection (legacy behavior preserved).
+- ✅ Build verified clean (`flutter build web`)
+
+#### Flight Mechanics Enhancements
+- ✅ **Groundspeed HUD**: Added `flightGroundSpeed` field to `GameState`, displayed in `FlightBuffIcon` alongside altitude (`Alt: X.X  Spd: X.X`)
+- ✅ **Double-tap hard banking**: Q/E double-tap within configurable window (0.3s default) activates 50% faster bank rate and 90-degree max bank angle. Static timing fields in `InputSystem` with edge-detection on key release/press
+- ✅ **Spacebar speed boost**: Spacebar now boosts flight speed (1.8x default) at cost of white mana (8.0/s default), replacing the old air brake + upward bump behavior
+- ✅ **Turn speed reduction**: Yaw rate tracked per frame; groundspeed reduced proportionally to turn rate (up to 30% at max turn). Simulates aerodynamic drag
+- ✅ **Config values**: Added 6 new flight config entries to `wind_config.json` and `WindConfig` getters: `doubleTapWindow`, `hardBankRateMultiplier`, `hardBankMaxAngle`, `spaceBoostMultiplier`, `spaceBoostManaCostPerSecond`, `turnSpeedReductionFactor`
+- ✅ **Tuning tab**: All new config fields added to Wind > FLIGHT section in Tuning tab with tooltips
+- ✅ Build verified clean (`flutter build web`)
+
+#### Runtime Config Editing (Tuning Tab)
+- ✅ **Override persistence for 5 config classes**: Added `_overrides` map, `_loadOverrides()`, `_saveOverrides()`, `setOverride()`, `clearOverride()`, `clearAllOverrides()`, `hasOverride()`, `overrides` getter, `getDefault()` to WindConfig, BuildingConfig, MinimapConfig, MacroConfig, GoalsConfig — all using SharedPreferences with unique storage keys
+- ✅ **GameConfig conversion**: Converted from static `const`/`final` class to JSON-loaded instance class following ManaConfig pattern. Static getters delegate to global instance for zero call-site changes. Created `assets/data/game_config.json` with all values including Vector3 color components. Auto-creates instance in `_i` getter for safe field-initializer access. Added override persistence (SharedPreferences key `game_config_overrides`)
+- ✅ **Generic ConfigEditorPanel**: Created `lib/game3d/ui/settings/config_editor_panel.dart` — reusable config editor widget taking `ConfigSectionDef` and `ConfigCallbacks`. Supports double, int, bool, and string field types. Save persists only changed fields as overrides, Restore Defaults clears all overrides. Same visual style as AbilityEditorPanel (dark theme, cyan accents, section grouping)
+- ✅ **Tuning tab in Settings**: Created `lib/game3d/ui/settings/tuning_tab.dart` — new "Tuning" tab in Settings panel with sub-navigation for 7 config systems: Game (9 sections), Mana (3 sections), Wind (8 sections), Buildings (1 section), Minimap (8 sections), Macros (3 sections), Goals (1 section). Each renders a ConfigEditorPanel with complete field definitions and tooltips
+- ✅ **Settings panel integration**: Added Tuning tab to `settings_panel.dart` tab list between General and Interfaces
+- ✅ Build verified clean (`flutter build web`)
+
+#### Editable Stance System
+- ✅ **StanceData.copyWith() + applyOverrides()**: Added `copyWith()` with all 22 stance fields and `applyOverrides(Map<String, dynamic>)` with sparse override merging, Vector3 color [r,g,b] list handling, and bool support
+- ✅ **StanceOverrideManager**: Created `lib/game3d/state/stance_override_manager.dart` — sparse override persistence (SharedPreferences key `stance_overrides`), `getEffectiveStance()`, `setOverrides()`, `clearOverrides()`, `hasOverrides()`, `loadOverrides()`, global `globalStanceOverrideManager`
+- ✅ **Barrel Export**: Updated `lib/game3d/data/stances/stances.dart` to re-export `stance_override_manager.dart`
+- ✅ **Initialization**: Wired `_initializeStanceOverrides()` in `game3d_widget.dart` alongside other config singletons
+- ✅ **activeStance Getter**: Modified `game_state.dart` to apply user overrides via `globalStanceOverrideManager.getEffectiveStance()` between base registry lookup and Drunken Master random roll; simplified Drunken Master branch to use `copyWith()` instead of full constructor
+- ✅ **StanceEditorPanel**: Created `lib/game3d/ui/stance_editor_panel.dart` (~400 lines) — side-panel editor with sections: IDENTITY (name read-only, description editable), MULTIPLIERS (9 double fields), PASSIVES (8 doubles + 3 bool toggles), SWITCHING (switchCooldown), VISUAL (color RGB); Save builds sparse override map, Restore Defaults clears overrides; tooltips on all fields
+- ✅ **StanceCardsSection Double-Tap**: Added `onDoubleTap` callback prop to `StanceCardsSection` in `stance_selector.dart`, wired to open `StanceEditorPanel` in abilities modal
+- ✅ **Override Indicator**: Yellow edit icon shown on stance cards with active overrides; modifier summary displays effective (overridden) values
+- ✅ **Abilities Modal Integration**: Added `_editingStance` state to `abilities_modal.dart`, mutually exclusive with ability editor (opening one closes the other), total width accounts for either editor panel
+- ✅ Build verified clean (`flutter build web`)
+
 ### ✅ Completed - 2026-02-19
 
 #### Exotic Stance System
@@ -30,6 +71,10 @@
 - ✅ **Game Loop**: `updateStanceTimers(dt)` wired into `_update()`, stance registry initialized in `initState()`
 - ✅ **Persistence**: Stance selections saved/loaded via SharedPreferences (`stance_player`, `stance_ally_N` keys), auto-saves on switch, loads after stance registry initialization
 - ✅ **Visual Effects**: Created `lib/game3d/ui/stance_effects_overlay.dart` — Drunken Master purple tint pulse on re-roll (0.4s fade), Fury of the Ancestors red vignette intensifying as HP drops (visible below 80% HP)
+- ✅ **Clickable Stance Icon Bar**: Created `lib/game3d/ui/unit_frames/stance_icon_bar.dart` — row of 6 clickable stance icons (None + 5 exotic) displayed above the player health bar in CombatHUD. Active stance is prominently highlighted with glowing colored border, larger size (30px vs 24px), and colored background. Tooltips show stance name, description, and modifier summary. Respects switch cooldown.
+- ✅ **Default Stance**: Added `defaultStance` field to `StanceRegistry` loaded from config JSON (set to Tide). All characters initialize with the default stance when no saved preference exists.
+- ✅ **Damage Modifier Audit**: Fixed missing `damageMultiplier` on 7 named ability damage paths — Frost Nova, Heavy Strike, Whirlwind, Crushing Blow, windup melee completion, Cyclone Dive, Dash Attack. Fixed missing `healingMultiplier` on Greater Heal (hardcoded 50.0).
+- ✅ **Movement Speed Audit**: Fixed missing stance `movementSpeedMultiplier` on flight speed (input_system.dart), ally `activeEffectiveSpeed` (game_state.dart), and dash attack speed (ability_system.dart). Ground WASD/QE movement already had it via `effectivePlayerSpeed`.
 - ✅ Build verified clean (`flutter build web`)
 
 ### ✅ Completed - 2026-02-18

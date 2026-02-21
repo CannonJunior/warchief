@@ -230,14 +230,17 @@ class StanceSelector extends StatelessWidget {
 /// Stance cards for the Abilities Modal (P key).
 ///
 /// Shows all stances as horizontal cards with full descriptions.
+/// Double-tap a card to open the stance editor panel.
 class StanceCardsSection extends StatelessWidget {
   final GameState gameState;
   final VoidCallback onStateChanged;
+  final void Function(StanceData stance)? onDoubleTap;
 
   const StanceCardsSection({
     Key? key,
     required this.gameState,
     required this.onStateChanged,
+    this.onDoubleTap,
   }) : super(key: key);
 
   Color _v3ToColor(Vector3 v, [double opacity = 1.0]) {
@@ -286,6 +289,9 @@ class StanceCardsSection extends StatelessWidget {
 
   Widget _buildStanceDetailCard(StanceData stance, bool isActive) {
     final color = _v3ToColor(stance.color);
+    final hasOverrides = globalStanceOverrideManager?.hasOverrides(stance.id.name) ?? false;
+    // Reason: Show effective values (with overrides) in modifier summary
+    final effective = globalStanceOverrideManager?.getEffectiveStance(stance) ?? stance;
 
     return GestureDetector(
       onTap: () {
@@ -294,6 +300,7 @@ class StanceCardsSection extends StatelessWidget {
           onStateChanged();
         }
       },
+      onDoubleTap: () => onDoubleTap?.call(stance),
       child: Container(
         width: 220,
         padding: const EdgeInsets.all(10),
@@ -325,6 +332,11 @@ class StanceCardsSection extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (hasOverrides)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 4),
+                    child: Icon(Icons.edit, color: Colors.yellow, size: 12),
+                  ),
                 if (isActive)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -345,7 +357,7 @@ class StanceCardsSection extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              stance.description,
+              effective.description,
               style: TextStyle(
                 color: Colors.grey.shade400,
                 fontSize: 10,
@@ -355,8 +367,8 @@ class StanceCardsSection extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 6),
-            // Modifier list
-            ...stance.modifierSummary.map((line) {
+            // Modifier list (shows effective/overridden values)
+            ...effective.modifierSummary.map((line) {
               final isPositive = line.startsWith('+');
               final isNegative = line.startsWith('-');
               return Padding(

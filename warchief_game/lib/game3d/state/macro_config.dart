@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-/// Manages macro system configuration with JSON asset defaults.
+/// Manages macro system configuration with JSON asset defaults and
+/// SharedPreferences overrides.
 ///
-/// Follows the same pattern as [WindConfig]: JSON asset file provides
-/// shipped defaults, with dot-notation getters for all values.
+/// Follows the same pattern as [ManaConfig]: JSON asset file provides
+/// shipped defaults, user overrides stored sparsely in SharedPreferences.
 class MacroConfig extends ChangeNotifier {
   static const String _assetPath = 'assets/data/macro_config.json';
+  static const String _storageKey = 'macro_config_overrides';
 
   /// Defaults loaded from JSON asset file
   Map<String, dynamic> _defaults = {};
+
+  /// Sparse user overrides stored in SharedPreferences
+  Map<String, dynamic> _overrides = {};
 
   // ==================== GCD GETTERS ====================
 
@@ -38,9 +44,10 @@ class MacroConfig extends ChangeNotifier {
 
   // ==================== INITIALIZATION ====================
 
-  /// Load defaults from JSON asset.
+  /// Load defaults from JSON asset, then overrides from SharedPreferences.
   Future<void> initialize() async {
     await _loadDefaults();
+    await _loadOverrides();
   }
 
   Future<void> _loadDefaults() async {
@@ -55,24 +62,87 @@ class MacroConfig extends ChangeNotifier {
     }
   }
 
+  Future<void> _loadOverrides() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = prefs.getString(_storageKey);
+      if (json != null) {
+        _overrides = Map<String, dynamic>.from(
+          jsonDecode(json) as Map<String, dynamic>,
+        );
+        notifyListeners();
+        print('[MacroConfig] Loaded ${_overrides.length} overrides');
+      }
+    } catch (e) {
+      print('[MacroConfig] Failed to load overrides: $e');
+    }
+  }
+
+  Future<void> _saveOverrides() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_storageKey, jsonEncode(_overrides));
+    } catch (e) {
+      print('[MacroConfig] Failed to save overrides: $e');
+    }
+  }
+
+  // ==================== OVERRIDE MANAGEMENT ====================
+
+  void setOverride(String key, dynamic value) {
+    _overrides[key] = value;
+    notifyListeners();
+    _saveOverrides();
+  }
+
+  void clearOverride(String key) {
+    _overrides.remove(key);
+    notifyListeners();
+    _saveOverrides();
+  }
+
+  void clearAllOverrides() {
+    _overrides.clear();
+    notifyListeners();
+    _saveOverrides();
+  }
+
+  bool hasOverride(String key) => _overrides.containsKey(key);
+
+  Map<String, dynamic> get overrides => Map.unmodifiable(_overrides);
+
+  dynamic getDefault(String key) => _resolveFromNestedMap(_defaults, key);
+
   // ==================== RESOLUTION HELPERS ====================
 
-  /// Resolve a double value from nested map with fallback.
+  /// Resolve a double: override -> default -> hardcoded fallback.
   double _resolve(String dotKey, double fallback) {
+    if (_overrides.containsKey(dotKey)) {
+      final val = _overrides[dotKey];
+      if (val is num) return val.toDouble();
+    }
     final val = _resolveFromNestedMap(_defaults, dotKey);
     if (val is num) return val.toDouble();
     return fallback;
   }
 
-  /// Resolve a bool value from nested map with fallback.
+  /// Resolve a bool: override -> default -> hardcoded fallback.
   bool _resolveBool(String dotKey, bool fallback) {
+    if (_overrides.containsKey(dotKey)) {
+      final val = _overrides[dotKey];
+      if (val is bool) return val;
+    }
     final val = _resolveFromNestedMap(_defaults, dotKey);
     if (val is bool) return val;
     return fallback;
   }
 
-  /// Resolve an int value from nested map with fallback.
+  /// Resolve an int: override -> default -> hardcoded fallback.
   int _resolveInt(String dotKey, int fallback) {
+    if (_overrides.containsKey(dotKey)) {
+      final val = _overrides[dotKey];
+      if (val is num) return val.toInt();
+    }
     final val = _resolveFromNestedMap(_defaults, dotKey);
     if (val is num) return val.toInt();
     return fallback;

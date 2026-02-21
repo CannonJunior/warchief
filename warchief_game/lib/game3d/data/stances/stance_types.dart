@@ -85,6 +85,120 @@ class StanceData {
     color: Vector3(0.5, 0.5, 0.5),
   );
 
+  /// Returns a copy of this stance with specified fields replaced.
+  StanceData copyWith({
+    StanceId? id,
+    String? name,
+    String? description,
+    IconData? icon,
+    Vector3? color,
+    double? damageMultiplier,
+    double? damageTakenMultiplier,
+    double? movementSpeedMultiplier,
+    double? cooldownMultiplier,
+    double? manaRegenMultiplier,
+    double? manaCostMultiplier,
+    double? healingMultiplier,
+    double? maxHealthMultiplier,
+    double? castTimeMultiplier,
+    double? healthDrainPerSecond,
+    double? damageTakenToManaRatio,
+    bool? usesHpForMana,
+    double? hpForManaRatio,
+    bool? convertsManaRegenToHeal,
+    double? rerollInterval,
+    bool? hasRandomModifiers,
+    double? rerollDamageMin,
+    double? rerollDamageMax,
+    double? rerollDamageTakenMin,
+    double? rerollDamageTakenMax,
+    double? switchCooldown,
+  }) {
+    return StanceData(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      icon: icon ?? this.icon,
+      color: color ?? this.color,
+      damageMultiplier: damageMultiplier ?? this.damageMultiplier,
+      damageTakenMultiplier: damageTakenMultiplier ?? this.damageTakenMultiplier,
+      movementSpeedMultiplier: movementSpeedMultiplier ?? this.movementSpeedMultiplier,
+      cooldownMultiplier: cooldownMultiplier ?? this.cooldownMultiplier,
+      manaRegenMultiplier: manaRegenMultiplier ?? this.manaRegenMultiplier,
+      manaCostMultiplier: manaCostMultiplier ?? this.manaCostMultiplier,
+      healingMultiplier: healingMultiplier ?? this.healingMultiplier,
+      maxHealthMultiplier: maxHealthMultiplier ?? this.maxHealthMultiplier,
+      castTimeMultiplier: castTimeMultiplier ?? this.castTimeMultiplier,
+      healthDrainPerSecond: healthDrainPerSecond ?? this.healthDrainPerSecond,
+      damageTakenToManaRatio: damageTakenToManaRatio ?? this.damageTakenToManaRatio,
+      usesHpForMana: usesHpForMana ?? this.usesHpForMana,
+      hpForManaRatio: hpForManaRatio ?? this.hpForManaRatio,
+      convertsManaRegenToHeal: convertsManaRegenToHeal ?? this.convertsManaRegenToHeal,
+      rerollInterval: rerollInterval ?? this.rerollInterval,
+      hasRandomModifiers: hasRandomModifiers ?? this.hasRandomModifiers,
+      rerollDamageMin: rerollDamageMin ?? this.rerollDamageMin,
+      rerollDamageMax: rerollDamageMax ?? this.rerollDamageMax,
+      rerollDamageTakenMin: rerollDamageTakenMin ?? this.rerollDamageTakenMin,
+      rerollDamageTakenMax: rerollDamageTakenMax ?? this.rerollDamageTakenMax,
+      switchCooldown: switchCooldown ?? this.switchCooldown,
+    );
+  }
+
+  /// Apply a sparse override map to produce a new StanceData.
+  ///
+  /// Keys match field names. Handles doubles, bools, strings,
+  /// and [r,g,b] lists for Vector3 color.
+  StanceData applyOverrides(Map<String, dynamic> overrides) {
+    if (overrides.isEmpty) return this;
+
+    T ov<T>(String key, T fallback) {
+      final v = overrides[key];
+      if (v == null) return fallback;
+      if (v is T) return v;
+      if (fallback is double && v is num) return v.toDouble() as T;
+      if (fallback is bool && v is bool) return v as T;
+      return fallback;
+    }
+
+    Vector3 colorOv = color;
+    if (overrides.containsKey('color')) {
+      final c = overrides['color'];
+      if (c is List && c.length >= 3) {
+        colorOv = Vector3(
+          (c[0] as num).toDouble(),
+          (c[1] as num).toDouble(),
+          (c[2] as num).toDouble(),
+        );
+      }
+    }
+
+    return copyWith(
+      description: ov<String>('description', description),
+      color: colorOv,
+      damageMultiplier: ov<double>('damageMultiplier', damageMultiplier),
+      damageTakenMultiplier: ov<double>('damageTakenMultiplier', damageTakenMultiplier),
+      movementSpeedMultiplier: ov<double>('movementSpeedMultiplier', movementSpeedMultiplier),
+      cooldownMultiplier: ov<double>('cooldownMultiplier', cooldownMultiplier),
+      manaRegenMultiplier: ov<double>('manaRegenMultiplier', manaRegenMultiplier),
+      manaCostMultiplier: ov<double>('manaCostMultiplier', manaCostMultiplier),
+      healingMultiplier: ov<double>('healingMultiplier', healingMultiplier),
+      maxHealthMultiplier: ov<double>('maxHealthMultiplier', maxHealthMultiplier),
+      castTimeMultiplier: ov<double>('castTimeMultiplier', castTimeMultiplier),
+      healthDrainPerSecond: ov<double>('healthDrainPerSecond', healthDrainPerSecond),
+      damageTakenToManaRatio: ov<double>('damageTakenToManaRatio', damageTakenToManaRatio),
+      usesHpForMana: ov<bool>('usesHpForMana', usesHpForMana),
+      hpForManaRatio: ov<double>('hpForManaRatio', hpForManaRatio),
+      convertsManaRegenToHeal: ov<bool>('convertsManaRegenToHeal', convertsManaRegenToHeal),
+      rerollInterval: ov<double>('rerollInterval', rerollInterval),
+      hasRandomModifiers: ov<bool>('hasRandomModifiers', hasRandomModifiers),
+      rerollDamageMin: ov<double>('rerollDamageMin', rerollDamageMin),
+      rerollDamageMax: ov<double>('rerollDamageMax', rerollDamageMax),
+      rerollDamageTakenMin: ov<double>('rerollDamageTakenMin', rerollDamageTakenMin),
+      rerollDamageTakenMax: ov<double>('rerollDamageTakenMax', rerollDamageTakenMax),
+      switchCooldown: ov<double>('switchCooldown', switchCooldown),
+    );
+  }
+
   /// Build a human-readable modifier summary for tooltips.
   ///
   /// Returns a list of strings like "+15% damage", "-20% healing".

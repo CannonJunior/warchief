@@ -64,6 +64,12 @@
     "autoLevelRate": 90.0,
     "autoLevelThreshold": 90.0,
     "bankToTurnMultiplier": 2.5,
-    "barrelRollRate": 360.0
+    "barrelRollRate": 360.0,
+    "doubleTapWindow": 0.3,
+    "hardBankRateMultiplier": 1.5,
+    "hardBankMaxAngle": 90.0,
+    "spaceBoostMultiplier": 1.8,
+    "spaceBoostManaCostPerSecond": 8.0,
+    "turnSpeedReductionFactor": 0.3
   }
 }

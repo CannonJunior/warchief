@@ -1,206 +1,347 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vector_math/vector_math.dart';
+import 'dart:convert';
 
-/// Game configuration constants
+/// Game configuration loaded from JSON with runtime override support.
 ///
-/// Centralized configuration for all game parameters including
-/// terrain, player, monster, ally, and ability settings.
-class GameConfig {
-  GameConfig._(); // Private constructor to prevent instantiation
+/// Architecture:
+/// - JSON asset file (`assets/data/game_config.json`) = shipped defaults
+/// - SharedPreferences = sparse user overrides (only changed fields)
+/// - Runtime = overrides merged on top of defaults via dot-notation getters
+///
+/// Static getters delegate to the global instance for backward compatibility.
+/// All existing `GameConfig.fieldName` call sites work without changes.
+class GameConfig extends ChangeNotifier {
+  static const String _assetPath = 'assets/data/game_config.json';
+  static const String _storageKey = 'game_config_overrides';
+
+  /// Defaults loaded from JSON asset file.
+  Map<String, dynamic> _defaults = {};
+
+  /// Sparse user overrides stored in SharedPreferences.
+  Map<String, dynamic> _overrides = {};
+
+  /// Internal shorthand for the global instance.
+  /// Auto-creates if needed so field initializers work before initState().
+  static GameConfig get _i {
+    globalGameConfig ??= GameConfig();
+    return globalGameConfig!;
+  }
 
   // ==================== TERRAIN CONFIGURATION ====================
 
-  /// Size of the terrain grid (50x50 tiles - optimized for performance)
-  /// PERFORMANCE FIX: Reduced from 200 to prevent system freezing
-  /// This reduces vertices from 40,401 to 2,601 (94% reduction)
-  static const int terrainGridSize = 50;
-
-  /// Size of each terrain tile
-  static const double terrainTileSize = 1.0;
-
-  /// Maximum terrain height (reduced for gentler slopes)
-  /// FIX: Reduced from 10.0 to 3.0 for rolling hills instead of steep mountains
-  static const double terrainMaxHeight = 3.0;
-
-  /// Terrain noise scale (larger = bigger features, gentler slopes)
-  /// FIX: Reduced from 0.08 to 0.03 for smoother, more rolling terrain
-  static const double terrainNoiseScale = 0.03;
-
-  /// Terrain noise octaves (detail layers)
-  static const int terrainNoiseOctaves = 2;
-
-  /// Terrain noise persistence (how much each octave contributes)
-  static const double terrainNoisePersistence = 0.5;
+  static int get terrainGridSize =>
+      _i._resolveInt('terrain.gridSize', 50);
+  static double get terrainTileSize =>
+      _i._resolve('terrain.tileSize', 1.0);
+  static double get terrainMaxHeight =>
+      _i._resolve('terrain.maxHeight', 3.0);
+  static double get terrainNoiseScale =>
+      _i._resolve('terrain.noiseScale', 0.03);
+  static int get terrainNoiseOctaves =>
+      _i._resolveInt('terrain.noiseOctaves', 2);
+  static double get terrainNoisePersistence =>
+      _i._resolve('terrain.noisePersistence', 0.5);
 
   // ==================== PLAYER CONFIGURATION ====================
 
-  /// Player movement speed (units per second)
-  static const double playerSpeed = 5.0;
-
-  /// Player rotation speed (degrees per second)
-  static const double playerRotationSpeed = 180.0;
-
-  /// Player mesh size
-  static const double playerSize = 0.5;
-
-  /// Player starting position
-  static final Vector3 playerStartPosition = Vector3(10, 0.5, 2);
-
-  /// Player starting rotation (degrees). 180 = facing north (+Z).
-  static const double playerStartRotation = 180.0;
-
-  /// Player direction indicator size
-  static const double playerDirectionIndicatorSize = 0.5;
+  static double get playerSpeed =>
+      _i._resolve('player.speed', 5.0);
+  static double get playerRotationSpeed =>
+      _i._resolve('player.rotationSpeed', 180.0);
+  static double get playerSize =>
+      _i._resolve('player.size', 0.5);
+  static Vector3 get playerStartPosition => Vector3(
+        _i._resolve('player.startPositionX', 10.0),
+        _i._resolve('player.startPositionY', 0.5),
+        _i._resolve('player.startPositionZ', 2.0),
+      );
+  static double get playerStartRotation =>
+      _i._resolve('player.startRotation', 180.0);
+  static double get playerDirectionIndicatorSize =>
+      _i._resolve('player.directionIndicatorSize', 0.5);
 
   // ==================== MONSTER CONFIGURATION ====================
 
-  /// Monster maximum health
-  static const double monsterMaxHealth = 100.0;
-
-  /// Monster mesh size
-  static const double monsterSize = 1.2;
-
-  /// Monster starting position (Y will be set to groundLevel + monsterSize/2 on spawn)
-  static final Vector3 monsterStartPosition = Vector3(18, groundLevel, 18);
-
-  /// Monster starting rotation (degrees)
-  static const double monsterStartRotation = 180.0;
-
-  /// Monster direction indicator size
-  static const double monsterDirectionIndicatorSize = 0.5;
-
-  /// Monster AI decision interval (seconds)
-  static const double monsterAiInterval = 2.0;
-
-  /// Monster movement threshold distance for AI decisions
-  static const double monsterMoveThresholdMin = 5.0;
-  static const double monsterMoveThresholdMax = 12.0;
-
-  /// Monster heal threshold (percentage of max health)
-  static const double monsterHealThreshold = 50.0;
+  static double get monsterMaxHealth =>
+      _i._resolve('monster.maxHealth', 100.0);
+  static double get monsterSize =>
+      _i._resolve('monster.size', 1.2);
+  static Vector3 get monsterStartPosition => Vector3(
+        _i._resolve('monster.startPositionX', 18.0),
+        _i._resolve('monster.startPositionY', 0.5),
+        _i._resolve('monster.startPositionZ', 18.0),
+      );
+  static double get monsterStartRotation =>
+      _i._resolve('monster.startRotation', 180.0);
+  static double get monsterDirectionIndicatorSize =>
+      _i._resolve('monster.directionIndicatorSize', 0.5);
+  static double get monsterAiInterval =>
+      _i._resolve('monster.aiInterval', 2.0);
+  static double get monsterMoveThresholdMin =>
+      _i._resolve('monster.moveThresholdMin', 5.0);
+  static double get monsterMoveThresholdMax =>
+      _i._resolve('monster.moveThresholdMax', 12.0);
+  static double get monsterHealThreshold =>
+      _i._resolve('monster.healThreshold', 50.0);
 
   // ==================== MONSTER ABILITIES ====================
 
-  /// Monster Ability 1: Dark Strike (Melee Sword)
-  static const double monsterAbility1CooldownMax = 2.0;
-  static const double monsterAbility1Damage = 15.0;
-  static const double monsterAbility1Range = 3.0; // Melee attack range
-  static const double monsterAbility1Duration = 0.4; // Sword swing duration
-  static const double monsterSwordWidth = 0.5; // Giant sword width
-  static const double monsterSwordHeight = 2.5; // Giant sword height
-  static final Vector3 monsterSwordColor = Vector3(0.4, 0.1, 0.5); // Dark purple
-  static final Vector3 monsterAbility1ImpactColor = Vector3(0.6, 0.2, 0.8); // Purple impact
-  static const double monsterAbility1ImpactSize = 0.6;
-
-  /// Monster Ability 2: Shadow Bolt (Ranged Projectile)
-  static const double monsterAbility2CooldownMax = 4.0;
-  static const double monsterAbility2ProjectileSize = 0.5;
-  static const double monsterAbility2Damage = 12.0;
-  static final Vector3 monsterAbility2ImpactColor = Vector3(0.5, 0.0, 0.5); // Purple
-
-  /// Monster Ability 3: Dark Healing
-  static const double monsterAbility3CooldownMax = 8.0;
-  static const double monsterAbility3HealAmount = 25.0;
+  static double get monsterAbility1CooldownMax =>
+      _i._resolve('monsterAbilities.ability1CooldownMax', 2.0);
+  static double get monsterAbility1Damage =>
+      _i._resolve('monsterAbilities.ability1Damage', 15.0);
+  static double get monsterAbility1Range =>
+      _i._resolve('monsterAbilities.ability1Range', 3.0);
+  static double get monsterAbility1Duration =>
+      _i._resolve('monsterAbilities.ability1Duration', 0.4);
+  static double get monsterSwordWidth =>
+      _i._resolve('monsterAbilities.swordWidth', 0.5);
+  static double get monsterSwordHeight =>
+      _i._resolve('monsterAbilities.swordHeight', 2.5);
+  static Vector3 get monsterSwordColor => Vector3(
+        _i._resolve('monsterAbilities.swordColorR', 0.4),
+        _i._resolve('monsterAbilities.swordColorG', 0.1),
+        _i._resolve('monsterAbilities.swordColorB', 0.5),
+      );
+  static Vector3 get monsterAbility1ImpactColor => Vector3(
+        _i._resolve('monsterAbilities.ability1ImpactColorR', 0.6),
+        _i._resolve('monsterAbilities.ability1ImpactColorG', 0.2),
+        _i._resolve('monsterAbilities.ability1ImpactColorB', 0.8),
+      );
+  static double get monsterAbility1ImpactSize =>
+      _i._resolve('monsterAbilities.ability1ImpactSize', 0.6);
+  static double get monsterAbility2CooldownMax =>
+      _i._resolve('monsterAbilities.ability2CooldownMax', 4.0);
+  static double get monsterAbility2ProjectileSize =>
+      _i._resolve('monsterAbilities.ability2ProjectileSize', 0.5);
+  static double get monsterAbility2Damage =>
+      _i._resolve('monsterAbilities.ability2Damage', 12.0);
+  static Vector3 get monsterAbility2ImpactColor => Vector3(
+        _i._resolve('monsterAbilities.ability2ImpactColorR', 0.5),
+        _i._resolve('monsterAbilities.ability2ImpactColorG', 0.0),
+        _i._resolve('monsterAbilities.ability2ImpactColorB', 0.5),
+      );
+  static double get monsterAbility3CooldownMax =>
+      _i._resolve('monsterAbilities.ability3CooldownMax', 8.0);
+  static double get monsterAbility3HealAmount =>
+      _i._resolve('monsterAbilities.ability3HealAmount', 25.0);
 
   // ==================== ALLY CONFIGURATION ====================
 
-  /// Ally maximum health
-  static const double allyMaxHealth = 50.0;
-
-  /// Ally mesh size (relative to player)
-  static const double allySize = 0.8;
-
-  /// Ally ability cooldown
-  static const double allyAbilityCooldownMax = 5.0;
-
-  /// Ally AI decision interval (seconds) - reduced for responsive AI
-  static const double allyAiInterval = 1.0;
-
-  /// Ally movement threshold distance for AI decisions
-  static const double allyMoveThreshold = 10.0;
-
-  /// Ally sword damage
-  static const double allySwordDamage = 10.0;
-
-  /// Ally fireball damage
-  static const double allyFireballDamage = 15.0;
-
-  /// Ally heal amount (self-heal)
-  static const double allyHealAmount = 15.0;
-
-  /// Ally fireball size
-  static const double allyFireballSize = 0.3;
-
-  // ==================== CLICK SELECTION CONFIGURATION ====================
-
-  /// Maximum pixel distance from click to entity screen position for selection
-  static const double clickSelectionRadius = 60.0;
+  static double get allyMaxHealth =>
+      _i._resolve('ally.maxHealth', 50.0);
+  static double get allySize =>
+      _i._resolve('ally.size', 0.8);
+  static double get allyAbilityCooldownMax =>
+      _i._resolve('ally.abilityCooldownMax', 5.0);
+  static double get allyAiInterval =>
+      _i._resolve('ally.aiInterval', 1.0);
+  static double get allyMoveThreshold =>
+      _i._resolve('ally.moveThreshold', 10.0);
+  static double get allySwordDamage =>
+      _i._resolve('ally.swordDamage', 10.0);
+  static double get allyFireballDamage =>
+      _i._resolve('ally.fireballDamage', 15.0);
+  static double get allyHealAmount =>
+      _i._resolve('ally.healAmount', 15.0);
+  static double get allyFireballSize =>
+      _i._resolve('ally.fireballSize', 0.3);
 
   // ==================== PLAYER ABILITIES ====================
 
-  /// Ability 1: Sword (Melee)
-  static const double ability1CooldownMax = 1.5; // 1.5 seconds
-  static const double ability1Duration = 0.3; // Sword visible for 0.3 seconds
-  static const double ability1Range = 2.0; // Hit detection range
-  static const double ability1Damage = 25.0; // Sword damage per hit
-  static final Vector3 ability1ImpactColor = Vector3(0.8, 0.8, 0.9); // Silver/gray impact
-  static const double ability1ImpactSize = 0.5;
+  static double get ability1CooldownMax =>
+      _i._resolve('playerAbilities.ability1CooldownMax', 1.5);
+  static double get ability1Duration =>
+      _i._resolve('playerAbilities.ability1Duration', 0.3);
+  static double get ability1Range =>
+      _i._resolve('playerAbilities.ability1Range', 2.0);
+  static double get ability1Damage =>
+      _i._resolve('playerAbilities.ability1Damage', 25.0);
+  static Vector3 get ability1ImpactColor => Vector3(
+        _i._resolve('playerAbilities.ability1ImpactColorR', 0.8),
+        _i._resolve('playerAbilities.ability1ImpactColorG', 0.8),
+        _i._resolve('playerAbilities.ability1ImpactColorB', 0.9),
+      );
+  static double get ability1ImpactSize =>
+      _i._resolve('playerAbilities.ability1ImpactSize', 0.5);
+  static double get ability2CooldownMax =>
+      _i._resolve('playerAbilities.ability2CooldownMax', 3.0);
+  static double get ability2ProjectileSpeed =>
+      _i._resolve('playerAbilities.ability2ProjectileSpeed', 10.0);
+  static double get ability2ProjectileSize =>
+      _i._resolve('playerAbilities.ability2ProjectileSize', 0.4);
+  static double get ability2Damage =>
+      _i._resolve('playerAbilities.ability2Damage', 20.0);
+  static Vector3 get ability2ProjectileColor => Vector3(
+        _i._resolve('playerAbilities.ability2ProjectileColorR', 1.0),
+        _i._resolve('playerAbilities.ability2ProjectileColorG', 0.4),
+        _i._resolve('playerAbilities.ability2ProjectileColorB', 0.0),
+      );
+  static double get ability3CooldownMax =>
+      _i._resolve('playerAbilities.ability3CooldownMax', 10.0);
+  static double get ability3HealAmount =>
+      _i._resolve('playerAbilities.ability3HealAmount', 20.0);
 
-  /// Ability 2: Fireball (Ranged Projectile)
-  static const double ability2CooldownMax = 3.0; // 3 seconds
-  static const double ability2ProjectileSpeed = 10.0; // units per second
-  static const double ability2ProjectileSize = 0.4;
-  static const double ability2Damage = 20.0;
-  static final Vector3 ability2ProjectileColor = Vector3(1.0, 0.4, 0.0); // Orange
+  // ==================== CLICK SELECTION ====================
 
-  /// Ability 3: Heal
-  static const double ability3CooldownMax = 10.0; // 10 seconds
-  static const double ability3HealAmount = 20.0;
+  static double get clickSelectionRadius =>
+      _i._resolve('selection.clickSelectionRadius', 60.0);
 
   // ==================== PROJECTILE CONFIGURATION ====================
 
-  /// Default projectile lifetime (seconds)
-  static const double projectileLifetime = 5.0;
+  static double get projectileLifetime =>
+      _i._resolve('projectile.lifetime', 5.0);
+  static double get collisionThreshold =>
+      _i._resolve('projectile.collisionThreshold', 1.0);
 
-  /// Collision detection threshold (distance in units)
-  static const double collisionThreshold = 1.0;
+  // ==================== VISUAL EFFECTS ====================
 
-  // ==================== VISUAL EFFECTS CONFIGURATION ====================
+  static double get impactEffectSize =>
+      _i._resolve('effects.impactSize', 0.6);
+  static double get impactEffectDuration =>
+      _i._resolve('effects.impactDuration', 0.3);
+  static double get impactEffectGrowthScale =>
+      _i._resolve('effects.impactGrowthScale', 1.5);
+  static double get fireballImpactSize =>
+      _i._resolve('effects.fireballImpactSize', 0.8);
+  static Vector3 get fireballImpactColor => Vector3(
+        _i._resolve('effects.fireballImpactColorR', 1.0),
+        _i._resolve('effects.fireballImpactColorG', 0.5),
+        _i._resolve('effects.fireballImpactColorB', 0.0),
+      );
+  static double get allyFireballImpactSize =>
+      _i._resolve('effects.allyFireballImpactSize', 0.6);
+  static Vector3 get allyFireballImpactColor => Vector3(
+        _i._resolve('effects.allyFireballImpactColorR', 1.0),
+        _i._resolve('effects.allyFireballImpactColorG', 0.4),
+        _i._resolve('effects.allyFireballImpactColorB', 0.0),
+      );
+  static double get allySwordImpactSize =>
+      _i._resolve('effects.allySwordImpactSize', 0.5);
+  static double get monsterProjectileImpactSize =>
+      _i._resolve('effects.monsterProjectileImpactSize', 0.5);
 
-  /// Impact effect default size
-  static const double impactEffectSize = 0.6;
+  // ==================== PHYSICS ====================
 
-  /// Impact effect duration (seconds)
-  static const double impactEffectDuration = 0.3;
+  static double get gravity =>
+      _i._resolve('physics.gravity', 20.0);
+  static double get jumpVelocity =>
+      _i._resolve('physics.jumpVelocity', 10.0);
+  static double get groundLevel =>
+      _i._resolve('physics.groundLevel', 0.5);
 
-  /// Impact effect growth scale multiplier
-  static const double impactEffectGrowthScale = 1.5; // Grows to 2.5x size
+  // ==================== INITIALIZATION ====================
 
-  /// Fireball impact size
-  static const double fireballImpactSize = 0.8;
+  /// Load defaults from JSON asset, then overrides from SharedPreferences.
+  Future<void> initialize() async {
+    await _loadDefaults();
+    await _loadOverrides();
+  }
 
-  /// Fireball impact color
-  static final Vector3 fireballImpactColor = Vector3(1.0, 0.5, 0.0);
+  Future<void> _loadDefaults() async {
+    try {
+      final jsonString = await rootBundle.loadString(_assetPath);
+      _defaults = jsonDecode(jsonString) as Map<String, dynamic>;
+      print('[GameConfig] Loaded defaults from $_assetPath');
+    } catch (e) {
+      print('[GameConfig] Failed to load defaults: $e (using fallbacks)');
+      _defaults = {};
+    }
+  }
 
-  /// Ally fireball impact size
-  static const double allyFireballImpactSize = 0.6;
+  Future<void> _loadOverrides() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = prefs.getString(_storageKey);
+      if (json != null) {
+        _overrides = Map<String, dynamic>.from(
+          jsonDecode(json) as Map<String, dynamic>,
+        );
+        notifyListeners();
+        print('[GameConfig] Loaded ${_overrides.length} overrides');
+      }
+    } catch (e) {
+      print('[GameConfig] Failed to load overrides: $e');
+    }
+  }
 
-  /// Ally fireball impact color
-  static final Vector3 allyFireballImpactColor = Vector3(1.0, 0.4, 0.0);
+  Future<void> _saveOverrides() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_storageKey, jsonEncode(_overrides));
+    } catch (e) {
+      print('[GameConfig] Failed to save overrides: $e');
+    }
+  }
 
-  /// Ally sword impact size
-  static const double allySwordImpactSize = 0.5;
+  // ==================== OVERRIDE MANAGEMENT ====================
 
-  /// Monster projectile impact size
-  static const double monsterProjectileImpactSize = 0.5;
+  void setOverride(String key, dynamic value) {
+    _overrides[key] = value;
+    notifyListeners();
+    _saveOverrides();
+  }
 
-  // ==================== PHYSICS CONFIGURATION ====================
+  void clearOverride(String key) {
+    _overrides.remove(key);
+    notifyListeners();
+    _saveOverrides();
+  }
 
-  /// Gravity strength (affects jump/fall physics)
-  static const double gravity = 20.0;
+  void clearAllOverrides() {
+    _overrides.clear();
+    notifyListeners();
+    _saveOverrides();
+  }
 
-  /// Jump velocity (units per second)
-  static const double jumpVelocity = 10.0;
+  bool hasOverride(String key) => _overrides.containsKey(key);
 
-  /// Ground level (Y coordinate)
-  static const double groundLevel = 0.5;
+  Map<String, dynamic> get overrides => Map.unmodifiable(_overrides);
+
+  dynamic getDefault(String key) => _resolveFromNestedMap(_defaults, key);
+
+  // ==================== RESOLUTION HELPERS ====================
+
+  /// Resolve a double: override -> default -> hardcoded fallback.
+  double _resolve(String dotKey, double fallback) {
+    if (_overrides.containsKey(dotKey)) {
+      final val = _overrides[dotKey];
+      if (val is num) return val.toDouble();
+    }
+    final val = _resolveFromNestedMap(_defaults, dotKey);
+    if (val is num) return val.toDouble();
+    return fallback;
+  }
+
+  /// Resolve an int: override -> default -> hardcoded fallback.
+  int _resolveInt(String dotKey, int fallback) {
+    if (_overrides.containsKey(dotKey)) {
+      final val = _overrides[dotKey];
+      if (val is num) return val.toInt();
+    }
+    final val = _resolveFromNestedMap(_defaults, dotKey);
+    if (val is num) return val.toInt();
+    return fallback;
+  }
+
+  /// Resolve a dot-notation key from a nested map.
+  static dynamic _resolveFromNestedMap(
+      Map<String, dynamic> map, String dotKey) {
+    final parts = dotKey.split('.');
+    dynamic current = map;
+    for (final part in parts) {
+      if (current is Map<String, dynamic> && current.containsKey(part)) {
+        current = current[part];
+      } else {
+        return null;
+      }
+    }
+    return current;
+  }
 }
+
+/// Global game config instance (initialized in game3d_widget.dart).
+GameConfig? globalGameConfig;

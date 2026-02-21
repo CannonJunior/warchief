@@ -33,6 +33,37 @@ class _FlightBuffIconState extends State<FlightBuffIcon>
     super.dispose();
   }
 
+  /// Normalize an angle to [-180, 180] range for display.
+  double _normalizeAngle(double angle) {
+    double n = angle % 360.0;
+    if (n > 180.0) n -= 360.0;
+    if (n < -180.0) n += 360.0;
+    return n;
+  }
+
+  /// Build the bank / yaw / pitch attitude indicator row.
+  Widget _buildAttitudeRow(GameState gs, bool lowMana) {
+    final pitch = _normalizeAngle(gs.flightPitchAngle);
+    final bank = _normalizeAngle(gs.flightBankAngle);
+    // Reason: playerRotation is unbounded; normalize for readable heading
+    final yaw = _normalizeAngle(gs.playerRotation);
+    final labelColor = lowMana ? Colors.red.shade100 : Colors.white54;
+    final valueColor = lowMana ? Colors.red.shade100 : Colors.white70;
+
+    return Row(
+      children: [
+        Text('B:', style: TextStyle(fontSize: 7, color: labelColor)),
+        Text('${bank.toStringAsFixed(0)}', style: TextStyle(fontSize: 7, color: valueColor)),
+        const SizedBox(width: 4),
+        Text('Y:', style: TextStyle(fontSize: 7, color: labelColor)),
+        Text('${yaw.toStringAsFixed(0)}', style: TextStyle(fontSize: 7, color: valueColor)),
+        const SizedBox(width: 4),
+        Text('P:', style: TextStyle(fontSize: 7, color: labelColor)),
+        Text('${pitch.toStringAsFixed(0)}', style: TextStyle(fontSize: 7, color: valueColor)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final gs = widget.gameState;
@@ -99,12 +130,14 @@ class _FlightBuffIconState extends State<FlightBuffIcon>
                         ),
                       ),
                       Text(
-                        'Alt: ${altitude.toStringAsFixed(1)}',
+                        'Alt: ${altitude.toStringAsFixed(1)}  Spd: ${gs.flightGroundSpeed.toStringAsFixed(1)}',
                         style: TextStyle(
                           fontSize: 8,
                           color: lowMana ? Colors.red.shade100 : Colors.white70,
                         ),
                       ),
+                      const SizedBox(height: 1),
+                      _buildAttitudeRow(gs, lowMana),
                     ],
                   ),
                 ),

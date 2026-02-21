@@ -134,6 +134,9 @@ class _Game3DState extends State<Game3D> {
     // Initialize Ollama client for AI
     ollamaClient = OllamaClient();
 
+    // Initialize game config (JSON defaults + SharedPreferences overrides)
+    _initializeGameConfig();
+
     // Initialize action bar config for ability slot assignments
     _initializeActionBarConfig();
 
@@ -176,11 +179,20 @@ class _Game3DState extends State<Game3D> {
     // Initialize stance registry (JSON definitions for exotic stances)
     _initializeStanceRegistry();
 
+    // Initialize stance override manager for custom stance edits
+    _initializeStanceOverrides();
+
     // Initialize player inventory with sample items
     _initializeInventory();
 
     // Create canvas element immediately
     _initializeGame();
+  }
+
+  /// Initialize the global game configuration (JSON defaults + overrides)
+  void _initializeGameConfig() {
+    globalGameConfig ??= GameConfig();
+    globalGameConfig!.initialize();
   }
 
   /// Initialize the global action bar configuration manager
@@ -194,6 +206,12 @@ class _Game3DState extends State<Game3D> {
   void _initializeAbilityOverrides() {
     globalAbilityOverrideManager ??= AbilityOverrideManager();
     globalAbilityOverrideManager!.loadOverrides();
+  }
+
+  /// Initialize the global stance override manager
+  void _initializeStanceOverrides() {
+    globalStanceOverrideManager ??= StanceOverrideManager();
+    globalStanceOverrideManager!.loadOverrides();
   }
 
   /// Initialize the global mana configuration (JSON defaults + overrides)
@@ -762,8 +780,22 @@ class _Game3DState extends State<Game3D> {
       }
     }
 
-    // Cockpit-style camera roll during flight banking
-    camera!.rollAngle = gameState.isFlying ? gameState.flightBankAngle : 0.0;
+    // Flight camera: roll from banking, pitch offset from pitch angle.
+    // SHIFT suppresses camera angle changes so the player can look around.
+    if (gameState.isFlying) {
+      final shiftHeld = inputManager!.isShiftPressed();
+      if (shiftHeld) {
+        camera!.rollAngle = 0.0;
+        camera!.targetPitchOffset = 0.0;
+      } else {
+        camera!.rollAngle = gameState.flightBankAngle;
+        final pitchRad = gameState.flightPitchAngle * (math.pi / 180.0);
+        camera!.targetPitchOffset = math.sin(pitchRad) * 5.0;
+      }
+    } else {
+      camera!.rollAngle = 0.0;
+      camera!.targetPitchOffset = 0.0;
+    }
   }
 
   void _render() {
@@ -2406,6 +2438,7 @@ class _Game3DState extends State<Game3D> {
                   : const Color(0xFFEF5350))
               : const Color(0xFF4CAF50),
           onAbilityDropped: _handleAbilityDropped,
+          onStateChanged: () => setState(() {}),
         ),
       ],
     );

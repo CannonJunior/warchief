@@ -1,0 +1,113 @@
+{
+  "terrain": {
+    "gridSize": 50,
+    "tileSize": 1.0,
+    "maxHeight": 3.0,
+    "noiseScale": 0.03,
+    "noiseOctaves": 2,
+    "noisePersistence": 0.5
+  },
+  "player": {
+    "speed": 5.0,
+    "rotationSpeed": 180.0,
+    "size": 0.5,
+    "startPositionX": 10.0,
+    "startPositionY": 0.5,
+    "startPositionZ": 2.0,
+    "startRotation": 180.0,
+    "directionIndicatorSize": 0.5
+  },
+  "monster": {
+    "maxHealth": 100.0,
+    "size": 1.2,
+    "startPositionX": 18.0,
+    "startPositionY": 0.5,
+    "startPositionZ": 18.0,
+    "startRotation": 180.0,
+    "directionIndicatorSize": 0.5,
+    "aiInterval": 2.0,
+    "moveThresholdMin": 5.0,
+    "moveThresholdMax": 12.0,
+    "healThreshold": 50.0
+  },
+  "monsterAbilities": {
+    "ability1CooldownMax": 2.0,
+    "ability1Damage": 15.0,
+    "ability1Range": 3.0,
+    "ability1Duration": 0.4,
+    "swordWidth": 0.5,
+    "swordHeight": 2.5,
+    "swordColorR": 0.4,
+    "swordColorG": 0.1,
+    "swordColorB": 0.5,
+    "ability1ImpactColorR": 0.6,
+    "ability1ImpactColorG": 0.2,
+    "ability1ImpactColorB": 0.8,
+    "ability1ImpactSize": 0.6,
+    "ability2CooldownMax": 4.0,
+    "ability2ProjectileSize": 0.5,
+    "ability2Damage": 12.0,
+    "ability2ImpactColorR": 0.5,
+    "ability2ImpactColorG": 0.0,
+    "ability2ImpactColorB": 0.5,
+    "ability3CooldownMax": 8.0,
+    "ability3HealAmount": 25.0
+  },
+  "ally": {
+    "maxHealth": 50.0,
+    "size": 0.8,
+    "abilityCooldownMax": 5.0,
+    "aiInterval": 1.0,
+    "moveThreshold": 10.0,
+    "swordDamage": 10.0,
+    "fireballDamage": 15.0,
+    "healAmount": 15.0,
+    "fireballSize": 0.3
+  },
+  "playerAbilities": {
+    "ability1CooldownMax": 1.5,
+    "ability1Duration": 0.3,
+    "ability1Range": 2.0,
+    "ability1Damage": 25.0,
+    "ability1ImpactColorR": 0.8,
+    "ability1ImpactColorG": 0.8,
+    "ability1ImpactColorB": 0.9,
+    "ability1ImpactSize": 0.5,
+    "ability2CooldownMax": 3.0,
+    "ability2ProjectileSpeed": 10.0,
+    "ability2ProjectileSize": 0.4,
+    "ability2Damage": 20.0,
+    "ability2ProjectileColorR": 1.0,
+    "ability2ProjectileColorG": 0.4,
+    "ability2ProjectileColorB": 0.0,
+    "ability3CooldownMax": 10.0,
+    "ability3HealAmount": 20.0
+  },
+  "projectile": {
+    "lifetime": 5.0,
+    "collisionThreshold": 1.0
+  },
+  "effects": {
+    "impactSize": 0.6,
+    "impactDuration": 0.3,
+    "impactGrowthScale": 1.5,
+    "fireballImpactSize": 0.8,
+    "fireballImpactColorR": 1.0,
+    "fireballImpactColorG": 0.5,
+    "fireballImpactColorB": 0.0,
+    "allyFireballImpactSize": 0.6,
+    "allyFireballImpactColorR": 1.0,
+    "allyFireballImpactColorG": 0.4,
+    "allyFireballImpactColorB": 0.0,
+    "allySwordImpactSize": 0.5,
+    "monsterProjectileImpactSize": 0.5
+  },
+  "physics": {
+    "gravity": 20.0,
+    "jumpVelocity": 10.0,
+    "groundLevel": 0.5
+  },
+  "selection": {
+    "clickSelectionRadius": 60.0
+  }
+}

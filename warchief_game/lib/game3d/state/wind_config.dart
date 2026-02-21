@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-/// Manages wind system configuration with JSON asset defaults.
+/// Manages wind system configuration with JSON asset defaults and
+/// SharedPreferences overrides.
 ///
 /// Follows the same pattern as [ManaConfig]: JSON asset file provides
 /// shipped defaults, with dot-notation getters for all values.
+/// User overrides are stored sparsely in SharedPreferences.
 class WindConfig extends ChangeNotifier {
   static const String _assetPath = 'assets/data/wind_config.json';
+  static const String _storageKey = 'wind_config_overrides';
 
   /// Defaults loaded from JSON asset file
   Map<String, dynamic> _defaults = {};
+
+  /// Sparse user overrides stored in SharedPreferences
+  Map<String, dynamic> _overrides = {};
 
   // ==================== WIND GETTERS ====================
 
@@ -64,6 +71,17 @@ class WindConfig extends ChangeNotifier {
   double get flightBankToTurnMultiplier =>
       _resolve('flight.bankToTurnMultiplier', 2.5);
   double get flightBarrelRollRate => _resolve('flight.barrelRollRate', 360.0);
+  double get flightDoubleTapWindow => _resolve('flight.doubleTapWindow', 0.3);
+  double get flightHardBankRateMultiplier =>
+      _resolve('flight.hardBankRateMultiplier', 1.5);
+  double get flightHardBankMaxAngle =>
+      _resolve('flight.hardBankMaxAngle', 90.0);
+  double get flightSpaceBoostMultiplier =>
+      _resolve('flight.spaceBoostMultiplier', 1.8);
+  double get flightSpaceBoostManaCost =>
+      _resolve('flight.spaceBoostManaCostPerSecond', 8.0);
+  double get flightTurnSpeedReductionFactor =>
+      _resolve('flight.turnSpeedReductionFactor', 0.3);
 
   // ==================== TRAIL GETTERS ====================
 
@@ -112,9 +130,10 @@ class WindConfig extends ChangeNotifier {
 
   // ==================== INITIALIZATION ====================
 
-  /// Load defaults from JSON asset.
+  /// Load defaults from JSON asset, then overrides from SharedPreferences.
   Future<void> initialize() async {
     await _loadDefaults();
+    await _loadOverrides();
   }
 
   Future<void> _loadDefaults() async {
@@ -129,24 +148,95 @@ class WindConfig extends ChangeNotifier {
     }
   }
 
+  /// Load user overrides from SharedPreferences.
+  Future<void> _loadOverrides() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = prefs.getString(_storageKey);
+      if (json != null) {
+        _overrides = Map<String, dynamic>.from(
+          jsonDecode(json) as Map<String, dynamic>,
+        );
+        notifyListeners();
+        print('[WindConfig] Loaded ${_overrides.length} overrides');
+      }
+    } catch (e) {
+      print('[WindConfig] Failed to load overrides: $e');
+    }
+  }
+
+  /// Save overrides to SharedPreferences.
+  Future<void> _saveOverrides() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_storageKey, jsonEncode(_overrides));
+    } catch (e) {
+      print('[WindConfig] Failed to save overrides: $e');
+    }
+  }
+
+  // ==================== OVERRIDE MANAGEMENT ====================
+
+  /// Set a single override value using dot-notation key.
+  void setOverride(String key, dynamic value) {
+    _overrides[key] = value;
+    notifyListeners();
+    _saveOverrides();
+  }
+
+  /// Remove a single override (reverts to default).
+  void clearOverride(String key) {
+    _overrides.remove(key);
+    notifyListeners();
+    _saveOverrides();
+  }
+
+  /// Remove all overrides (revert everything to defaults).
+  void clearAllOverrides() {
+    _overrides.clear();
+    notifyListeners();
+    _saveOverrides();
+  }
+
+  /// Check if a specific key has an override.
+  bool hasOverride(String key) => _overrides.containsKey(key);
+
+  /// Get the full overrides map (for editor UI).
+  Map<String, dynamic> get overrides => Map.unmodifiable(_overrides);
+
+  /// Get the default value for a dot-notation key.
+  dynamic getDefault(String key) => _resolveFromNestedMap(_defaults, key);
+
   // ==================== RESOLUTION HELPERS ====================
 
-  /// Resolve a double value from nested map with fallback.
+  /// Resolve a double: override -> default -> hardcoded fallback.
   double _resolve(String dotKey, double fallback) {
+    if (_overrides.containsKey(dotKey)) {
+      final val = _overrides[dotKey];
+      if (val is num) return val.toDouble();
+    }
     final val = _resolveFromNestedMap(_defaults, dotKey);
     if (val is num) return val.toDouble();
     return fallback;
   }
 
-  /// Resolve a bool value from nested map with fallback.
+  /// Resolve a bool: override -> default -> hardcoded fallback.
   bool _resolveBool(String dotKey, bool fallback) {
+    if (_overrides.containsKey(dotKey)) {
+      final val = _overrides[dotKey];
+      if (val is bool) return val;
+    }
     final val = _resolveFromNestedMap(_defaults, dotKey);
     if (val is bool) return val;
     return fallback;
   }
 
-  /// Resolve an int value from nested map with fallback.
+  /// Resolve an int: override -> default -> hardcoded fallback.
   int _resolveInt(String dotKey, int fallback) {
+    if (_overrides.containsKey(dotKey)) {
+      final val = _overrides[dotKey];
+      if (val is num) return val.toInt();
+    }
     final val = _resolveFromNestedMap(_defaults, dotKey);
     if (val is num) return val.toInt();
     return fallback;

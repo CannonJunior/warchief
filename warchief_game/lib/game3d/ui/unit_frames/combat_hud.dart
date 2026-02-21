@@ -4,6 +4,7 @@ import '../mana_bar.dart';
 import 'unit_frame.dart';
 import 'vs_indicator.dart';
 import 'buff_debuff_icons.dart';
+import 'stance_icon_bar.dart';
 import '../../state/action_bar_config.dart';
 import '../../state/game_state.dart';
 import '../../data/abilities/ability_types.dart';
@@ -67,6 +68,9 @@ class CombatHUD extends StatelessWidget {
   final ActionBarConfig? actionBarConfig;
   final Function(int slotIndex, String abilityName)? onAbilityDropped;
 
+  // Callback when stance or other state changes (triggers parent rebuild)
+  final VoidCallback? onStateChanged;
+
   const CombatHUD({
     Key? key,
     required this.playerName,
@@ -108,6 +112,7 @@ class CombatHUD extends StatelessWidget {
     this.totHealthColor = const Color(0xFF4CAF50),
     this.actionBarConfig,
     this.onAbilityDropped,
+    this.onStateChanged,
   }) : super(key: key);
 
   @override
@@ -150,6 +155,15 @@ class CombatHUD extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
                     child: FlightBuffIcon(gameState: gameState!),
+                  ),
+                // Stance icon bar (above player health bar)
+                if (gameState != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: StanceIconBar(
+                      gameState: gameState!,
+                      onStateChanged: onStateChanged,
+                    ),
                   ),
                 // Player frame (portrait on left)
                 UnitFrame(
