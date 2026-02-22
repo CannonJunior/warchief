@@ -2,7 +2,86 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-21
+
+#### Tab Targeting Improvements (WoW-inspired)
+- ✅ **Melee range priority tier**: Three-tier sorting — enemies within melee range (≤5 units) are always first, sorted by distance. Then front-cone (≤60°) sorted by angle. Then everything else by distance. Melee characters always tab to the closest hittable enemy.
+- ✅ **Max range filter**: Enemies beyond 50 units are excluded from tab targeting entirely. Prevents tab-targeting distant enemies you can't reach.
+- ✅ **First-tab selects best target**: First tab press with no target selects index 0 (nearest/best priority) instead of skipping to index 1. Subsequent presses cycle through the sorted list.
+- ✅ **Fresh sort on each keypress**: Cache is invalidated on each tab press so the sort reflects current positions and facing direction, not a 0.2s-stale snapshot.
+- ✅ **Active character targeting**: Input handler now uses `activeTransform`/`activeRotation` instead of `playerTransform` — fixes tab targeting when controlling allies.
+- ✅ **Auto-target on hit**: When the player takes damage with no current target, automatically acquires the nearest enemy (WoW behavior).
+- ✅ **Auto-target on kill**: When current target dies, automatically picks the next nearest enemy so melee players keep swinging without manual re-targeting.
+- ✅ **Fixed sort comparator**: Replaced lossy `.toInt()` and `.sign.toInt()` comparisons with proper `.compareTo()` for correct double ordering.
+- ✅ Build verified clean (`flutter build web`)
+
+#### Abilities Codex Resizable Panel
+- ✅ **Resizable borders**: All 4 edges and 4 corners of the Abilities Codex panel are draggable to resize. Right/bottom expand, left/top expand while shifting position to keep the opposite edge anchored.
+- ✅ **Size constraints**: Min 500x400, max 1200x900 to prevent over/under-sizing.
+- ✅ **Cursor feedback**: MouseRegion wrappers show appropriate resize cursors (resizeColumn, resizeRow, resizeDownRight, resizeUpLeft, etc.) on hover.
+- ✅ **Header drag-to-move**: Panel repositioning now only triggers from the header bar (not the entire panel surface), so resize handles don't conflict with dragging.
+- ✅ **Dynamic layout**: Panel width/height stored as state variables (`_panelWidth`, `_panelHeight`), replacing hardcoded 750x600. Editor panel total width calculation uses dynamic width.
+- ✅ Build verified clean (`flutter build web`)
+
+#### Combat Stance Revamp: 5-Way Rock-Paper-Scissors Metagame
+- ✅ **7 new StanceData fields**: Added `spellPushbackInflicted`, `spellPushbackResistance`, `ccDurationInflicted`, `ccDurationReceived`, `lifestealRatio`, `dodgeChance`, `manaCostDisruption` to `stance_types.dart` with constructor defaults, `copyWith`, `applyOverrides`, and `modifierSummary`.
+- ✅ **Parsing**: Added 7 new fields to `_parseStance()` in `stance_definitions.dart` with safe `?.toDouble() ?? default` pattern.
+- ✅ **Revised stance values**: Updated `stance_config.json` with rebalanced multipliers for all 5 stances creating a pentagonal RPS graph (Fury>BW/Drunken, Tide>Fury/Phantom, Phantom>Fury/Drunken, Drunken>Tide/BW, BW>Phantom/Tide).
+- ✅ **Dodge mechanic**: In `combat_system.dart`, player dodge check before damage application. Uses static `math.Random` instance. Shows "DODGED" in combat log. Skipped for target dummy.
+- ✅ **Spell pushback**: In `combat_system.dart`, after player takes damage while casting, pushes back `castProgress` by `castTime * 0.25 * (1 - resistance)`. Capped at 3 pushbacks per cast via `castPushbackCount` on GameState. Tide immune (1.0 resistance).
+- ✅ **Lifesteal**: `_applyLifesteal()` helper in `ability_system.dart`. Heals by `damage * lifestealRatio` (NOT modified by healingMultiplier). Called at all hit points: `_autoHitCurrentTarget`, `_damageTargetWithProjectile`, non-homing projectile hits, AoE hits (Whirlwind, Frost Nova, generic AoE).
+- ✅ **CC duration modifiers**: `_applyMeleeStatusEffect()`, `_applyDoTFromProjectile()`, and Fear effect multiply status duration by `activeStance.ccDurationInflicted`.
+- ✅ **Stance editor**: Added COMBAT INTERACTIONS section with 7 new fields, controllers, populate, dispose, override map, and tooltips in `stance_editor_panel.dart`.
+- ✅ Build verified clean (`flutter build web`)
+
+#### Ability Category Reordering in Codex
+- ✅ **AbilityOrderManager**: Created `lib/game3d/state/ability_order_manager.dart` — per-category ability ordering persisted via SharedPreferences. Stores `Map<String, List<String>>` keyed by category name. Reconciles with registry on access (new abilities appended, removed abilities pruned). Global `globalAbilityOrderManager` instance.
+- ✅ **Reorderable ability lists**: Each category in the "Potential Future Abilities" section uses `ReorderableListView.builder` for drag-to-reorder. Drag handle icons on the left of each card. `onReorder` callback saves order via manager.
+- ✅ **Slot number badges**: First 10 abilities in each category show numbered badges (1–9, 0) matching action bar hotkey slots, so the user knows which abilities will load.
+- ✅ **Load to Action Bar uses order**: `_loadClassToActionBar` now loads abilities in user-defined order via `globalAbilityOrderManager.getOrderedAbilities()`.
+- ✅ **Reset custom order**: Categories with custom order show a reset icon to revert to default registry order.
+- ✅ **Initialization**: `globalAbilityOrderManager` initialized in `game3d_widget.dart` alongside other managers.
+- ✅ Build verified clean (`flutter build web`)
+
 ### ✅ Completed - 2026-02-20
+
+#### Auto-Hit for Melee and Ranged Abilities
+- ✅ **Auto-hit intended target**: Melee and ranged abilities that can be successfully cast now automatically hit the intended target — no collision check needed. Uses `_autoHitCurrentTarget()` helper that routes damage to the specific target type (boss, minion, dummy) by ID.
+- ✅ **Face target on strike**: All melee abilities (`updateAbility1`, `_executeHeavyStrikeEffect`, `_executeCrushingBlowEffect`, `_executeGenericWindupMelee`) call `_faceCurrentTarget()` to rotate the character toward the target before dealing damage.
+- ✅ **Homing projectile auto-hit**: Homing ranged projectiles (ability 2) auto-hit at 2.5-unit threshold and skip general collision checks, preventing interception by non-targeted enemies.
+- ✅ **Collision fallback**: When no target is selected, all abilities fall back to collision-based detection in the forward direction (legacy behavior preserved).
+- ✅ **Piercing unaffected**: AOE abilities (Whirlwind) and non-homing projectiles retain collision-based detection for hitting non-targeted units.
+- ✅ **Side effects preserved**: `_autoHitCurrentTarget()` handles red mana generation, melee streak tracking, kill goal events, and alive minion refresh — matching the side effects of the collision-based path.
+- ✅ Build verified clean (`flutter build web`)
+
+#### Blue Ley Line Overlay Enhancement
+- ✅ **Thicker ley lines**: Line width multiplied by 2.5x with a soft glow layer underneath (3x width, pulsing opacity). Lines use rounded caps for cleaner visuals.
+- ✅ **Prominent power nodes**: Nodes now render with four layers — outer pulsing glow ring, pulsing stroke ring border, solid core circle (1.2x radius), and bright center highlight. All pulse with elapsed time.
+- ✅ **Blue mana attunement gate**: Ley lines and power nodes only render when `activeManaAttunements.contains(ManaColor.blue)` AND toggle is enabled. Replaces old `hideLeyLinesByAttunement` logic (which was gated behind `manaSourceVisibilityGated` setting).
+- ✅ **Toggle icon**: Hub/network icon (Icons.hub) on minimap border at top-right (below green toggle when both attuned). Click toggles `minimapState.showBlueOverlay` on/off. Blue when active, dim when inactive. Tooltip shows "Show/Hide ley lines".
+- ✅ **Entity painter gated**: Ley power node diamonds in `MinimapEntityPainter` also gated behind the same blue attunement + toggle check.
+- ✅ **State**: Added `showBlueOverlay` boolean to `MinimapState` (defaults to true).
+- ✅ Build verified clean (`flutter build web`)
+
+#### Minimap Green Mana Source Overlay
+- ✅ **Green mana overlay painter**: Created `minimap_green_painter.dart` — CustomPainter drawing three layers of green mana source information:
+  - **Grass zones**: Coarse grid (4px step) sampling terrain height, tinting areas with grass weight in translucent green. Uses the same normalized height formula (0.15-0.65 range, peak at 0.4) as the actual green mana regen calculation.
+  - **Spirit being auras**: Pulsing green rings around allies in spirit form, showing the `spiritBeingRadius` (6.0 units default) within which they broadcast 3.0/sec green mana regen. Leaf icon at center.
+  - **Nature creatures**: Prominent pulsing glow rings + leaf icon around elemental and beast faction minions (e.g. Dryad Lifebinder). These are the "natural creatures that replenish high amounts of green mana."
+  - Also shows proximity radius rings around green-attuned allies (green mana proximity regen sources).
+- ✅ **Green mana attunement gate**: Overlay only renders when `activeManaAttunements.contains(ManaColor.green)`. Toggle icon also only appears when green-attuned.
+- ✅ **Toggle icon**: Eco leaf icon (Icons.eco) on minimap border at top-right corner. Click toggles `minimapState.showGreenOverlay` on/off. Green when active, dim when inactive. Tooltip shows "Show/Hide green mana sources".
+- ✅ **Layer ordering**: Green overlay placed between terrain and entity layers so grass zones appear beneath entity blips.
+- ✅ **State**: Added `showGreenOverlay` boolean to `MinimapState` (defaults to true).
+- ✅ Build verified clean (`flutter build web`)
+
+#### Minimap Wind Overlay
+- ✅ **Wind overlay painter**: Created `minimap_wind_painter.dart` — CustomPainter drawing animated dashed flow lines across the minimap in the wind direction. Line opacity/count scales with wind strength. Lines scroll along the wind direction for animated flow effect. Handles both rotating and fixed-north minimap modes.
+- ✅ **Derecho prominence**: During derecho storms, overlay intensifies with orange pulsing radial glow, thicker/brighter flow lines that lerp from blue-white to orange with intensity, and a "DERECHO" label at top of minimap that fades in above 30% intensity.
+- ✅ **White mana attunement gate**: Overlay only renders when the active character's `activeManaAttunements` contains `ManaColor.white`. Toggle icon also only appears when white-attuned.
+- ✅ **Toggle icon**: Wind icon (Icons.air) added to minimap border at top-left corner. Click toggles `minimapState.showWindOverlay` on/off. Icon is blue-silver when active, dim when inactive, pulses orange during derecho. Tooltip shows "Show/Hide wind overlay".
+- ✅ **State**: Added `showWindOverlay` boolean to `MinimapState` (defaults to true).
+- ✅ Build verified clean (`flutter build web`)
 
 #### Simplify Movement+Damage Abilities
 - ✅ **Target-seeking dashes**: Non-AOE abilities with movement+damage now move the character toward the targeted enemy instead of dashing straight forward. Dash snaps player rotation to face target during travel.

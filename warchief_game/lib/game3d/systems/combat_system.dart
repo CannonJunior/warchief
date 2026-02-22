@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math.dart' hide Colors;
 
@@ -23,6 +24,9 @@ enum DamageTarget { player, monster, ally, minion, dummy }
 /// - Impact effect creation
 class CombatSystem {
   CombatSystem._(); // Private constructor to prevent instantiation
+
+  /// Shared RNG for dodge rolls (avoids repeated instantiation in hot path)
+  static final math.Random _rng = math.Random();
 
   /// Creates an impact effect at the specified position
   ///
@@ -93,6 +97,28 @@ class CombatSystem {
     final distSq = dx * dx + dy * dy + dz * dz;
 
     if (distSq < collisionThreshold * collisionThreshold) {
+      // Reason: Cache activeStance once — the getter does registry lookup +
+      // override merge + potential copyWith on every call.
+      final stance = targetType == DamageTarget.player ? gameState.activeStance : null;
+
+      // Dodge check: player stance dodgeChance (skip for target dummy)
+      if (targetType == DamageTarget.player) {
+        final dodgeChance = stance!.dodgeChance;
+        if (dodgeChance > 0 && _rng.nextDouble() < dodgeChance) {
+          gameState.combatLogMessages.add(CombatLogEntry(
+            source: attackType.split(' ').first,
+            action: '$attackType DODGED',
+            type: CombatLogType.damage,
+            amount: 0,
+            target: 'Player',
+          ));
+          if (gameState.combatLogMessages.length > 250) {
+            gameState.combatLogMessages.removeRange(0, gameState.combatLogMessages.length - 200);
+          }
+          return false;
+        }
+      }
+
       // Create impact effect at collision point
       createImpactEffect(
         gameState,
@@ -129,9 +155,7 @@ class CombatSystem {
       // Apply damage based on target type
       switch (targetType) {
         case DamageTarget.player:
-          // Apply stance damageTakenMultiplier
-          final stance = gameState.activeStance;
-          final effectiveDamage = damage * stance.damageTakenMultiplier;
+          final effectiveDamage = damage * stance!.damageTakenMultiplier;
           gameState.playerHealth = (gameState.playerHealth - effectiveDamage)
               .clamp(0.0, gameState.playerMaxHealth);
           // Tide stance: convert portion of damage taken into primary attuned mana
@@ -140,6 +164,25 @@ class CombatSystem {
           }
           assert(() { print('$attackType hit player for ${effectiveDamage.toStringAsFixed(1)} damage! '
                 'Player health: ${gameState.playerHealth.toStringAsFixed(1)}'); return true; }());
+          // Reason: Auto-acquire nearest enemy when hit with no target (WoW behavior).
+          // Melee players immediately know who is attacking them.
+          if (gameState.currentTargetId == null && gameState.activeTransform != null) {
+            final pos = gameState.activeTransform!.position;
+            gameState.tabToNextTarget(pos.x, pos.z, gameState.activeRotation);
+          }
+          // Spell pushback: push back castProgress when hit while casting
+          if (gameState.isCasting && gameState.castProgress > 0 &&
+              gameState.castPushbackCount < 3) {
+            final resistance = stance.spellPushbackResistance;
+            if (resistance < 1.0) {
+              // Reason: pushback = castTime * basePushback(0.25) * (1 - resistance)
+              final pushbackAmount = gameState.currentCastTime * 0.25 * (1.0 - resistance);
+              gameState.castProgress = (gameState.castProgress - pushbackAmount).clamp(0.0, gameState.currentCastTime);
+              gameState.castPushbackCount++;
+              assert(() { print('[PUSHBACK] Cast pushed back by ${pushbackAmount.toStringAsFixed(2)}s '
+                    '(${gameState.castPushbackCount}/3, resistance=${(resistance * 100).round()}%)'); return true; }());
+            }
+          }
           break;
 
         case DamageTarget.monster:

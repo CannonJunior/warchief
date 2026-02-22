@@ -11,6 +11,8 @@ import 'minimap_terrain_painter.dart';
 import 'minimap_entity_painter.dart';
 import 'minimap_border_icons.dart';
 import 'minimap_ping_overlay.dart';
+import 'minimap_wind_painter.dart';
+import 'minimap_green_painter.dart';
 
 /// Circular minimap widget showing terrain, entities, ley lines, and pings.
 ///
@@ -89,7 +91,7 @@ class MinimapWidget extends StatelessWidget {
                       color: bgColor,
                       child: Stack(
                         children: [
-                          // Terrain layer
+                          // Terrain layer (ley lines gated by blue attunement + toggle)
                           CustomPaint(
                             size: Size(size, size),
                             painter: MinimapTerrainPainter(
@@ -101,11 +103,24 @@ class MinimapWidget extends StatelessWidget {
                                   gameState.infiniteTerrainManager,
                               leyLineManager: gameState.leyLineManager,
                               minimapState: minimapState,
-                              hideLeyLinesByAttunement:
-                                  (globalGameplaySettings?.manaSourceVisibilityGated ?? false) &&
-                                  !gameState.activeManaAttunements.contains(ManaColor.blue),
+                              showLeyLines: minimapState.showBlueOverlay &&
+                                  gameState.activeManaAttunements.contains(ManaColor.blue),
+                              elapsedTime: minimapState.elapsedTime,
                             ),
                           ),
+                          // Green mana source overlay (green-attuned only)
+                          if (minimapState.showGreenOverlay &&
+                              gameState.activeManaAttunements.contains(ManaColor.green))
+                            CustomPaint(
+                              size: Size(size, size),
+                              painter: MinimapGreenPainter(
+                                gameState: gameState,
+                                viewRadius: viewRadius,
+                                playerRotation: gameState.playerRotation,
+                                isRotatingMode: isRotating,
+                                elapsedTime: minimapState.elapsedTime,
+                              ),
+                            ),
                           // Entity blips layer
                           CustomPaint(
                             size: Size(size, size),
@@ -114,8 +129,22 @@ class MinimapWidget extends StatelessWidget {
                               viewRadius: viewRadius,
                               mapRotation: gameState.playerRotation,
                               isRotatingMode: isRotating,
+                              showLeyNodes: minimapState.showBlueOverlay &&
+                                  gameState.activeManaAttunements.contains(ManaColor.blue),
                             ),
                           ),
+                          // Wind overlay layer (white-attuned only)
+                          if (minimapState.showWindOverlay &&
+                              gameState.activeManaAttunements.contains(ManaColor.white))
+                            CustomPaint(
+                              size: Size(size, size),
+                              painter: MinimapWindPainter(
+                                windState: windState,
+                                playerRotation: gameState.playerRotation,
+                                isRotatingMode: isRotating,
+                                elapsedTime: minimapState.elapsedTime,
+                              ),
+                            ),
                           // Ping overlay layer
                           CustomPaint(
                             size: Size(size, size),
@@ -149,6 +178,21 @@ class MinimapWidget extends StatelessWidget {
                 isRotatingMode: isRotating,
                 onToggleRotation: () {
                   minimapState.isRotatingMode = !minimapState.isRotatingMode;
+                },
+                showWindOverlay: minimapState.showWindOverlay,
+                isWhiteAttuned: gameState.activeManaAttunements.contains(ManaColor.white),
+                onToggleWindOverlay: () {
+                  minimapState.showWindOverlay = !minimapState.showWindOverlay;
+                },
+                showGreenOverlay: minimapState.showGreenOverlay,
+                isGreenAttuned: gameState.activeManaAttunements.contains(ManaColor.green),
+                onToggleGreenOverlay: () {
+                  minimapState.showGreenOverlay = !minimapState.showGreenOverlay;
+                },
+                showBlueOverlay: minimapState.showBlueOverlay,
+                isBlueAttuned: gameState.activeManaAttunements.contains(ManaColor.blue),
+                onToggleBlueOverlay: () {
+                  minimapState.showBlueOverlay = !minimapState.showBlueOverlay;
                 },
               ),
             ],

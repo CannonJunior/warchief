@@ -44,6 +44,15 @@ class StanceData {
   final double rerollDamageTakenMin;
   final double rerollDamageTakenMax;
 
+  // Combat interaction modifiers
+  final double spellPushbackInflicted;
+  final double spellPushbackResistance;
+  final double ccDurationInflicted;
+  final double ccDurationReceived;
+  final double lifestealRatio;
+  final double dodgeChance;
+  final double manaCostDisruption;
+
   // Switching constraints
   final double switchCooldown;
 
@@ -73,6 +82,13 @@ class StanceData {
     this.rerollDamageMax = 1.30,
     this.rerollDamageTakenMin = 0.70,
     this.rerollDamageTakenMax = 1.30,
+    this.spellPushbackInflicted = 0.0,
+    this.spellPushbackResistance = 0.0,
+    this.ccDurationInflicted = 1.0,
+    this.ccDurationReceived = 1.0,
+    this.lifestealRatio = 0.0,
+    this.dodgeChance = 0.0,
+    this.manaCostDisruption = 0.0,
     this.switchCooldown = 1.5,
   });
 
@@ -112,6 +128,13 @@ class StanceData {
     double? rerollDamageMax,
     double? rerollDamageTakenMin,
     double? rerollDamageTakenMax,
+    double? spellPushbackInflicted,
+    double? spellPushbackResistance,
+    double? ccDurationInflicted,
+    double? ccDurationReceived,
+    double? lifestealRatio,
+    double? dodgeChance,
+    double? manaCostDisruption,
     double? switchCooldown,
   }) {
     return StanceData(
@@ -140,6 +163,13 @@ class StanceData {
       rerollDamageMax: rerollDamageMax ?? this.rerollDamageMax,
       rerollDamageTakenMin: rerollDamageTakenMin ?? this.rerollDamageTakenMin,
       rerollDamageTakenMax: rerollDamageTakenMax ?? this.rerollDamageTakenMax,
+      spellPushbackInflicted: spellPushbackInflicted ?? this.spellPushbackInflicted,
+      spellPushbackResistance: spellPushbackResistance ?? this.spellPushbackResistance,
+      ccDurationInflicted: ccDurationInflicted ?? this.ccDurationInflicted,
+      ccDurationReceived: ccDurationReceived ?? this.ccDurationReceived,
+      lifestealRatio: lifestealRatio ?? this.lifestealRatio,
+      dodgeChance: dodgeChance ?? this.dodgeChance,
+      manaCostDisruption: manaCostDisruption ?? this.manaCostDisruption,
       switchCooldown: switchCooldown ?? this.switchCooldown,
     );
   }
@@ -195,6 +225,13 @@ class StanceData {
       rerollDamageMax: ov<double>('rerollDamageMax', rerollDamageMax),
       rerollDamageTakenMin: ov<double>('rerollDamageTakenMin', rerollDamageTakenMin),
       rerollDamageTakenMax: ov<double>('rerollDamageTakenMax', rerollDamageTakenMax),
+      spellPushbackInflicted: ov<double>('spellPushbackInflicted', spellPushbackInflicted),
+      spellPushbackResistance: ov<double>('spellPushbackResistance', spellPushbackResistance),
+      ccDurationInflicted: ov<double>('ccDurationInflicted', ccDurationInflicted),
+      ccDurationReceived: ov<double>('ccDurationReceived', ccDurationReceived),
+      lifestealRatio: ov<double>('lifestealRatio', lifestealRatio),
+      dodgeChance: ov<double>('dodgeChance', dodgeChance),
+      manaCostDisruption: ov<double>('manaCostDisruption', manaCostDisruption),
       switchCooldown: ov<double>('switchCooldown', switchCooldown),
     );
   }
@@ -226,6 +263,19 @@ class StanceData {
     if (convertsManaRegenToHeal) lines.add('Mana regen heals HP instead');
     if (damageTakenToManaRatio > 0) lines.add('${(damageTakenToManaRatio * 100).round()}% damage taken → mana');
     if (healthDrainPerSecond > 0) lines.add('Drains ${(healthDrainPerSecond * 100).toStringAsFixed(0)}% max HP/s');
+    if (spellPushbackInflicted > 0) lines.add('${(spellPushbackInflicted * 100).round()}% spell pushback per hit');
+    if (spellPushbackResistance > 0) {
+      if (spellPushbackResistance >= 1.0) {
+        lines.add('Immune to spell pushback');
+      } else {
+        lines.add('${(spellPushbackResistance * 100).round()}% pushback resistance');
+      }
+    }
+    add('CC duration inflicted', ccDurationInflicted);
+    add('CC duration received', ccDurationReceived);
+    if (lifestealRatio > 0) lines.add('${(lifestealRatio * 100).round()}% lifesteal');
+    if (dodgeChance > 0) lines.add('${(dodgeChance * 100).round()}% dodge chance');
+    if (manaCostDisruption > 0) lines.add('${(manaCostDisruption * 100).round()}% mana disruption');
     if (switchCooldown > 2.0) lines.add('${switchCooldown.toStringAsFixed(0)}s lock-in on activation');
 
     return lines;

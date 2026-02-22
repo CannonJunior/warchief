@@ -28,6 +28,13 @@ const Map<String, String> _tooltips = {
   'rerollDamageTakenMin': 'Minimum value for random damage taken multiplier roll.',
   'rerollDamageTakenMax': 'Maximum value for random damage taken multiplier roll.',
   'switchCooldown': 'Seconds before you can switch to another stance.',
+  'spellPushbackInflicted': 'Fraction of cast time pushed back per hit on a casting target (0.25 = 25%).',
+  'spellPushbackResistance': 'Resistance to spell pushback (1.0 = immune, 0.5 = 50% reduction).',
+  'ccDurationInflicted': 'Multiplier to CC duration you apply (1.30 = 30% longer).',
+  'ccDurationReceived': 'Multiplier to CC duration applied to you (0.60 = 40% shorter).',
+  'lifestealRatio': 'Fraction of damage dealt that heals you (0.10 = 10%).',
+  'dodgeChance': 'Chance to completely avoid an incoming attack (0.12 = 12%).',
+  'manaCostDisruption': 'Increases enemy mana costs in your aura (0.15 = 15%). PvP infrastructure.',
   'colorR': 'Red component of stance color (0.0–1.0).',
   'colorG': 'Green component of stance color (0.0–1.0).',
   'colorB': 'Blue component of stance color (0.0–1.0).',
@@ -85,6 +92,15 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
   late bool _convertsManaRegenToHeal;
   late bool _hasRandomModifiers;
 
+  // Combat interactions
+  late TextEditingController _pushbackInflictedCtrl;
+  late TextEditingController _pushbackResistanceCtrl;
+  late TextEditingController _ccDurationInflictedCtrl;
+  late TextEditingController _ccDurationReceivedCtrl;
+  late TextEditingController _lifestealRatioCtrl;
+  late TextEditingController _dodgeChanceCtrl;
+  late TextEditingController _manaCostDisruptionCtrl;
+
   // Switching
   late TextEditingController _switchCooldownCtrl;
 
@@ -112,40 +128,81 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
     }
   }
 
+  /// Whether controllers have been initialized (first call creates, subsequent reuse).
+  bool _controllersInitialized = false;
+
   void _populateFromStance(StanceData s) {
     // Reason: Show effective values (with overrides) in the editor
     final effective = globalStanceOverrideManager?.getEffectiveStance(s) ?? s;
 
-    _descriptionCtrl = TextEditingController(text: effective.description);
-
-    _damageMultCtrl = TextEditingController(text: effective.damageMultiplier.toString());
-    _damageTakenMultCtrl = TextEditingController(text: effective.damageTakenMultiplier.toString());
-    _moveSpeedMultCtrl = TextEditingController(text: effective.movementSpeedMultiplier.toString());
-    _cooldownMultCtrl = TextEditingController(text: effective.cooldownMultiplier.toString());
-    _manaRegenMultCtrl = TextEditingController(text: effective.manaRegenMultiplier.toString());
-    _manaCostMultCtrl = TextEditingController(text: effective.manaCostMultiplier.toString());
-    _healingMultCtrl = TextEditingController(text: effective.healingMultiplier.toString());
-    _maxHealthMultCtrl = TextEditingController(text: effective.maxHealthMultiplier.toString());
-    _castTimeMultCtrl = TextEditingController(text: effective.castTimeMultiplier.toString());
-
-    _healthDrainCtrl = TextEditingController(text: effective.healthDrainPerSecond.toString());
-    _dmgToManaRatioCtrl = TextEditingController(text: effective.damageTakenToManaRatio.toString());
-    _hpForManaRatioCtrl = TextEditingController(text: effective.hpForManaRatio.toString());
-    _rerollIntervalCtrl = TextEditingController(text: effective.rerollInterval.toString());
-    _rerollDmgMinCtrl = TextEditingController(text: effective.rerollDamageMin.toString());
-    _rerollDmgMaxCtrl = TextEditingController(text: effective.rerollDamageMax.toString());
-    _rerollDmgTakenMinCtrl = TextEditingController(text: effective.rerollDamageTakenMin.toString());
-    _rerollDmgTakenMaxCtrl = TextEditingController(text: effective.rerollDamageTakenMax.toString());
+    if (!_controllersInitialized) {
+      // First call: create controllers
+      _descriptionCtrl = TextEditingController(text: effective.description);
+      _damageMultCtrl = TextEditingController(text: effective.damageMultiplier.toString());
+      _damageTakenMultCtrl = TextEditingController(text: effective.damageTakenMultiplier.toString());
+      _moveSpeedMultCtrl = TextEditingController(text: effective.movementSpeedMultiplier.toString());
+      _cooldownMultCtrl = TextEditingController(text: effective.cooldownMultiplier.toString());
+      _manaRegenMultCtrl = TextEditingController(text: effective.manaRegenMultiplier.toString());
+      _manaCostMultCtrl = TextEditingController(text: effective.manaCostMultiplier.toString());
+      _healingMultCtrl = TextEditingController(text: effective.healingMultiplier.toString());
+      _maxHealthMultCtrl = TextEditingController(text: effective.maxHealthMultiplier.toString());
+      _castTimeMultCtrl = TextEditingController(text: effective.castTimeMultiplier.toString());
+      _healthDrainCtrl = TextEditingController(text: effective.healthDrainPerSecond.toString());
+      _dmgToManaRatioCtrl = TextEditingController(text: effective.damageTakenToManaRatio.toString());
+      _hpForManaRatioCtrl = TextEditingController(text: effective.hpForManaRatio.toString());
+      _rerollIntervalCtrl = TextEditingController(text: effective.rerollInterval.toString());
+      _rerollDmgMinCtrl = TextEditingController(text: effective.rerollDamageMin.toString());
+      _rerollDmgMaxCtrl = TextEditingController(text: effective.rerollDamageMax.toString());
+      _rerollDmgTakenMinCtrl = TextEditingController(text: effective.rerollDamageTakenMin.toString());
+      _rerollDmgTakenMaxCtrl = TextEditingController(text: effective.rerollDamageTakenMax.toString());
+      _pushbackInflictedCtrl = TextEditingController(text: effective.spellPushbackInflicted.toString());
+      _pushbackResistanceCtrl = TextEditingController(text: effective.spellPushbackResistance.toString());
+      _ccDurationInflictedCtrl = TextEditingController(text: effective.ccDurationInflicted.toString());
+      _ccDurationReceivedCtrl = TextEditingController(text: effective.ccDurationReceived.toString());
+      _lifestealRatioCtrl = TextEditingController(text: effective.lifestealRatio.toString());
+      _dodgeChanceCtrl = TextEditingController(text: effective.dodgeChance.toString());
+      _manaCostDisruptionCtrl = TextEditingController(text: effective.manaCostDisruption.toString());
+      _switchCooldownCtrl = TextEditingController(text: effective.switchCooldown.toString());
+      _colorRCtrl = TextEditingController(text: effective.color.x.toStringAsFixed(2));
+      _colorGCtrl = TextEditingController(text: effective.color.y.toStringAsFixed(2));
+      _colorBCtrl = TextEditingController(text: effective.color.z.toStringAsFixed(2));
+      _controllersInitialized = true;
+    } else {
+      // Subsequent calls: reuse controllers to avoid memory leaks
+      _descriptionCtrl.text = effective.description;
+      _damageMultCtrl.text = effective.damageMultiplier.toString();
+      _damageTakenMultCtrl.text = effective.damageTakenMultiplier.toString();
+      _moveSpeedMultCtrl.text = effective.movementSpeedMultiplier.toString();
+      _cooldownMultCtrl.text = effective.cooldownMultiplier.toString();
+      _manaRegenMultCtrl.text = effective.manaRegenMultiplier.toString();
+      _manaCostMultCtrl.text = effective.manaCostMultiplier.toString();
+      _healingMultCtrl.text = effective.healingMultiplier.toString();
+      _maxHealthMultCtrl.text = effective.maxHealthMultiplier.toString();
+      _castTimeMultCtrl.text = effective.castTimeMultiplier.toString();
+      _healthDrainCtrl.text = effective.healthDrainPerSecond.toString();
+      _dmgToManaRatioCtrl.text = effective.damageTakenToManaRatio.toString();
+      _hpForManaRatioCtrl.text = effective.hpForManaRatio.toString();
+      _rerollIntervalCtrl.text = effective.rerollInterval.toString();
+      _rerollDmgMinCtrl.text = effective.rerollDamageMin.toString();
+      _rerollDmgMaxCtrl.text = effective.rerollDamageMax.toString();
+      _rerollDmgTakenMinCtrl.text = effective.rerollDamageTakenMin.toString();
+      _rerollDmgTakenMaxCtrl.text = effective.rerollDamageTakenMax.toString();
+      _pushbackInflictedCtrl.text = effective.spellPushbackInflicted.toString();
+      _pushbackResistanceCtrl.text = effective.spellPushbackResistance.toString();
+      _ccDurationInflictedCtrl.text = effective.ccDurationInflicted.toString();
+      _ccDurationReceivedCtrl.text = effective.ccDurationReceived.toString();
+      _lifestealRatioCtrl.text = effective.lifestealRatio.toString();
+      _dodgeChanceCtrl.text = effective.dodgeChance.toString();
+      _manaCostDisruptionCtrl.text = effective.manaCostDisruption.toString();
+      _switchCooldownCtrl.text = effective.switchCooldown.toString();
+      _colorRCtrl.text = effective.color.x.toStringAsFixed(2);
+      _colorGCtrl.text = effective.color.y.toStringAsFixed(2);
+      _colorBCtrl.text = effective.color.z.toStringAsFixed(2);
+    }
 
     _usesHpForMana = effective.usesHpForMana;
     _convertsManaRegenToHeal = effective.convertsManaRegenToHeal;
     _hasRandomModifiers = effective.hasRandomModifiers;
-
-    _switchCooldownCtrl = TextEditingController(text: effective.switchCooldown.toString());
-
-    _colorRCtrl = TextEditingController(text: effective.color.x.toStringAsFixed(2));
-    _colorGCtrl = TextEditingController(text: effective.color.y.toStringAsFixed(2));
-    _colorBCtrl = TextEditingController(text: effective.color.z.toStringAsFixed(2));
   }
 
   @override
@@ -168,6 +225,13 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
     _rerollDmgMaxCtrl.dispose();
     _rerollDmgTakenMinCtrl.dispose();
     _rerollDmgTakenMaxCtrl.dispose();
+    _pushbackInflictedCtrl.dispose();
+    _pushbackResistanceCtrl.dispose();
+    _ccDurationInflictedCtrl.dispose();
+    _ccDurationReceivedCtrl.dispose();
+    _lifestealRatioCtrl.dispose();
+    _dodgeChanceCtrl.dispose();
+    _manaCostDisruptionCtrl.dispose();
     _switchCooldownCtrl.dispose();
     _colorRCtrl.dispose();
     _colorGCtrl.dispose();
@@ -219,6 +283,14 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
     if (_hasRandomModifiers != original.hasRandomModifiers) {
       overrides['hasRandomModifiers'] = _hasRandomModifiers;
     }
+
+    checkDbl('spellPushbackInflicted', _pushbackInflictedCtrl.text, original.spellPushbackInflicted);
+    checkDbl('spellPushbackResistance', _pushbackResistanceCtrl.text, original.spellPushbackResistance);
+    checkDbl('ccDurationInflicted', _ccDurationInflictedCtrl.text, original.ccDurationInflicted);
+    checkDbl('ccDurationReceived', _ccDurationReceivedCtrl.text, original.ccDurationReceived);
+    checkDbl('lifestealRatio', _lifestealRatioCtrl.text, original.lifestealRatio);
+    checkDbl('dodgeChance', _dodgeChanceCtrl.text, original.dodgeChance);
+    checkDbl('manaCostDisruption', _manaCostDisruptionCtrl.text, original.manaCostDisruption);
 
     checkDbl('switchCooldown', _switchCooldownCtrl.text, original.switchCooldown);
 
@@ -272,6 +344,7 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
                 children: [
                   _buildIdentitySection(),
                   _buildMultipliersSection(),
+                  _buildCombatInteractionsSection(),
                   _buildPassivesSection(),
                   _buildSwitchingSection(),
                   _buildVisualSection(),
@@ -392,6 +465,18 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
       _buildNumericRow('Healing', _healingMultCtrl, 'healingMultiplier'),
       _buildNumericRow('Max Health', _maxHealthMultCtrl, 'maxHealthMultiplier'),
       _buildNumericRow('Cast Time', _castTimeMultCtrl, 'castTimeMultiplier'),
+    ]);
+  }
+
+  Widget _buildCombatInteractionsSection() {
+    return _buildSection('COMBAT INTERACTIONS', Colors.teal.shade300, [
+      _buildNumericRow('Pushback Inflicted', _pushbackInflictedCtrl, 'spellPushbackInflicted'),
+      _buildNumericRow('Pushback Resist', _pushbackResistanceCtrl, 'spellPushbackResistance'),
+      _buildNumericRow('CC Dur Inflicted', _ccDurationInflictedCtrl, 'ccDurationInflicted'),
+      _buildNumericRow('CC Dur Received', _ccDurationReceivedCtrl, 'ccDurationReceived'),
+      _buildNumericRow('Lifesteal', _lifestealRatioCtrl, 'lifestealRatio'),
+      _buildNumericRow('Dodge Chance', _dodgeChanceCtrl, 'dodgeChance'),
+      _buildNumericRow('Mana Disruption', _manaCostDisruptionCtrl, 'manaCostDisruption'),
     ]);
   }
 

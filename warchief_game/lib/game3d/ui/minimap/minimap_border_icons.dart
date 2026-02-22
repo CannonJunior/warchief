@@ -39,6 +39,33 @@ class MinimapBorderIcons extends StatelessWidget {
   /// Callback to toggle between rotating and fixed-north mode.
   final VoidCallback onToggleRotation;
 
+  /// Whether the wind overlay is currently enabled.
+  final bool showWindOverlay;
+
+  /// Whether the active character is attuned to White mana.
+  final bool isWhiteAttuned;
+
+  /// Callback to toggle the wind overlay on/off.
+  final VoidCallback onToggleWindOverlay;
+
+  /// Whether the green mana source overlay is currently enabled.
+  final bool showGreenOverlay;
+
+  /// Whether the active character is attuned to Green mana.
+  final bool isGreenAttuned;
+
+  /// Callback to toggle the green mana overlay on/off.
+  final VoidCallback onToggleGreenOverlay;
+
+  /// Whether the blue ley line overlay is currently enabled.
+  final bool showBlueOverlay;
+
+  /// Whether the active character is attuned to Blue mana.
+  final bool isBlueAttuned;
+
+  /// Callback to toggle the blue ley line overlay on/off.
+  final VoidCallback onToggleBlueOverlay;
+
   const MinimapBorderIcons({
     Key? key,
     required this.size,
@@ -51,6 +78,15 @@ class MinimapBorderIcons extends StatelessWidget {
     required this.playerRotation,
     required this.isRotatingMode,
     required this.onToggleRotation,
+    required this.showWindOverlay,
+    required this.isWhiteAttuned,
+    required this.onToggleWindOverlay,
+    required this.showGreenOverlay,
+    required this.isGreenAttuned,
+    required this.onToggleGreenOverlay,
+    required this.showBlueOverlay,
+    required this.isBlueAttuned,
+    required this.onToggleBlueOverlay,
   }) : super(key: key);
 
   @override
@@ -73,6 +109,30 @@ class MinimapBorderIcons extends StatelessWidget {
 
           // Wind direction arrow on border
           if (config?.showWindOnBorder ?? true) _buildWindArrow(radius),
+
+          // Wind overlay toggle at top-left (only when white-attuned)
+          if (isWhiteAttuned)
+            Positioned(
+              left: 0,
+              top: 0,
+              child: _buildWindToggle(),
+            ),
+
+          // Green mana overlay toggle at top-right (only when green-attuned)
+          if (isGreenAttuned)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: _buildGreenToggle(),
+            ),
+
+          // Blue ley line overlay toggle below green at top-right (only when blue-attuned)
+          if (isBlueAttuned)
+            Positioned(
+              right: 0,
+              top: isGreenAttuned ? 20 : 0,
+              child: _buildBlueToggle(),
+            ),
 
           // Rotation mode toggle at bottom-left
           Positioned(
@@ -273,6 +333,115 @@ class MinimapBorderIcons extends StatelessWidget {
               color: isRotatingMode
                   ? const Color(0xFF4cc9f0)
                   : const Color(0xFFCCA040),
+              size: 12,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build the wind overlay toggle button.
+  Widget _buildWindToggle() {
+    final active = showWindOverlay;
+    final isDerecho = windState.isDerechoActive;
+
+    // Reason: during a derecho the icon pulses orange to draw attention
+    final iconColor = isDerecho && active
+        ? const Color(0xFFFF8800)
+        : active
+            ? const Color(0xFFB0C4DE)
+            : const Color(0xFF555577);
+    final borderColor = isDerecho && active
+        ? const Color(0xFFFF8800)
+        : active
+            ? const Color(0xFFB0C4DE)
+            : const Color(0xFF333344);
+
+    return GestureDetector(
+      onTap: onToggleWindOverlay,
+      child: Tooltip(
+        message: active ? 'Hide wind overlay' : 'Show wind overlay',
+        child: Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A0A1A).withOpacity(0.8),
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(color: borderColor, width: 1),
+          ),
+          child: Center(
+            child: Icon(
+              Icons.air,
+              color: iconColor,
+              size: 12,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build the green mana source overlay toggle button.
+  Widget _buildGreenToggle() {
+    final active = showGreenOverlay;
+    final iconColor = active
+        ? const Color(0xFF4CCC4C)
+        : const Color(0xFF555577);
+    final borderColor = active
+        ? const Color(0xFF4CCC4C)
+        : const Color(0xFF333344);
+
+    return GestureDetector(
+      onTap: onToggleGreenOverlay,
+      child: Tooltip(
+        message: active ? 'Hide green mana sources' : 'Show green mana sources',
+        child: Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A0A1A).withOpacity(0.8),
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(color: borderColor, width: 1),
+          ),
+          child: Center(
+            child: Icon(
+              Icons.eco,
+              color: iconColor,
+              size: 12,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build the blue ley line overlay toggle button.
+  Widget _buildBlueToggle() {
+    final active = showBlueOverlay;
+    final iconColor = active
+        ? const Color(0xFF4488DD)
+        : const Color(0xFF555577);
+    final borderColor = active
+        ? const Color(0xFF4488DD)
+        : const Color(0xFF333344);
+
+    return GestureDetector(
+      onTap: onToggleBlueOverlay,
+      child: Tooltip(
+        message: active ? 'Hide ley lines' : 'Show ley lines',
+        child: Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A0A1A).withOpacity(0.8),
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(color: borderColor, width: 1),
+          ),
+          child: Center(
+            child: Icon(
+              Icons.hub,
+              color: iconColor,
               size: 12,
             ),
           ),

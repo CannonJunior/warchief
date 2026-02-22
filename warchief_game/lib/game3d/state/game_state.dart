@@ -182,7 +182,9 @@ class GameState {
       action: 'Switched to ${activeStance.name} stance',
       type: CombatLogType.ability,
     ));
-    if (combatLogMessages.length > 200) combatLogMessages.removeAt(0);
+    if (combatLogMessages.length > 250) {
+      combatLogMessages.removeRange(0, combatLogMessages.length - 200);
+    }
 
     print('[STANCE] Switched to ${activeStance.name}');
     saveStanceConfig();
@@ -233,7 +235,9 @@ class GameState {
           type: CombatLogType.damage,
           amount: activeHealth,
         ));
-        if (combatLogMessages.length > 200) combatLogMessages.removeAt(0);
+        if (combatLogMessages.length > 250) {
+          combatLogMessages.removeRange(0, combatLogMessages.length - 200);
+        }
       }
     }
 
@@ -257,7 +261,9 @@ class GameState {
           action: '${stance.name}: Power surges! ($dmgSign$dmgPct% damage, $takenSign$takenPct% damage taken)',
           type: CombatLogType.ability,
         ));
-        if (combatLogMessages.length > 200) combatLogMessages.removeAt(0);
+        if (combatLogMessages.length > 250) {
+          combatLogMessages.removeRange(0, combatLogMessages.length - 200);
+        }
 
         // Trigger visual pulse for UI overlay
         drunkenRerollPulseTimer = 0.4;
@@ -1070,7 +1076,9 @@ class GameState {
       amount: effect.damagePerTick,
       target: target,
     ));
-    if (combatLogMessages.length > 200) combatLogMessages.removeAt(0);
+    if (combatLogMessages.length > 250) {
+      combatLogMessages.removeRange(0, combatLogMessages.length - 200);
+    }
   }
 
   // Monster sword state (for melee ability 1)
@@ -1656,28 +1664,42 @@ class GameState {
     _tabTargetIndex = -1;
   }
 
-  /// Get ordered list of targetable enemies (for tab targeting)
-  /// Sorted by angle from player's facing direction, then by distance
+  /// Maximum range for tab targeting (WoW uses ~40 yards; our units are smaller)
+  static const double _tabTargetMaxRange = 50.0;
+
+  /// Melee range threshold — enemies within this distance get highest priority
+  static const double _meleeRange = 5.0;
+
+  /// Get ordered list of targetable enemies (for tab targeting).
+  ///
+  /// Sorting tiers (WoW-inspired):
+  ///  1. Melee range (≤ _meleeRange) — sorted by distance (nearest first)
+  ///  2. Front cone (≤ 60°) — sorted by angle, then distance
+  ///  3. Everything else within max range — sorted by distance
+  ///
+  /// Enemies beyond _tabTargetMaxRange are excluded entirely.
   List<String> getTargetableEnemies(double playerX, double playerZ, double playerRotation) {
     final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
 
-    // Cache for 0.2 seconds
-    if (_targetableEnemyIds.isNotEmpty && now - _targetListCacheTime < 0.2) {
+    // Cache for 0.1 seconds (fast refresh for responsive melee targeting)
+    if (_targetableEnemyIds.isNotEmpty && now - _targetListCacheTime < 0.1) {
       return _targetableEnemyIds;
     }
 
     final targets = <_TargetCandidate>[];
-    final playerFacingRad = playerRotation * 3.14159 / 180.0;
+    final playerFacingRad = playerRotation * math.pi / 180.0;
     final playerFacingX = -sin(playerFacingRad);
     final playerFacingZ = -cos(playerFacingRad);
 
-    // Add target dummy if spawned (prioritize for DPS testing)
+    // Add target dummy if spawned
     if (targetDummy != null && targetDummy!.isSpawned) {
       final dx = targetDummy!.position.x - playerX;
       final dz = targetDummy!.position.z - playerZ;
       final dist = sqrt(dx * dx + dz * dz);
-      final angle = _calculateAngleToTarget(dx, dz, playerFacingX, playerFacingZ, dist);
-      targets.add(_TargetCandidate(TargetDummy.instanceId, dist, angle));
+      if (dist <= _tabTargetMaxRange) {
+        final angle = _calculateAngleToTarget(dx, dz, playerFacingX, playerFacingZ, dist);
+        targets.add(_TargetCandidate(TargetDummy.instanceId, dist, angle));
+      }
     }
 
     // Add boss if alive
@@ -1685,8 +1707,10 @@ class GameState {
       final dx = monsterTransform!.position.x - playerX;
       final dz = monsterTransform!.position.z - playerZ;
       final dist = sqrt(dx * dx + dz * dz);
-      final angle = _calculateAngleToTarget(dx, dz, playerFacingX, playerFacingZ, dist);
-      targets.add(_TargetCandidate('boss', dist, angle));
+      if (dist <= _tabTargetMaxRange) {
+        final angle = _calculateAngleToTarget(dx, dz, playerFacingX, playerFacingZ, dist);
+        targets.add(_TargetCandidate('boss', dist, angle));
+      }
     }
 
     // Add alive minions
@@ -1694,26 +1718,42 @@ class GameState {
       final dx = minion.transform.position.x - playerX;
       final dz = minion.transform.position.z - playerZ;
       final dist = sqrt(dx * dx + dz * dz);
-      final angle = _calculateAngleToTarget(dx, dz, playerFacingX, playerFacingZ, dist);
-      targets.add(_TargetCandidate(minion.instanceId, dist, angle));
+      if (dist <= _tabTargetMaxRange) {
+        final angle = _calculateAngleToTarget(dx, dz, playerFacingX, playerFacingZ, dist);
+        targets.add(_TargetCandidate(minion.instanceId, dist, angle));
+      }
     }
 
-    // Sort: prioritize enemies in front (small angle), then by distance
-    // Cone preference: enemies within 60 degrees of facing direction get priority
+    // Reason: Three-tier sort — melee range first (nearest), then front cone
+    // (by angle), then everything else (by distance). This mirrors WoW's
+    // behavior where tab always grabs the closest hittable enemy for melee.
     targets.sort((a, b) {
+      final aInMelee = a.distance <= _meleeRange;
+      final bInMelee = b.distance <= _meleeRange;
+
+      // Tier 1: melee-range enemies always come first, sorted by distance
+      if (aInMelee && !bInMelee) return -1;
+      if (!aInMelee && bInMelee) return 1;
+      if (aInMelee && bInMelee) {
+        return a.distance.compareTo(b.distance);
+      }
+
+      // Tier 2: front-cone enemies (within 60°) come next
       final aInCone = a.angle < 60;
       final bInCone = b.angle < 60;
 
       if (aInCone && !bInCone) return -1;
       if (!aInCone && bInCone) return 1;
 
-      // Within same cone status, sort by angle first, then distance
+      // Within cone: sort by angle first, break ties with distance
       if (aInCone && bInCone) {
-        final angleDiff = a.angle - b.angle;
-        if (angleDiff.abs() > 10) return angleDiff.toInt();
+        final angleCmp = a.angle.compareTo(b.angle);
+        if (angleCmp != 0) return angleCmp;
+        return a.distance.compareTo(b.distance);
       }
 
-      return (a.distance - b.distance).sign.toInt();
+      // Tier 3: behind the player — just sort by distance
+      return a.distance.compareTo(b.distance);
     });
 
     _targetableEnemyIds = targets.map((t) => t.id).toList();
@@ -1729,23 +1769,39 @@ class GameState {
     final targetDirZ = dz / dist;
     final dot = facingX * targetDirX + facingZ * targetDirZ;
     final clampedDot = dot.clamp(-1.0, 1.0);
-    return acos(clampedDot) * 180.0 / 3.14159;
+    return acos(clampedDot) * 180.0 / math.pi;
   }
 
-  /// Tab to next target (WoW-style)
+  /// Tab to next target (WoW-style).
+  ///
+  /// First press with no target selects the highest-priority enemy (index 0).
+  /// Subsequent presses cycle through the sorted list.
+  /// Invalidates the cache so the list is always fresh on key press.
   void tabToNextTarget(double playerX, double playerZ, double playerRotation, {bool reverse = false}) {
+    // Reason: Invalidate cache on each key press so the sort reflects current
+    // positions and facing direction, not a stale snapshot.
+    _targetListCacheTime = 0.0;
+
     final targets = getTargetableEnemies(playerX, playerZ, playerRotation);
     if (targets.isEmpty) {
       clearTarget();
       return;
     }
 
-    if (reverse) {
-      _tabTargetIndex--;
-      if (_tabTargetIndex < 0) _tabTargetIndex = targets.length - 1;
+    // Reason: If no current target, first tab picks the best target (index 0)
+    // rather than incrementing past it.
+    if (currentTargetId == null || !targets.contains(currentTargetId)) {
+      _tabTargetIndex = 0;
     } else {
-      _tabTargetIndex++;
-      if (_tabTargetIndex >= targets.length) _tabTargetIndex = 0;
+      // Find where the current target sits in the freshly-sorted list
+      final currentIdx = targets.indexOf(currentTargetId!);
+      if (reverse) {
+        _tabTargetIndex = currentIdx - 1;
+        if (_tabTargetIndex < 0) _tabTargetIndex = targets.length - 1;
+      } else {
+        _tabTargetIndex = currentIdx + 1;
+        if (_tabTargetIndex >= targets.length) _tabTargetIndex = 0;
+      }
     }
 
     currentTargetId = targets[_tabTargetIndex];
@@ -1754,64 +1810,53 @@ class GameState {
   /// Check if a specific entity is the current target
   bool isTargeted(String id) => currentTargetId == id;
 
-  /// Validate current target (clear if dead)
+  /// Validate current target — auto-acquire next nearest enemy if target dies.
   void validateTarget() {
     if (currentTargetId == null) return;
 
     if (currentTargetId == 'player') {
-      // Player is always a valid target
       return;
     }
 
+    bool targetDead = false;
+
     if (currentTargetId == 'boss') {
-      if (monsterHealth <= 0) clearTarget();
+      if (monsterHealth <= 0) targetDead = true;
     } else if (currentTargetId == TargetDummy.instanceId) {
-      // Target dummy is valid as long as it's spawned
-      if (targetDummy == null || !targetDummy!.isSpawned) clearTarget();
+      if (targetDummy == null || !targetDummy!.isSpawned) targetDead = true;
     } else if (currentTargetId!.startsWith('ally_')) {
       final index = int.tryParse(currentTargetId!.substring(5));
       if (index == null || index >= allies.length || allies[index].health <= 0) {
         clearTarget();
+        return;
       }
     } else {
       final minion = minions.where((m) => m.instanceId == currentTargetId).firstOrNull;
-      if (minion == null || !minion.isAlive) clearTarget();
+      if (minion == null || !minion.isAlive) targetDead = true;
+    }
+
+    // Reason: When an enemy target dies, auto-acquire the next nearest enemy
+    // so melee players can keep swinging without manual re-targeting.
+    if (targetDead) {
+      clearTarget();
+      if (activeTransform != null) {
+        final pos = activeTransform!.position;
+        // Invalidate cache so we get a fresh sort
+        _targetListCacheTime = 0.0;
+        final targets = getTargetableEnemies(pos.x, pos.z, activeRotation);
+        if (targets.isNotEmpty) {
+          _tabTargetIndex = 0;
+          currentTargetId = targets[0];
+        }
+      }
     }
   }
 
-  // Math helpers for targeting
-  static double sqrt(double x) => x <= 0 ? 0 : _sqrtNewton(x);
-  static double _sqrtNewton(double x) {
-    double guess = x / 2;
-    for (int i = 0; i < 10; i++) {
-      guess = (guess + x / guess) / 2;
-    }
-    return guess;
-  }
-  static double sin(double x) {
-    while (x > 3.14159) x -= 2 * 3.14159;
-    while (x < -3.14159) x += 2 * 3.14159;
-    final x2 = x * x;
-    return x - x * x2 / 6 + x * x2 * x2 / 120;
-  }
-  static double cos(double x) {
-    while (x > 3.14159) x -= 2 * 3.14159;
-    while (x < -3.14159) x += 2 * 3.14159;
-    final x2 = x * x;
-    return 1 - x2 / 2 + x2 * x2 / 24;
-  }
-  static double acos(double x) {
-    // Simple approximation for acos
-    if (x >= 1) return 0;
-    if (x <= -1) return 3.14159;
-    return 3.14159 / 2 - _asinApprox(x);
-  }
-  static double _asinApprox(double x) {
-    // Approximation: asin(x) ≈ x + x³/6 + 3x⁵/40
-    final x3 = x * x * x;
-    final x5 = x3 * x * x;
-    return x + x3 / 6 + 3 * x5 / 40;
-  }
+  // Math helpers for targeting (delegates to dart:math for accuracy + hardware speed)
+  static double sqrt(double x) => x <= 0 ? 0.0 : math.sqrt(x);
+  static double sin(double x) => math.sin(x);
+  static double cos(double x) => math.cos(x);
+  static double acos(double x) => math.acos(x.clamp(-1.0, 1.0));
 
   // ==================== MINIMAP STATE ====================
 
@@ -2241,6 +2286,9 @@ class GameState {
 
   /// Name of the ability being cast (for UI display)
   String castingAbilityName = '';
+
+  /// Number of pushbacks applied to the current cast (capped at 3)
+  int castPushbackCount = 0;
 
   /// Whether the player is currently winding up a melee attack
   bool isWindingUp = false;

@@ -66,6 +66,15 @@ class MinimapState {
   /// Whether the minimap rotates with the player (true) or is fixed-north (false).
   bool isRotatingMode = true;
 
+  /// Whether the wind overlay is visible on the minimap.
+  bool showWindOverlay = true;
+
+  /// Whether the green mana source overlay is visible on the minimap.
+  bool showGreenOverlay = true;
+
+  /// Whether the blue ley line overlay is visible on the minimap.
+  bool showBlueOverlay = true;
+
   // ==================== TERRAIN CACHE ====================
 
   /// Cached terrain image (regenerated when player moves too far).

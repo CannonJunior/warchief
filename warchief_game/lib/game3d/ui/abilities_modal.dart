@@ -10,6 +10,7 @@ import 'ability_editor_panel.dart';
 import 'stance_editor_panel.dart';
 import 'ui_config.dart';
 import '../data/abilities/ability_balance.dart';
+import '../state/ability_order_manager.dart';
 import '../state/game_state.dart';
 import '../data/stances/stances.dart' show StanceData, globalStanceOverrideManager;
 import 'stance_selector.dart';
@@ -39,6 +40,15 @@ class AbilitiesModal extends StatefulWidget {
 class _AbilitiesModalState extends State<AbilitiesModal> {
   double _xPos = 50.0;
   double _yPos = 50.0;
+  double _panelWidth = 750.0;
+  double _panelHeight = 600.0;
+
+  static const double _minWidth = 500.0;
+  static const double _maxWidth = 1200.0;
+  static const double _minHeight = 400.0;
+  static const double _maxHeight = 900.0;
+  static const double _resizeHandleSize = 6.0;
+
   AbilityData? _editingAbility;
   bool _isCreatingNew = false;
   StanceData? _editingStance;
@@ -73,32 +83,137 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
     return categories;
   }
 
+  /// Build all 8 resize handles (4 edges + 4 corners) for the panel.
+  List<Widget> _buildResizeHandles() {
+    Widget edge({
+      double? left, double? right, double? top, double? bottom,
+      required MouseCursor cursor,
+      required void Function(DragUpdateDetails) onPanUpdate,
+      bool isVertical = false,
+    }) {
+      return Positioned(
+        left: left, right: right, top: top, bottom: bottom,
+        child: GestureDetector(
+          onPanUpdate: onPanUpdate,
+          child: MouseRegion(
+            cursor: cursor,
+            child: Container(
+              width: isVertical ? _resizeHandleSize : null,
+              height: isVertical ? null : _resizeHandleSize,
+              color: Colors.transparent,
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget corner({
+      double? left, double? right, double? top, double? bottom,
+      required MouseCursor cursor,
+      required void Function(DragUpdateDetails) onPanUpdate,
+    }) {
+      return Positioned(
+        left: left, right: right, top: top, bottom: bottom,
+        child: GestureDetector(
+          onPanUpdate: onPanUpdate,
+          child: MouseRegion(
+            cursor: cursor,
+            child: Container(
+              width: _resizeHandleSize * 2,
+              height: _resizeHandleSize * 2,
+              color: Colors.transparent,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return [
+      // Right edge
+      edge(right: 0, top: 0, bottom: 0, isVertical: true,
+        cursor: SystemMouseCursors.resizeColumn,
+        onPanUpdate: (d) => setState(() {
+          _panelWidth = (_panelWidth + d.delta.dx).clamp(_minWidth, _maxWidth);
+        })),
+      // Bottom edge
+      edge(left: 0, right: 0, bottom: 0,
+        cursor: SystemMouseCursors.resizeRow,
+        onPanUpdate: (d) => setState(() {
+          _panelHeight = (_panelHeight + d.delta.dy).clamp(_minHeight, _maxHeight);
+        })),
+      // Left edge
+      edge(left: 0, top: 0, bottom: 0, isVertical: true,
+        cursor: SystemMouseCursors.resizeColumn,
+        onPanUpdate: (d) => setState(() {
+          final newW = (_panelWidth - d.delta.dx).clamp(_minWidth, _maxWidth);
+          _xPos += _panelWidth - newW;
+          _panelWidth = newW;
+        })),
+      // Top edge
+      edge(left: 0, right: 0, top: 0,
+        cursor: SystemMouseCursors.resizeRow,
+        onPanUpdate: (d) => setState(() {
+          final newH = (_panelHeight - d.delta.dy).clamp(_minHeight, _maxHeight);
+          _yPos += _panelHeight - newH;
+          _panelHeight = newH;
+        })),
+      // Bottom-right corner
+      corner(right: 0, bottom: 0,
+        cursor: SystemMouseCursors.resizeDownRight,
+        onPanUpdate: (d) => setState(() {
+          _panelWidth = (_panelWidth + d.delta.dx).clamp(_minWidth, _maxWidth);
+          _panelHeight = (_panelHeight + d.delta.dy).clamp(_minHeight, _maxHeight);
+        })),
+      // Bottom-left corner
+      corner(left: 0, bottom: 0,
+        cursor: SystemMouseCursors.resizeDownLeft,
+        onPanUpdate: (d) => setState(() {
+          final newW = (_panelWidth - d.delta.dx).clamp(_minWidth, _maxWidth);
+          _xPos += _panelWidth - newW;
+          _panelWidth = newW;
+          _panelHeight = (_panelHeight + d.delta.dy).clamp(_minHeight, _maxHeight);
+        })),
+      // Top-right corner
+      corner(right: 0, top: 0,
+        cursor: SystemMouseCursors.resizeUpRight,
+        onPanUpdate: (d) => setState(() {
+          _panelWidth = (_panelWidth + d.delta.dx).clamp(_minWidth, _maxWidth);
+          final newH = (_panelHeight - d.delta.dy).clamp(_minHeight, _maxHeight);
+          _yPos += _panelHeight - newH;
+          _panelHeight = newH;
+        })),
+      // Top-left corner
+      corner(left: 0, top: 0,
+        cursor: SystemMouseCursors.resizeUpLeft,
+        onPanUpdate: (d) => setState(() {
+          final newW = (_panelWidth - d.delta.dx).clamp(_minWidth, _maxWidth);
+          _xPos += _panelWidth - newW;
+          _panelWidth = newW;
+          final newH = (_panelHeight - d.delta.dy).clamp(_minHeight, _maxHeight);
+          _yPos += _panelHeight - newH;
+          _panelHeight = newH;
+        })),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     // Total width includes editor panel when open (ability or stance, mutually exclusive)
     final hasEditor = _editingAbility != null || _editingStance != null;
-    final totalWidth = hasEditor ? 750.0 + 8.0 + 320.0 : 750.0;
+    final totalWidth = hasEditor ? _panelWidth + 8.0 + 320.0 : _panelWidth;
 
     return Positioned(
       left: _xPos,
       top: _yPos,
-      child: GestureDetector(
-        onPanUpdate: (details) {
-          setState(() {
-            _xPos += details.delta.dx;
-            _yPos += details.delta.dy;
-            // Clamp position to screen bounds (account for editor panel width)
-            _xPos = _xPos.clamp(0.0, MediaQuery.of(context).size.width - totalWidth);
-            _yPos = _yPos.clamp(0.0, MediaQuery.of(context).size.height - 600);
-          });
-        },
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Main codex panel
-            Container(
-              width: 750, // Wider to accommodate drag icons
-              height: 600,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Main codex panel wrapped in a Stack for resize handles
+          Stack(
+            children: [
+              Container(
+                width: _panelWidth,
+                height: _panelHeight,
               decoration: BoxDecoration(
                 color: Colors.grey.shade900,
                 borderRadius: BorderRadius.circular(12),
@@ -114,7 +229,16 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
               child: Column(
                 children: [
                   // Header (draggable area)
-                  Container(
+                  GestureDetector(
+                    onPanUpdate: (details) {
+                      setState(() {
+                        _xPos += details.delta.dx;
+                        _yPos += details.delta.dy;
+                        _xPos = _xPos.clamp(0.0, MediaQuery.of(context).size.width - totalWidth);
+                        _yPos = _yPos.clamp(0.0, MediaQuery.of(context).size.height - _panelHeight);
+                      });
+                    },
+                    child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.7),
@@ -212,6 +336,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                       ],
                     ),
                   ),
+                  ),
 
                   // Category filter (non-scrolling)
                   _buildCategoryFilter(),
@@ -292,35 +417,14 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
 
                           SizedBox(height: 24),
 
-                          // Potential Future Abilities
+                          // Potential Future Abilities (reorderable per category)
                           _buildSection(
                             'POTENTIAL FUTURE ABILITIES',
                             Colors.orange,
                             [
                               ...AbilitiesConfig.categories.map((category) {
                                 if (!_enabledCategories.contains(category)) return SizedBox.shrink();
-                                final abilities = AbilitiesConfig.getAbilitiesByCategory(category);
-                                final customInCategory = globalCustomAbilityManager?.getByCategory(category) ?? [];
-                                if (abilities.isEmpty && customInCategory.isEmpty) return SizedBox.shrink();
-
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildCategoryHeader(
-                                      category.toUpperCase(),
-                                      _getCategoryColor(category),
-                                    ),
-                                    ...abilities
-                                      .where((a) => _enabledTypes.contains(a.type))
-                                      .map((ability) =>
-                                        _buildAbilityCard(ability, _getCategoryColor(category).withOpacity(0.3), draggable: true)),
-                                    ...customInCategory
-                                      .where((a) => _enabledTypes.contains(a.type))
-                                      .map((ability) =>
-                                        _buildCustomAbilityCard(ability)),
-                                    SizedBox(height: 16),
-                                  ],
-                                );
+                                return _buildReorderableCategorySection(category);
                               }).toList(),
                               // Custom categories added via "+ Add New" in editor
                               ..._buildCustomCategorySections(),
@@ -333,45 +437,48 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                 ],
               ),
             ),
-            // Editor panel (side-by-side) — ability or stance, mutually exclusive
-            if (_editingAbility != null) ...[
-              SizedBox(width: 8),
-              AbilityEditorPanel(
-                key: ValueKey('${_editingAbility!.name}_${_isCreatingNew}'),
-                ability: _editingAbility!,
-                isNewAbility: _isCreatingNew,
-                onClose: () {
-                  setState(() {
+              // Resize handles: 4 edges + 4 corners
+              ..._buildResizeHandles(),
+            ],
+          ),
+          // Editor panel (side-by-side) — ability or stance, mutually exclusive
+          if (_editingAbility != null) ...[
+            SizedBox(width: 8),
+            AbilityEditorPanel(
+              key: ValueKey('${_editingAbility!.name}_${_isCreatingNew}'),
+              ability: _editingAbility!,
+              isNewAbility: _isCreatingNew,
+              onClose: () {
+                setState(() {
+                  _editingAbility = null;
+                  _isCreatingNew = false;
+                });
+              },
+              onSaved: () {
+                setState(() {
+                  // Refresh the codex to show updated values
+                  if (_isCreatingNew) {
                     _editingAbility = null;
                     _isCreatingNew = false;
-                  });
-                },
-                onSaved: () {
-                  setState(() {
-                    // Refresh the codex to show updated values
-                    if (_isCreatingNew) {
-                      _editingAbility = null;
-                      _isCreatingNew = false;
-                    }
-                  });
-                },
-              ),
-            ],
-            if (_editingStance != null) ...[
-              SizedBox(width: 8),
-              StanceEditorPanel(
-                key: ValueKey('stance_${_editingStance!.id.name}'),
-                stance: _editingStance!,
-                onClose: () {
-                  setState(() => _editingStance = null);
-                },
-                onSaved: () {
-                  setState(() {});
-                },
-              ),
-            ],
+                  }
+                });
+              },
+            ),
           ],
-        ),
+          if (_editingStance != null) ...[
+            SizedBox(width: 8),
+            StanceEditorPanel(
+              key: ValueKey('stance_${_editingStance!.id.name}'),
+              stance: _editingStance!,
+              onClose: () {
+                setState(() => _editingStance = null);
+              },
+              onSaved: () {
+                setState(() {});
+              },
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -415,6 +522,144 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
           letterSpacing: 1.2,
         ),
       ),
+    );
+  }
+
+  /// Build a reorderable category section with drag-to-reorder ability cards.
+  ///
+  /// Uses ReorderableListView.builder wrapped in a SizedBox so it can live
+  /// inside the outer scroll view (shrinkWrap + NeverScrollable physics).
+  Widget _buildReorderableCategorySection(String category) {
+    final orderedAbilities = globalAbilityOrderManager?.getOrderedAbilities(category)
+        ?? AbilitiesConfig.getAbilitiesByCategory(category);
+    final filtered = orderedAbilities
+        .where((a) => _enabledTypes.contains(a.type))
+        .toList();
+    if (filtered.isEmpty) return SizedBox.shrink();
+
+    final hasCustomOrder = globalAbilityOrderManager?.hasCustomOrder(category) ?? false;
+    final categoryColor = _getCategoryColor(category);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildCategoryHeader(
+                category.toUpperCase(),
+                categoryColor,
+              ),
+            ),
+            if (hasCustomOrder)
+              Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: Tooltip(
+                  message: 'Custom order — click to reset',
+                  child: InkWell(
+                    onTap: () {
+                      globalAbilityOrderManager?.clearOrder(category);
+                      setState(() {});
+                    },
+                    child: Icon(Icons.restart_alt, color: Colors.orange, size: 16),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        // Reason: ReorderableListView needs a bounded height; we calculate it
+        // from item count. Each card is ~100px tall (content + margin).
+        SizedBox(
+          height: filtered.length * 100.0,
+          child: ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            itemCount: filtered.length,
+            onReorder: (oldIndex, newIndex) {
+              // Reason: ReorderableListView passes newIndex as if the item
+              // at oldIndex was already removed, so adjust when moving down.
+              if (newIndex > oldIndex) newIndex--;
+              final reordered = List<AbilityData>.from(filtered);
+              final item = reordered.removeAt(oldIndex);
+              reordered.insert(newIndex, item);
+              // Save the full category order (including filtered-out types)
+              // by rebuilding from the unfiltered ordered list
+              final fullOrdered = globalAbilityOrderManager
+                  ?.getOrderedAbilities(category) ?? [];
+              final fullReordered = <AbilityData>[];
+              final reorderedNames = reordered.map((a) => a.name).toSet();
+              int reorderedIdx = 0;
+              for (final a in fullOrdered) {
+                if (reorderedNames.contains(a.name)) {
+                  fullReordered.add(reordered[reorderedIdx++]);
+                } else {
+                  fullReordered.add(a);
+                }
+              }
+              globalAbilityOrderManager?.setOrder(
+                  category, fullReordered.map((a) => a.name).toList());
+              setState(() {});
+            },
+            itemBuilder: (context, index) {
+              final ability = filtered[index];
+              final isCustom = globalCustomAbilityManager?.hasAbility(ability.name) ?? false;
+              // Slot badge: show 1-10 for the first 10 items
+              final slotNumber = index < 10 ? index + 1 : null;
+              return Row(
+                key: ValueKey(ability.name),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag handle
+                  ReorderableDragStartListener(
+                    index: index,
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 12, right: 4),
+                      child: Icon(Icons.drag_indicator,
+                          color: Colors.white38, size: 20),
+                    ),
+                  ),
+                  // Slot number badge
+                  if (slotNumber != null)
+                    Padding(
+                      padding: EdgeInsets.only(top: 12, right: 4),
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: categoryColor.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          slotNumber == 10 ? '0' : '$slotNumber',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (slotNumber == null)
+                    SizedBox(width: 24),
+                  // Ability card
+                  Expanded(
+                    child: isCustom
+                        ? _buildCustomAbilityCard(ability)
+                        : _buildAbilityCard(
+                            ability,
+                            categoryColor.withOpacity(0.3),
+                            draggable: true,
+                          ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        SizedBox(height: 16),
+      ],
     );
   }
 
@@ -1248,11 +1493,12 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
     final config = globalActionBarConfig;
     if (config == null) return;
 
-    // Combine built-in + custom abilities for this category
-    final abilities = <AbilityData>[
-      ...AbilityRegistry.getByCategory(category),
-      ...(globalCustomAbilityManager?.getByCategory(category) ?? []),
-    ];
+    // Use user-defined order if available, otherwise default registry + custom
+    final abilities = globalAbilityOrderManager?.getOrderedAbilities(category)
+        ?? <AbilityData>[
+          ...AbilityRegistry.getByCategory(category),
+          ...(globalCustomAbilityManager?.getByCategory(category) ?? []),
+        ];
     if (abilities.isEmpty) return;
 
     for (int i = 0; i < 10; i++) {

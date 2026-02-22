@@ -17,12 +17,14 @@ class MinimapEntityPainter extends CustomPainter {
   final double viewRadius;
   final double mapRotation;
   final bool isRotatingMode;
+  final bool showLeyNodes;
 
   MinimapEntityPainter({
     required this.gameState,
     required this.viewRadius,
     required this.mapRotation,
     required this.isRotatingMode,
+    this.showLeyNodes = true,
   });
 
   @override
@@ -43,8 +45,8 @@ class MinimapEntityPainter extends CustomPainter {
       }
     }
 
-    // Draw ley power nodes (small blue-purple diamonds)
-    if (gameState.leyLineManager != null) {
+    // Draw ley power nodes (small blue-purple diamonds, gated by blue attunement toggle)
+    if (showLeyNodes && gameState.leyLineManager != null) {
       final nodeColor = _colorFromList(
           config?.powerNodeColor ?? [0.40, 0.27, 0.80, 0.8]);
       for (final node in gameState.leyLineManager!.powerNodes) {

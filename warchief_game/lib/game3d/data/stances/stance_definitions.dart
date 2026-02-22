@@ -118,6 +118,13 @@ class StanceRegistry {
       rerollDamageMax: (data['rerollDamageMax'] as num?)?.toDouble() ?? 1.30,
       rerollDamageTakenMin: (data['rerollDamageTakenMin'] as num?)?.toDouble() ?? 0.70,
       rerollDamageTakenMax: (data['rerollDamageTakenMax'] as num?)?.toDouble() ?? 1.30,
+      spellPushbackInflicted: (data['spellPushbackInflicted'] as num?)?.toDouble() ?? 0.0,
+      spellPushbackResistance: (data['spellPushbackResistance'] as num?)?.toDouble() ?? 0.0,
+      ccDurationInflicted: (data['ccDurationInflicted'] as num?)?.toDouble() ?? 1.0,
+      ccDurationReceived: (data['ccDurationReceived'] as num?)?.toDouble() ?? 1.0,
+      lifestealRatio: (data['lifestealRatio'] as num?)?.toDouble() ?? 0.0,
+      dodgeChance: (data['dodgeChance'] as num?)?.toDouble() ?? 0.0,
+      manaCostDisruption: (data['manaCostDisruption'] as num?)?.toDouble() ?? 0.0,
       switchCooldown: (data['switchCooldown'] as num?)?.toDouble() ?? 1.5,
     );
   }

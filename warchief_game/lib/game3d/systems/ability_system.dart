@@ -1,5 +1,6 @@
 import 'package:vector_math/vector_math.dart';
 import 'dart:math' as math;
+import 'dart:ui' show Color;
 
 import '../state/game_state.dart';
 import '../state/game_config.dart';
@@ -13,6 +14,7 @@ import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
 import '../../models/impact_effect.dart';
 import 'combat_system.dart';
+import 'goal_system.dart';
 import 'physics_system.dart';
 import '../../models/combat_log_entry.dart';
 import '../../models/active_effect.dart';
@@ -84,8 +86,8 @@ class AbilitySystem {
         action: '$abilityName cast (${configuredTime.toStringAsFixed(2)}s)',
         type: CombatLogType.ability,
       ));
-      if (gameState.combatLogMessages.length > 200) {
-        gameState.combatLogMessages.removeAt(0);
+      if (gameState.combatLogMessages.length > 250) {
+        gameState.combatLogMessages.removeRange(0, gameState.combatLogMessages.length - 200);
       }
 
       // Execute the ability now
@@ -126,8 +128,8 @@ class AbilitySystem {
         action: '$abilityName windup (${configuredTime.toStringAsFixed(2)}s)',
         type: CombatLogType.ability,
       ));
-      if (gameState.combatLogMessages.length > 200) {
-        gameState.combatLogMessages.removeAt(0);
+      if (gameState.combatLogMessages.length > 250) {
+        gameState.combatLogMessages.removeRange(0, gameState.combatLogMessages.length - 200);
       }
 
       // Execute the ability now
@@ -733,6 +735,7 @@ class AbilitySystem {
 
     gameState.isCasting = true;
     gameState.castProgress = 0.0;
+    gameState.castPushbackCount = 0;
     gameState.currentCastTime = castTime;
     gameState.castingSlotIndex = slotIndex;
     gameState.castingAbilityName = abilityData.name;
@@ -1160,15 +1163,20 @@ class AbilitySystem {
     ));
 
     // Damage nearby enemies
-    CombatSystem.checkAndDamageEnemies(
+    final frostNovaDmg = 20.0 * gameState.activeStance.damageMultiplier;
+    final frostNovaHit = CombatSystem.checkAndDamageEnemies(
       gameState,
       attackerPosition: gameState.activeTransform!.position,
-      damage: 20.0 * gameState.activeStance.damageMultiplier,
+      damage: frostNovaDmg,
       attackType: 'Frost Nova',
       impactColor: Vector3(0.5, 0.8, 1.0),
       impactSize: 0.5,
       collisionThreshold: 8.0,
     );
+
+    if (frostNovaHit) {
+      _applyLifesteal(gameState, frostNovaDmg);
+    }
 
     print('Frost Nova released!');
   }
@@ -1230,24 +1238,41 @@ class AbilitySystem {
   static void _executeHeavyStrikeEffect(int slotIndex, GameState gameState) {
     if (gameState.activeTransform == null) return;
 
-    final forward = Vector3(
-      -math.sin(_radians(gameState.activeRotation)),
-      0,
-      -math.cos(_radians(gameState.activeRotation)),
-    );
-    final strikePosition = gameState.activeTransform!.position + forward * 2.5;
+    // Face the current target before striking
+    _faceCurrentTarget(gameState);
 
-    // Large hit radius
-    final hitRegistered = CombatSystem.checkAndDamageEnemies(
-      gameState,
-      attackerPosition: strikePosition,
-      damage: 75.0 * gameState.activeStance.damageMultiplier,
-      attackType: 'Heavy Strike',
-      impactColor: Vector3(1.0, 0.4, 0.2),
-      impactSize: 1.0,
-      collisionThreshold: 4.0, // Large hit radius
-      isMeleeDamage: true, // Generate red mana
-    );
+    final damage = 75.0 * gameState.activeStance.damageMultiplier;
+
+    // Auto-hit the intended target if we have one
+    bool hitRegistered = false;
+    if (gameState.currentTargetId != null) {
+      hitRegistered = _autoHitCurrentTarget(
+        gameState,
+        damage: damage,
+        attackType: 'Heavy Strike',
+        impactColor: Vector3(1.0, 0.4, 0.2),
+        impactSize: 1.0,
+        isMelee: true,
+      );
+    } else {
+      // No target — fall back to collision-based in forward direction
+      final forward = Vector3(
+        -math.sin(_radians(gameState.activeRotation)),
+        0,
+        -math.cos(_radians(gameState.activeRotation)),
+      );
+      final strikePosition = gameState.activeTransform!.position + forward * 2.5;
+      hitRegistered = CombatSystem.checkAndDamageEnemies(
+        gameState,
+        attackerPosition: strikePosition,
+        damage: damage,
+        attackType: 'Heavy Strike',
+        impactColor: Vector3(1.0, 0.4, 0.2),
+        impactSize: 1.0,
+        collisionThreshold: 4.0,
+        isMeleeDamage: true,
+      );
+    }
 
     if (hitRegistered) {
       print('Heavy Strike hit!');
@@ -1274,10 +1299,11 @@ class AbilitySystem {
     ));
 
     // Damage all nearby enemies with large radius
-    CombatSystem.checkAndDamageEnemies(
+    final whirlwindDmg = 48.0 * gameState.activeStance.damageMultiplier;
+    final whirlwindHit = CombatSystem.checkAndDamageEnemies(
       gameState,
       attackerPosition: gameState.activeTransform!.position,
-      damage: 48.0 * gameState.activeStance.damageMultiplier,
+      damage: whirlwindDmg,
       attackType: 'Whirlwind',
       impactColor: Vector3(0.7, 0.7, 0.8),
       impactSize: 0.6,
@@ -1285,12 +1311,19 @@ class AbilitySystem {
       isMeleeDamage: true, // Generate red mana
     );
 
+    if (whirlwindHit) {
+      _applyLifesteal(gameState, whirlwindDmg);
+    }
+
     print('Whirlwind!');
   }
 
   /// Execute Crushing Blow effect after windup completes
   static void _executeCrushingBlowEffect(int slotIndex, GameState gameState) {
     if (gameState.activeTransform == null) return;
+
+    // Face the current target before striking
+    _faceCurrentTarget(gameState);
 
     final forward = Vector3(
       -math.sin(_radians(gameState.activeRotation)),
@@ -1314,17 +1347,32 @@ class AbilitySystem {
       lifetime: 0.5,
     ));
 
-    // Heavy damage with moderate hit radius
-    final hitRegistered = CombatSystem.checkAndDamageEnemies(
-      gameState,
-      attackerPosition: strikePosition,
-      damage: 110.0 * gameState.activeStance.damageMultiplier,
-      attackType: 'Crushing Blow',
-      impactColor: Vector3(0.7, 0.3, 0.1),
-      impactSize: 1.2,
-      collisionThreshold: 3.5, // Moderate hit radius
-      isMeleeDamage: true, // Generate red mana
-    );
+    final damage = 110.0 * gameState.activeStance.damageMultiplier;
+
+    // Auto-hit the intended target if we have one
+    bool hitRegistered = false;
+    if (gameState.currentTargetId != null) {
+      hitRegistered = _autoHitCurrentTarget(
+        gameState,
+        damage: damage,
+        attackType: 'Crushing Blow',
+        impactColor: Vector3(0.7, 0.3, 0.1),
+        impactSize: 1.2,
+        isMelee: true,
+      );
+    } else {
+      // No target — fall back to collision-based in forward direction
+      hitRegistered = CombatSystem.checkAndDamageEnemies(
+        gameState,
+        attackerPosition: strikePosition,
+        damage: damage,
+        attackType: 'Crushing Blow',
+        impactColor: Vector3(0.7, 0.3, 0.1),
+        impactSize: 1.2,
+        collisionThreshold: 3.5,
+        isMeleeDamage: true,
+      );
+    }
 
     if (hitRegistered) {
       print('Crushing Blow devastates the target!');
@@ -1336,6 +1384,9 @@ class AbilitySystem {
   static void _executeGenericWindupMelee(int slotIndex, GameState gameState, String abilityName) {
     if (gameState.activeTransform == null) return;
 
+    // Face the current target before striking
+    _faceCurrentTarget(gameState);
+
     // Reason: Read ability data from the action bar so windup melee abilities
     // use their configured damage/range instead of hardcoded fallbacks.
     final abilityData = globalActionBarConfig?.getSlotAbilityData(slotIndex);
@@ -1343,24 +1394,41 @@ class AbilitySystem {
         ? (globalAbilityOverrideManager?.getEffectiveAbility(abilityData) ?? abilityData)
         : null;
 
-    final forward = Vector3(
-      -math.sin(_radians(gameState.activeRotation)),
-      0,
-      -math.cos(_radians(gameState.activeRotation)),
-    );
-    final strikeRange = ability?.range ?? 2.5;
-    final strikePosition = gameState.activeTransform!.position + forward * strikeRange;
+    final damage = (ability?.damage ?? 40.0) * gameState.activeStance.damageMultiplier;
+    final impactColor = ability?.impactColor ?? Vector3(0.8, 0.8, 0.8);
+    final impactSize = ability?.impactSize ?? 0.8;
 
-    final hitRegistered = CombatSystem.checkAndDamageEnemies(
-      gameState,
-      attackerPosition: strikePosition,
-      damage: (ability?.damage ?? 40.0) * gameState.activeStance.damageMultiplier,
-      attackType: abilityName,
-      impactColor: ability?.impactColor ?? Vector3(0.8, 0.8, 0.8),
-      impactSize: ability?.impactSize ?? 0.8,
-      collisionThreshold: ability?.effectiveHitRadius ?? 3.5,
-      isMeleeDamage: true,
-    );
+    // Auto-hit the intended target if we have one
+    bool hitRegistered = false;
+    if (gameState.currentTargetId != null) {
+      hitRegistered = _autoHitCurrentTarget(
+        gameState,
+        damage: damage,
+        attackType: abilityName,
+        impactColor: impactColor,
+        impactSize: impactSize,
+        isMelee: true,
+      );
+    } else {
+      // No target — fall back to collision-based in forward direction
+      final forward = Vector3(
+        -math.sin(_radians(gameState.activeRotation)),
+        0,
+        -math.cos(_radians(gameState.activeRotation)),
+      );
+      final strikeRange = ability?.range ?? 2.5;
+      final strikePosition = gameState.activeTransform!.position + forward * strikeRange;
+      hitRegistered = CombatSystem.checkAndDamageEnemies(
+        gameState,
+        attackerPosition: strikePosition,
+        damage: damage,
+        attackType: abilityName,
+        impactColor: impactColor,
+        impactSize: impactSize,
+        collisionThreshold: ability?.effectiveHitRadius ?? 3.5,
+        isMeleeDamage: true,
+      );
+    }
 
     // Apply status effects and knockback from windup melee abilities
     if (hitRegistered && ability != null) {
@@ -1677,10 +1745,12 @@ class AbilitySystem {
 
     // Apply fear effect to boss monster
     if (gameState.monsterHealth > 0) {
+      // Reason: CC duration modified by stance's ccDurationInflicted multiplier
+      final fearDuration = ability.statusDuration * gameState.activeStance.ccDurationInflicted;
       gameState.monsterActiveEffects.add(ActiveEffect(
         type: StatusEffect.fear,
-        remainingDuration: ability.statusDuration,
-        totalDuration: ability.statusDuration,
+        remainingDuration: fearDuration,
+        totalDuration: fearDuration,
       ));
 
       // Force flee path immediately — monster runs away from player
@@ -2001,6 +2071,149 @@ class AbilitySystem {
 
   // ==================== GENERIC ABILITY HELPERS ====================
 
+  /// Face the current target: rotate the active character toward the targeted enemy.
+  ///
+  /// Reason: melee and ranged abilities should orient the character toward the
+  /// intended target so motion effects and visuals move in the correct direction.
+  static void _faceCurrentTarget(GameState gameState) {
+    if (gameState.currentTargetId == null || gameState.activeTransform == null) return;
+    final targetPos = gameState.getCurrentTargetPosition();
+    if (targetPos == null) return;
+    final dx = targetPos.x - gameState.activeTransform!.position.x;
+    final dz = targetPos.z - gameState.activeTransform!.position.z;
+    if (dx * dx + dz * dz < 0.001) return;
+    final targetYaw = -math.atan2(dx, dz) * (180.0 / math.pi);
+    gameState.activeRotation = targetYaw;
+    gameState.activeTransform!.rotation.y = targetYaw;
+  }
+
+  /// Directly damage the current target without collision checks (guaranteed hit).
+  ///
+  /// Reason: successfully cast abilities should always hit their intended target.
+  /// Handles boss, minion, and dummy targets with all side effects (red mana
+  /// generation, goal events, damage indicators). Returns true if hit.
+  static bool _autoHitCurrentTarget(
+    GameState gameState, {
+    required double damage,
+    required String attackType,
+    required Vector3 impactColor,
+    required double impactSize,
+    bool isMelee = false,
+  }) {
+    final targetId = gameState.currentTargetId;
+    if (targetId == null) return false;
+
+    // Allies: offensive abilities don't damage friendly targets
+    if (targetId.startsWith('ally_')) return false;
+
+    bool hit = false;
+
+    // Target dummy
+    if (gameState.isTargetingDummy && gameState.targetDummy != null) {
+      hit = CombatSystem.damageTargetDummy(
+        gameState,
+        damage: damage,
+        abilityName: attackType,
+        abilityColor: Color.fromRGBO(
+          (impactColor.x * 255).clamp(0, 255).toInt(),
+          (impactColor.y * 255).clamp(0, 255).toInt(),
+          (impactColor.z * 255).clamp(0, 255).toInt(),
+          1.0,
+        ),
+        impactColor: impactColor,
+        impactSize: impactSize,
+        isMelee: isMelee,
+      );
+    }
+    // Boss monster
+    else if (targetId == 'boss') {
+      if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
+        final bossHealthBefore = gameState.monsterHealth;
+        hit = CombatSystem.checkAndDamageMonster(
+          gameState,
+          attackerPosition: gameState.monsterTransform!.position,
+          damage: damage,
+          attackType: attackType,
+          impactColor: impactColor,
+          impactSize: impactSize,
+          collisionThreshold: 999.0,
+          showDamageIndicator: true,
+          isMelee: isMelee,
+        );
+        if (hit && bossHealthBefore > 0 && gameState.monsterHealth <= 0) {
+          GoalSystem.processEvent(gameState, 'enemy_killed');
+          GoalSystem.processEvent(gameState, 'boss_killed');
+        }
+      }
+    }
+    // Minion
+    else {
+      final aliveCountBefore = gameState.aliveMinions.length;
+      hit = CombatSystem.damageMinion(
+        gameState,
+        minionInstanceId: targetId,
+        damage: damage,
+        attackType: attackType,
+        impactColor: impactColor,
+        impactSize: impactSize,
+        showDamageIndicator: true,
+        isMelee: isMelee,
+      );
+      if (hit) {
+        gameState.refreshAliveMinions();
+        if (gameState.aliveMinions.length < aliveCountBefore) {
+          GoalSystem.processEvent(gameState, 'enemy_killed');
+          for (final minion in gameState.minions) {
+            if (!minion.isAlive && minion.health <= 0) {
+              GoalSystem.processEvent(gameState, 'kill_${minion.definition.id}');
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Red mana generation and melee streak tracking
+    if (hit && isMelee) {
+      gameState.generateRedManaFromMelee(damage);
+      gameState.consecutiveMeleeHits++;
+      GoalSystem.processEvent(gameState, 'consecutive_melee_hits',
+          metadata: {'streak': gameState.consecutiveMeleeHits});
+    }
+
+    // Lifesteal: heal player by fraction of damage dealt
+    if (hit) {
+      _applyLifesteal(gameState, damage);
+    }
+
+    return hit;
+  }
+
+  /// Apply lifesteal healing from damage dealt.
+  ///
+  /// Heals player by damage * activeStance.lifestealRatio.
+  /// NOT modified by healingMultiplier — separate sustain path.
+  static void _applyLifesteal(GameState gameState, double damage) {
+    final ratio = gameState.activeStance.lifestealRatio;
+    if (ratio <= 0 || damage <= 0) return;
+    final heal = damage * ratio;
+    final oldHealth = gameState.activeHealth;
+    gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + heal);
+    final healed = gameState.activeHealth - oldHealth;
+    if (healed > 0) {
+      gameState.combatLogMessages.add(CombatLogEntry(
+        source: 'Player',
+        action: 'Lifesteal',
+        type: CombatLogType.heal,
+        amount: healed,
+        target: 'Player',
+      ));
+      if (gameState.combatLogMessages.length > 250) {
+        gameState.combatLogMessages.removeRange(0, gameState.combatLogMessages.length - 200);
+      }
+    }
+  }
+
   /// Threshold above which a melee ability is treated as a gap-closer dash
   /// rather than a standing melee swing (normal melee range is ~2–3 units).
   static const double _gapCloserRangeThreshold = 4.0;
@@ -2083,19 +2296,21 @@ class AbilitySystem {
 
     // Apply status effect
     if (ability.statusEffect != StatusEffect.none && ability.statusDuration > 0) {
+      // Reason: CC duration modified by stance's ccDurationInflicted multiplier
+      final effectiveDuration = ability.statusDuration * gameState.activeStance.ccDurationInflicted;
       double damagePerTick = 0;
       double tickInterval = 0;
 
       // Reason: DoT effects (bleed, poison, burn) deal ability damage split across ticks
       if (ability.dotTicks > 0) {
-        tickInterval = ability.statusDuration / ability.dotTicks;
+        tickInterval = effectiveDuration / ability.dotTicks;
         damagePerTick = ability.damage / ability.dotTicks;
       }
 
       final effect = ActiveEffect(
         type: ability.statusEffect,
-        remainingDuration: ability.statusDuration,
-        totalDuration: ability.statusDuration,
+        remainingDuration: effectiveDuration,
+        totalDuration: effectiveDuration,
         strength: ability.statusStrength > 0 ? ability.statusStrength : 1.0,
         damagePerTick: damagePerTick,
         tickInterval: tickInterval,
@@ -2206,14 +2421,19 @@ class AbilitySystem {
     ));
 
     // Damage nearby enemies (apply stance damage multiplier)
-    CombatSystem.checkAndDamageEnemies(
+    final aoeDamage = ability.damage * gameState.activeStance.damageMultiplier;
+    final aoeHit = CombatSystem.checkAndDamageEnemies(
       gameState,
       attackerPosition: gameState.activeTransform!.position,
-      damage: ability.damage * gameState.activeStance.damageMultiplier,
+      damage: aoeDamage,
       attackType: ability.name,
       impactColor: ability.impactColor,
       impactSize: ability.impactSize,
     );
+
+    if (aoeHit) {
+      _applyLifesteal(gameState, aoeDamage);
+    }
 
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
     print(message);
@@ -2295,7 +2515,13 @@ class AbilitySystem {
       gameState.ability1Active = false;
       gameState.activeGenericMeleeAbility = null;
     } else if (gameState.swordTransform != null && gameState.activeTransform != null) {
-      // Position sword in front of player, rotating during swing
+      // Reason: face the target so the swing animation and any motion
+      // effect move toward the intended enemy, not the old facing direction
+      if (gameState.currentTargetId != null) {
+        _faceCurrentTarget(gameState);
+      }
+
+      // Recalculate forward after potential rotation change
       final forward = Vector3(
         -math.sin(_radians(gameState.activeRotation)),
         0,
@@ -2308,29 +2534,40 @@ class AbilitySystem {
       gameState.swordTransform!.position.y = gameState.activeTransform!.position.y;
       gameState.swordTransform!.rotation.y = gameState.activeRotation + swingAngle - 90;
 
-      // Check collision with monster (only once per swing)
+      // Apply damage (only once per swing)
       if (!gameState.ability1HitRegistered) {
-        // Reason: Use stored generic melee ability data if available,
-        // otherwise fall back to default playerSword for the basic Sword attack.
         final melee = gameState.activeGenericMeleeAbility
             ?? _effective(AbilitiesConfig.playerSword);
-        final swordTipPosition = gameState.activeTransform!.position + forward * melee.range;
-
-        // Apply stance damage multiplier to melee damage
         final stanceDmg = melee.damage * gameState.activeStance.damageMultiplier;
-        final hitRegistered = CombatSystem.checkAndDamageEnemies(
-          gameState,
-          attackerPosition: swordTipPosition,
-          damage: stanceDmg,
-          attackType: melee.name,
-          impactColor: melee.impactColor,
-          impactSize: melee.impactSize,
-          isMeleeDamage: true, // Generate red mana from melee attacks
-        );
+
+        // Reason: if targeting a specific enemy, guarantee the hit — the ability
+        // was successfully cast so it should always connect with the intended target.
+        // Fall back to collision-based detection when no target is selected.
+        bool hitRegistered;
+        if (gameState.currentTargetId != null) {
+          hitRegistered = _autoHitCurrentTarget(
+            gameState,
+            damage: stanceDmg,
+            attackType: melee.name,
+            impactColor: melee.impactColor,
+            impactSize: melee.impactSize,
+            isMelee: true,
+          );
+        } else {
+          final swordTipPosition = gameState.activeTransform!.position + forward * melee.range;
+          hitRegistered = CombatSystem.checkAndDamageEnemies(
+            gameState,
+            attackerPosition: swordTipPosition,
+            damage: stanceDmg,
+            attackType: melee.name,
+            impactColor: melee.impactColor,
+            impactSize: melee.impactSize,
+            isMeleeDamage: true,
+          );
+        }
 
         if (hitRegistered) {
           gameState.ability1HitRegistered = true;
-          // Apply status effects and knockback from generic melee abilities
           if (gameState.activeGenericMeleeAbility != null) {
             _applyMeleeStatusEffect(gameState, melee);
           }
@@ -2386,21 +2623,24 @@ class AbilitySystem {
       projectile.transform.position += projectile.velocity * dt;
       projectile.lifetime -= dt;
 
-      // Check collision with the specific target first (for homing projectiles)
-      if (targetPos != null) {
-          final dx = projectile.transform.position.x - targetPos.x;
-          final dy = projectile.transform.position.y - targetPos.y;
-          final dz = projectile.transform.position.z - targetPos.z;
-          // Use a generous collision threshold for homing projectiles (1.0 squared = 1.0)
-          if (dx * dx + dy * dy + dz * dz < 1.0) {
-            // Direct hit on target - use projectile's stored damage data
-            _damageTargetWithProjectile(gameState, projectile.targetId!, projectile);
-            return true;
-          }
+      // Reason: homing projectiles locked on a target auto-hit at generous
+      // range and skip general collision so they can't be intercepted by
+      // non-targeted enemies along the flight path.
+      if (projectile.isHoming && targetPos != null) {
+        final dx = projectile.transform.position.x - targetPos.x;
+        final dy = projectile.transform.position.y - targetPos.y;
+        final dz = projectile.transform.position.z - targetPos.z;
+        // Reason: 2.5-unit threshold ensures homing projectiles always hit
+        // their intended target without a tight collision check
+        if (dx * dx + dy * dy + dz * dz < 6.25) {
+          _damageTargetWithProjectile(gameState, projectile.targetId!, projectile);
+          return true;
+        }
+        // Still flying toward target — skip general collision
+        return projectile.lifetime <= 0;
       }
 
-      // Also check collision with any enemy (in case projectile passes near others)
-      // Stance damage multiplier applied at collision time
+      // Non-homing projectiles: use collision-based hit detection against any enemy
       final hitRegistered = CombatSystem.checkAndDamageEnemies(
         gameState,
         attackerPosition: projectile.transform.position,
@@ -2411,7 +2651,7 @@ class AbilitySystem {
       );
 
       if (hitRegistered) {
-        // Apply DoT to boss if projectile has DoT data (non-homing hit path)
+        _applyLifesteal(gameState, projectile.damage * gameState.activeStance.damageMultiplier);
         if (projectile.dotTicks > 0 && projectile.statusDuration > 0) {
           _applyDoTFromProjectile(gameState, 'boss', projectile);
         }
@@ -2450,6 +2690,9 @@ class AbilitySystem {
       );
     }
 
+    // Lifesteal from projectile damage
+    _applyLifesteal(gameState, effectiveDamage);
+
     // Apply DoT effect if projectile has ticks
     _applyDoTFromProjectile(gameState, targetId, projectile);
   }
@@ -2461,13 +2704,15 @@ class AbilitySystem {
     final statusType = projectile.statusEffect != StatusEffect.none
         ? projectile.statusEffect
         : StatusEffect.burn; // Default DoT type
-    final tickInterval = projectile.statusDuration / projectile.dotTicks;
+    // Reason: CC duration modified by stance's ccDurationInflicted multiplier
+    final effectiveDuration = projectile.statusDuration * gameState.activeStance.ccDurationInflicted;
+    final tickInterval = effectiveDuration / projectile.dotTicks;
     final damagePerTick = projectile.damage / projectile.dotTicks;
 
     final effect = ActiveEffect(
       type: statusType,
-      remainingDuration: projectile.statusDuration,
-      totalDuration: projectile.statusDuration,
+      remainingDuration: effectiveDuration,
+      totalDuration: effectiveDuration,
       damagePerTick: damagePerTick,
       tickInterval: tickInterval,
       sourceName: projectile.abilityName,
@@ -2480,7 +2725,7 @@ class AbilitySystem {
       if (minion != null) minion.activeEffects.add(effect);
     }
 
-    print('[DoT] Applied ${statusType.name} to $targetId: ${damagePerTick.toStringAsFixed(1)} dmg every ${tickInterval.toStringAsFixed(1)}s for ${projectile.statusDuration.toStringAsFixed(1)}s');
+    print('[DoT] Applied ${statusType.name} to $targetId: ${damagePerTick.toStringAsFixed(1)} dmg every ${tickInterval.toStringAsFixed(1)}s for ${effectiveDuration.toStringAsFixed(1)}s');
   }
 
   // ==================== ABILITY 3: HEAL ====================
@@ -2729,8 +2974,8 @@ class AbilitySystem {
       amount: healedAmount,
       target: 'Player',
     ));
-    if (gameState.combatLogMessages.length > 200) {
-      gameState.combatLogMessages.removeAt(0);
+    if (gameState.combatLogMessages.length > 250) {
+      gameState.combatLogMessages.removeRange(0, gameState.combatLogMessages.length - 200);
     }
   }
 

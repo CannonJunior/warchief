@@ -68,6 +68,7 @@ import 'state/macro_config.dart';
 import 'state/macro_manager.dart';
 import 'state/gameplay_settings.dart';
 import 'data/stances/stances.dart';
+import 'state/ability_order_manager.dart';
 import 'ui/minimap/minimap_widget.dart';
 import 'ui/minimap/minimap_ping_overlay.dart';
 import 'ui/building_panel.dart';
@@ -182,6 +183,9 @@ class _Game3DState extends State<Game3D> {
     // Initialize stance override manager for custom stance edits
     _initializeStanceOverrides();
 
+    // Initialize ability order manager for category reordering in codex
+    _initializeAbilityOrder();
+
     // Initialize player inventory with sample items
     _initializeInventory();
 
@@ -212,6 +216,12 @@ class _Game3DState extends State<Game3D> {
   void _initializeStanceOverrides() {
     globalStanceOverrideManager ??= StanceOverrideManager();
     globalStanceOverrideManager!.loadOverrides();
+  }
+
+  /// Initialize the global ability order manager (category reordering)
+  void _initializeAbilityOrder() {
+    globalAbilityOrderManager ??= AbilityOrderManager();
+    globalAbilityOrderManager!.loadOrders();
   }
 
   /// Initialize the global mana configuration (JSON defaults + overrides)
@@ -992,9 +1002,9 @@ class _Game3DState extends State<Game3D> {
         return;
       }
 
-      final playerX = gameState.playerTransform?.position.x ?? 0.0;
-      final playerZ = gameState.playerTransform?.position.z ?? 0.0;
-      final playerRotation = gameState.playerTransform?.rotation.y ?? 0.0;
+      final playerX = gameState.activeTransform?.position.x ?? 0.0;
+      final playerZ = gameState.activeTransform?.position.z ?? 0.0;
+      final playerRotation = gameState.activeRotation;
 
       setState(() {
         gameState.tabToNextTarget(playerX, playerZ, playerRotation);

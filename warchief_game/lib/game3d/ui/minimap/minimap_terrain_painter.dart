@@ -25,7 +25,8 @@ class MinimapTerrainPainter extends CustomPainter {
   final InfiniteTerrainManager? terrainManager;
   final LeyLineManager? leyLineManager;
   final MinimapState minimapState;
-  final bool hideLeyLinesByAttunement;
+  final bool showLeyLines;
+  final double elapsedTime;
 
   MinimapTerrainPainter({
     required this.playerX,
@@ -35,7 +36,8 @@ class MinimapTerrainPainter extends CustomPainter {
     required this.terrainManager,
     required this.leyLineManager,
     required this.minimapState,
-    this.hideLeyLinesByAttunement = false,
+    this.showLeyLines = true,
+    this.elapsedTime = 0.0,
   });
 
   @override
@@ -48,8 +50,8 @@ class MinimapTerrainPainter extends CustomPainter {
     // Draw terrain color grid
     _paintTerrain(canvas, size, resolution);
 
-    // Draw ley lines on top (gated by attunement if visibility toggle is on)
-    if ((config?.showLeyLines ?? true) && !hideLeyLinesByAttunement) {
+    // Draw ley lines on top (gated by blue attunement + toggle at widget level)
+    if ((config?.showLeyLines ?? true) && showLeyLines) {
       _paintLeyLines(canvas, size);
     }
   }
@@ -230,6 +232,10 @@ class MinimapTerrainPainter extends CustomPainter {
   }
 
   /// Draw ley line segments and power nodes within view.
+  ///
+  /// Reason: thicker lines (2.5x base) with a soft glow underneath make ley
+  /// lines readable at all zoom levels. Power nodes get a pulsing outer ring
+  /// plus a bright core diamond to stand out from terrain.
   void _paintLeyLines(Canvas canvas, Size size) {
     if (leyLineManager == null) return;
 
@@ -238,45 +244,89 @@ class MinimapTerrainPainter extends CustomPainter {
         config?.leyLineColor ?? [0.27, 0.53, 0.80, 0.6]);
     final nodeColor = _colorFromList(
         config?.powerNodeColor ?? [0.40, 0.27, 0.80, 0.8]);
-    final lineWidth = config?.leyLineWidth ?? 1.0;
+    final baseLineWidth = config?.leyLineWidth ?? 1.0;
     final nodeRadius = config?.nodeRadius ?? 3.0;
+    final pulse = math.sin(elapsedTime * 2.0) * 0.5 + 0.5;
+
+    // Reason: 2.5x multiplier gives visible lines without obscuring terrain
+    final lineWidth = baseLineWidth * 2.5;
 
     final half = size.width / 2;
 
-    // Draw ley line segments
-    final linePaint = Paint()
-      ..color = lineColor
-      ..strokeWidth = lineWidth
-      ..style = PaintingStyle.stroke;
-
     final segments = leyLineManager!.getVisibleSegments(
         playerX, playerZ, viewRadius);
+
+    // Soft glow layer underneath the lines
+    final glowLinePaint = Paint()
+      ..color = lineColor.withOpacity(0.15 + pulse * 0.1)
+      ..strokeWidth = lineWidth * 3.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
     for (final seg in segments) {
       final p1 = _worldToMinimap(seg.x1, seg.z1, half);
       final p2 = _worldToMinimap(seg.x2, seg.z2, half);
       if (p1 != null || p2 != null) {
-        canvas.drawLine(
-          p1 ?? p2!,
-          p2 ?? p1!,
-          linePaint,
-        );
+        canvas.drawLine(p1 ?? p2!, p2 ?? p1!, glowLinePaint);
       }
     }
 
-    // Draw power nodes
-    final nodePaint = Paint()
-      ..color = nodeColor
-      ..style = PaintingStyle.fill;
+    // Core ley line segments
+    final linePaint = Paint()
+      ..color = lineColor
+      ..strokeWidth = lineWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
 
+    for (final seg in segments) {
+      final p1 = _worldToMinimap(seg.x1, seg.z1, half);
+      final p2 = _worldToMinimap(seg.x2, seg.z2, half);
+      if (p1 != null || p2 != null) {
+        canvas.drawLine(p1 ?? p2!, p2 ?? p1!, linePaint);
+      }
+    }
+
+    // Draw power nodes with prominent pulsing effect
     for (final node in leyLineManager!.powerNodes) {
       final pos = _worldToMinimap(node.x, node.z, half);
       if (pos != null) {
-        // Glow effect
-        final glowPaint = Paint()
-          ..color = nodeColor.withOpacity(0.3)
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(pos, nodeRadius * 1.5, glowPaint);
-        canvas.drawCircle(pos, nodeRadius, nodePaint);
+        // Outer glow ring (pulsing)
+        final outerGlowRadius = nodeRadius * 2.5 + pulse * 2.0;
+        canvas.drawCircle(
+          pos,
+          outerGlowRadius,
+          Paint()
+            ..color = nodeColor.withOpacity(0.12 + pulse * 0.08)
+            ..style = PaintingStyle.fill,
+        );
+
+        // Pulsing ring border
+        canvas.drawCircle(
+          pos,
+          nodeRadius * 2.0 + pulse * 1.5,
+          Paint()
+            ..color = nodeColor.withOpacity(0.3 + pulse * 0.2)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5,
+        );
+
+        // Solid core circle
+        canvas.drawCircle(
+          pos,
+          nodeRadius * 1.2,
+          Paint()
+            ..color = nodeColor
+            ..style = PaintingStyle.fill,
+        );
+
+        // Bright center highlight
+        canvas.drawCircle(
+          pos,
+          nodeRadius * 0.5,
+          Paint()
+            ..color = Color.fromRGBO(180, 160, 255, 0.9)
+            ..style = PaintingStyle.fill,
+        );
       }
     }
   }
@@ -332,6 +382,6 @@ class MinimapTerrainPainter extends CustomPainter {
     return moved > threshold ||
         playerRotation != oldDelegate.playerRotation ||
         viewRadius != oldDelegate.viewRadius ||
-        hideLeyLinesByAttunement != oldDelegate.hideLeyLinesByAttunement;
+        showLeyLines != oldDelegate.showLeyLines;
   }
 }
