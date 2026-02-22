@@ -222,8 +222,8 @@ class InterfaceConfigManager {
       category: 'ui_panels',
       shortcutKey: 'M',
       isVisible: true,
-      position: const Offset(0, 0),
-      defaultPosition: const Offset(0, 0),
+      position: const Offset(1410, 8),
+      defaultPosition: const Offset(1410, 8),
     );
 
     // DPS Panel (Press SHIFT+D to toggle)

@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-21T19:30:35.862028",
+  "generated_at": "2026-02-21T23:13:31.508375",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
     "files": 218,
     "directories": 36,
-    "lines": 64126,
-    "size": 2211249
+    "lines": 64086,
+    "size": 2210807
   },
   "tree": {
     "name": "warchief_game",
@@ -708,10 +708,10 @@
                     "name": "game_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state.dart",
-                    "size": 90454,
+                    "size": 89976,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 2487
+                    "lines": 2467
                   },
                   {
                     "name": "gameplay_settings.dart",
@@ -823,7 +823,7 @@
                     "name": "ability_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/ability_system.dart",
-                    "size": 110972,
+                    "size": 111107,
                     "extension": ".dart",
                     "icon": "🎯",
                     "lines": 2987
@@ -850,10 +850,10 @@
                     "name": "combat_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/combat_system.dart",
-                    "size": 30389,
+                    "size": 30506,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 874
+                    "lines": 876
                   },
                   {
                     "name": "entity_picking_system.dart",
@@ -1004,7 +1004,7 @@
                         "name": "interface_config.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/settings/interface_config.dart",
-                        "size": 12331,
+                        "size": 12337,
                         "extension": ".dart",
                         "icon": "🎯",
                         "lines": 420
@@ -1139,10 +1139,10 @@
                     "name": "abilities_modal.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/abilities_modal.dart",
-                    "size": 70263,
+                    "size": 67568,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 1856
+                    "lines": 1801
                   },
                   {
                     "name": "ability_button.dart",
@@ -1445,10 +1445,10 @@
                     "name": "stance_editor_panel.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/stance_editor_panel.dart",
-                    "size": 26291,
+                    "size": 28764,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 618
+                    "lines": 651
                   },
                   {
                     "name": "stance_effects_overlay.dart",
