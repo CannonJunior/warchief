@@ -2,7 +2,38 @@
 
 ## Current Tasks
 
+### Pending - File Size Reduction Roadmap
+
+14 Dart files exceed the 500-line limit. See `warchief_game/CLAUDE.md` for the full split strategy table. Priority order:
+
+1. **ability_system.dart** (2987 lines) → Split into 4 files: execution core, implementations, interactions, effects
+2. **game3d_widget.dart** (2573 lines) → Split into 5 files: core, initializer, input, ally commands, UI builder
+3. **game_state.dart** (2467 lines) → Split into 3 files: core, mana/effects, world entities
+4. **abilities_modal.dart** (1801 lines) → Split into 3 files: core scaffold, ability list, filters/editor
+5. **ai_system.dart** (1251 lines) → Split into 2 files: monster AI, ally AI
+6. **ability_editor_panel.dart** (1029 lines) → Split into 2 files: core editor, field builders
+7. **combat_hud.dart** (880 lines) → Split into 2 files: layout, frame widgets
+8. **combat_system.dart** (876 lines) → Split into 2 files: damage pipeline, effect application
+9. **ally_behavior_tree.dart** (765 lines) → Split into 2 files: tree nodes, behavior execution
+10. **macro_builder_panel.dart** (737 lines) → Split into 2 files: panel scaffold, step editors
+11. **mesh.dart** (615 lines) → Split into 2 files: core mesh, mesh factories
+12. **ley_lines.dart** (606 lines) → Split into 2 files: manager, rendering
+
 ### ✅ Completed - 2026-02-21
+
+#### Project Documentation Overhaul
+- ✅ **Rewrote root CLAUDE.md**: Removed stale Mojo/Python/RAG references. Now accurately describes the Flutter/Dart game project with mandatory doc-reading instructions.
+- ✅ **Rewrote warchief_game/CLAUDE.md**: Added complete file map with line counts, subsystem doc references (read-before-explore table), oversized file split roadmap, architecture patterns, game loop description, and key dependency list.
+- ✅ **Archived 12 stale docs**: Moved completed/historical documentation to `warchief_game/docs/archive/` (PHASE1_COMPLETE.md, TERRAIN_FIXES_COMPLETE.md, TERRAIN_RESEARCH.md, PERFORMANCE_FIXES_COMPLETED.md, PERFORMANCE_MITIGATION_PLAN.md, ROLLBACK_PLAN.md, GAME_BEHAVIOR_CHECKLIST.md, GOALS_SYSTEM_DESIGN.md, AI_INTEGRATION.md, CLAUDE_TASK_TEMPLATE.md, ABILITY_TEST_EVALUATION.md, WARCHIEF-CONTEXT-ENGINEERING-PROMPT.md).
+- ✅ **Audited all 218 source files**: Identified 14 files exceeding the 500-line limit with specific split strategies for each.
+- ✅ **Minimap position fix**: Fixed InterfaceConfig default position for minimap from Offset(0,0) to Offset(1410,8) — was rendering hidden behind the instructions overlay.
+
+#### Optimization & Tech Debt Fixes
+- ✅ **dart:math delegation**: Replaced 32 lines of custom Taylor/Newton math approximations in game_state.dart with 4 one-liner delegates to `dart:math` (hardware-accelerated, more accurate).
+- ✅ **Controller memory leak fix**: stance_editor_panel.dart now reuses TextEditingControllers on stance switch instead of recreating 26 controllers per switch.
+- ✅ **Combat log trim standardization**: All 10 trim sites across 3 files now consistently use `> 250 → removeRange(0, len - 200)` instead of mixed `> 200 → removeAt(0)` patterns.
+- ✅ **Resize handle deduplication**: Replaced 170 lines of 8 near-identical resize handles in abilities_modal.dart with a 110-line `_buildResizeHandles()` helper.
+- ✅ **ActiveStance getter caching**: combat_system.dart now caches `gameState.activeStance` once before the dodge check instead of calling the getter 3 times (each call does registry lookup + override merge + copyWith).
 
 #### Tab Targeting Improvements (WoW-inspired)
 - ✅ **Melee range priority tier**: Three-tier sorting — enemies within melee range (≤5 units) are always first, sorted by distance. Then front-cone (≤60°) sorted by angle. Then everything else by distance. Melee characters always tab to the closest hittable enemy.

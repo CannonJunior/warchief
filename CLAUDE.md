@@ -1,85 +1,66 @@
-### 🔄 Project Awareness & Context
-- **NEVER HARDCODE A VALUE** when the same value can be written into a configuration file and read into data instead. Prompt the user if you **ever** create a hard-coded value.
-- **Always read 'WARCHIEF-CONTEXT-ENGINEERING-PROMPT.md** at the start of a new conversation to understand the project's architecture, goals, style, and constraints.
-- **Check `TASK.md`** before starting a new task. If the task isn't listed, add it with a brief description and today's date.
-- **Use consistent naming conventions, file structure, and architecture patterns** as described in `PLANNING.md`.
-- **Use venv_linux** (the virtual environment) whenever executing Python commands, including for unit tests.
+# Warchief Project - Claude Code Instructions
 
-### 🌐 Port Management - CRITICAL
-- **ALWAYS run this web application on port 8008 ONLY.** Never change the port without explicit user permission.
-- **If you need to run another service on a different port, ASK the user first.**
-- **The default server port is 8008** - maintain this consistency across all sessions.
-- **📋 MEMOIZATION RULE**: Every new directory MUST have a CLAUDE.md file that includes the port 8008 requirement.
+## READ FIRST - Mandatory Context Loading
 
-### 🧱 Code Structure & Modularity
-- **Never create a file longer than 500 lines of code.** If a file approaches this limit, refactor by splitting it into modules or helper files.
-- **Organize code into clearly separated modules**, grouped by feature or responsibility.
-  For agents this looks like:
-    - `agent.py` - Main agent definition and execution logic 
-    - `tools.py` - Tool functions used by the agent 
-    - `prompts.py` - System prompts
-- **Use clear, consistent imports** (prefer relative imports within packages).
-- **Use clear, consistent imports** (prefer relative imports within packages).
-- **Use python_dotenv and load_env()** for environment variables.
+Before exploring code or starting any task, **read these files in order**:
 
-### 🧪 Testing & Reliability
-- **Always create Pytest unit tests for new features** (functions, classes, routes, etc).
-- **After updating any logic**, check whether existing unit tests need to be updated. If so, do it.
-- **Tests should live in a `/tests` folder** mirroring the main app structure.
-  - Include at least:
-    - 1 test for expected use
-    - 1 edge case
-    - 1 failure case
+1. **`TASK.md`** - Check for current/pending tasks. Add new tasks before starting work.
+2. **`warchief_game/CLAUDE.md`** - Game-specific architecture, file map, and subsystem docs.
 
-### ✅ Task Completion
-- **Mark completed tasks in `TASK.md`** immediately after finishing them.
-- Add new sub-tasks or TODOs discovered during development to `TASK.md` under a “Discovered During Work” section.
+Only explore the codebase AFTER reading the above. These files exist to prevent redundant exploration.
 
-### 📎 Style & Conventions
-- **Use Mojo** as the primary language.
-- **Use Python** as a secondary language.
-- **Follow PEP8**, use type hints, and format with `black`.
-- **Use `pydantic` for data validation**.
-- Write **docstrings for every function** using the Google style:
-  ```python
-  def example():
-      """
-      Brief summary.
+## Project Overview
 
-      Args:
-          param1 (type): Description.
+This is a **3D isometric game** built with **Flutter/Dart** using a custom WebGL rendering pipeline. WoW-inspired controls, AI-powered NPCs via local Ollama, and a JSON-configuration-driven design.
 
-      Returns:
-          type: Description.
-      """
-  ```
+- **Language**: Dart (Flutter framework). No Python, Mojo, or other languages in the game.
+- **Port**: ALWAYS **8008**. Never change without explicit permission.
+- **Entry point**: `warchief_game/lib/main.dart`
+- **Start command**: `./start.sh` or `flutter run -d web-server --web-port=8008 --web-hostname=localhost`
+- **Build command**: `flutter build web`
 
-### 📚 Documentation & Explainability
-- **Update `README.md`** when new features are added, dependencies change, or setup steps are modified.
-- **Comment non-obvious code** and ensure everything is understandable to a mid-level developer.
-- When writing complex logic, **add an inline `# Reason:` comment** explaining the why, not just the what.
+## Critical Rules
 
-### 🧠 AI Behavior Rules
-- **Never assume missing context. Ask questions if uncertain.**
-- **Never hallucinate libraries or functions** – only use known, verified Python packages.
-- **Always confirm file paths and module names** exist before referencing them in code or tests.
-- **Never delete or overwrite existing code** unless explicitly instructed to or if part of a task from `TASK.md`.
+### Never Hardcode Values
+Write values into JSON config files under `warchief_game/assets/data/` or `warchief_game/config/` and read them at runtime. Prompt the user if you ever create a hardcoded value.
 
-### 📦 Package Management - CRITICAL
-- **ALWAYS use `uv` instead of `pip`** for Python package management
-- Commands: `uv add <package>`, `uv run <script>`, `uv sync`
-- uv is faster, more reliable, and provides better dependency resolution
-- Use `uv run server.py` instead of `python3 server.py`
+### 500-Line File Limit
+Never create a file longer than 500 lines. If approaching this limit, split into focused modules. See `warchief_game/CLAUDE.md` for the current oversized files that need splitting.
 
-### 🤖 RAG System Architecture
-- Zero-cost, locally-running RAG system for 5 users
-- Agent-native architecture with MCP (Model Context Protocol)
-- Mojo programming language integration for performance optimization
-- ChromaDB + DuckDB vector database (local, not PostgreSQL)
-- Ollama for local LLM integration (not API services)
-- Redis Streams for event processing (not Kafka)
-- Document processing: Docling + Unstract (not paid APIs)
+### Configuration-Driven Design
+All tunable values (colors, speeds, multipliers, sizes, cooldowns) belong in JSON config files, not in Dart source code. Existing configs:
+- `config/game_config.json` - Game settings
+- `assets/data/stance_config.json` - Combat stances
+- `assets/data/minimap_config.json` - Minimap settings
+- `assets/data/wind_config.json` - Wind/weather system
+- `assets/data/mana_config.json` - Mana system tuning
+- `assets/data/items.json` - Item definitions
 
-### 📝 Memoization Instructions
-- **Memoize any input given in MEMOIZE.md file.**
-- **This project focuses on agent-native RAG features to help users with document analysis and knowledge synthesis.**
+### Inline Reasoning Comments
+When writing complex logic, add `// Reason:` comments explaining **why**, not what.
+
+### Task Tracking
+- Mark completed tasks in `TASK.md` immediately after finishing.
+- Add discovered sub-tasks under a "Discovered During Work" section.
+
+## Documentation Files
+
+| File | Purpose | When to Read |
+|------|---------|-------------|
+| `TASK.md` | Task tracking and history | Every session start |
+| `PLATFORM_DESIGN.md` | Full architecture spec | Understanding overall design |
+| `QUICK_START.md` | Quick reference guide | Getting oriented |
+| `warchief_game/CLAUDE.md` | Game code map and subsystem docs | Before any code changes |
+| `warchief_game/RENDERING_PIPELINE.md` | WebGL rendering architecture | Touching rendering code |
+| `warchief_game/GAME_STATE_ENTITIES.md` | Entity system reference | Touching game_state.dart |
+| `warchief_game/ALLY_AND_MONSTER_AI_DOCUMENTATION.md` | AI system docs | Touching AI code |
+| `warchief_game/FLIGHT_MECHANICS.md` | Flight system reference | Touching flight code |
+| `warchief_game/docs/ABILITIES_GUIDE.md` | Ability system guide | Touching abilities |
+
+## Style Conventions
+
+- Follow Dart style conventions (lowerCamelCase for methods/variables, UpperCamelCase for classes)
+- Use `///` doc comments for public APIs
+- Group code with `// ==================== SECTION ====================` headers
+- Prefer `final` for local variables
+- Use null-safety (`?.`, `??`, `!`) consistently

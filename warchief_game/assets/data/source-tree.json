@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-21T23:13:31.508375",
+  "generated_at": "2026-02-22T11:36:55.473842",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
-    "files": 218,
-    "directories": 36,
-    "lines": 64086,
-    "size": 2210807
+    "files": 221,
+    "directories": 37,
+    "lines": 64921,
+    "size": 2252097
   },
   "tree": {
     "name": "warchief_game",
@@ -165,6 +165,121 @@
         "type": "directory",
         "path": "warchief_game/docs",
         "children": [
+          {
+            "name": "archive",
+            "type": "directory",
+            "path": "warchief_game/docs/archive",
+            "children": [
+              {
+                "name": "ABILITY_TEST_EVALUATION.md",
+                "type": "file",
+                "path": "warchief_game/docs/archive/ABILITY_TEST_EVALUATION.md",
+                "size": 13512,
+                "extension": ".md",
+                "icon": "📝",
+                "lines": 189
+              },
+              {
+                "name": "AI_INTEGRATION.md",
+                "type": "file",
+                "path": "warchief_game/docs/archive/AI_INTEGRATION.md",
+                "size": 2985,
+                "extension": ".md",
+                "icon": "📝",
+                "lines": 86
+              },
+              {
+                "name": "CLAUDE_TASK_TEMPLATE.md",
+                "type": "file",
+                "path": "warchief_game/docs/archive/CLAUDE_TASK_TEMPLATE.md",
+                "size": 2399,
+                "extension": ".md",
+                "icon": "📝",
+                "lines": 68
+              },
+              {
+                "name": "GAME_BEHAVIOR_CHECKLIST.md",
+                "type": "file",
+                "path": "warchief_game/docs/archive/GAME_BEHAVIOR_CHECKLIST.md",
+                "size": 7540,
+                "extension": ".md",
+                "icon": "📝",
+                "lines": 272
+              },
+              {
+                "name": "GOALS_SYSTEM_DESIGN.md",
+                "type": "file",
+                "path": "warchief_game/docs/archive/GOALS_SYSTEM_DESIGN.md",
+                "size": 4530,
+                "extension": ".md",
+                "icon": "📝",
+                "lines": 114
+              },
+              {
+                "name": "PERFORMANCE_FIXES_COMPLETED.md",
+                "type": "file",
+                "path": "warchief_game/docs/archive/PERFORMANCE_FIXES_COMPLETED.md",
+                "size": 10883,
+                "extension": ".md",
+                "icon": "📝",
+                "lines": 392
+              },
+              {
+                "name": "PERFORMANCE_MITIGATION_PLAN.md",
+                "type": "file",
+                "path": "warchief_game/docs/archive/PERFORMANCE_MITIGATION_PLAN.md",
+                "size": 11187,
+                "extension": ".md",
+                "icon": "📝",
+                "lines": 394
+              },
+              {
+                "name": "PHASE1_COMPLETE.md",
+                "type": "file",
+                "path": "warchief_game/docs/archive/PHASE1_COMPLETE.md",
+                "size": 9261,
+                "extension": ".md",
+                "icon": "📝",
+                "lines": 345
+              },
+              {
+                "name": "ROLLBACK_PLAN.md",
+                "type": "file",
+                "path": "warchief_game/docs/archive/ROLLBACK_PLAN.md",
+                "size": 6231,
+                "extension": ".md",
+                "icon": "📝",
+                "lines": 310
+              },
+              {
+                "name": "TERRAIN_FIXES_COMPLETE.md",
+                "type": "file",
+                "path": "warchief_game/docs/archive/TERRAIN_FIXES_COMPLETE.md",
+                "size": 15073,
+                "extension": ".md",
+                "icon": "📝",
+                "lines": 512
+              },
+              {
+                "name": "TERRAIN_RESEARCH.md",
+                "type": "file",
+                "path": "warchief_game/docs/archive/TERRAIN_RESEARCH.md",
+                "size": 16433,
+                "extension": ".md",
+                "icon": "📝",
+                "lines": 558
+              },
+              {
+                "name": "WARCHIEF-CONTEXT-ENGINEERING-PROMPT.md",
+                "type": "file",
+                "path": "warchief_game/docs/archive/WARCHIEF-CONTEXT-ENGINEERING-PROMPT.md",
+                "size": 11894,
+                "extension": ".md",
+                "icon": "📝",
+                "lines": 212
+              }
+            ]
+          },
           {
             "name": "ABILITIES_GUIDE.md",
             "type": "file",
@@ -2043,15 +2158,6 @@
         "lines": 231
       },
       {
-        "name": "AI_INTEGRATION.md",
-        "type": "file",
-        "path": "warchief_game/AI_INTEGRATION.md",
-        "size": 2985,
-        "extension": ".md",
-        "icon": "📝",
-        "lines": 86
-      },
-      {
         "name": "ALLY_AND_MONSTER_AI_DOCUMENTATION.md",
         "type": "file",
         "path": "warchief_game/ALLY_AND_MONSTER_AI_DOCUMENTATION.md",
@@ -2073,19 +2179,10 @@
         "name": "CLAUDE.md",
         "type": "file",
         "path": "warchief_game/CLAUDE.md",
-        "size": 2092,
+        "size": 8715,
         "extension": ".md",
         "icon": "📝",
-        "lines": 71
-      },
-      {
-        "name": "CLAUDE_TASK_TEMPLATE.md",
-        "type": "file",
-        "path": "warchief_game/CLAUDE_TASK_TEMPLATE.md",
-        "size": 2399,
-        "extension": ".md",
-        "icon": "📝",
-        "lines": 68
+        "lines": 160
       },
       {
         "name": "FLIGHT_MECHANICS.md",
@@ -2105,15 +2202,6 @@
         "icon": "📄"
       },
       {
-        "name": "GAME_BEHAVIOR_CHECKLIST.md",
-        "type": "file",
-        "path": "warchief_game/GAME_BEHAVIOR_CHECKLIST.md",
-        "size": 7540,
-        "extension": ".md",
-        "icon": "📝",
-        "lines": 272
-      },
-      {
         "name": "GAME_STATE_ENTITIES.md",
         "type": "file",
         "path": "warchief_game/GAME_STATE_ENTITIES.md",
@@ -2121,33 +2209,6 @@
         "extension": ".md",
         "icon": "📝",
         "lines": 563
-      },
-      {
-        "name": "GOALS_SYSTEM_DESIGN.md",
-        "type": "file",
-        "path": "warchief_game/GOALS_SYSTEM_DESIGN.md",
-        "size": 4530,
-        "extension": ".md",
-        "icon": "📝",
-        "lines": 114
-      },
-      {
-        "name": "PERFORMANCE_FIXES_COMPLETED.md",
-        "type": "file",
-        "path": "warchief_game/PERFORMANCE_FIXES_COMPLETED.md",
-        "size": 10883,
-        "extension": ".md",
-        "icon": "📝",
-        "lines": 392
-      },
-      {
-        "name": "PERFORMANCE_MITIGATION_PLAN.md",
-        "type": "file",
-        "path": "warchief_game/PERFORMANCE_MITIGATION_PLAN.md",
-        "size": 11187,
-        "extension": ".md",
-        "icon": "📝",
-        "lines": 394
       },
       {
         "name": "pubspec.yaml",
@@ -2175,33 +2236,6 @@
         "extension": ".md",
         "icon": "📝",
         "lines": 322
-      },
-      {
-        "name": "ROLLBACK_PLAN.md",
-        "type": "file",
-        "path": "warchief_game/ROLLBACK_PLAN.md",
-        "size": 6231,
-        "extension": ".md",
-        "icon": "📝",
-        "lines": 310
-      },
-      {
-        "name": "TERRAIN_FIXES_COMPLETE.md",
-        "type": "file",
-        "path": "warchief_game/TERRAIN_FIXES_COMPLETE.md",
-        "size": 15073,
-        "extension": ".md",
-        "icon": "📝",
-        "lines": 512
-      },
-      {
-        "name": "TERRAIN_RESEARCH.md",
-        "type": "file",
-        "path": "warchief_game/TERRAIN_RESEARCH.md",
-        "size": 16433,
-        "extension": ".md",
-        "icon": "📝",
-        "lines": 558
       },
       {
         "name": "warchief_game.iml",
