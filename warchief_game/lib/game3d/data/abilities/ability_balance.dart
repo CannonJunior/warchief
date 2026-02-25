@@ -10,6 +10,7 @@ extension ManaColorDisplay on ManaColor {
     ManaColor.red   => const Color(0xFFFF4040),
     ManaColor.white => const Color(0xFFE0E0E0),
     ManaColor.green => const Color(0xFF40CC40),
+    ManaColor.black => const Color(0xFF8020C0),
   };
 }
 

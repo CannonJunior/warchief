@@ -37,9 +37,13 @@ class ManaBar extends StatelessWidget {
     final hasRed = attunements.contains(ManaColor.red);
     final hasWhite = attunements.contains(ManaColor.white);
     final hasGreen = attunements.contains(ManaColor.green);
+    final hasBlack = attunements.contains(ManaColor.black);
     final greenManaPercent = gameState.activeMaxGreenMana > 0
         ? gameState.activeGreenMana / gameState.activeMaxGreenMana : 0.0;
     final greenRegenRate = gameState.currentGreenManaRegenRate;
+    final blackManaPercent = gameState.activeMaxBlackMana > 0
+        ? gameState.activeBlackMana / gameState.activeMaxBlackMana : 0.0;
+    final blackRegenRate = gameState.currentBlackManaRegenRate;
 
     // Border color: purple for power node, blue for ley line, gray default
     final borderColor = isOnPowerNode
@@ -86,8 +90,21 @@ class ManaBar extends StatelessWidget {
         isRegenerating: greenRegenRate > 0,
       ));
     }
+    // Black mana — void/comet energy (always shown when attuned; comet drives regen)
+    if (hasBlack) {
+      children.add(_buildManaBar(
+        percent: blackManaPercent,
+        current: gameState.activeBlackMana,
+        max: gameState.activeMaxBlackMana,
+        colors: const [Color(0xFF0A0025), Color(0xFF350070), Color(0xFF8020C0)],
+        isRegenerating: blackRegenRate > 0,
+      ));
+    }
 
     // Info widgets gated by attunement
+    if (hasBlack && blackRegenRate > 0.6) {
+      children.add(_buildCometInfo(blackRegenRate));
+    }
     if (hasGreen && greenRegenRate > 0) {
       children.add(_buildGreenManaInfo(greenRegenRate));
     }
@@ -258,6 +275,49 @@ class ManaBar extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             'Nature',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 8,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCometInfo(double regenRate) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Comet icon — glowing void-purple circle
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: const Color(0xFF8020C0),
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF8020C0).withOpacity(0.7),
+                  blurRadius: 6,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '+${regenRate.toStringAsFixed(1)}/s',
+            style: const TextStyle(
+              color: Color(0xFFB060FF),
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Comet',
             style: TextStyle(
               color: Colors.white.withOpacity(0.7),
               fontSize: 8,

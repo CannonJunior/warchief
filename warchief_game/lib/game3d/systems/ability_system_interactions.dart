@@ -246,17 +246,35 @@ void _executeGenericAoE(int slotIndex, GameState gameState, AbilityData rawAbili
   print(message);
 }
 
-/// Generic self-heal.
+/// Generic heal — applies to the current friendly target (ally) or self if no friendly is targeted.
 void _executeGenericHeal(int slotIndex, GameState gameState, AbilityData rawAbility, String message) {
   final ability = globalAbilityOverrideManager?.getEffectiveAbility(rawAbility) ?? rawAbility;
   if (gameState.ability3Active) return;
   gameState.ability3Active = true;
   gameState.ability3ActiveTime = 0.0;
   final effectiveHeal = ability.healAmount * gameState.activeStance.healingMultiplier;
+  _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+
+  // Heal targeted ally if one is selected
+  final targetId = gameState.currentTargetId;
+  if (targetId != null && targetId.startsWith('ally_')) {
+    final index = int.tryParse(targetId.substring(5));
+    if (index != null && index < gameState.allies.length && gameState.allies[index].health > 0) {
+      final ally = gameState.allies[index];
+      final oldHealth = ally.health;
+      ally.health = math.min(ally.maxHealth, ally.health + effectiveHeal);
+      final healedAmount = ally.health - oldHealth;
+      _logHeal(gameState, ability.name, healedAmount);
+      _showHealIndicator(gameState, healedAmount, ally.transform.position);
+      print('$message Restored ${healedAmount.toStringAsFixed(1)} HP to ${ally.name}');
+      return;
+    }
+  }
+
+  // Self-heal (no target, self-target, or invalid ally target)
   final oldHealth = gameState.activeHealth;
   gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + effectiveHeal);
   final healedAmount = gameState.activeHealth - oldHealth;
-  _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
   _logHeal(gameState, ability.name, healedAmount);
   _showHealIndicator(gameState, healedAmount, gameState.activeTransform?.position);
   print('$message Restored ${healedAmount.toStringAsFixed(1)} HP');

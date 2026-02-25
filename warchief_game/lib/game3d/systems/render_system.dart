@@ -9,7 +9,10 @@ import '../../rendering3d/mesh.dart';
 import '../../rendering3d/ley_lines.dart';
 import '../rendering/wind_particles.dart';
 import '../rendering/green_mana_sparkles.dart';
+import '../rendering/meteor_particles.dart';
+import '../rendering/sky_renderer.dart';
 import '../state/gameplay_settings.dart';
+import '../state/comet_state.dart' show globalCometState;
 import '../data/abilities/ability_types.dart' show ManaColor;
 
 /// Render System - Handles 3D scene rendering
@@ -27,6 +30,12 @@ class RenderSystem {
 
   /// Green mana sparkle particle system (initialized on first use)
   static final GreenManaSparkleSystem _greenSparkles = GreenManaSparkleSystem();
+
+  /// Meteor shower particle system (initialized on first use)
+  static final MeteorParticleSystem _meteorParticles = MeteorParticleSystem();
+
+  /// Sky gradient and comet billboard renderer
+  static final SkyRenderer _skyRenderer = SkyRenderer();
 
   /// Cached transforms for terrain chunks (keyed by world position hash).
   /// Avoids per-frame Transform3d allocation for each chunk.
@@ -52,8 +61,30 @@ class RenderSystem {
     Camera3D camera,
     GameState gameState,
   ) {
+    // Tint clearColor toward void-purple during comet flyby
+    // Reason: the sky mesh quad is outside the isometric camera frustum; clearColor
+    // is the most reliable way to show the comet's influence on the sky background.
+    final cometState = globalCometState;
+    final cometI = cometState?.cometIntensity ?? 0.0;
+    if (cometI > 0.01) {
+      renderer.gl.clearColor(
+        0.10 - cometI * 0.06, // R: neutral gray → darker (0.04 at peak)
+        0.10 - cometI * 0.09, // G: neutral gray → near-black (0.01 at peak)
+        0.10 + cometI * 0.05, // B: neutral gray → void-blue tint (0.15 at peak)
+        1.0,
+      );
+    } else {
+      renderer.gl.clearColor(0.10, 0.10, 0.10, 1.0);
+    }
+
     // Clear screen
     renderer.clear();
+
+    // Render sky background (before terrain so it sits behind everything)
+    if (cometState != null) {
+      _skyRenderer.update(cometState);
+      _skyRenderer.renderSky(renderer, camera, cometState);
+    }
 
     // Render infinite terrain chunks with LOD and texture splatting
     if (gameState.infiniteTerrainManager != null) {
@@ -189,6 +220,14 @@ class RenderSystem {
 
     // Render green mana sparkles (Effects pass)
     _renderGreenManaSparkles(renderer, camera, gameState);
+
+    // Render comet billboard (additive blending, after opaque geometry)
+    if (cometState != null) {
+      _skyRenderer.renderComet(renderer, camera, cometState);
+    }
+
+    // Render meteor shower particles
+    _renderMeteors(renderer, camera, gameState);
   }
 
   /// Render aura glow discs at unit bases with additive blending.
@@ -271,6 +310,36 @@ class RenderSystem {
 
     _greenSparkles.update(0.016, gameState);
     _greenSparkles.render(renderer, camera);
+  }
+
+  /// Update and render meteor shower particles.
+  static void _renderMeteors(
+    WebGLRenderer renderer,
+    Camera3D camera,
+    GameState gameState,
+  ) {
+    final cometState = globalCometState;
+    if (cometState == null) return;
+    if (gameState.playerTransform == null) return;
+
+    if (!_meteorParticles.isInitialized) {
+      _meteorParticles.init();
+    }
+
+    final pos = gameState.playerTransform!.position;
+    final terrainManager = gameState.infiniteTerrainManager;
+
+    _meteorParticles.update(
+      0.016,
+      pos.x,
+      pos.z,
+      terrainManager != null
+          ? (x, z) => terrainManager.getTerrainHeight(x, z)
+          : (x, z) => 0.0,
+      cometState,
+    );
+
+    _meteorParticles.render(renderer, camera);
   }
 
   /// Render target indicator around the current target

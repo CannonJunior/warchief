@@ -30,7 +30,7 @@ part 'ability_system_interactions.dart';
 part 'ability_system_updates.dart';
 
 /// Internal mana type enumeration used only within the ability system.
-enum _ManaType { none, blue, red, white, green }
+enum _ManaType { none, blue, red, white, green, black }
 
 /// Ability System — handles all player ability logic.
 ///

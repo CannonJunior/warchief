@@ -60,6 +60,8 @@ import 'state/item_config.dart';
 import 'state/custom_item_manager.dart';
 import 'state/wind_config.dart';
 import 'state/wind_state.dart';
+import 'state/comet_config.dart';
+import 'state/comet_state.dart';
 import 'state/minimap_config.dart';
 import 'state/minimap_state.dart';
 import 'state/building_config.dart';
@@ -228,6 +230,9 @@ class _Game3DState extends _GameStateBase
 
     // Initialize wind config (JSON defaults for wind simulation)
     _initializeWindConfig();
+
+    // Initialize comet system (orbital state + black mana config)
+    _initializeCometSystem();
 
     // Initialize minimap config (JSON defaults for minimap display)
     _initializeMinimapConfig();

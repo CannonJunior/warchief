@@ -172,7 +172,29 @@ void _executeBlessingOfStrength(int slotIndex, GameState gameState) {
 
 void _executePurify(int slotIndex, GameState gameState) {
   _setCooldownForSlot(slotIndex, _effective(HealerAbilities.purify).cooldown, gameState);
-  print('Purify! Debuffs removed.');
+
+  // Determine whose debuffs to remove: targeted ally or self
+  List<ActiveEffect> targetEffects;
+  String targetLabel;
+
+  final targetId = gameState.currentTargetId;
+  if (targetId != null && targetId.startsWith('ally_')) {
+    final index = int.tryParse(targetId.substring(5));
+    if (index != null && index < gameState.allies.length && gameState.allies[index].health > 0) {
+      targetEffects = gameState.allies[index].activeEffects;
+      targetLabel = gameState.allies[index].name;
+    } else {
+      targetEffects = gameState.activeCharacterActiveEffects;
+      targetLabel = 'self';
+    }
+  } else {
+    targetEffects = gameState.activeCharacterActiveEffects;
+    targetLabel = 'self';
+  }
+
+  final removedCount = targetEffects.where((e) => e.isDebuff).length;
+  targetEffects.removeWhere((e) => e.isDebuff);
+  print('Purify! Removed $removedCount debuff(s) from $targetLabel.');
 }
 
 // ==================== NATURE ABILITIES ====================

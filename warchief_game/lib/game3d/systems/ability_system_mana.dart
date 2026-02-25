@@ -16,6 +16,7 @@ _ManaType _manaColorToType(ManaColor color) {
     case ManaColor.red: return _ManaType.red;
     case ManaColor.white: return _ManaType.white;
     case ManaColor.green: return _ManaType.green;
+    case ManaColor.black: return _ManaType.black;
     case ManaColor.none: return _ManaType.none;
   }
 }
@@ -26,17 +27,19 @@ ManaColor _manaTypeToColor(_ManaType type) {
     case _ManaType.red: return ManaColor.red;
     case _ManaType.white: return ManaColor.white;
     case _ManaType.green: return ManaColor.green;
+    case _ManaType.black: return ManaColor.black;
     case _ManaType.none: return ManaColor.none;
   }
 }
 
-/// Convert _ManaType to index (0=blue, 1=red, 2=white, 3=green).
+/// Convert _ManaType to index (0=blue, 1=red, 2=white, 3=green, 4=black).
 int _manaTypeToIndex(_ManaType type) {
   switch (type) {
     case _ManaType.blue: return 0;
     case _ManaType.red: return 1;
     case _ManaType.white: return 2;
     case _ManaType.green: return 3;
+    case _ManaType.black: return 4;
     case _ManaType.none: return 0;
   }
 }
@@ -71,6 +74,12 @@ bool _activeHasMana(GameState gameState, _ManaType type, double cost, String abi
         return false;
       }
       return true;
+    case _ManaType.black:
+      if (!gameState.activeHasBlackMana(cost)) {
+        gameState.addConsoleLog('$abilityName: not enough black mana (need ${cost.toStringAsFixed(0)}, have ${gameState.activeBlackMana.toStringAsFixed(0)})', level: ConsoleLogLevel.warn);
+        return false;
+      }
+      return true;
     case _ManaType.none:
       return true;
   }
@@ -98,6 +107,10 @@ void _spendManaByType(GameState gameState, _ManaType type, double cost, String a
       gameState.activeSpendGreenMana(cost);
       print('[MANA] Spent $cost green mana for $abilityName');
       break;
+    case _ManaType.black:
+      gameState.activeSpendBlackMana(cost);
+      print('[MANA] Spent $cost black mana for $abilityName');
+      break;
     case _ManaType.none:
       break;
   }
@@ -116,8 +129,12 @@ void _spendPendingMana(GameState gameState, String abilityName) {
       _pendingSecondaryManaCost = 0.0;
       return;
     }
-    // Reason: pendingManaType distinguishes blue(0), red(1), white(2), green(3)
+    // Reason: pendingManaType distinguishes blue(0), red(1), white(2), green(3), black(4)
     switch (gameState.pendingManaType) {
+      case 4:
+        gameState.activeSpendBlackMana(cost);
+        print('[MANA] Spent $cost black mana for $abilityName');
+        break;
       case 3:
         gameState.activeSpendGreenMana(cost);
         print('[MANA] Spent $cost green mana for $abilityName');
@@ -141,6 +158,10 @@ void _spendPendingMana(GameState gameState, String abilityName) {
   final secondaryCost = _pendingSecondaryManaCost;
   if (secondaryCost > 0) {
     switch (_pendingSecondaryManaType) {
+      case 4:
+        gameState.activeSpendBlackMana(secondaryCost);
+        print('[MANA] Spent $secondaryCost black mana (secondary) for $abilityName');
+        break;
       case 3:
         gameState.activeSpendGreenMana(secondaryCost);
         print('[MANA] Spent $secondaryCost green mana (secondary) for $abilityName');

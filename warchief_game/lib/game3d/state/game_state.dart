@@ -29,6 +29,8 @@ import 'mana_config.dart';
 import 'building_config.dart';
 import 'wind_config.dart';
 import 'wind_state.dart';
+import 'comet_config.dart';
+import 'comet_state.dart' show globalCometState;
 import 'minimap_state.dart';
 import '../utils/movement_prediction.dart';
 import '../utils/bezier_path.dart';
@@ -181,6 +183,13 @@ class GameState {
   /// Current green mana regen rate (sum of all sources)
   double currentGreenManaRegenRate = 0.0;
 
+  /// Black mana - void/comet energy regenerated from comet proximity and meteor impacts
+  double blackMana = 0.0;
+  double get maxBlackMana => globalCometConfig?.maxBlackMana ?? 100.0;
+
+  /// Current black mana regen rate (ambient + comet surge + crater bonuses)
+  double currentBlackManaRegenRate = 0.0;
+
   /// Whether the Warchief is in spirit form
   bool playerInSpiritForm = false;
 
@@ -190,8 +199,8 @@ class GameState {
   /// Temporary mana attunements for Warchief (from buffs/auras)
   Set<ManaColor> temporaryAttunements = {};
 
-  /// All four mana colors — returned when attunement is not required.
-  static const Set<ManaColor> _allManaColors = {ManaColor.blue, ManaColor.red, ManaColor.white, ManaColor.green};
+  /// All mana colors — returned when attunement is not required.
+  static const Set<ManaColor> _allManaColors = {ManaColor.blue, ManaColor.red, ManaColor.white, ManaColor.green, ManaColor.black};
 
   /// Cached player mana attunements. Invalidated when equipment or temporary attunements change.
   Set<ManaColor>? _cachedPlayerManaAttunements;
@@ -298,6 +307,23 @@ class GameState {
   /// Generate green mana directly (e.g. from regen or abilities)
   void generateGreenMana(double amount) {
     greenMana = (greenMana + amount).clamp(0.0, maxGreenMana);
+  }
+
+  /// Spend black mana for an ability. Returns true if spent, false if insufficient.
+  bool spendBlackMana(double amount) {
+    if (blackMana >= amount) {
+      blackMana -= amount;
+      return true;
+    }
+    return false;
+  }
+
+  /// Check if player has enough black mana.
+  bool canAffordBlackMana(double amount) => blackMana >= amount;
+
+  /// Generate black mana directly (e.g. from items or abilities)
+  void generateBlackMana(double amount) {
+    blackMana = (blackMana + amount).clamp(0.0, maxBlackMana);
   }
 
   /// Generate red mana from dealing melee damage
@@ -426,6 +452,8 @@ class GameState {
   double get activeMaxWhiteMana => isWarchiefActive ? maxWhiteMana : (activeAlly?.maxWhiteMana ?? 0.0);
   double get activeGreenMana => isWarchiefActive ? greenMana : (activeAlly?.greenMana ?? 0.0);
   double get activeMaxGreenMana => isWarchiefActive ? maxGreenMana : (activeAlly?.maxGreenMana ?? 0.0);
+  double get activeBlackMana => isWarchiefActive ? blackMana : (activeAlly?.blackMana ?? 0.0);
+  double get activeMaxBlackMana => isWarchiefActive ? maxBlackMana : (activeAlly?.maxBlackMana ?? 0.0);
 
   /// Mana attunements for the active character (Warchief or ally).
   /// When attunement requirement is disabled, returns all four colors.
@@ -468,6 +496,7 @@ class GameState {
   bool activeHasRedMana(double amount) => isWarchiefActive ? hasRedMana(amount) : (activeAlly?.redMana ?? 0.0) >= amount;
   bool activeHasWhiteMana(double amount) => isWarchiefActive ? hasWhiteMana(amount) : (activeAlly?.whiteMana ?? 0.0) >= amount;
   bool activeHasGreenMana(double amount) => isWarchiefActive ? hasGreenMana(amount) : (activeAlly?.greenMana ?? 0.0) >= amount;
+  bool activeHasBlackMana(double amount) => isWarchiefActive ? canAffordBlackMana(amount) : (activeAlly?.blackMana ?? 0.0) >= amount;
 
   /// Spend mana from active character's pool
   bool activeSpendBlueMana(double amount) {
@@ -495,6 +524,13 @@ class GameState {
     if (isWarchiefActive) return spendGreenMana(amount);
     final ally = activeAlly;
     if (ally != null && ally.greenMana >= amount) { ally.greenMana -= amount; return true; }
+    return false;
+  }
+
+  bool activeSpendBlackMana(double amount) {
+    if (isWarchiefActive) return spendBlackMana(amount);
+    final ally = activeAlly;
+    if (ally != null && ally.blackMana >= amount) { ally.blackMana -= amount; return true; }
     return false;
   }
 

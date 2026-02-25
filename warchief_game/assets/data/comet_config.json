@@ -1,0 +1,47 @@
+{
+  "orbital": {
+    "periodSeconds": 3600.0,
+    "perihelionFraction": 0.5,
+    "meteorShowerWindow": 0.15,
+    "startPhase": 0.45
+  },
+  "blackMana": {
+    "maxMana": 100.0,
+    "ambientRegenRate": 0.5,
+    "perihelionRegenRate": 15.0,
+    "impactCraterRadius": 8.0,
+    "impactCraterBonus": 8.0,
+    "impactCraterDecayTime": 60.0,
+    "decayRate": 1.0
+  },
+  "sky": {
+    "zenithColor": [0.05, 0.01, 0.10],
+    "horizonColorDay": [0.12, 0.06, 0.04],
+    "horizonColorNight": [0.07, 0.02, 0.10],
+    "cometTintStrength": 0.6
+  },
+  "comet": {
+    "comaColor": [0.85, 0.70, 1.00],
+    "ionTailColor": [0.50, 0.30, 1.00],
+    "dustTailColor": [0.70, 0.55, 0.90],
+    "comaMinSize": 0.02,
+    "comaMaxSize": 0.15,
+    "ionTailMinLength": 0.0,
+    "ionTailMaxLength": 0.5,
+    "dustTailMinLength": 0.0,
+    "dustTailMaxLength": 0.35
+  },
+  "meteors": {
+    "baseRate": 0.5,
+    "showerRate": 5.0,
+    "stormRate": 20.0,
+    "lifetime": 3.0,
+    "speed": 60.0,
+    "trailLength": 4.0,
+    "headColor": [0.90, 0.80, 1.00],
+    "tailColor": [0.10, 0.00, 0.20],
+    "impactFlashDuration": 0.4,
+    "spawnRadius": 80.0,
+    "spawnHeight": 25.0
+  }
+}

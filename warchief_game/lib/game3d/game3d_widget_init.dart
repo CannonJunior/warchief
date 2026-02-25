@@ -50,6 +50,13 @@ mixin _WidgetInitMixin on _GameStateBase {
     globalWindState ??= WindState();
   }
 
+  /// Initialize the global comet system (config + orbital state)
+  void _initializeCometSystem() {
+    globalCometConfig ??= CometConfig();
+    globalCometConfig!.initialize();
+    globalCometState ??= CometState();
+  }
+
   /// Initialize the global minimap configuration (JSON defaults)
   void _initializeMinimapConfig() {
     globalMinimapConfig ??= MinimapConfig();

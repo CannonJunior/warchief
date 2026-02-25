@@ -381,7 +381,7 @@
         "zeal": 8,
         "auspice": 8
       },
-      "manaAttunement": ["blue", "red", "white", "green"],
+      "manaAttunement": ["blue", "red", "white", "green", "black"],
       "iconName": "talisman_allsource",
       "sellValue": 1200,
       "levelRequirement": 10

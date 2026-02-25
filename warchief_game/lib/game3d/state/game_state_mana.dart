@@ -407,4 +407,57 @@ extension GameStateManaExt on GameState {
       }
     }
   }
+
+  /// Update black mana regeneration (comet-driven: ambient + surge + crater proximity).
+  ///
+  /// Three regen layers:
+  ///   1. Ambient — always active (0.5/s by default)
+  ///   2. Comet surge — scales with cometIntensity, up to 15/s at perihelion
+  ///   3. Impact craters — bonus while standing within radius of a fresh crater
+  ///
+  /// When regen rate drops near zero, black mana decays slowly (like red mana).
+  void updateBlackManaRegen(double dt, double playerX, double playerZ) {
+    final cometState = globalCometState;
+    final cometConfig = globalCometConfig;
+
+    final playerAttunements = playerManaAttunements;
+
+    // ── Player black mana ───────────────────────────────────────────────────
+    if (playerAttunements.contains(ManaColor.black)) {
+      final regenRate = cometState?.computeBlackManaRegen(playerX, playerZ)
+          ?? (cometConfig?.ambientRegenRate ?? 0.5);
+      currentBlackManaRegenRate = regenRate;
+
+      if (regenRate > 0) {
+        blackMana = math.min(maxBlackMana, blackMana + regenRate * dt);
+      } else if (blackMana > 0) {
+        // Reason: decay when comet is not influencing the area (between flybys)
+        final decayRate = cometConfig?.blackManaDecayRate ?? 1.0;
+        blackMana = math.max(0.0, blackMana - decayRate * dt);
+      }
+    } else {
+      currentBlackManaRegenRate = 0.0;
+    }
+
+    // ── Ally black mana ─────────────────────────────────────────────────────
+    for (final ally in allies) {
+      if (ally.health <= 0) continue;
+      final allyAttunements = (globalGameplaySettings?.attunementRequired ?? true)
+          ? ally.combinedManaAttunements
+          : GameState._allManaColors;
+      if (!allyAttunements.contains(ManaColor.black)) continue;
+
+      final ax = ally.transform.position.x;
+      final az = ally.transform.position.z;
+      final allyRegen = cometState?.computeBlackManaRegen(ax, az)
+          ?? (cometConfig?.ambientRegenRate ?? 0.5);
+
+      if (allyRegen > 0) {
+        ally.blackMana = math.min(ally.maxBlackMana, ally.blackMana + allyRegen * dt);
+      } else if (ally.blackMana > 0) {
+        final decayRate = cometConfig?.blackManaDecayRate ?? 1.0;
+        ally.blackMana = math.max(0.0, ally.blackMana - decayRate * dt);
+      }
+    }
+  }
 }

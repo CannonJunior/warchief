@@ -44,6 +44,8 @@ class Ally {
   double maxWhiteMana;
   double greenMana;
   double maxGreenMana;
+  double blackMana;
+  double maxBlackMana;
 
   /// Whether this ally is currently in spirit form (broadcasts green mana regen)
   bool inSpiritForm;
@@ -141,6 +143,8 @@ class Ally {
     this.maxWhiteMana = 50.0,
     this.greenMana = 0.0,
     this.maxGreenMana = 50.0,
+    this.blackMana = 0.0,
+    this.maxBlackMana = 100.0,
     this.inSpiritForm = false,
     required this.abilityIndex,
     this.abilityCooldown = 0.0,

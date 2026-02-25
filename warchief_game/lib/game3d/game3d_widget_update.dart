@@ -55,6 +55,13 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     // Update green mana regeneration (grass proximity, ally proximity, spirit beings)
     gameState.updateGreenManaRegen(dt);
 
+    // Advance comet orbital phase and update black mana regeneration
+    globalCometState?.update(dt);
+    final cometPos = gameState.activeTransform?.position;
+    if (cometPos != null) {
+      gameState.updateBlackManaRegen(dt, cometPos.x, cometPos.z);
+    }
+
     // Tick and expire active status effects on all entities
     gameState.updateActiveEffects(dt);
 

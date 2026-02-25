@@ -2,6 +2,28 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-25
+
+#### Comet System (Options A + B) with Black Mana
+- ✅ **`assets/data/comet_config.json`**: All tunable values for orbital, blackMana, sky, comet visual, and meteor sections.
+- ✅ **`lib/game3d/state/comet_config.dart`**: Config model following ManaConfig pattern — extends ChangeNotifier, dot-notation getters with fallbacks, `globalCometConfig` singleton.
+- ✅ **`lib/game3d/state/comet_state.dart`**: Runtime orbital state — `_orbitalPhase` [0–1], bell-curve intensity, meteor shower window, three-layer black mana regen, impact crater list with proximity bonus and decay. `globalCometState` singleton.
+- ✅ **`lib/game3d/rendering/meteor_particles.dart`**: Pool-based meteor streak particle system — radiant-aligned spawn, terrain impact detection, flash effect, crater registration, additive-blend mesh rendering.
+- ✅ **`lib/game3d/rendering/sky_renderer.dart`**: Sky gradient quad (zenith→horizon, comet-tinted) + comet billboard (coma + ion tail + dust tail) rendered at max camera distance with additive blending.
+- ✅ **`lib/game3d/data/abilities/ability_types.dart`**: Added `black` to `ManaColor` enum; added `requiresBlackMana` getter.
+- ✅ **`lib/game3d/state/game_state.dart`**: Added `blackMana`, `maxBlackMana`, `currentBlackManaRegenRate` fields; `activeBlackMana`/`activeMaxBlackMana` getters; `spendBlackMana`/`canAffordBlackMana`/`generateBlackMana`/`activeHasBlackMana`/`activeSpendBlackMana` methods. Updated `_allManaColors` to include black. Added comet imports.
+- ✅ **`lib/game3d/state/game_state_mana.dart`**: Added `updateBlackManaRegen()` — three-layer regen (ambient + surge + craters) for Warchief and allies.
+- ✅ **`lib/models/ally.dart`**: Added `blackMana` / `maxBlackMana` fields with defaults (0.0 / 100.0).
+- ✅ **`lib/game3d/ui/mana_bar.dart`**: Added black mana bar (void-purple gradient), `_buildCometInfo()` widget, and comet regen rate info display.
+- ✅ **`lib/game3d/systems/render_system.dart`**: Added `SkyRenderer` + `MeteorParticleSystem` statics; sky rendered before terrain; comet + meteors rendered after effects pass. Added `_renderMeteors()` helper.
+- ✅ **`lib/game3d/game3d_widget_init.dart`**: Added `_initializeCometSystem()` method (instantiates CometConfig + CometState).
+- ✅ **`lib/game3d/game3d_widget.dart`**: Calls `_initializeCometSystem()` on startup + imports comet types.
+- ✅ **`lib/game3d/game3d_widget_update.dart`**: Calls `globalCometState?.update(dt)` and `updateBlackManaRegen()` each frame.
+- ✅ **`lib/game3d/systems/ability_system.dart`**: Added `black` to `_ManaType` internal enum.
+- ✅ **`lib/game3d/systems/ability_system_mana.dart`**: Updated all mana color/type conversion functions and switch statements for black mana.
+- ✅ **`lib/game3d/data/abilities/ability_balance.dart`**: Added `ManaColor.black` display color (void-purple `0xFF8020C0`) to exhaustive switch.
+- ✅ Build verified clean (`flutter analyze --no-pub` — 0 new errors).
+
 ### Pending - File Size Reduction Roadmap
 
 14 Dart files exceed the 500-line limit. See `warchief_game/CLAUDE.md` for the full split strategy table. Priority order:
