@@ -95,7 +95,7 @@ class WarriorAbilities {
     description: 'Quick armored fist jab — fast combo starter',
     type: AbilityType.melee,
     damage: 12.0,
-    cooldown: 2.0,
+    cooldown: 1.0,
     range: 2.0,
     color: Vector3(0.7, 0.7, 0.7),
     impactColor: Vector3(0.8, 0.8, 0.8),
@@ -109,7 +109,7 @@ class WarriorAbilities {
     description: 'Low sweeping kick with iron greaves, slowing the target',
     type: AbilityType.melee,
     damage: 18.0,
-    cooldown: 4.0,
+    cooldown: 1.0,
     range: 2.5,
     color: Vector3(0.6, 0.6, 0.65),
     impactColor: Vector3(0.7, 0.7, 0.75),
@@ -169,9 +169,25 @@ class WarriorAbilities {
     category: 'warrior',
   );
 
+  /// Sunder Armor — Crushing strike that permanently exposes physical weakness
+  static final sunderArmor = AbilityData(
+    name: 'Sunder Armor',
+    description: 'A crushing strike that permanently exposes the target\'s weakness to physical damage.',
+    type: AbilityType.melee,
+    damage: 10.0,
+    cooldown: 12.0,
+    range: 2.5,
+    color: Vector3(0.7, 0.5, 0.3),
+    impactColor: Vector3(0.8, 0.6, 0.4),
+    impactSize: 0.6,
+    category: 'warrior',
+    appliesPermanentVulnerability: true,
+  );
+
   /// All warrior abilities as a list
   static List<AbilityData> get all => [
     shieldBash, whirlwind, charge, taunt, fortify,
     gauntletJab, ironSweep, rendingChains, warcryUppercut, executionStrike,
+    sunderArmor,
   ];
 }

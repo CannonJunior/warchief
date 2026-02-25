@@ -28,6 +28,7 @@ class StormheartAbilities {
     secondaryManaColor: ManaColor.red,
     secondaryManaCost: 10.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Storm Bolt — Lightning projectile that chains to 2 nearby enemies.
@@ -48,6 +49,7 @@ class StormheartAbilities {
     manaColor: ManaColor.white,
     manaCost: 20.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Tempest Fury — +40% attack speed buff for 8 seconds.
@@ -66,6 +68,7 @@ class StormheartAbilities {
     manaColor: ManaColor.white,
     manaCost: 15.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Eye of the Storm — 4s damage immunity + AoE slow around caster.
@@ -88,6 +91,7 @@ class StormheartAbilities {
     secondaryManaColor: ManaColor.red,
     secondaryManaCost: 15.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Blood Thunder — AoE lightning burst with stun.
@@ -109,6 +113,7 @@ class StormheartAbilities {
     secondaryManaColor: ManaColor.white,
     secondaryManaCost: 15.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Avatar of Storms — Transform into a storm elemental.
@@ -132,6 +137,7 @@ class StormheartAbilities {
     secondaryManaColor: ManaColor.red,
     secondaryManaCost: 30.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Lightning Dash — Short-range teleport leaving a lightning trail.
@@ -149,6 +155,7 @@ class StormheartAbilities {
     manaColor: ManaColor.white,
     manaCost: 10.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Static Charge — Mark an enemy so the next 3 hits deal +50% damage.
@@ -168,6 +175,7 @@ class StormheartAbilities {
     manaColor: ManaColor.white,
     manaCost: 15.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Thunderclap — Melee AoE stun with lightning damage.
@@ -189,6 +197,7 @@ class StormheartAbilities {
     secondaryManaColor: ManaColor.white,
     secondaryManaCost: 10.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Conduit — Channel lightning to a target: 8 dps for 5 seconds.
@@ -206,11 +215,13 @@ class StormheartAbilities {
     impactSize: 0.6,
     castTime: 5.0,
     requiresStationary: true,
+    channelEffect: ChannelEffect.conduit,
     manaColor: ManaColor.white,
     manaCost: 25.0,
     secondaryManaColor: ManaColor.red,
     secondaryManaCost: 15.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
   );
 
   // ==================== MELEE COMBO ABILITIES ====================
@@ -230,6 +241,7 @@ class StormheartAbilities {
     manaColor: ManaColor.white,
     manaCost: 8.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Chain Shock — Chain punch with brief stun
@@ -248,6 +260,7 @@ class StormheartAbilities {
     manaColor: ManaColor.white,
     manaCost: 12.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Storm Surge — Lightning dash-punch gap-closer
@@ -264,6 +277,7 @@ class StormheartAbilities {
     manaColor: ManaColor.white,
     manaCost: 15.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Thundergod Fist — Dual-mana finisher with windup, stun, and knockback
@@ -287,6 +301,53 @@ class StormheartAbilities {
     secondaryManaColor: ManaColor.red,
     secondaryManaCost: 12.0,
     category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
+  );
+
+  /// Basic no-mana melee: lightning jab
+  static final voltStrike = AbilityData(
+    name: 'Volt Strike',
+    description: 'A quick, manaless lightning-infused strike.',
+    type: AbilityType.melee,
+    damage: 13.0,
+    cooldown: 1.0,
+    range: 2.0,
+    color: Vector3(1.0, 1.0, 0.3),
+    impactColor: Vector3(1.0, 1.0, 0.5),
+    impactSize: 0.4,
+    category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
+  );
+
+  /// Basic no-mana melee: arc punch
+  static final arcPunch = AbilityData(
+    name: 'Arc Punch',
+    description: 'A crackling electrical punch.',
+    type: AbilityType.melee,
+    damage: 15.0,
+    cooldown: 1.0,
+    range: 2.5,
+    color: Vector3(0.9, 0.9, 0.2),
+    impactColor: Vector3(1.0, 1.0, 0.4),
+    impactSize: 0.5,
+    category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
+  );
+
+  /// Medium-cooldown permanent lightning vulnerability
+  static final lightningBrand = AbilityData(
+    name: 'Lightning Brand',
+    description: 'A searing lightning strike that permanently exposes the target to electrical damage.',
+    type: AbilityType.melee,
+    damage: 10.0,
+    cooldown: 12.0,
+    range: 2.5,
+    color: Vector3(1.0, 1.0, 0.0),
+    impactColor: Vector3(1.0, 1.0, 0.3),
+    impactSize: 0.6,
+    category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
+    appliesPermanentVulnerability: true,
   );
 
   /// All stormheart abilities as a list
@@ -305,5 +366,8 @@ class StormheartAbilities {
     chainShock,
     stormSurge,
     thundergodFist,
+    voltStrike,
+    arcPunch,
+    lightningBrand,
   ];
 }

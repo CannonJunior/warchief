@@ -20,6 +20,7 @@ class NatureAbilities {
     statusEffect: StatusEffect.root,
     statusDuration: 4.0,
     category: 'nature',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Thorns - Reflect damage buff
@@ -34,6 +35,7 @@ class NatureAbilities {
     impactColor: Vector3(0.4, 0.6, 0.3),
     impactSize: 1.0,
     category: 'nature',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Nature's Wrath - AoE nature damage
@@ -50,6 +52,7 @@ class NatureAbilities {
     impactSize: 1.2,
     aoeRadius: 5.0,
     category: 'nature',
+    damageSchool: DamageSchool.nature,
   );
 
   // ==================== MELEE ABILITIES ====================
@@ -60,7 +63,7 @@ class NatureAbilities {
     description: 'Lash out with a thorned vine whip, causing bleeding wounds',
     type: AbilityType.melee,
     damage: 15.0,
-    cooldown: 3.5,
+    cooldown: 1.0,
     range: 3.0,
     color: Vector3(0.4, 0.6, 0.2),
     impactColor: Vector3(0.6, 0.3, 0.2),
@@ -69,6 +72,7 @@ class NatureAbilities {
     statusDuration: 3.0,
     dotTicks: 2,
     category: 'nature',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Ironwood Smash — Bark-encased slam that roots the target
@@ -85,11 +89,28 @@ class NatureAbilities {
     statusEffect: StatusEffect.root,
     statusDuration: 1.5,
     category: 'nature',
+    damageSchool: DamageSchool.nature,
+  );
+
+  /// Thornbind Mark — Nature strike that permanently exposes target
+  static final thornbindMark = AbilityData(
+    name: 'Thornbind Mark',
+    description: 'A nature-infused strike that permanently exposes the target to nature damage.',
+    type: AbilityType.melee,
+    damage: 8.0,
+    cooldown: 12.0,
+    range: 2.5,
+    color: Vector3(0.3, 0.6, 0.2),
+    impactColor: Vector3(0.4, 0.7, 0.3),
+    impactSize: 0.6,
+    category: 'nature',
+    damageSchool: DamageSchool.nature,
+    appliesPermanentVulnerability: true,
   );
 
   /// All nature abilities as a list
   static List<AbilityData> get all => [
     entanglingRoots, thorns, naturesWrath,
-    briarLash, ironwoodSmash,
+    briarLash, ironwoodSmash, thornbindMark,
   ];
 }

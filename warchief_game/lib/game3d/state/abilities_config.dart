@@ -90,6 +90,7 @@ class AbilitiesConfig {
   static AbilityData get curseOfWeakness => NecromancerAbilities.curseOfWeakness;
   static AbilityData get fear => NecromancerAbilities.fear;
   static AbilityData get summonSkeleton => NecromancerAbilities.summonSkeleton;
+  static AbilityData get summonSkeletonMage => NecromancerAbilities.summonSkeletonMage;
 
   // ==================== ELEMENTAL ABILITIES (Legacy Access) ====================
 

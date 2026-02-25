@@ -45,7 +45,7 @@ class UtilityAbilities {
     description: 'A swift, efficient slash — nothing fancy, just fast',
     type: AbilityType.melee,
     damage: 10.0,
-    cooldown: 2.0,
+    cooldown: 1.0,
     range: 2.0,
     color: Vector3(0.8, 0.8, 0.8),
     impactColor: Vector3(0.9, 0.9, 0.9),
@@ -68,9 +68,24 @@ class UtilityAbilities {
     category: 'utility',
   );
 
+  /// Weak Point — Calculated strike that permanently exposes physical weakness
+  static final weakPoint = AbilityData(
+    name: 'Weak Point',
+    description: 'A calculated strike that permanently exposes the target\'s physical weakness.',
+    type: AbilityType.melee,
+    damage: 10.0,
+    cooldown: 12.0,
+    range: 2.5,
+    color: Vector3(0.6, 0.6, 0.5),
+    impactColor: Vector3(0.7, 0.7, 0.6),
+    impactSize: 0.6,
+    category: 'utility',
+    appliesPermanentVulnerability: true,
+  );
+
   /// All utility abilities as a list
   static List<AbilityData> get all => [
     sprint, battleShout,
-    quickSlash, shoulderCharge,
+    quickSlash, shoulderCharge, weakPoint,
   ];
 }

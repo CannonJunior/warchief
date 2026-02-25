@@ -21,6 +21,7 @@ class ElementalAbilities {
     piercing: true,
     maxTargets: 3,
     category: 'elemental',
+    damageSchool: DamageSchool.frost,
   );
 
   /// Flame Wave - Line AoE fire attack
@@ -39,6 +40,7 @@ class ElementalAbilities {
     statusEffect: StatusEffect.burn,
     statusDuration: 2.0,
     category: 'elemental',
+    damageSchool: DamageSchool.fire,
   );
 
   /// Earthquake - Ground AoE with stun
@@ -58,7 +60,9 @@ class ElementalAbilities {
     statusEffect: StatusEffect.stun,
     statusDuration: 0.5,
     castTime: 1.0,
+    channelEffect: ChannelEffect.earthquake,
     category: 'elemental',
+    damageSchool: DamageSchool.nature,
   );
 
   // ==================== MELEE ABILITIES ====================
@@ -69,7 +73,7 @@ class ElementalAbilities {
     description: 'Slash with an ice-enchanted blade, chilling the target',
     type: AbilityType.melee,
     damage: 18.0,
-    cooldown: 4.0,
+    cooldown: 1.0,
     range: 2.5,
     color: Vector3(0.6, 0.85, 1.0),
     impactColor: Vector3(0.7, 0.9, 1.0),
@@ -77,6 +81,7 @@ class ElementalAbilities {
     statusEffect: StatusEffect.slow,
     statusDuration: 2.0,
     category: 'elemental',
+    damageSchool: DamageSchool.frost,
   );
 
   /// Magma Strike — Molten fist slam with burn
@@ -93,11 +98,28 @@ class ElementalAbilities {
     statusEffect: StatusEffect.burn,
     statusDuration: 3.0,
     category: 'elemental',
+    damageSchool: DamageSchool.fire,
+  );
+
+  /// Elemental Rend — Fiery strike that permanently exposes target
+  static final elementalRend = AbilityData(
+    name: 'Elemental Rend',
+    description: 'A fiery strike that permanently exposes the target to fire damage.',
+    type: AbilityType.melee,
+    damage: 10.0,
+    cooldown: 12.0,
+    range: 2.5,
+    color: Vector3(1.0, 0.4, 0.1),
+    impactColor: Vector3(1.0, 0.5, 0.2),
+    impactSize: 0.6,
+    category: 'elemental',
+    damageSchool: DamageSchool.fire,
+    appliesPermanentVulnerability: true,
   );
 
   /// All elemental abilities as a list
   static List<AbilityData> get all => [
     iceLance, flameWave, earthquake,
-    frostbiteSlash, magmaStrike,
+    frostbiteSlash, magmaStrike, elementalRend,
   ];
 }

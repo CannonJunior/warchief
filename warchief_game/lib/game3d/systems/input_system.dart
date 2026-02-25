@@ -134,9 +134,12 @@ class InputSystem {
         inputManager.isActionPressed(GameAction.strafeLeft) ||
         inputManager.isActionPressed(GameAction.strafeRight);
 
-    // Cancel cast if moving during a stationary cast
+    // Cancel cast/channel if moving during a stationary cast
     if (isMoving && gameState.isCasting) {
       gameState.cancelCast();
+    }
+    if (isMoving && gameState.isChanneling) {
+      gameState.cancelChannel();
     }
 
     // Get effective speed (includes windup modifier if winding up)

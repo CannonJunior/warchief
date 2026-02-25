@@ -110,8 +110,17 @@ double _statusEffectValue(StatusEffect effect) => switch (effect) {
   StatusEffect.burn     => 0.1,
   StatusEffect.poison   => 0.1,
   StatusEffect.bleed    => 0.1,
-  StatusEffect.weakness => 0.1,
-  StatusEffect.regen    => 0.1,
+  StatusEffect.weakness          => 0.1,
+  StatusEffect.regen             => 0.1,
+  // Vulnerability debuffs — low balance value (passive exposure, no direct CC)
+  StatusEffect.vulnerablePhysical   => 0.05,
+  StatusEffect.vulnerableFire       => 0.05,
+  StatusEffect.vulnerableFrost      => 0.05,
+  StatusEffect.vulnerableLightning  => 0.05,
+  StatusEffect.vulnerableNature     => 0.05,
+  StatusEffect.vulnerableShadow     => 0.05,
+  StatusEffect.vulnerableArcane     => 0.05,
+  StatusEffect.vulnerableHoly       => 0.05,
 };
 
 /// Returns a color for the given balance score.

@@ -61,6 +61,49 @@ enum StatusEffect {
   strength,   // Increased damage
   weakness,   // Reduced damage output
   fear,       // Causes uncontrolled fleeing
+  vulnerablePhysical,   // Increased physical damage taken
+  vulnerableFire,       // Increased fire damage taken
+  vulnerableFrost,      // Increased frost damage taken
+  vulnerableLightning,  // Increased lightning damage taken
+  vulnerableNature,     // Increased nature damage taken
+  vulnerableShadow,     // Increased shadow damage taken
+  vulnerableArcane,     // Increased arcane damage taken
+  vulnerableHoly,       // Increased holy damage taken
+}
+
+/// Maps a DamageSchool to its corresponding vulnerability StatusEffect.
+StatusEffect vulnerabilityForSchool(DamageSchool school) {
+  switch (school) {
+    case DamageSchool.physical: return StatusEffect.vulnerablePhysical;
+    case DamageSchool.fire: return StatusEffect.vulnerableFire;
+    case DamageSchool.frost: return StatusEffect.vulnerableFrost;
+    case DamageSchool.lightning: return StatusEffect.vulnerableLightning;
+    case DamageSchool.nature: return StatusEffect.vulnerableNature;
+    case DamageSchool.shadow: return StatusEffect.vulnerableShadow;
+    case DamageSchool.arcane: return StatusEffect.vulnerableArcane;
+    case DamageSchool.holy: return StatusEffect.vulnerableHoly;
+  }
+}
+
+/// Visual effect type for channeled abilities
+enum ChannelEffect {
+  none,         // No visual effect
+  lifeDrain,    // Purple vortex lines from target to caster
+  blizzard,     // Ice crystals descending from sky in AoE area
+  earthquake,   // Earth particles erupting upward from ground
+  conduit,      // Lightning bolts from sky to target
+}
+
+/// Damage school types for vulnerability and damage classification
+enum DamageSchool {
+  physical,   // Melee/physical attacks
+  fire,       // Burn spells
+  frost,      // Ice/freeze spells
+  lightning,  // Storm/electrical
+  nature,     // Poison/bleed/root
+  shadow,     // Necromancy, curses
+  arcane,     // Pure magical energy
+  holy,       // Divine healing/damage
 }
 
 /// Mana color types for different magical energy sources
@@ -130,6 +173,15 @@ class AbilityData {
   /// For ranged abilities with castTime, movement cancels the cast
   final bool requiresStationary;
 
+  /// Visual effect displayed while channeling (only for channeled abilities)
+  final ChannelEffect channelEffect;
+
+  /// Damage school for vulnerability system classification
+  final DamageSchool damageSchool;
+
+  /// Whether this ability applies a permanent vulnerability debuff on hit
+  final bool appliesPermanentVulnerability;
+
   const AbilityData({
     required this.name,
     required this.description,
@@ -160,6 +212,10 @@ class AbilityData {
     this.windupMovementSpeed = 1.0,
     this.hitRadius,
     this.requiresStationary = false,
+    this.channelEffect = ChannelEffect.none,
+    // Damage school defaults
+    this.damageSchool = DamageSchool.physical,
+    this.appliesPermanentVulnerability = false,
     // Mana cost defaults
     this.manaColor = ManaColor.none,
     this.manaCost = 0.0,
@@ -251,6 +307,9 @@ class AbilityData {
     double? windupMovementSpeed,
     double? hitRadius,
     bool? requiresStationary,
+    ChannelEffect? channelEffect,
+    DamageSchool? damageSchool,
+    bool? appliesPermanentVulnerability,
   }) {
     return AbilityData(
       name: name ?? this.name,
@@ -284,6 +343,9 @@ class AbilityData {
       windupMovementSpeed: windupMovementSpeed ?? this.windupMovementSpeed,
       hitRadius: hitRadius ?? this.hitRadius,
       requiresStationary: requiresStationary ?? this.requiresStationary,
+      channelEffect: channelEffect ?? this.channelEffect,
+      damageSchool: damageSchool ?? this.damageSchool,
+      appliesPermanentVulnerability: appliesPermanentVulnerability ?? this.appliesPermanentVulnerability,
     );
   }
 
@@ -321,6 +383,9 @@ class AbilityData {
       'windupMovementSpeed': windupMovementSpeed,
       'hitRadius': hitRadius,
       'requiresStationary': requiresStationary,
+      'channelEffect': channelEffect.index,
+      'damageSchool': damageSchool.index,
+      'appliesPermanentVulnerability': appliesPermanentVulnerability,
     };
   }
 
@@ -370,6 +435,9 @@ class AbilityData {
       windupMovementSpeed: (json['windupMovementSpeed'] as num?)?.toDouble() ?? 1.0,
       hitRadius: (json['hitRadius'] as num?)?.toDouble(),
       requiresStationary: json['requiresStationary'] as bool? ?? false,
+      channelEffect: ChannelEffect.values[(json['channelEffect'] as int? ?? 0).clamp(0, ChannelEffect.values.length - 1)],
+      damageSchool: DamageSchool.values[(json['damageSchool'] as int? ?? 0).clamp(0, DamageSchool.values.length - 1)],
+      appliesPermanentVulnerability: json['appliesPermanentVulnerability'] as bool? ?? false,
     );
   }
 
@@ -419,6 +487,9 @@ class AbilityData {
       windupMovementSpeed: (overrides['windupMovementSpeed'] as num?)?.toDouble(),
       hitRadius: (overrides['hitRadius'] as num?)?.toDouble(),
       requiresStationary: overrides['requiresStationary'] as bool?,
+      channelEffect: overrides['channelEffect'] != null ? ChannelEffect.values[overrides['channelEffect'] as int] : null,
+      damageSchool: overrides['damageSchool'] != null ? DamageSchool.values[overrides['damageSchool'] as int] : null,
+      appliesPermanentVulnerability: overrides['appliesPermanentVulnerability'] as bool?,
     );
   }
 }

@@ -22,6 +22,7 @@ class MageAbilities {
     statusDuration: 3.0,
     statusStrength: 0.5,
     category: 'mage',
+    damageSchool: DamageSchool.frost,
   );
 
   /// Blizzard - Channeled AoE ice storm
@@ -41,7 +42,9 @@ class MageAbilities {
     statusEffect: StatusEffect.slow,
     statusDuration: 1.0,
     castTime: 1.0,
+    channelEffect: ChannelEffect.blizzard,
     category: 'mage',
+    damageSchool: DamageSchool.frost,
   );
 
   /// Lightning Bolt - Fast high damage projectile
@@ -59,6 +62,7 @@ class MageAbilities {
     projectileSize: 0.2,
     castTime: 1.5,
     category: 'mage',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Chain Lightning - Bounces between targets
@@ -76,6 +80,7 @@ class MageAbilities {
     projectileSize: 0.15,
     maxTargets: 4,
     category: 'mage',
+    damageSchool: DamageSchool.lightning,
   );
 
   /// Meteor - Massive AoE fire damage
@@ -95,6 +100,7 @@ class MageAbilities {
     statusDuration: 3.0,
     castTime: 2.0,
     category: 'mage',
+    damageSchool: DamageSchool.fire,
   );
 
   /// Arcane Shield - Magic damage absorption
@@ -110,6 +116,7 @@ class MageAbilities {
     statusEffect: StatusEffect.shield,
     statusStrength: 40.0,
     category: 'mage',
+    damageSchool: DamageSchool.arcane,
   );
 
   /// Teleport - Short range blink
@@ -133,12 +140,13 @@ class MageAbilities {
     description: 'Release a burst of arcane energy at close range',
     type: AbilityType.melee,
     damage: 15.0,
-    cooldown: 3.0,
+    cooldown: 1.0,
     range: 2.5,
     color: Vector3(0.6, 0.3, 0.9),
     impactColor: Vector3(0.7, 0.4, 1.0),
     impactSize: 0.5,
     category: 'mage',
+    damageSchool: DamageSchool.arcane,
   );
 
   /// Rift Blade — Dimensional slash that slows
@@ -155,12 +163,29 @@ class MageAbilities {
     statusEffect: StatusEffect.slow,
     statusDuration: 2.0,
     category: 'mage',
+    damageSchool: DamageSchool.arcane,
+  );
+
+  /// Arcane Breach — Focused arcane strike that applies permanent vulnerability
+  static final arcaneBreach = AbilityData(
+    name: 'Arcane Breach',
+    description: 'A focused arcane strike that permanently exposes the target to arcane damage.',
+    type: AbilityType.melee,
+    damage: 10.0,
+    cooldown: 12.0,
+    range: 2.5,
+    color: Vector3(0.6, 0.3, 0.9),
+    impactColor: Vector3(0.7, 0.4, 1.0),
+    impactSize: 0.6,
+    category: 'mage',
+    damageSchool: DamageSchool.arcane,
+    appliesPermanentVulnerability: true,
   );
 
   /// All mage abilities as a list
   static List<AbilityData> get all => [
     frostBolt, blizzard, lightningBolt, chainLightning,
     meteor, arcaneShield, teleport,
-    arcanePulse, riftBlade,
+    arcanePulse, riftBlade, arcaneBreach,
   ];
 }

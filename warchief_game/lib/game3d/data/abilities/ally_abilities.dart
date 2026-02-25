@@ -11,7 +11,7 @@ class AllyAbilities {
     description: 'Ally melee attack',
     type: AbilityType.melee,
     damage: 10.0,
-    cooldown: 5.0,
+    cooldown: 1.0,
     duration: 0.3,
     range: 2.0,
     color: Vector3(0.6, 0.8, 1.0),
@@ -47,6 +47,20 @@ class AllyAbilities {
     impactSize: 1.0,
   );
 
+  /// Ally Jab Attack (Quick Melee)
+  static final allyJab = AbilityData(
+    name: 'Ally Jab',
+    description: 'A quick jab attack.',
+    type: AbilityType.melee,
+    damage: 8.0,
+    cooldown: 1.0,
+    range: 2.0,
+    color: Vector3(0.5, 0.6, 0.7),
+    impactColor: Vector3(0.6, 0.7, 0.8),
+    impactSize: 0.3,
+    category: 'ally',
+  );
+
   /// Get ability by index (0=Sword, 1=Fireball, 2=Heal)
   static AbilityData getByIndex(int index) {
     switch (index) {
@@ -58,5 +72,5 @@ class AllyAbilities {
   }
 
   /// All ally abilities as a list
-  static List<AbilityData> get all => [sword, fireball, heal];
+  static List<AbilityData> get all => [sword, fireball, heal, allyJab];
 }

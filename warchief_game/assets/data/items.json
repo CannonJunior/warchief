@@ -374,6 +374,10 @@
         "maxRedMana": 25,
         "maxWhiteMana": 25,
         "maxGreenMana": 25,
+        "blueManaRegen": 1,
+        "redManaRegen": 1,
+        "whiteManaRegen": 1,
+        "greenManaRegen": 1,
         "zeal": 8,
         "auspice": 8
       },

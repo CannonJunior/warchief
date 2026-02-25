@@ -26,6 +26,7 @@ class SpiritkinAbilities {
     manaColor: ManaColor.green,
     manaCost: 15.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Spirit Claws — Enhanced melee strike with bleed DoT.
@@ -50,6 +51,7 @@ class SpiritkinAbilities {
     secondaryManaColor: ManaColor.red,
     secondaryManaCost: 15.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Verdant Bulwark — Absorb 60 damage + thorns reflect for 12 seconds.
@@ -69,6 +71,7 @@ class SpiritkinAbilities {
     manaColor: ManaColor.green,
     manaCost: 25.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Bloodroot Surge — Self-heal for 40 HP.
@@ -87,6 +90,7 @@ class SpiritkinAbilities {
     secondaryManaColor: ManaColor.red,
     secondaryManaCost: 10.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Feral Lunge — Gap-closer melee with knockback.
@@ -105,6 +109,7 @@ class SpiritkinAbilities {
     manaColor: ManaColor.red,
     manaCost: 20.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Aspect of the Beast — Transform into spirit beast form.
@@ -126,6 +131,7 @@ class SpiritkinAbilities {
     secondaryManaColor: ManaColor.red,
     secondaryManaCost: 30.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Vine Lash — Nature whip projectile that roots the target for 3 seconds.
@@ -146,6 +152,7 @@ class SpiritkinAbilities {
     manaColor: ManaColor.green,
     manaCost: 15.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Nature's Cataclysm — Massive AoE nature+fire damage.
@@ -165,6 +172,7 @@ class SpiritkinAbilities {
     secondaryManaColor: ManaColor.red,
     secondaryManaCost: 25.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Regenerative Bark — HoT on self or ally, 30 HP over 10 seconds.
@@ -184,6 +192,7 @@ class SpiritkinAbilities {
     manaColor: ManaColor.green,
     manaCost: 20.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Totem of the Wild — Place a spirit totem that buffs nearby allies.
@@ -204,6 +213,7 @@ class SpiritkinAbilities {
     manaColor: ManaColor.green,
     manaCost: 40.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
   );
 
   // ==================== MELEE COMBO ABILITIES ====================
@@ -226,6 +236,7 @@ class SpiritkinAbilities {
     manaColor: ManaColor.green,
     manaCost: 6.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Barkhide Slam — Bark-hardened fist slam that slows
@@ -244,6 +255,7 @@ class SpiritkinAbilities {
     manaColor: ManaColor.green,
     manaCost: 10.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Bloodfang Rush — Gap-closer with forward movement
@@ -260,6 +272,7 @@ class SpiritkinAbilities {
     manaColor: ManaColor.red,
     manaCost: 15.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Primal Rend — Dual-mana finisher with windup and bleed
@@ -283,6 +296,53 @@ class SpiritkinAbilities {
     secondaryManaColor: ManaColor.red,
     secondaryManaCost: 10.0,
     category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
+  );
+
+  /// Basic no-mana melee: claw attack
+  static final clawRake = AbilityData(
+    name: 'Claw Rake',
+    description: 'A quick, manaless claw rake.',
+    type: AbilityType.melee,
+    damage: 12.0,
+    cooldown: 1.0,
+    range: 2.0,
+    color: Vector3(0.5, 0.8, 0.3),
+    impactColor: Vector3(0.6, 0.9, 0.4),
+    impactSize: 0.4,
+    category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
+  );
+
+  /// Basic no-mana melee: fang snap
+  static final fangSnap = AbilityData(
+    name: 'Fang Snap',
+    description: 'A vicious bite attack.',
+    type: AbilityType.melee,
+    damage: 14.0,
+    cooldown: 1.0,
+    range: 2.5,
+    color: Vector3(0.4, 0.7, 0.2),
+    impactColor: Vector3(0.5, 0.8, 0.3),
+    impactSize: 0.5,
+    category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
+  );
+
+  /// Medium-cooldown permanent nature vulnerability
+  static final naturesMark = AbilityData(
+    name: 'Nature\'s Mark',
+    description: 'A nature-infused strike that permanently exposes the target to nature damage.',
+    type: AbilityType.melee,
+    damage: 8.0,
+    cooldown: 12.0,
+    range: 2.5,
+    color: Vector3(0.3, 0.7, 0.1),
+    impactColor: Vector3(0.4, 0.8, 0.2),
+    impactSize: 0.6,
+    category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
+    appliesPermanentVulnerability: true,
   );
 
   /// All spiritkin abilities as a list
@@ -301,5 +361,8 @@ class SpiritkinAbilities {
     barkhideSlam,
     bloodfangRush,
     primalRend,
+    clawRake,
+    fangSnap,
+    naturesMark,
   ];
 }

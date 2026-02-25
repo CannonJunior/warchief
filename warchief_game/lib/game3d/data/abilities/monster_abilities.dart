@@ -11,7 +11,7 @@ class MonsterAbilities {
     description: 'A devastating melee attack with a giant shadow sword',
     type: AbilityType.melee,
     damage: 15.0,
-    cooldown: 2.0,
+    cooldown: 1.0,
     duration: 0.4,
     range: 3.0,
     color: Vector3(0.4, 0.1, 0.5),
@@ -47,6 +47,20 @@ class MonsterAbilities {
     impactSize: 1.2,
   );
 
+  /// Monster Ability 4: Claw Swipe (Quick Melee)
+  static final clawSwipe = AbilityData(
+    name: 'Claw Swipe',
+    description: 'A quick claw attack.',
+    type: AbilityType.melee,
+    damage: 12.0,
+    cooldown: 1.0,
+    range: 2.0,
+    color: Vector3(0.5, 0.3, 0.3),
+    impactColor: Vector3(0.6, 0.4, 0.4),
+    impactSize: 0.4,
+    category: 'monster',
+  );
+
   /// Get ability by index (0=DarkStrike, 1=ShadowBolt, 2=DarkHeal)
   static AbilityData getByIndex(int index) {
     switch (index) {
@@ -58,5 +72,5 @@ class MonsterAbilities {
   }
 
   /// All monster abilities as a list
-  static List<AbilityData> get all => [darkStrike, shadowBolt, darkHeal];
+  static List<AbilityData> get all => [darkStrike, shadowBolt, darkHeal, clawSwipe];
 }

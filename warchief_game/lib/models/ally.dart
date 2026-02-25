@@ -85,6 +85,22 @@ class Ally {
   Transform3d auraTransform = Transform3d();
   Vector3? lastAuraColor;
 
+  /// Whether this ally is a summoned unit (vs a permanent party member)
+  bool isSummoned;
+
+  /// Remaining lifetime in seconds (summoned units only, -1 = permanent)
+  double summonDuration;
+
+  /// Maximum lifetime (for UI timer display)
+  double summonDurationMax;
+
+  /// Display name for this unit (e.g. "Skeleton Warrior")
+  String name;
+
+  // Global cooldown tracking
+  double gcdRemaining = 0.0;
+  double gcdMax = 0.0;
+
   // Active status effects (buff/debuff tracking)
   List<ActiveEffect> activeEffects = [];
 
@@ -139,6 +155,10 @@ class Ally {
     this.commandTimer = 0.0,
     this.strategyType = AllyStrategyType.balanced,
     this.currentStance = StanceId.none,
+    this.isSummoned = false,
+    this.summonDuration = -1,
+    this.summonDurationMax = -1,
+    this.name = 'Ally',
   })  : inventory = inventory ?? Inventory(),
         projectiles = [];
 }

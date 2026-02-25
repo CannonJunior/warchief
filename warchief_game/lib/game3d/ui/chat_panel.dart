@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../../models/ai_chat_message.dart';
 import '../../models/raid_chat_message.dart';
 import '../../models/combat_log_entry.dart';
+import '../../models/console_log_entry.dart';
 import 'raid_chat.dart';
 import 'combat_log_tab.dart';
+import 'console_log_tab.dart';
 
 /// Unified tabbed chat panel with Spirit and Raid Chat tabs.
 ///
@@ -17,6 +19,7 @@ class ChatPanel extends StatefulWidget {
   final Future<void> Function(String) onSendSpiritMessage;
   final List<RaidChatMessage> raidMessages;
   final List<CombatLogEntry> combatLogMessages;
+  final List<ConsoleLogEntry> consoleLogMessages;
   final int initialTab;
   final VoidCallback onClose;
   final void Function(int)? onTabChanged;
@@ -27,6 +30,7 @@ class ChatPanel extends StatefulWidget {
     required this.onSendSpiritMessage,
     required this.raidMessages,
     required this.combatLogMessages,
+    required this.consoleLogMessages,
     this.initialTab = 0,
     required this.onClose,
     this.onTabChanged,
@@ -99,7 +103,9 @@ class _ChatPanelState extends State<ChatPanel> {
                   ? const Color(0xFF6A4C9C)   // Purple for Spirit
                   : _activeTab == 1
                       ? const Color(0xFFCC7722)   // Orange for Raid
-                      : const Color(0xFFCC3333),  // Red for Combat
+                      : _activeTab == 2
+                          ? const Color(0xFFCC3333)   // Red for Combat
+                          : const Color(0xFF33AA33),  // Green for Console
               width: 1.5,
             ),
             boxShadow: [
@@ -121,7 +127,9 @@ class _ChatPanelState extends State<ChatPanel> {
                     ? _buildSpiritTab()
                     : _activeTab == 1
                         ? RaidChatTab(messages: widget.raidMessages)
-                        : CombatLogTab(messages: widget.combatLogMessages),
+                        : _activeTab == 2
+                            ? CombatLogTab(messages: widget.combatLogMessages)
+                            : ConsoleLogTab(messages: widget.consoleLogMessages),
               ),
 
               // Thinking indicator (Spirit tab only)
@@ -170,6 +178,14 @@ class _ChatPanelState extends State<ChatPanel> {
             icon: Icons.menu_book,
             label: 'Combat',
             activeColor: const Color(0xFFCC3333),
+          ),
+          const SizedBox(width: 6),
+          // Tab: Console
+          _buildTabButton(
+            index: 3,
+            icon: Icons.terminal,
+            label: 'Console',
+            activeColor: const Color(0xFF33AA33),
           ),
           const Spacer(),
           // Close button

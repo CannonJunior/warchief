@@ -94,7 +94,7 @@ class RogueAbilities {
     description: 'Lightning-quick dagger stab — the fastest combo opener',
     type: AbilityType.melee,
     damage: 10.0,
-    cooldown: 1.5,
+    cooldown: 1.0,
     range: 1.5,
     color: Vector3(0.4, 0.4, 0.45),
     impactColor: Vector3(0.6, 0.6, 0.65),
@@ -108,7 +108,7 @@ class RogueAbilities {
     description: 'Shadow-infused claw rake that leaves deep bleeding wounds',
     type: AbilityType.melee,
     damage: 16.0,
-    cooldown: 3.0,
+    cooldown: 1.0,
     range: 2.5,
     color: Vector3(0.3, 0.2, 0.4),
     impactColor: Vector3(0.6, 0.1, 0.2),
@@ -165,9 +165,25 @@ class RogueAbilities {
     category: 'rogue',
   );
 
+  /// Expose Weakness — Precise strike that permanently reveals physical vulnerability
+  static final exposeWeakness = AbilityData(
+    name: 'Expose Weakness',
+    description: 'A precise strike that permanently reveals the target\'s vulnerability to physical damage.',
+    type: AbilityType.melee,
+    damage: 8.0,
+    cooldown: 12.0,
+    range: 2.5,
+    color: Vector3(0.5, 0.3, 0.5),
+    impactColor: Vector3(0.6, 0.4, 0.6),
+    impactSize: 0.5,
+    category: 'rogue',
+    appliesPermanentVulnerability: true,
+  );
+
   /// All rogue abilities as a list
   static List<AbilityData> get all => [
     backstab, poisonBlade, smokeBomb, fanOfKnives, shadowStep,
     shiv, shadowfangRake, shadowSpike, umbralLunge, deathMark,
+    exposeWeakness,
   ];
 }

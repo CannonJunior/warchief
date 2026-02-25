@@ -311,6 +311,53 @@ class _SettingsPanelState extends State<SettingsPanel> {
               });
             },
           ),
+          const SizedBox(height: 20),
+          _buildSectionHeader('Combat Numbers', Icons.format_bold),
+          const SizedBox(height: 12),
+          _buildSettingToggle(
+            'Show Damage Numbers',
+            'Display floating damage numbers above targets when they take damage.',
+            settings?.showDamageNumbers ?? true,
+            (value) {
+              setState(() {
+                settings?.showDamageNumbers = value;
+                settings?.save();
+              });
+            },
+          ),
+          _buildSettingToggle(
+            'Show Heal Numbers',
+            'Display floating green heal numbers above units when they receive healing.',
+            settings?.showHealNumbers ?? true,
+            (value) {
+              setState(() {
+                settings?.showHealNumbers = value;
+                settings?.save();
+              });
+            },
+          ),
+          _buildSettingToggle(
+            'Show Channel Bar',
+            'Display the channeling progress bar during channeled abilities.',
+            settings?.showChannelBar ?? true,
+            (value) {
+              setState(() {
+                settings?.showChannelBar = value;
+                settings?.save();
+              });
+            },
+          ),
+          _buildScaleSlider(
+            'Combat Number Size',
+            'Scale factor for floating damage and heal number text.',
+            settings?.damageNumberScale ?? 1.0,
+            (value) {
+              setState(() {
+                settings?.damageNumberScale = value;
+                settings?.save();
+              });
+            },
+          ),
         ],
       ),
     );
@@ -399,6 +446,79 @@ class _SettingsPanelState extends State<SettingsPanel> {
             onChanged: onChanged,
             activeColor: const Color(0xFF4cc9f0),
             activeTrackColor: const Color(0xFF4cc9f0).withValues(alpha: 0.3),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScaleSlider(
+    String label,
+    String hint,
+    double value,
+    ValueChanged<double> onChanged,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF252542),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hint,
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${(value * 100).round()}%',
+                style: const TextStyle(
+                  color: Color(0xFF4cc9f0),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: const Color(0xFF4cc9f0),
+              inactiveTrackColor: const Color(0xFF4cc9f0).withValues(alpha: 0.2),
+              thumbColor: const Color(0xFF4cc9f0),
+              overlayColor: const Color(0xFF4cc9f0).withValues(alpha: 0.1),
+              trackHeight: 4,
+            ),
+            child: Slider(
+              value: value,
+              min: 0.5,
+              max: 2.0,
+              divisions: 15,
+              onChanged: onChanged,
+            ),
           ),
         ],
       ),

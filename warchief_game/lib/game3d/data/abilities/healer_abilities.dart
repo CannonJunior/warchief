@@ -19,6 +19,7 @@ class HealerAbilities {
     impactSize: 1.0,
     castTime: 1.5,
     category: 'healer',
+    damageSchool: DamageSchool.holy,
   );
 
   /// Rejuvenation - Heal over time
@@ -36,6 +37,7 @@ class HealerAbilities {
     statusEffect: StatusEffect.regen,
     dotTicks: 8,
     category: 'healer',
+    damageSchool: DamageSchool.holy,
   );
 
   /// Circle of Healing - AoE heal
@@ -53,6 +55,7 @@ class HealerAbilities {
     aoeRadius: 8.0,
     maxTargets: 5,
     category: 'healer',
+    damageSchool: DamageSchool.holy,
   );
 
   /// Blessing of Strength - Damage buff
@@ -69,6 +72,7 @@ class HealerAbilities {
     statusEffect: StatusEffect.strength,
     statusStrength: 1.25,
     category: 'healer',
+    damageSchool: DamageSchool.holy,
   );
 
   /// Purify - Removes debuffs
@@ -82,6 +86,7 @@ class HealerAbilities {
     impactColor: Vector3(1.0, 1.0, 0.9),
     impactSize: 1.0,
     category: 'healer',
+    damageSchool: DamageSchool.holy,
   );
 
   // ==================== MELEE ABILITIES ====================
@@ -92,12 +97,13 @@ class HealerAbilities {
     description: 'Strike with divine radiance at close range',
     type: AbilityType.melee,
     damage: 12.0,
-    cooldown: 3.0,
+    cooldown: 1.0,
     range: 2.0,
     color: Vector3(1.0, 1.0, 0.6),
     impactColor: Vector3(1.0, 1.0, 0.8),
     impactSize: 0.5,
     category: 'healer',
+    damageSchool: DamageSchool.holy,
   );
 
   /// Judgment Hammer — Holy mace slam with stun
@@ -114,11 +120,28 @@ class HealerAbilities {
     statusEffect: StatusEffect.stun,
     statusDuration: 1.0,
     category: 'healer',
+    damageSchool: DamageSchool.holy,
+  );
+
+  /// Judgment Mark — Divine strike that applies permanent vulnerability
+  static final judgmentMark = AbilityData(
+    name: 'Judgment Mark',
+    description: 'A divine strike that permanently exposes the target to holy damage.',
+    type: AbilityType.melee,
+    damage: 8.0,
+    cooldown: 12.0,
+    range: 2.5,
+    color: Vector3(1.0, 1.0, 0.7),
+    impactColor: Vector3(1.0, 1.0, 0.8),
+    impactSize: 0.6,
+    category: 'healer',
+    damageSchool: DamageSchool.holy,
+    appliesPermanentVulnerability: true,
   );
 
   /// All healer abilities as a list
   static List<AbilityData> get all => [
     holyLight, rejuvenation, circleOfHealing, blessingOfStrength, purify,
-    holySmite, judgmentHammer,
+    holySmite, judgmentHammer, judgmentMark,
   ];
 }

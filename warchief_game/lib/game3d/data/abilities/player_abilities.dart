@@ -15,7 +15,7 @@ class PlayerAbilities {
     description: 'A swift melee attack that damages nearby enemies',
     type: AbilityType.melee,
     damage: 35.0,
-    cooldown: 1.5,
+    cooldown: 1.0,
     duration: 0.3,
     range: 2.0,
     color: Vector3(0.7, 0.7, 0.8),

@@ -19,7 +19,9 @@ class NecromancerAbilities {
     impactColor: Vector3(0.6, 0.1, 0.3),
     impactSize: 0.5,
     dotTicks: 6,
+    channelEffect: ChannelEffect.lifeDrain,
     category: 'necromancer',
+    damageSchool: DamageSchool.shadow,
   );
 
   /// Curse of Weakness - Reduce enemy damage
@@ -36,6 +38,7 @@ class NecromancerAbilities {
     statusEffect: StatusEffect.weakness,
     statusStrength: 0.75,
     category: 'necromancer',
+    damageSchool: DamageSchool.shadow,
   );
 
   /// Fear - Makes enemy flee
@@ -52,6 +55,7 @@ class NecromancerAbilities {
     statusEffect: StatusEffect.fear,
     statusDuration: 4.0,
     category: 'necromancer',
+    damageSchool: DamageSchool.shadow,
   );
 
   /// Soul Rot - Dark projectile that applies a damage-over-time curse
@@ -72,19 +76,35 @@ class NecromancerAbilities {
     statusDuration: 10.0,
     dotTicks: 5,
     category: 'necromancer',
+    damageSchool: DamageSchool.shadow,
   );
 
-  /// Summon Skeleton - Creates temporary ally
+  /// Summon Skeleton - Creates temporary melee ally with red mana attunement
   static final summonSkeleton = AbilityData(
     name: 'Summon Skeleton',
-    description: 'Raises a skeleton warrior to fight for you',
+    description: 'Raises a skeleton warrior with red mana melee abilities',
     type: AbilityType.summon,
     cooldown: 25.0,
-    duration: 30.0,
+    duration: 60.0,
     color: Vector3(0.8, 0.8, 0.7),
     impactColor: Vector3(0.9, 0.9, 0.8),
     impactSize: 1.0,
     category: 'necromancer',
+    damageSchool: DamageSchool.shadow,
+  );
+
+  /// Summon Skeleton Mage - Creates temporary caster ally with blue mana attunement
+  static final summonSkeletonMage = AbilityData(
+    name: 'Summon Skeleton Mage',
+    description: 'Raises a skeleton mage with blue mana ranged abilities',
+    type: AbilityType.summon,
+    cooldown: 30.0,
+    duration: 60.0,
+    color: Vector3(0.5, 0.6, 0.9),
+    impactColor: Vector3(0.6, 0.7, 1.0),
+    impactSize: 1.0,
+    category: 'necromancer',
+    damageSchool: DamageSchool.shadow,
   );
 
   // ==================== MELEE ABILITIES ====================
@@ -95,7 +115,7 @@ class NecromancerAbilities {
     description: 'Touch the target with grave-cold hands, sapping their strength',
     type: AbilityType.melee,
     damage: 14.0,
-    cooldown: 3.0,
+    cooldown: 1.0,
     range: 2.0,
     color: Vector3(0.4, 0.15, 0.3),
     impactColor: Vector3(0.5, 0.2, 0.4),
@@ -104,6 +124,7 @@ class NecromancerAbilities {
     statusStrength: 0.8,
     statusDuration: 4.0,
     category: 'necromancer',
+    damageSchool: DamageSchool.shadow,
   );
 
   /// Soul Scythe — Spectral scythe swing with bleed
@@ -121,11 +142,28 @@ class NecromancerAbilities {
     statusDuration: 4.0,
     dotTicks: 2,
     category: 'necromancer',
+    damageSchool: DamageSchool.shadow,
+  );
+
+  /// Soul Fracture — Shadow strike that applies permanent vulnerability
+  static final soulFracture = AbilityData(
+    name: 'Soul Fracture',
+    description: 'A shadow-infused strike that permanently exposes the target to shadow damage.',
+    type: AbilityType.melee,
+    damage: 10.0,
+    cooldown: 12.0,
+    range: 2.5,
+    color: Vector3(0.4, 0.1, 0.5),
+    impactColor: Vector3(0.5, 0.2, 0.6),
+    impactSize: 0.6,
+    category: 'necromancer',
+    damageSchool: DamageSchool.shadow,
+    appliesPermanentVulnerability: true,
   );
 
   /// All necromancer abilities as a list
   static List<AbilityData> get all => [
-    lifeDrain, curseOfWeakness, fear, soulRot, summonSkeleton,
-    graveTouch, soulScythe,
+    lifeDrain, curseOfWeakness, fear, soulRot, summonSkeleton, summonSkeletonMage,
+    graveTouch, soulScythe, soulFracture,
   ];
 }

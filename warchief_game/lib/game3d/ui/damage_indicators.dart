@@ -3,14 +3,15 @@ import 'package:flutter/material.dart' hide Matrix4;
 import 'package:vector_math/vector_math.dart' hide Colors;
 
 import '../../rendering3d/camera3d.dart';
+import '../state/gameplay_settings.dart';
 import '../utils/screen_projection.dart';
 
-/// A single floating damage number above a target
+/// A single floating damage or heal number above a target
 class DamageIndicator {
-  /// Damage amount to display
+  /// Damage/heal amount to display
   final double damage;
 
-  /// World-space position where damage occurred (target's position)
+  /// World-space position where damage/heal occurred (target's position)
   final Vector3 worldPosition;
 
   /// Whether this was a melee hit (rises faster, shorter lifetime)
@@ -18,6 +19,9 @@ class DamageIndicator {
 
   /// Whether this hit killed the target
   final bool isKillingBlow;
+
+  /// Whether this is a healing number (green, prefixed with +)
+  final bool isHeal;
 
   /// Time elapsed since creation
   double age = 0.0;
@@ -30,6 +34,7 @@ class DamageIndicator {
     required this.worldPosition,
     this.isMelee = false,
     this.isKillingBlow = false,
+    this.isHeal = false,
   }) : xJitter = (math.Random().nextDouble() - 0.5) * 30.0;
 
   /// Maximum lifetime in seconds
@@ -61,6 +66,10 @@ class DamageIndicatorOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     if (camera == null || indicators.isEmpty) return const SizedBox.shrink();
 
+    final settings = globalGameplaySettings;
+    final showDamage = settings?.showDamageNumbers ?? true;
+    final showHeals = settings?.showHealNumbers ?? true;
+
     final viewMatrix = camera!.getViewMatrix();
     final projMatrix = camera!.getProjectionMatrix();
     final screenSize = MediaQuery.of(context).size;
@@ -68,6 +77,9 @@ class DamageIndicatorOverlay extends StatelessWidget {
     final children = <Widget>[];
 
     for (final indicator in indicators) {
+      // Reason: Skip rendering based on settings toggles
+      if (indicator.isHeal && !showHeals) continue;
+      if (!indicator.isHeal && !showDamage) continue;
       final screenPos = worldToScreen(
         indicator.worldPosition,
         viewMatrix,
@@ -109,9 +121,11 @@ class DamageIndicatorOverlay extends StatelessWidget {
         ? (1.0 - (progress - fadeStart) / (1.0 - fadeStart)).clamp(0.0, 1.0)
         : 1.0;
 
-    // Color: yellow normally, transitions to red on killing blow
+    // Color: green for heals, yellow for damage, yellow→red for killing blow
     Color textColor;
-    if (indicator.isKillingBlow) {
+    if (indicator.isHeal) {
+      textColor = const Color(0xFF44FF44); // bright green
+    } else if (indicator.isKillingBlow) {
       // Start yellow, transition to red
       final redProgress = (progress * 2.0).clamp(0.0, 1.0);
       textColor = Color.lerp(
@@ -123,8 +137,9 @@ class DamageIndicatorOverlay extends StatelessWidget {
       textColor = const Color(0xFFFFDD00); // bright yellow
     }
 
-    // Font size: starts large, shrinks slightly
-    final baseFontSize = indicator.isMelee ? 30.0 : 33.0;
+    // Reason: Font size increased 10% from original (33→36.3, 30→33), scaled by settings
+    final userScale = globalGameplaySettings?.damageNumberScale ?? 1.0;
+    final baseFontSize = (indicator.isMelee ? 33.0 : 36.3) * userScale;
     // Brief scale-up at the start
     final scaleT = progress < 0.1 ? 1.0 + (0.1 - progress) * 3.0 : 1.0;
     final fontSize = baseFontSize * scaleT;
@@ -150,26 +165,42 @@ class DamageIndicatorOverlay extends StatelessWidget {
               // Sparkle trail for killing blows
               if (indicator.isKillingBlow && progress > 0.05)
                 _buildSparkleTrail(indicator, progress, opacity),
-              // Damage number
+              // Damage/heal number
               Text(
-                indicator.damage.round().toString(),
+                indicator.isHeal
+                    ? '+${indicator.damage.round()}'
+                    : indicator.damage.round().toString(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: textColor.withOpacity(opacity),
                   fontSize: fontSize,
-                  fontWeight: FontWeight.bold,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withOpacity(opacity * 0.9),
-                      blurRadius: 3,
-                      offset: const Offset(1, 1),
-                    ),
-                    Shadow(
-                      color: Colors.black.withOpacity(opacity * 0.7),
-                      blurRadius: 6,
-                      offset: const Offset(0, 0),
-                    ),
-                  ],
+                  fontWeight: FontWeight.w900,
+                  shadows: indicator.isKillingBlow
+                      ? [
+                          // Reason: Killing blow gets black + yellow shadows for emphasis
+                          Shadow(
+                            color: Colors.black.withOpacity(opacity * 0.9),
+                            blurRadius: 4,
+                            offset: const Offset(1, 1),
+                          ),
+                          Shadow(
+                            color: const Color(0xFFFFDD00).withOpacity(opacity * 0.6),
+                            blurRadius: 8,
+                            offset: const Offset(0, 0),
+                          ),
+                        ]
+                      : [
+                          Shadow(
+                            color: Colors.black.withOpacity(opacity * 0.9),
+                            blurRadius: 3,
+                            offset: const Offset(1, 1),
+                          ),
+                          Shadow(
+                            color: Colors.black.withOpacity(opacity * 0.7),
+                            blurRadius: 6,
+                            offset: const Offset(0, 0),
+                          ),
+                        ],
                 ),
               ),
             ],

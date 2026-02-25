@@ -6,18 +6,80 @@
 
 14 Dart files exceed the 500-line limit. See `warchief_game/CLAUDE.md` for the full split strategy table. Priority order:
 
-1. **ability_system.dart** (2987 lines) → Split into 4 files: execution core, implementations, interactions, effects
-2. **game3d_widget.dart** (2573 lines) → Split into 5 files: core, initializer, input, ally commands, UI builder
-3. **game_state.dart** (2467 lines) → Split into 3 files: core, mana/effects, world entities
-4. **abilities_modal.dart** (1801 lines) → Split into 3 files: core scaffold, ability list, filters/editor
-5. **ai_system.dart** (1251 lines) → Split into 2 files: monster AI, ally AI
-6. **ability_editor_panel.dart** (1029 lines) → Split into 2 files: core editor, field builders
-7. **combat_hud.dart** (880 lines) → Split into 2 files: layout, frame widgets
-8. **combat_system.dart** (876 lines) → Split into 2 files: damage pipeline, effect application
-9. **ally_behavior_tree.dart** (765 lines) → Split into 2 files: tree nodes, behavior execution
-10. **macro_builder_panel.dart** (737 lines) → Split into 2 files: panel scaffold, step editors
-11. **mesh.dart** (615 lines) → Split into 2 files: core mesh, mesh factories
-12. **ley_lines.dart** (606 lines) → Split into 2 files: manager, rendering
+1. ✅ **ability_system.dart** (3238 lines) → Split into 8 part files using Dart `part`/`part of`. Files: `ability_system_core`, `_mana`, `_dispatch`, `_cast_effects`, `_implementations`, `_windwalker`, `_interactions`, `_updates`. Build verified clean.
+2. ✅ **game3d_widget.dart** (2573 lines) → Split into 7 part files: core+base (342), init (369), update (223), input (451), commands (458), ui (443), ui_helpers (389). All under 500 lines. Build verified clean.
+3. ✅ **game_state.dart** (2661 lines) → Split into 5 part files via extension methods: core fields (946†), stance+effects (394), mana regen (410), targeting (427), world+spawn (531). Build verified clean. †Main file has 150+ documented fields — unavoidable minimum.
+4. ✅ **abilities_modal.dart** (1809 lines) → Split into 5 part files via extension methods: main scaffold (484), cards (407), filters (295), sections (372), custom (275). All under 500 lines. Build verified clean.
+5. ✅ **ai_system.dart** (1252 lines) → Split into 4 part files: main+terrain helpers (264), `_MonsterAI` (324), `_AllyAI` (222), `_MinionAI` (438). All under 500 lines. Build verified clean.
+6. ✅ **ability_editor_panel.dart** (1048 lines) → Split into 3 part files via extension methods: core+logic (476), sections+balance+header (299), field widgets+styles (291). All under 500 lines. Build verified clean.
+7. ✅ **combat_hud.dart** (887 lines) → Split into 3 part files via extension: main layout (322), action bar (184), portraits+helpers (388). All under 500 lines. Build verified clean.
+8. ✅ **combat_system.dart** (876 lines) → Split into 2 part files: damage pipeline + convenience wrappers (487), enemy/dummy combat via `_CombatAdvanced` + top-level helpers (347). All under 500 lines. Build verified clean.
+9. ✅ **ally_behavior_tree.dart** (765 lines) → Split into 3 part files: types+factory+evaluator (221), `_AllyBranches` tree builders (389), `_AllyActions` implementations (183). All under 500 lines. Build verified clean.
+10. ✅ **macro_builder_panel.dart** (737 lines) → Split into 2 part files via extension: panel scaffold+state+header (316), list+editor views (427). All under 500 lines. Build verified clean.
+11. ✅ **mesh.dart** (615 lines) → Split into 2 part files: core mesh+basic factories (408), `targetIndicator`+`auraDisc` implementations+math helpers (221). All under 500 lines. Build verified clean.
+12. ✅ **ley_lines.dart** (606 lines) → Split into 2 part files: data types (193), `LeyLineManager`+`_Intersection` (416). All under 500 lines. Build verified clean.
+
+### ✅ Completed - 2026-02-22
+
+#### Channeled Ability Visual Effects
+- ✅ **ChannelEffect enum**: Added `ChannelEffect` enum (none, lifeDrain, blizzard, earthquake, conduit) to `ability_types.dart`. Added `channelEffect` field to `AbilityData` with full serialization support (constructor, copyWith, toJson, fromJson, applyOverrides).
+- ✅ **Channel effects overlay**: Created `channel_effects_overlay.dart` — Flutter overlay widget with `CustomPainter` for each effect type:
+  - **Life Drain**: 5 purple vortex arcs spiraling from target to caster + bright center stream
+  - **Blizzard**: 40 ice crystal diamonds falling from sky in AoE + ground ring
+  - **Earthquake**: 35 earth particles erupting in parabolic arcs + ground ring
+  - **Conduit**: 3 jagged lightning bolts from sky to target + impact glow + caster connection
+- ✅ **Fixed channeled ability execution**: Blizzard, Earthquake, and Conduit now use `_startChanneledAbility` instead of instant execution. Added `channelAoeCenter` field to GameState for AoE positioning. Added dedicated `_executeConduit` function.
+- ✅ **Wired overlay into game**: `ChannelEffectOverlay` added to `game3d_widget.dart` widget tree between damage indicators and stance effects.
+- ✅ **Editor dropdown**: Added `channelEffect` dropdown to ability editor panel mechanics section, with full save/load/preview support. Users can select a channel effect when editing or creating channeled abilities.
+- ✅ Build verified clean (`flutter build web`)
+
+#### Fix Buff/Debuff Display on Target Frame and Active Character
+- ✅ **Fixed `_minionIndex` always empty**: `rebuildMinionIndex()` was called during `spawnMinions()` before `refreshAliveMinions()` had populated the cache, building an empty index that was never rebuilt. Fixed by iterating `minions` directly (not the cached `aliveMinions`) and rebuilding each frame in `refreshAliveMinions()`.
+- ✅ **Target frame now shows buffs/debuffs**: `currentTargetActiveEffects` getter works correctly now that `_minionIndex` is populated — debuffs on targeted minions/boss display in the `BuffDebuffIcons` widget to the right of the target frame.
+- ✅ **Active character effects**: Added `activeCharacterActiveEffects` getter that returns effects for the currently controlled character (Warchief's `playerActiveEffects` or active ally/summon's `activeEffects`). Combat HUD player frame now uses this instead of `playerActiveEffects`.
+- ✅ **Buffs and debuffs both display**: `BuffDebuffIcons` widget already renders two rows (buffs on top, debuffs below) — now visible on both the target frame and active character frame.
+- ✅ Build verified clean (`flutter build web`)
+
+#### Channeled Abilities, Heal Numbers, Combat Number Settings
+- ✅ **Channeling state**: Added `isChanneling`, `channelProgress`, `channelDuration`, `channelingAbilityName`, `channelingSlotIndex` to GameState. `channelPercentage` returns 1.0→0.0 (drains). `cancelChannel()` resets state. Updated `isPerformingAction` to include channeling.
+- ✅ **Channeling bar**: Extended `cast_bar.dart` to handle channeling (purple, 0xFF9B59B6). Progress drains from full to empty. Label shows "Channeling". Movement cancels channeling (input_system.dart).
+- ✅ **Channeling system**: `updateChannelingState()` in ability_system ticks channel progress and applies periodic damage/heal ticks (1/sec via `_channelTickAccum`). Life Drain converted from projectile to channeled ability.
+- ✅ **Green heal numbers**: Added `isHeal` flag to `DamageIndicator`. Heals display in green (0xFF44FF44) with `+` prefix. Added `_showHealIndicator()` helper. Heal indicators added to all 7 heal sites (basic heal, greater heal, lifesteal, generic heal, windshear ally heal, boss dark heal, channel tick heal).
+- ✅ **Font size +10% / bolder**: Melee 30→33, ranged 33→36.3. FontWeight `bold`→`w900`.
+- ✅ **Killing blow shadows**: Black shadow (blur 4, offset 1,1) + yellow shadow (0xFFFFDD00, blur 8, offset 0,0).
+- ✅ **Combat Number settings**: Added `showDamageNumbers`, `showHealNumbers`, `showChannelBar` (bool), `damageNumberScale` (double) to `GameplaySettings` with SharedPreferences persistence.
+- ✅ **Settings UI**: "Combat Numbers" section in General tab with toggles for damage/heal numbers and channel bar, plus a slider for number scale (50%–200%).
+- ✅ **Settings wired to rendering**: Damage/heal indicators filtered by settings in `DamageIndicatorOverlay.build()`. Font size multiplied by `damageNumberScale`. Channel bar hidden when `showChannelBar` is false in `cast_bar.dart`.
+- ✅ Build verified clean (`flutter build web`)
+
+#### Summon Skeleton Mage + Skeleton Specialization
+- ✅ **Summon Skeleton Mage ability**: New `summonSkeletonMage` ability in `NecromancerAbilities` (blue-tinted, 30s cooldown, 60s duration). Registered in `all` list, legacy access in `abilities_config.dart`, switch case + mana cost (60 blue) in `ability_system.dart`.
+- ✅ **Skeleton Warrior (red melee)**: Red mana attunement via `temporaryAttunements`, 50 red mana pool, action bar pre-loaded with Sword, Heavy Strike, Whirlwind, Crushing Blow, Charge.
+- ✅ **Skeleton Mage (blue caster)**: Blue mana attunement, 100 blue mana pool, 20 HP, 1.8 move speed, action bar pre-loaded with Fireball, Frost Bolt, Arcane Missile, Ice Shard, Frost Nova.
+- ✅ **Doubled durations**: Both summon abilities and spawn methods use 60s (up from 30s).
+- ✅ **Refactored spawn helpers**: Extracted `_summonSpawnPosition()` and `_setupSummonActionBar()` to share logic between both spawn methods.
+- ✅ Build verified clean (`flutter build web`)
+
+#### Summon Skeleton: Controllable Summoned Units
+- ✅ **Ally model fields**: Added `isSummoned`, `summonDuration`, `summonDurationMax`, `name` fields to `Ally` class with constructor defaults.
+- ✅ **GameState helpers**: Added `isActiveSummoned`, `activeActionBarSlots` getters, `tickSummonDurations(dt)` for auto-despawn, and `spawnSummonedSkeleton()` to create bone-colored cube ally with 30s lifespan.
+- ✅ **Ability system**: Replaced `_executeSummonSkeleton` stub with real spawn call. Skeleton spawns 3 units in front of caster at terrain height.
+- ✅ **Action bar delimitation**: Summoned units show only 5 action bar slots (Row 2 hidden). Player characters retain all 10 slots.
+- ✅ **Abilities Codex lock**: Drag-to-action-bar disabled when controlling a summoned unit. Visual indicator "(Summoned unit — action bar locked)" shown in Codex header.
+- ✅ **Duration ticking**: `tickSummonDurations(dt)` called each frame in game3d_widget update loop. Expired summons auto-despawn with console log. Control returns to Warchief if active summon expires.
+- ✅ **Character switching**: Summoned units fully participate in `[`/`]` cycling alongside Warchief and permanent allies.
+- ✅ Build verified clean (`flutter build web`)
+
+#### Console.log Tab in Chat Panel
+- ✅ **New Console tab**: Added 4th tab to the AI Chat panel (Spirit, Raid, Combat, **Console**) with green terminal theme and INFO/WARN/ERR level prefixes.
+- ✅ **Console log model**: Created `console_log_entry.dart` with `ConsoleLogLevel` enum (info, warn, error) and `ConsoleLogEntry` class.
+- ✅ **Console log tab widget**: Created `console_log_tab.dart` following `combat_log_tab.dart` pattern — green-themed, monospace, reverse-chronological, color-coded by level.
+- ✅ **GameState integration**: Added `consoleLogMessages` list and `addConsoleLog()` helper with automatic trimming (>250 → keep 200).
+- ✅ **Ability system logging**: All ability executions log to console. Blocked abilities log with reason (cooldown, casting, range, mana, attunement). 6 stub abilities (Summon Skeleton, Taunt, Fortify, Smoke Bomb, Sprint, Battle Shout) log as ERR with "STUB" label.
+- ✅ **Mana failure logging**: All 4 mana colors log insufficient mana with current/required amounts.
+- ✅ **Stance switch logging**: Logged to console on every stance change.
+- ✅ **Target change logging**: Logged on setTarget() and clearTarget().
+- ✅ Build verified clean (`flutter build web`)
 
 ### ✅ Completed - 2026-02-21
 

@@ -25,6 +25,7 @@ class GreenseerAbilities {
     manaColor: ManaColor.green,
     manaCost: 15.0,
     category: 'greenseer',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Spirit Bloom — AoE heal for up to 5 allies within 6 yards.
@@ -43,6 +44,7 @@ class GreenseerAbilities {
     manaColor: ManaColor.green,
     manaCost: 25.0,
     category: 'greenseer',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Verdant Embrace — HoT that heals 30 HP over 9 seconds.
@@ -62,6 +64,7 @@ class GreenseerAbilities {
     manaColor: ManaColor.green,
     manaCost: 20.0,
     category: 'greenseer',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Soul Shield — Absorb 80 damage on a target ally for 15 seconds.
@@ -81,6 +84,7 @@ class GreenseerAbilities {
     manaColor: ManaColor.green,
     manaCost: 35.0,
     category: 'greenseer',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Nature's Grace — Target receives +40% healing for 12 seconds.
@@ -100,6 +104,7 @@ class GreenseerAbilities {
     manaColor: ManaColor.green,
     manaCost: 20.0,
     category: 'greenseer',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Ethereal Form — Transform into luminous spirit seer.
@@ -120,6 +125,7 @@ class GreenseerAbilities {
     manaColor: ManaColor.green,
     manaCost: 60.0,
     category: 'greenseer',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Cleansing Rain — Remove all debuffs from allies in 6 radius.
@@ -139,6 +145,7 @@ class GreenseerAbilities {
     secondaryManaColor: ManaColor.white,
     secondaryManaCost: 10.0,
     category: 'greenseer',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Rejuvenating Roots — Place a healing zone: 80 HP total over 10 seconds.
@@ -157,6 +164,7 @@ class GreenseerAbilities {
     manaColor: ManaColor.green,
     manaCost: 15.0,
     category: 'greenseer',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Harmony — Link two allies: damage split 50/50 for 12 seconds.
@@ -175,6 +183,7 @@ class GreenseerAbilities {
     manaColor: ManaColor.green,
     manaCost: 30.0,
     category: 'greenseer',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Awakening — Massive single-target heal (80 HP) with 2.0s cast.
@@ -193,6 +202,7 @@ class GreenseerAbilities {
     manaColor: ManaColor.green,
     manaCost: 50.0,
     category: 'greenseer',
+    damageSchool: DamageSchool.nature,
   );
 
   // ==================== MELEE ABILITIES ====================
@@ -213,6 +223,7 @@ class GreenseerAbilities {
     manaColor: ManaColor.green,
     manaCost: 8.0,
     category: 'greenseer',
+    damageSchool: DamageSchool.nature,
   );
 
   /// Thornguard Strike — Defensive thorn attack with poison
@@ -232,6 +243,53 @@ class GreenseerAbilities {
     manaColor: ManaColor.green,
     manaCost: 12.0,
     category: 'greenseer',
+    damageSchool: DamageSchool.nature,
+  );
+
+  /// Basic no-mana melee: thorn lash
+  static final thornLash = AbilityData(
+    name: 'Thorn Lash',
+    description: 'A quick, manaless vine strike.',
+    type: AbilityType.melee,
+    damage: 10.0,
+    cooldown: 1.0,
+    range: 2.5,
+    color: Vector3(0.3, 0.7, 0.2),
+    impactColor: Vector3(0.4, 0.8, 0.3),
+    impactSize: 0.4,
+    category: 'greenseer',
+    damageSchool: DamageSchool.nature,
+  );
+
+  /// Basic no-mana melee: bark fist
+  static final barkFist = AbilityData(
+    name: 'Bark Fist',
+    description: 'A hardened bark punch.',
+    type: AbilityType.melee,
+    damage: 12.0,
+    cooldown: 1.0,
+    range: 2.0,
+    color: Vector3(0.5, 0.4, 0.2),
+    impactColor: Vector3(0.6, 0.5, 0.3),
+    impactSize: 0.4,
+    category: 'greenseer',
+    damageSchool: DamageSchool.nature,
+  );
+
+  /// Medium-cooldown permanent nature vulnerability
+  static final verdantCurse = AbilityData(
+    name: 'Verdant Curse',
+    description: 'A nature-infused strike that permanently exposes the target to nature damage.',
+    type: AbilityType.melee,
+    damage: 8.0,
+    cooldown: 12.0,
+    range: 2.5,
+    color: Vector3(0.2, 0.6, 0.1),
+    impactColor: Vector3(0.3, 0.7, 0.2),
+    impactSize: 0.6,
+    category: 'greenseer',
+    damageSchool: DamageSchool.nature,
+    appliesPermanentVulnerability: true,
   );
 
   /// All greenseer abilities as a list
@@ -248,5 +306,8 @@ class GreenseerAbilities {
     awakening,
     lifebloomTouch,
     thornguardStrike,
+    thornLash,
+    barkFist,
+    verdantCurse,
   ];
 }

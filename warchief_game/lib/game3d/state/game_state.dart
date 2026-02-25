@@ -20,6 +20,7 @@ import '../../models/building.dart';
 import '../../models/goal.dart';
 import '../../models/raid_chat_message.dart';
 import '../../models/combat_log_entry.dart';
+import '../../models/console_log_entry.dart';
 import '../../models/active_effect.dart';
 import '../../rendering3d/building_mesh.dart';
 import '../../data/item_database.dart';
@@ -36,8 +37,14 @@ import '../data/monsters/minion_definitions.dart';
 import '../data/abilities/ability_types.dart' show ManaColor, AbilityData;
 import '../data/stances/stances.dart';
 import 'gameplay_settings.dart';
+import 'action_bar_config.dart' show globalActionBarConfigManager;
 import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
+
+part 'game_state_stance.dart';
+part 'game_state_mana.dart';
+part 'game_state_targeting.dart';
+part 'game_state_world.dart';
 
 /// Game State - Centralized state management for the 3D game
 ///
@@ -139,231 +146,6 @@ class GameState {
       );
     }
     return base;
-  }
-
-  /// Switch the active character to a new stance.
-  ///
-  /// Proportionally scales current HP when maxHealth changes.
-  /// Respects switch cooldown (cannot switch during cooldown).
-  void switchStance(StanceId newStance) {
-    if (stanceSwitchCooldown > 0) {
-      print('[STANCE] Cannot switch yet — ${stanceSwitchCooldown.toStringAsFixed(1)}s remaining');
-      return;
-    }
-
-    final oldMaxHealth = activeMaxHealth;
-    if (isWarchiefActive) {
-      playerStance = newStance;
-    } else if (activeAlly != null) {
-      activeAlly!.currentStance = newStance;
-    }
-    final newMaxHealth = activeMaxHealth;
-
-    // Proportionally scale current HP so switching doesn't instakill or overheal
-    if (oldMaxHealth > 0 && newMaxHealth != oldMaxHealth) {
-      final ratio = activeHealth / oldMaxHealth;
-      activeHealth = (ratio * newMaxHealth).clamp(1.0, newMaxHealth);
-    }
-
-    // Set switch cooldown from the new stance
-    stanceSwitchCooldown = activeStance.switchCooldown;
-    stanceActiveTime = 0.0;
-
-    // Reset Drunken Master accumulators if switching to it
-    if (activeStance.hasRandomModifiers) {
-      stanceRerollAccumulator = 0.0;
-      drunkenDamageRoll = 1.0;
-      drunkenDamageTakenRoll = 1.0;
-    }
-
-    // Combat log
-    combatLogMessages.add(CombatLogEntry(
-      source: 'Player',
-      action: 'Switched to ${activeStance.name} stance',
-      type: CombatLogType.ability,
-    ));
-    if (combatLogMessages.length > 250) {
-      combatLogMessages.removeRange(0, combatLogMessages.length - 200);
-    }
-
-    print('[STANCE] Switched to ${activeStance.name}');
-    saveStanceConfig();
-  }
-
-  /// Cycle to the next selectable stance (for Shift+X).
-  void cycleStance() {
-    final registry = globalStanceRegistry;
-    if (registry == null) return;
-    final stances = [StanceId.none, ...registry.selectableStances.map((s) => s.id)];
-    final currentId = isWarchiefActive ? playerStance : (activeAlly?.currentStance ?? StanceId.none);
-    final idx = stances.indexOf(currentId);
-    // Skip stances that are on switch cooldown — try each one
-    for (int i = 1; i <= stances.length; i++) {
-      final nextIdx = (idx + i) % stances.length;
-      final nextId = stances[nextIdx];
-      // Reason: switching resets cooldown, so we only check if cooldown blocks us
-      if (stanceSwitchCooldown <= 0 || nextId == currentId) {
-        switchStance(nextId);
-        return;
-      }
-    }
-  }
-
-  /// Update stance timers each frame: Fury drain, Drunken re-rolls, switch cooldown.
-  void updateStanceTimers(double dt) {
-    // Tick switch cooldown
-    if (stanceSwitchCooldown > 0) {
-      stanceSwitchCooldown = (stanceSwitchCooldown - dt).clamp(0.0, double.infinity);
-    }
-
-    final stance = activeStance;
-    stanceActiveTime += dt;
-
-    // Fury of the Ancestors: health drain
-    if (stance.healthDrainPerSecond > 0) {
-      final maxHp = activeMaxHealth;
-      final drain = maxHp * stance.healthDrainPerSecond * dt;
-      activeHealth = (activeHealth - drain).clamp(1.0, maxHp);
-
-      // Log when HP reaches critical (<20%)
-      final hpPct = activeHealth / maxHp;
-      // Reason: only log once when crossing the 20% threshold
-      if (hpPct < 0.20 && (activeHealth + drain) / maxHp >= 0.20) {
-        combatLogMessages.add(CombatLogEntry(
-          source: stance.name,
-          action: '${stance.name}: HP critical!',
-          type: CombatLogType.damage,
-          amount: activeHealth,
-        ));
-        if (combatLogMessages.length > 250) {
-          combatLogMessages.removeRange(0, combatLogMessages.length - 200);
-        }
-      }
-    }
-
-    // Drunken Master: periodic re-rolls
-    if (stance.hasRandomModifiers && stance.rerollInterval > 0) {
-      stanceRerollAccumulator += dt;
-      if (stanceRerollAccumulator >= stance.rerollInterval) {
-        stanceRerollAccumulator -= stance.rerollInterval;
-        final range = stance.rerollDamageMax - stance.rerollDamageMin;
-        drunkenDamageRoll = stance.rerollDamageMin + _stanceRng.nextDouble() * range;
-        final takenRange = stance.rerollDamageTakenMax - stance.rerollDamageTakenMin;
-        drunkenDamageTakenRoll = stance.rerollDamageTakenMin + _stanceRng.nextDouble() * takenRange;
-
-        final dmgPct = ((drunkenDamageRoll - 1.0) * 100).round();
-        final takenPct = ((drunkenDamageTakenRoll - 1.0) * 100).round();
-        final dmgSign = dmgPct >= 0 ? '+' : '';
-        final takenSign = takenPct >= 0 ? '+' : '';
-
-        combatLogMessages.add(CombatLogEntry(
-          source: stance.name,
-          action: '${stance.name}: Power surges! ($dmgSign$dmgPct% damage, $takenSign$takenPct% damage taken)',
-          type: CombatLogType.ability,
-        ));
-        if (combatLogMessages.length > 250) {
-          combatLogMessages.removeRange(0, combatLogMessages.length - 200);
-        }
-
-        // Trigger visual pulse for UI overlay
-        drunkenRerollPulseTimer = 0.4;
-      }
-    }
-
-    // Tick down the Drunken re-roll visual pulse
-    if (drunkenRerollPulseTimer > 0) {
-      drunkenRerollPulseTimer = (drunkenRerollPulseTimer - dt).clamp(0.0, double.infinity);
-    }
-  }
-
-  /// Generate mana from damage taken (Tide stance passive).
-  ///
-  /// Adds mana to the primary attuned color of the active character.
-  void generateManaFromDamageTaken(double manaAmount) {
-    if (manaAmount <= 0) return;
-    final attunements = activeManaAttunements;
-    // Reason: pick the first attuned color as "primary"
-    if (attunements.contains(ManaColor.red)) {
-      if (isWarchiefActive) {
-        redMana = (redMana + manaAmount).clamp(0.0, maxRedMana);
-      } else if (activeAlly != null) {
-        activeAlly!.redMana = (activeAlly!.redMana + manaAmount).clamp(0.0, activeAlly!.maxRedMana);
-      }
-    } else if (attunements.contains(ManaColor.blue)) {
-      if (isWarchiefActive) {
-        blueMana = (blueMana + manaAmount).clamp(0.0, maxBlueMana);
-      } else if (activeAlly != null) {
-        activeAlly!.blueMana = (activeAlly!.blueMana + manaAmount).clamp(0.0, activeAlly!.maxBlueMana);
-      }
-    } else if (attunements.contains(ManaColor.green)) {
-      if (isWarchiefActive) {
-        greenMana = (greenMana + manaAmount).clamp(0.0, maxGreenMana);
-      } else if (activeAlly != null) {
-        activeAlly!.greenMana = (activeAlly!.greenMana + manaAmount).clamp(0.0, activeAlly!.maxGreenMana);
-      }
-    } else if (attunements.contains(ManaColor.white)) {
-      if (isWarchiefActive) {
-        whiteMana = (whiteMana + manaAmount).clamp(0.0, maxWhiteMana);
-      } else if (activeAlly != null) {
-        activeAlly!.whiteMana = (activeAlly!.whiteMana + manaAmount).clamp(0.0, activeAlly!.maxWhiteMana);
-      }
-    }
-    print('[TIDE] Converted damage to ${manaAmount.toStringAsFixed(1)} mana');
-  }
-
-  /// Save current stance selections to SharedPreferences.
-  Future<void> saveStanceConfig() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('stance_player', playerStance.name);
-      for (int i = 0; i < allies.length; i++) {
-        await prefs.setString('stance_ally_$i', allies[i].currentStance.name);
-      }
-    } catch (e) {
-      print('[STANCE] Failed to save stance config: $e');
-    }
-  }
-
-  /// Load saved stance selections from SharedPreferences.
-  ///
-  /// If no saved preference exists, applies the registry's [defaultStance].
-  Future<void> loadStanceConfig() async {
-    final registry = globalStanceRegistry;
-    final fallback = registry?.defaultStance ?? StanceId.none;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final playerStanceName = prefs.getString('stance_player');
-      if (playerStanceName != null) {
-        final id = _parseStanceIdFromName(playerStanceName);
-        playerStance = id ?? fallback;
-      } else {
-        playerStance = fallback;
-      }
-      for (int i = 0; i < allies.length; i++) {
-        final allyStanceName = prefs.getString('stance_ally_$i');
-        if (allyStanceName != null) {
-          final id = _parseStanceIdFromName(allyStanceName);
-          allies[i].currentStance = id ?? fallback;
-        } else {
-          allies[i].currentStance = fallback;
-        }
-      }
-    } catch (e) {
-      print('[STANCE] Failed to load stance config: $e');
-      // Still apply default on failure
-      playerStance = fallback;
-      for (final ally in allies) {
-        ally.currentStance = fallback;
-      }
-    }
-  }
-
-  /// Parse a StanceId from its enum name string.
-  StanceId? _parseStanceIdFromName(String name) {
-    for (final id in StanceId.values) {
-      if (id.name == name) return id;
-    }
-    return null;
   }
 
   // ==================== PLAYER MANA ====================
@@ -530,426 +312,11 @@ class GameState {
     }
   }
 
-  /// Regenerate mana based on current position
-  void updateManaRegen(double dt) {
-    if (leyLineManager == null || playerTransform == null) return;
-
-    final pos = playerTransform!.position;
-    currentManaRegenRate = leyLineManager!.calculateManaRegen(pos.x, pos.z);
-    currentLeyLineInfo = leyLineManager!.getLeyLineInfo(pos.x, pos.z);
-
-    // Check if on a power node
-    isOnPowerNode = leyLineManager!.isOnPowerNode(pos.x, pos.z);
-
-    final playerAttunements = playerManaAttunements;
-
-    // Stance mana regen modifier and Blood Weave conversion
-    final stanceManaRegenMult = activeStance.manaRegenMultiplier;
-    final stanceConvertsToHeal = activeStance.convertsManaRegenToHeal;
-
-    // Apply blue mana regeneration (Ley Lines + equipped item bonus)
-    if (playerAttunements.contains(ManaColor.blue)) {
-      final blueRegenBonus = playerInventory.totalEquippedStats.blueManaRegen;
-      final effectiveBlueRegen = (currentManaRegenRate + blueRegenBonus) * stanceManaRegenMult;
-      if (effectiveBlueRegen > 0) {
-        if (stanceConvertsToHeal) {
-          // Blood Weave: mana regen heals HP instead
-          playerHealth = (playerHealth + effectiveBlueRegen * dt).clamp(0.0, playerMaxHealth);
-        } else {
-          blueMana = (blueMana + effectiveBlueRegen * dt).clamp(0.0, maxBlueMana);
-        }
-      }
-    }
-
-    // Apply red mana regeneration (power nodes + equipped item bonus)
-    if (playerAttunements.contains(ManaColor.red)) {
-      final redRegenBonus = playerInventory.totalEquippedStats.redManaRegen;
-      if (isOnPowerNode) {
-        currentRedManaRegenRate = (currentManaRegenRate + redRegenBonus) * stanceManaRegenMult;
-        if (stanceConvertsToHeal) {
-          playerHealth = (playerHealth + currentRedManaRegenRate * dt).clamp(0.0, playerMaxHealth);
-        } else {
-          redMana = (redMana + currentRedManaRegenRate * dt).clamp(0.0, maxRedMana);
-        }
-        _timeSinceLastRedManaChange = 0.0; // Power nodes pause decay
-      } else {
-        currentRedManaRegenRate = redRegenBonus.toDouble() * stanceManaRegenMult;
-
-        // Apply item-based red regen even off power nodes
-        if (redRegenBonus > 0) {
-          final effectiveRedRegen = redRegenBonus * stanceManaRegenMult;
-          if (stanceConvertsToHeal) {
-            playerHealth = (playerHealth + effectiveRedRegen * dt).clamp(0.0, playerMaxHealth);
-          } else {
-            redMana = (redMana + effectiveRedRegen * dt).clamp(0.0, maxRedMana);
-          }
-          _timeSinceLastRedManaChange = 0.0;
-        }
-
-        // Red mana decay (after grace period, when not on power node and no item regen)
-        if (redMana > 0 && redRegenBonus <= 0) {
-          _timeSinceLastRedManaChange += dt;
-          final decayDelay = globalManaConfig?.redManaDecayDelay ?? 5.0;
-          if (_timeSinceLastRedManaChange >= decayDelay) {
-            final decayRate = globalManaConfig?.redManaDecayRate ?? 3.0;
-            redMana = (redMana - decayRate * dt).clamp(0.0, maxRedMana);
-          }
-        }
-      }
-    } else {
-      currentRedManaRegenRate = 0.0;
-    }
-
-    // ===== ALLY MANA REGEN =====
-    for (final ally in allies) {
-      if (ally.health <= 0) continue;
-
-      final allyPos = ally.transform.position;
-      final allyBlueRegen = leyLineManager!.calculateManaRegen(allyPos.x, allyPos.z);
-      final allyOnPowerNode = leyLineManager!.isOnPowerNode(allyPos.x, allyPos.z);
-      final allyAttunements = (globalGameplaySettings?.attunementRequired ?? true)
-          ? ally.combinedManaAttunements
-          : _allManaColors;
-      final allyItemBlueBonus = ally.inventory.totalEquippedStats.blueManaRegen;
-      final allyItemRedBonus = ally.inventory.totalEquippedStats.redManaRegen;
-
-      // Ally blue mana regen (ley lines + item bonus) — only if blue-attuned
-      if (allyAttunements.contains(ManaColor.blue)) {
-        final effectiveAllyBlueRegen = allyBlueRegen + allyItemBlueBonus;
-        if (effectiveAllyBlueRegen > 0) {
-          ally.blueMana = (ally.blueMana + effectiveAllyBlueRegen * dt)
-              .clamp(0.0, ally.maxBlueMana);
-        }
-      }
-
-      // Ally red mana regen (power nodes + item bonus) — only if red-attuned
-      if (allyAttunements.contains(ManaColor.red)) {
-        if (allyOnPowerNode) {
-          final allyRedRegen = allyBlueRegen + allyItemRedBonus;
-          ally.redMana = (ally.redMana + allyRedRegen * dt)
-              .clamp(0.0, ally.maxRedMana);
-        } else if (allyItemRedBonus > 0) {
-          ally.redMana = (ally.redMana + allyItemRedBonus * dt)
-              .clamp(0.0, ally.maxRedMana);
-        }
-      }
-    }
-  }
-
-  /// Update wind simulation and White Mana regeneration/decay.
-  ///
-  /// Wind exposure drives White Mana regen. When wind drops below
-  /// shelterThreshold, White Mana actively decays — unlike blue mana
-  /// which simply stops regenerating.
-  void updateWindAndWhiteMana(double dt) {
-    _windState.update(dt);
-
-    // Also update globalWindState for other systems (movement, projectiles)
-    globalWindState = _windState;
-
-    final config = globalWindConfig;
-    final exposure = _windState.exposureLevel;
-    final shelterThresh = config?.shelterThreshold ?? 0.1;
-
-    final whiteRegenBonus = playerInventory.totalEquippedStats.whiteManaRegen;
-
-    // Wind Affinity regen multiplier (2x when active)
-    final windAffinityMult = windAffinityActive ? 2.0 : 1.0;
-
-    // Reason: derecho storms multiply white mana regen for massive gains
-    final derechoManaMult = _windState.derechoManaMultiplier;
-
-    // Stance modifiers for white mana regen
-    final whiteStanceMult = activeStance.manaRegenMultiplier;
-    final whiteStanceConverts = activeStance.convertsManaRegenToHeal;
-
-    if (playerManaAttunements.contains(ManaColor.white)) {
-      if (exposure >= shelterThresh) {
-        // Wind is blowing — regenerate white mana (wind + item bonus)
-        final regenRate = ((config?.windExposureRegen ?? 5.0) *
-            exposure *
-            (config?.windStrengthMultiplier ?? 1.0) +
-            whiteRegenBonus) * windAffinityMult * derechoManaMult * whiteStanceMult;
-        currentWhiteManaRegenRate = regenRate;
-        if (whiteStanceConverts) {
-          playerHealth = (playerHealth + regenRate * dt).clamp(0.0, playerMaxHealth);
-        } else {
-          whiteMana = (whiteMana + regenRate * dt).clamp(0.0, maxWhiteMana);
-        }
-      } else {
-        // Sheltered — item regen still applies, but wind decay counteracts
-        currentWhiteManaRegenRate = whiteRegenBonus.toDouble() * windAffinityMult * whiteStanceMult;
-        if (whiteRegenBonus > 0) {
-          final effectiveWhiteRegen = whiteRegenBonus * windAffinityMult * whiteStanceMult;
-          if (whiteStanceConverts) {
-            playerHealth = (playerHealth + effectiveWhiteRegen * dt).clamp(0.0, playerMaxHealth);
-          } else {
-            whiteMana = (whiteMana + effectiveWhiteRegen * dt).clamp(0.0, maxWhiteMana);
-          }
-        }
-        if (whiteMana > 0 && whiteRegenBonus <= 0) {
-          final decay = config?.decayRate ?? 0.5;
-          whiteMana = (whiteMana - decay * dt).clamp(0.0, maxWhiteMana);
-        }
-      }
-    } else {
-      currentWhiteManaRegenRate = 0.0;
-    }
-
-    // ===== ALLY WHITE MANA REGEN =====
-    // Allies share the global wind exposure level
-    for (final ally in allies) {
-      if (ally.health <= 0) continue;
-      final allyAttunements = (globalGameplaySettings?.attunementRequired ?? true)
-          ? ally.combinedManaAttunements
-          : _allManaColors;
-
-      if (allyAttunements.contains(ManaColor.white)) {
-        final allyWhiteRegenBonus = ally.inventory.totalEquippedStats.whiteManaRegen;
-
-        if (exposure >= shelterThresh) {
-          // Wind is blowing — ally regenerates white mana
-          final allyRegenRate = (config?.windExposureRegen ?? 5.0) *
-              exposure *
-              (config?.windStrengthMultiplier ?? 1.0) +
-              allyWhiteRegenBonus;
-          ally.whiteMana = (ally.whiteMana + allyRegenRate * dt)
-              .clamp(0.0, ally.maxWhiteMana);
-        } else {
-          // Sheltered — item regen still applies
-          if (allyWhiteRegenBonus > 0) {
-            ally.whiteMana = (ally.whiteMana + allyWhiteRegenBonus * dt)
-                .clamp(0.0, ally.maxWhiteMana);
-          }
-          // Ally white mana decay when sheltered
-          if (ally.whiteMana > 0 && allyWhiteRegenBonus <= 0) {
-            final decay = config?.decayRate ?? 0.5;
-            ally.whiteMana = (ally.whiteMana - decay * dt)
-                .clamp(0.0, ally.maxWhiteMana);
-          }
-        }
-      }
-    }
-
-    // Flight mana drain
-    if (isFlying) {
-      final drainRate = config?.flightManaDrainRate ?? 3.0;
-      whiteMana = (whiteMana - drainRate * dt).clamp(0.0, maxWhiteMana);
-
-      // Low mana descent — slowly lose altitude when mana is low
-      final lowThreshold = config?.lowManaThreshold ?? 33.0;
-      final minAlt = config?.minAltitudeForDescent ?? 10.0;
-      if (whiteMana < lowThreshold && flightAltitude >= minAlt) {
-        final descentRate = config?.lowManaDescentRate ?? 2.0;
-        if (playerTransform != null) {
-          playerTransform!.position.y -= descentRate * dt;
-        }
-      }
-
-      // Zero mana — forced landing
-      if (whiteMana <= 0) {
-        endFlight();
-      }
-    }
-
-    // Sovereign of the Sky buff timer
-    if (sovereignBuffActive) {
-      sovereignBuffTimer -= dt;
-      if (sovereignBuffTimer <= 0) {
-        sovereignBuffActive = false;
-        sovereignBuffTimer = 0.0;
-        print('[FLIGHT] Sovereign of the Sky buff expired');
-      }
-    }
-
-    // Wind Affinity buff timer
-    if (windAffinityActive) {
-      windAffinityTimer -= dt;
-      if (windAffinityTimer <= 0) {
-        windAffinityActive = false;
-        windAffinityTimer = 0.0;
-        print('[WIND] Wind Affinity buff expired');
-      }
-    }
-
-    // Wind Warp speed buff timer
-    if (windWarpSpeedActive) {
-      windWarpSpeedTimer -= dt;
-      if (windWarpSpeedTimer <= 0) {
-        windWarpSpeedActive = false;
-        windWarpSpeedTimer = 0.0;
-        print('[WIND] Wind Warp speed buff expired');
-      }
-    }
-  }
-
-  /// Update green mana regeneration based on proximity to nature sources.
-  ///
-  /// Green mana regenerates from three sources:
-  /// 1. Standing on grass (terrain weight)
-  /// 2. Proximity to other green-attuned characters (within proximityRadius)
-  /// 3. Proximity to spirit beings (within spiritBeingRadius, does NOT regen self)
-  void updateGreenManaRegen(double dt) {
-    final config = globalManaConfig;
-    if (config == null) return;
-
-    final grassBaseRegen = config.grassBaseRegen;
-    final proximityRegenPerUser = config.proximityRegenPerUser;
-    final proximityRadius = config.proximityRadius;
-    final spiritBeingRegenBonus = config.spiritBeingRegenBonus;
-    final spiritBeingRadius = config.spiritBeingRadius;
-    final decayRate = config.greenManaDecayRate;
-    final decayDelay = config.greenManaDecayDelay;
-    final greenRegenBonus = playerInventory.totalEquippedStats.greenManaRegen;
-
-    final playerAttunements = playerManaAttunements;
-    final hasGreen = playerAttunements.contains(ManaColor.green);
-
-    // === WARCHIEF GREEN MANA ===
-    if (hasGreen && playerTransform != null) {
-      final px = playerTransform!.position.x;
-      final pz = playerTransform!.position.z;
-
-      // 1. Grass-based regen: use terrain grass weight
-      double grassWeight = 0.0;
-      if (infiniteTerrainManager != null && terrainHeightmap != null) {
-        // Reason: Approximate grass weight from terrain height/slope without SplatMapGenerator dependency
-        final height = infiniteTerrainManager!.getTerrainHeight(px, pz);
-        // Grass grows at mid-heights (roughly 0.2-0.6 of terrain range)
-        final normalizedHeight = ((height + 10.0) / 40.0).clamp(0.0, 1.0);
-        grassWeight = (normalizedHeight > 0.15 && normalizedHeight < 0.65) ? 1.0 - ((normalizedHeight - 0.4).abs() * 3.0).clamp(0.0, 1.0) : 0.0;
-      }
-      final grassRegen = grassBaseRegen * grassWeight;
-
-      // 2. Proximity regen: count green-attuned characters within range
-      int proximityCount = 0;
-      final proximityRadiusSq = proximityRadius * proximityRadius;
-      for (final ally in allies) {
-        if (ally.health <= 0) continue;
-        final allyAttunements = (globalGameplaySettings?.attunementRequired ?? true)
-            ? ally.combinedManaAttunements
-            : _allManaColors;
-        if (!allyAttunements.contains(ManaColor.green)) continue;
-        final dx = ally.transform.position.x - px;
-        final dz = ally.transform.position.z - pz;
-        if (dx * dx + dz * dz <= proximityRadiusSq) proximityCount++;
-      }
-      final proximityRegen = proximityCount * proximityRegenPerUser;
-
-      // 3. Spirit being regen: count spirit beings nearby (not self)
-      int spiritCount = 0;
-      final spiritBeingRadiusSq = spiritBeingRadius * spiritBeingRadius;
-      for (final ally in allies) {
-        if (ally.health <= 0 || !ally.inSpiritForm) continue;
-        final dx = ally.transform.position.x - px;
-        final dz = ally.transform.position.z - pz;
-        if (dx * dx + dz * dz <= spiritBeingRadiusSq) spiritCount++;
-      }
-      final spiritRegen = spiritCount * spiritBeingRegenBonus;
-
-      final totalRegen = (grassRegen + proximityRegen + spiritRegen + greenRegenBonus) * activeStance.manaRegenMultiplier;
-      currentGreenManaRegenRate = totalRegen;
-
-      if (totalRegen > 0) {
-        if (activeStance.convertsManaRegenToHeal) {
-          playerHealth = (playerHealth + totalRegen * dt).clamp(0.0, playerMaxHealth);
-        } else {
-          greenMana = (greenMana + totalRegen * dt).clamp(0.0, maxGreenMana);
-        }
-        _timeSinceLastGreenManaSource = 0.0;
-      } else {
-        // Decay when no regen sources
-        _timeSinceLastGreenManaSource += dt;
-        if (_timeSinceLastGreenManaSource >= decayDelay && greenMana > 0) {
-          greenMana = (greenMana - decayRate * dt).clamp(0.0, maxGreenMana);
-        }
-      }
-    } else {
-      currentGreenManaRegenRate = 0.0;
-    }
-
-    // === ALLY GREEN MANA ===
-    for (final ally in allies) {
-      if (ally.health <= 0) continue;
-      final allyAttunements = (globalGameplaySettings?.attunementRequired ?? true)
-          ? ally.combinedManaAttunements
-          : _allManaColors;
-      if (!allyAttunements.contains(ManaColor.green)) continue;
-
-      final ax = ally.transform.position.x;
-      final az = ally.transform.position.z;
-      final allyGreenRegenBonus = ally.inventory.totalEquippedStats.greenManaRegen;
-
-      // Grass regen for ally
-      double allyGrassWeight = 0.0;
-      if (infiniteTerrainManager != null) {
-        final h = infiniteTerrainManager!.getTerrainHeight(ax, az);
-        final nh = ((h + 10.0) / 40.0).clamp(0.0, 1.0);
-        allyGrassWeight = (nh > 0.15 && nh < 0.65) ? 1.0 - ((nh - 0.4).abs() * 3.0).clamp(0.0, 1.0) : 0.0;
-      }
-      final allyGrassRegen = grassBaseRegen * allyGrassWeight;
-
-      // Proximity regen from other green characters
-      int allyProxCount = 0;
-      final proxRadSq = proximityRadius * proximityRadius;
-      // Check warchief
-      if (hasGreen && playerTransform != null) {
-        final dx = playerTransform!.position.x - ax;
-        final dz = playerTransform!.position.z - az;
-        if (dx * dx + dz * dz <= proxRadSq) allyProxCount++;
-      }
-      // Check other allies
-      for (final otherAlly in allies) {
-        if (otherAlly == ally || otherAlly.health <= 0) continue;
-        final otherAttunements = (globalGameplaySettings?.attunementRequired ?? true)
-            ? otherAlly.combinedManaAttunements
-            : _allManaColors;
-        if (!otherAttunements.contains(ManaColor.green)) continue;
-        final dx = otherAlly.transform.position.x - ax;
-        final dz = otherAlly.transform.position.z - az;
-        if (dx * dx + dz * dz <= proxRadSq) allyProxCount++;
-      }
-      final allyProxRegen = allyProxCount * proximityRegenPerUser;
-
-      // Spirit being regen (not self)
-      int allySpiritCount = 0;
-      final spiritRadSq = spiritBeingRadius * spiritBeingRadius;
-      if (playerInSpiritForm && playerTransform != null) {
-        final dx = playerTransform!.position.x - ax;
-        final dz = playerTransform!.position.z - az;
-        if (dx * dx + dz * dz <= spiritRadSq) allySpiritCount++;
-      }
-      for (final otherAlly in allies) {
-        if (otherAlly == ally || otherAlly.health <= 0 || !otherAlly.inSpiritForm) continue;
-        final dx = otherAlly.transform.position.x - ax;
-        final dz = otherAlly.transform.position.z - az;
-        if (dx * dx + dz * dz <= spiritRadSq) allySpiritCount++;
-      }
-      final allySpiritRegen = allySpiritCount * spiritBeingRegenBonus;
-
-      final allyTotalRegen = allyGrassRegen + allyProxRegen + allySpiritRegen + allyGreenRegenBonus;
-      if (allyTotalRegen > 0) {
-        ally.greenMana = (ally.greenMana + allyTotalRegen * dt).clamp(0.0, ally.maxGreenMana);
-      } else if (ally.greenMana > 0) {
-        ally.greenMana = (ally.greenMana - decayRate * dt).clamp(0.0, ally.maxGreenMana);
-      }
-    }
-  }
-
   // ==================== LEY LINES ====================
 
   /// Ley Lines manager - generates and manages magical energy lines
   LeyLineManager? leyLineManager;
 
-  /// Initialize Ley Lines for the world
-  void initializeLeyLines({int seed = 42, double worldSize = 200.0, int siteCount = 25}) {
-    leyLineManager = LeyLineManager(
-      seed: seed,
-      worldSize: worldSize,
-      siteCount: siteCount,
-    );
-    print('[LeyLines] Initialized with seed $seed, ${leyLineManager!.segments.length} segments');
-  }
 
   // ==================== MONSTER STATE ====================
 
@@ -988,98 +355,6 @@ class GameState {
   /// Active status effects on the boss monster
   List<ActiveEffect> monsterActiveEffects = [];
 
-  /// Tick and expire all active effects on all entities, applying DoT damage.
-  void updateActiveEffects(double dt) {
-    // Player effects
-    for (final effect in playerActiveEffects) {
-      effect.tick(dt);
-      if (effect.isDoT) {
-        effect.tickAccumulator += dt;
-        while (effect.tickAccumulator >= effect.tickInterval) {
-          effect.tickAccumulator -= effect.tickInterval;
-          playerHealth = (playerHealth - effect.damagePerTick).clamp(0.0, playerMaxHealth);
-          _logDoTTick(effect, 'Player', playerTransform?.position);
-        }
-      }
-    }
-    playerActiveEffects.removeWhere((e) => e.isExpired);
-
-    // Boss monster effects
-    for (final effect in monsterActiveEffects) {
-      effect.tick(dt);
-      if (effect.isDoT) {
-        effect.tickAccumulator += dt;
-        while (effect.tickAccumulator >= effect.tickInterval) {
-          effect.tickAccumulator -= effect.tickInterval;
-          monsterHealth = (monsterHealth - effect.damagePerTick).clamp(0.0, monsterMaxHealth);
-          _logDoTTick(effect, 'Monster', monsterTransform?.position);
-        }
-      }
-    }
-    monsterActiveEffects.removeWhere((e) => e.isExpired);
-
-    // Ally effects
-    for (int i = 0; i < allies.length; i++) {
-      final ally = allies[i];
-      for (final effect in ally.activeEffects) {
-        effect.tick(dt);
-        if (effect.isDoT) {
-          effect.tickAccumulator += dt;
-          while (effect.tickAccumulator >= effect.tickInterval) {
-            effect.tickAccumulator -= effect.tickInterval;
-            ally.health = (ally.health - effect.damagePerTick).clamp(0.0, ally.maxHealth);
-            _logDoTTick(effect, 'Ally ${i + 1}', ally.transform.position);
-          }
-        }
-      }
-      ally.activeEffects.removeWhere((e) => e.isExpired);
-    }
-
-    // Minion effects
-    for (final minion in minions) {
-      for (final effect in minion.activeEffects) {
-        effect.tick(dt);
-        if (effect.isDoT) {
-          effect.tickAccumulator += dt;
-          while (effect.tickAccumulator >= effect.tickInterval) {
-            effect.tickAccumulator -= effect.tickInterval;
-            minion.takeDamage(effect.damagePerTick);
-            _logDoTTick(effect, 'Minion', minion.transform.position);
-          }
-        }
-      }
-      minion.activeEffects.removeWhere((e) => e.isExpired);
-    }
-  }
-
-  /// Log a DoT tick as a floating damage number and a combat log entry.
-  void _logDoTTick(ActiveEffect effect, String target, Vector3? worldPos) {
-    final label = effect.sourceName.isNotEmpty
-        ? effect.sourceName
-        : effect.type.name;
-
-    // Floating damage number
-    if (worldPos != null) {
-      final indicatorPos = worldPos.clone();
-      indicatorPos.y += 2.0;
-      damageIndicators.add(DamageIndicator(
-        damage: effect.damagePerTick,
-        worldPosition: indicatorPos,
-      ));
-    }
-
-    // Combat log entry
-    combatLogMessages.add(CombatLogEntry(
-      source: label,
-      action: '$label (${effect.type.name})',
-      type: CombatLogType.damage,
-      amount: effect.damagePerTick,
-      target: target,
-    ));
-    if (combatLogMessages.length > 250) {
-      combatLogMessages.removeRange(0, combatLogMessages.length - 200);
-    }
-  }
 
   // Monster sword state (for melee ability 1)
   Mesh? monsterSwordMesh;
@@ -1104,19 +379,18 @@ class GameState {
     return allies[activeCharacterIndex - 1];
   }
 
-  /// Cycle active character forward (] key)
-  void cycleActiveCharacterNext() {
-    final total = 1 + allies.length;
-    activeCharacterIndex = (activeCharacterIndex + 1) % total;
-    _resetPhysicsForSwitch();
+  /// Whether the active character is a summoned unit
+  bool get isActiveSummoned => activeAlly?.isSummoned ?? false;
+
+  /// Number of action bar slots for the active character (5 for summoned, 10 for player chars)
+  int get activeActionBarSlots => isActiveSummoned ? 5 : 10;
+
+  /// Active effects on the currently controlled character (Warchief or active ally/summon).
+  List<ActiveEffect> get activeCharacterActiveEffects {
+    if (isWarchiefActive) return playerActiveEffects;
+    return activeAlly?.activeEffects ?? [];
   }
 
-  /// Cycle active character backward ([ key)
-  void cycleActiveCharacterPrev() {
-    final total = 1 + allies.length;
-    activeCharacterIndex = (activeCharacterIndex - 1 + total) % total;
-    _resetPhysicsForSwitch();
-  }
 
   /// Transform of the currently controlled character (Warchief or active ally)
   Transform3d? get activeTransform =>
@@ -1238,21 +512,6 @@ class GameState {
   }
   double get activeMaxHealth => isWarchiefActive ? playerMaxHealth : (activeAlly?.maxHealth ?? 0.0);
 
-  /// Reset physics state when switching active character
-  /// Prevents carried velocity / jump state from bleeding across characters
-  void _resetPhysicsForSwitch() {
-    verticalVelocity = 0.0;
-    isJumping = false;
-    isGrounded = true;
-    jumpsRemaining = maxJumps;
-    cancelCast();
-    cancelWindup();
-    // End flight if switching away from Warchief
-    if (!isWarchiefActive && isFlying) {
-      endFlight();
-    }
-  }
-
   /// Selected index in the character panel carousel (null = not externally set)
   int? characterPanelSelectedIndex;
 
@@ -1261,23 +520,6 @@ class GameState {
   /// Index for friendly tab targeting cycle
   int _friendlyTabIndex = -1;
 
-  /// Get list of targetable friendlies (player + alive allies)
-  List<String> getTargetableFriendlies() {
-    final targets = <String>['player'];
-    for (int i = 0; i < allies.length; i++) {
-      if (allies[i].health > 0) targets.add('ally_$i');
-    }
-    return targets;
-  }
-
-  /// Cycle to next friendly target (Shift+Tab)
-  void tabToNextFriendlyTarget() {
-    final targets = getTargetableFriendlies();
-    if (targets.isEmpty) return;
-    _friendlyTabIndex++;
-    if (_friendlyTabIndex >= targets.length) _friendlyTabIndex = 0;
-    currentTargetId = targets[_friendlyTabIndex];
-  }
 
   // ==================== ALLY STATE ====================
 
@@ -1286,25 +528,7 @@ class GameState {
   Map<Ally, TacticalPosition>? _cachedTacticalPositions;
   double _tacticalPositionCacheTime = 0.0;
 
-  /// Get tactical positions for all allies (cached for performance)
-  Map<Ally, TacticalPosition> getTacticalPositions() {
-    // Recalculate every 0.5 seconds or when cache is invalid
-    final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
-    if (_cachedTacticalPositions == null ||
-        now - _tacticalPositionCacheTime > 0.5) {
-      _cachedTacticalPositions = TacticalPositioning.calculatePositions(
-        this,
-        currentFormation,
-      );
-      _tacticalPositionCacheTime = now;
-    }
-    return _cachedTacticalPositions!;
-  }
 
-  /// Force recalculation of tactical positions
-  void invalidateTacticalPositions() {
-    _cachedTacticalPositions = null;
-  }
 
   // ==================== MINIONS STATE ====================
 
@@ -1317,87 +541,7 @@ class GameState {
   /// Direction indicator meshes for minions (shared by type)
   final Map<String, Mesh> _minionDirectionIndicators = {};
 
-  /// Get or create direction indicator mesh for a minion type
-  Mesh getMinionDirectionIndicator(MonsterDefinition definition) {
-    return _minionDirectionIndicators.putIfAbsent(
-      definition.id,
-      () => Mesh.triangle(
-        size: 0.3 * definition.effectiveScale,
-        color: definition.accentColor,
-      ),
-    );
-  }
 
-  /// Spawn all minions according to DefaultMinionSpawns configuration
-  /// Total: 8 Goblin Rogues + 4 Orc Warlocks + 2 Cultist Priests + 1 Skeleton Champion = 15 minions
-  void spawnMinions(InfiniteTerrainManager? terrainManager) {
-    if (minionsSpawned) return;
-
-    print('[MINIONS] Spawning minions...');
-    print(DefaultMinionSpawns.summary);
-
-    // Base spawn position (offset from monster)
-    final baseX = GameConfig.monsterStartPosition.x;
-    final baseZ = GameConfig.monsterStartPosition.z - 10; // Behind the boss
-
-    int totalSpawned = 0;
-
-    for (final spawnConfig in DefaultMinionSpawns.spawns) {
-      final definition = MinionDefinitions.getById(spawnConfig.definitionId);
-      if (definition == null) {
-        print('[MINIONS] Warning: Unknown definition ${spawnConfig.definitionId}');
-        continue;
-      }
-
-      // Calculate spawn center for this group (arrange groups in a line)
-      final groupOffset = totalSpawned * 0.5;
-      final centerX = baseX + (groupOffset % 4) * 4 - 6;
-      final centerZ = baseZ - (groupOffset ~/ 4) * 4;
-
-      // Get terrain height at spawn center
-      double centerY = 0.0;
-      if (terrainManager != null) {
-        centerY = terrainManager.getTerrainHeight(centerX, centerZ);
-      }
-
-      // Create monsters for this group
-      final monsters = MonsterFactory.createGroup(
-        definition: definition,
-        centerPosition: Vector3(centerX, centerY, centerZ),
-        count: spawnConfig.count,
-        spreadRadius: spawnConfig.spreadRadius,
-      );
-
-      // Adjust Y positions to terrain height (add half size so bottom sits on terrain)
-      for (final monster in monsters) {
-        if (terrainManager != null) {
-          final terrainY = terrainManager.getTerrainHeight(
-            monster.transform.position.x,
-            monster.transform.position.z,
-          );
-          // Add half the minion size + buffer so bottom of mesh sits above terrain
-          const double terrainBuffer = 0.15;
-          monster.transform.position.y = terrainY + definition.effectiveScale / 2 + terrainBuffer;
-          // Direction indicator sits on top of the mesh
-          if (monster.directionIndicatorTransform != null) {
-            monster.directionIndicatorTransform!.position.y =
-                monster.transform.position.y + definition.effectiveScale / 2 + 0.1;
-          }
-        }
-      }
-
-      minions.addAll(monsters);
-      totalSpawned += spawnConfig.count;
-
-      print('[MINIONS] Spawned ${spawnConfig.count}x ${definition.name} '
-          '(MP ${definition.monsterPower})');
-    }
-
-    minionsSpawned = true;
-    rebuildMinionIndex();
-    print('[MINIONS] Total spawned: ${minions.length} minions');
-    print('[MINIONS] Total Monster Power: ${DefaultMinionSpawns.totalMonsterPower}');
-  }
 
   /// Cached list of alive minions, rebuilt once per frame via [refreshAliveMinions].
   List<Monster> _cachedAliveMinions = [];
@@ -1407,32 +551,8 @@ class GameState {
   /// Call [refreshAliveMinions] once at the start of each game loop tick.
   List<Monster> get aliveMinions => _cachedAliveMinions;
 
-  /// Rebuild the alive minions cache. Call once per frame at the start of the update loop.
-  void refreshAliveMinions() {
-    _cachedAliveMinions = minions.where((m) => m.isAlive).toList();
-  }
 
-  /// Get minions by archetype
-  List<Monster> getMinionsByArchetype(MonsterArchetype archetype) {
-    return minions.where((m) =>
-        m.isAlive && m.definition.archetype == archetype).toList();
-  }
 
-  /// Get the nearest minion to a position
-  Monster? getNearestMinion(Vector3 position, {double maxRange = double.infinity}) {
-    Monster? nearest;
-    double nearestDist = maxRange;
-
-    for (final minion in aliveMinions) {
-      final dist = minion.distanceTo(position);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearest = minion;
-      }
-    }
-
-    return nearest;
-  }
 
   // ==================== AI CHAT ====================
 
@@ -1456,213 +576,8 @@ class GameState {
   List<String> _targetableEnemyIds = [];
   double _targetListCacheTime = 0.0;
 
-  /// Get the currently targeted entity
-  /// Returns a map with 'type' ('boss', 'minion', or 'dummy') and the entity itself
-  Map<String, dynamic>? getCurrentTarget() {
-    if (currentTargetId == null) return null;
-
-    if (currentTargetId == 'player') {
-      return {
-        'type': 'player',
-        'entity': null,
-        'id': 'player',
-      };
-    }
-
-    if (currentTargetId == 'boss') {
-      return {
-        'type': 'boss',
-        'entity': null, // Boss is accessed directly via gameState
-        'id': 'boss',
-      };
-    }
-
-    // Check for target dummy
-    if (currentTargetId == TargetDummy.instanceId && targetDummy != null && targetDummy!.isSpawned) {
-      return {
-        'type': 'dummy',
-        'entity': targetDummy,
-        'id': TargetDummy.instanceId,
-      };
-    }
-
-    // Check for ally target
-    if (currentTargetId!.startsWith('ally_')) {
-      final index = int.tryParse(currentTargetId!.substring(5));
-      if (index != null && index < allies.length && allies[index].health > 0) {
-        return {
-          'type': 'ally',
-          'entity': allies[index],
-          'id': currentTargetId,
-        };
-      }
-      // Ally is dead or invalid, clear it
-      currentTargetId = null;
-      return null;
-    }
-
-    // Find minion by instance ID
-    final minion = minions.firstWhere(
-      (m) => m.instanceId == currentTargetId && m.isAlive,
-      orElse: () => minions.firstWhere((m) => false, orElse: () => minions.first),
-    );
-
-    if (minion.instanceId == currentTargetId && minion.isAlive) {
-      return {
-        'type': 'minion',
-        'entity': minion,
-        'id': currentTargetId,
-      };
-    }
-
-    // Target is dead or invalid, clear it
-    currentTargetId = null;
-    return null;
-  }
-
   /// Index of minions by instanceId for O(1) lookup.
   final Map<String, Monster> _minionIndex = {};
-
-  /// Rebuild the minion index. Call after minions spawn/die.
-  void rebuildMinionIndex() {
-    _minionIndex.clear();
-    for (final minion in aliveMinions) {
-      _minionIndex[minion.instanceId] = minion;
-    }
-  }
-
-  /// Active effects on the current target (boss, minion, ally, or player).
-  /// Returns empty list if no target or target has no effects.
-  List<ActiveEffect> get currentTargetActiveEffects {
-    if (currentTargetId == null) return [];
-    if (currentTargetId == 'boss') return monsterActiveEffects;
-    if (currentTargetId == 'player') return playerActiveEffects;
-    if (currentTargetId!.startsWith('ally_')) {
-      final index = int.tryParse(currentTargetId!.substring(5));
-      if (index != null && index < allies.length) return allies[index].activeEffects;
-      return [];
-    }
-    // O(1) minion lookup by instance ID
-    final minion = _minionIndex[currentTargetId];
-    if (minion != null && minion.isAlive) return minion.activeEffects;
-    return [];
-  }
-
-  /// Get the world position of the current target.
-  /// Returns null if no target or target is dead/missing.
-  Vector3? getCurrentTargetPosition() {
-    if (currentTargetId == null) return null;
-
-    if (currentTargetId == 'boss') {
-      if (monsterTransform != null && monsterHealth > 0) {
-        return monsterTransform!.position;
-      }
-      return null;
-    }
-
-    if (currentTargetId == TargetDummy.instanceId && targetDummy != null && targetDummy!.isSpawned) {
-      return targetDummy!.transform.position;
-    }
-
-    if (currentTargetId!.startsWith('ally_')) {
-      final index = int.tryParse(currentTargetId!.substring(5));
-      if (index != null && index < allies.length && allies[index].health > 0) {
-        return allies[index].transform.position;
-      }
-      return null;
-    }
-
-    // Check minions via O(1) index lookup
-    final minion = _minionIndex[currentTargetId];
-    if (minion != null && minion.isAlive) {
-      return minion.transform.position;
-    }
-
-    return null;
-  }
-
-  /// Get XZ-plane distance from active character to current target
-  /// Returns null if no target or no active character position
-  double? getDistanceToCurrentTarget() {
-    if (currentTargetId == null || activeTransform == null) return null;
-
-    final playerPos = activeTransform!.position;
-
-    if (currentTargetId == 'boss') {
-      if (monsterTransform != null && monsterHealth > 0) {
-        final dx = monsterTransform!.position.x - playerPos.x;
-        final dz = monsterTransform!.position.z - playerPos.z;
-        return sqrt(dx * dx + dz * dz);
-      }
-      return null;
-    }
-
-    if (currentTargetId == TargetDummy.instanceId && targetDummy != null && targetDummy!.isSpawned) {
-      return targetDummy!.distanceToXZ(playerPos);
-    }
-
-    // Check allies
-    if (currentTargetId!.startsWith('ally_')) {
-      final index = int.tryParse(currentTargetId!.substring(5));
-      if (index != null && index < allies.length && allies[index].health > 0) {
-        final dx = allies[index].transform.position.x - playerPos.x;
-        final dz = allies[index].transform.position.z - playerPos.z;
-        return sqrt(dx * dx + dz * dz);
-      }
-      return null;
-    }
-
-    // Check minions
-    for (final minion in aliveMinions) {
-      if (minion.instanceId == currentTargetId) {
-        final dx = minion.transform.position.x - playerPos.x;
-        final dz = minion.transform.position.z - playerPos.z;
-        return sqrt(dx * dx + dz * dz);
-      }
-    }
-
-    return null;
-  }
-
-  /// Get target's current target (target of target)
-  String? getTargetOfTarget() {
-    final target = getCurrentTarget();
-    if (target == null) return null;
-
-    if (target['type'] == 'boss') {
-      // Boss always targets player (for now)
-      return 'player';
-    } else if (target['type'] == 'minion') {
-      final minion = target['entity'] as Monster;
-      return minion.targetId ?? 'none';
-    } else if (target['type'] == 'ally') {
-      // Allies always "target" player for simplicity
-      return 'player';
-    } else if (target['type'] == 'dummy') {
-      // Dummy doesn't target anyone
-      return 'none';
-    }
-
-    return null;
-  }
-
-  /// Set the current target by ID
-  void setTarget(String? targetId) {
-    currentTargetId = targetId;
-    // Update tab index to match
-    if (targetId != null) {
-      final index = _targetableEnemyIds.indexOf(targetId);
-      if (index >= 0) {
-        _tabTargetIndex = index;
-      }
-    }
-  }
-
-  /// Clear current target
-  void clearTarget() {
-    currentTargetId = null;
-    _tabTargetIndex = -1;
-  }
 
   /// Maximum range for tab targeting (WoW uses ~40 yards; our units are smaller)
   static const double _tabTargetMaxRange = 50.0;
@@ -1670,193 +585,6 @@ class GameState {
   /// Melee range threshold — enemies within this distance get highest priority
   static const double _meleeRange = 5.0;
 
-  /// Get ordered list of targetable enemies (for tab targeting).
-  ///
-  /// Sorting tiers (WoW-inspired):
-  ///  1. Melee range (≤ _meleeRange) — sorted by distance (nearest first)
-  ///  2. Front cone (≤ 60°) — sorted by angle, then distance
-  ///  3. Everything else within max range — sorted by distance
-  ///
-  /// Enemies beyond _tabTargetMaxRange are excluded entirely.
-  List<String> getTargetableEnemies(double playerX, double playerZ, double playerRotation) {
-    final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
-
-    // Cache for 0.1 seconds (fast refresh for responsive melee targeting)
-    if (_targetableEnemyIds.isNotEmpty && now - _targetListCacheTime < 0.1) {
-      return _targetableEnemyIds;
-    }
-
-    final targets = <_TargetCandidate>[];
-    final playerFacingRad = playerRotation * math.pi / 180.0;
-    final playerFacingX = -sin(playerFacingRad);
-    final playerFacingZ = -cos(playerFacingRad);
-
-    // Add target dummy if spawned
-    if (targetDummy != null && targetDummy!.isSpawned) {
-      final dx = targetDummy!.position.x - playerX;
-      final dz = targetDummy!.position.z - playerZ;
-      final dist = sqrt(dx * dx + dz * dz);
-      if (dist <= _tabTargetMaxRange) {
-        final angle = _calculateAngleToTarget(dx, dz, playerFacingX, playerFacingZ, dist);
-        targets.add(_TargetCandidate(TargetDummy.instanceId, dist, angle));
-      }
-    }
-
-    // Add boss if alive
-    if (monsterHealth > 0 && monsterTransform != null) {
-      final dx = monsterTransform!.position.x - playerX;
-      final dz = monsterTransform!.position.z - playerZ;
-      final dist = sqrt(dx * dx + dz * dz);
-      if (dist <= _tabTargetMaxRange) {
-        final angle = _calculateAngleToTarget(dx, dz, playerFacingX, playerFacingZ, dist);
-        targets.add(_TargetCandidate('boss', dist, angle));
-      }
-    }
-
-    // Add alive minions
-    for (final minion in aliveMinions) {
-      final dx = minion.transform.position.x - playerX;
-      final dz = minion.transform.position.z - playerZ;
-      final dist = sqrt(dx * dx + dz * dz);
-      if (dist <= _tabTargetMaxRange) {
-        final angle = _calculateAngleToTarget(dx, dz, playerFacingX, playerFacingZ, dist);
-        targets.add(_TargetCandidate(minion.instanceId, dist, angle));
-      }
-    }
-
-    // Reason: Three-tier sort — melee range first (nearest), then front cone
-    // (by angle), then everything else (by distance). This mirrors WoW's
-    // behavior where tab always grabs the closest hittable enemy for melee.
-    targets.sort((a, b) {
-      final aInMelee = a.distance <= _meleeRange;
-      final bInMelee = b.distance <= _meleeRange;
-
-      // Tier 1: melee-range enemies always come first, sorted by distance
-      if (aInMelee && !bInMelee) return -1;
-      if (!aInMelee && bInMelee) return 1;
-      if (aInMelee && bInMelee) {
-        return a.distance.compareTo(b.distance);
-      }
-
-      // Tier 2: front-cone enemies (within 60°) come next
-      final aInCone = a.angle < 60;
-      final bInCone = b.angle < 60;
-
-      if (aInCone && !bInCone) return -1;
-      if (!aInCone && bInCone) return 1;
-
-      // Within cone: sort by angle first, break ties with distance
-      if (aInCone && bInCone) {
-        final angleCmp = a.angle.compareTo(b.angle);
-        if (angleCmp != 0) return angleCmp;
-        return a.distance.compareTo(b.distance);
-      }
-
-      // Tier 3: behind the player — just sort by distance
-      return a.distance.compareTo(b.distance);
-    });
-
-    _targetableEnemyIds = targets.map((t) => t.id).toList();
-    _targetListCacheTime = now;
-
-    return _targetableEnemyIds;
-  }
-
-  /// Calculate angle (in degrees) between player facing and target direction
-  double _calculateAngleToTarget(double dx, double dz, double facingX, double facingZ, double dist) {
-    if (dist < 0.001) return 0;
-    final targetDirX = dx / dist;
-    final targetDirZ = dz / dist;
-    final dot = facingX * targetDirX + facingZ * targetDirZ;
-    final clampedDot = dot.clamp(-1.0, 1.0);
-    return acos(clampedDot) * 180.0 / math.pi;
-  }
-
-  /// Tab to next target (WoW-style).
-  ///
-  /// First press with no target selects the highest-priority enemy (index 0).
-  /// Subsequent presses cycle through the sorted list.
-  /// Invalidates the cache so the list is always fresh on key press.
-  void tabToNextTarget(double playerX, double playerZ, double playerRotation, {bool reverse = false}) {
-    // Reason: Invalidate cache on each key press so the sort reflects current
-    // positions and facing direction, not a stale snapshot.
-    _targetListCacheTime = 0.0;
-
-    final targets = getTargetableEnemies(playerX, playerZ, playerRotation);
-    if (targets.isEmpty) {
-      clearTarget();
-      return;
-    }
-
-    // Reason: If no current target, first tab picks the best target (index 0)
-    // rather than incrementing past it.
-    if (currentTargetId == null || !targets.contains(currentTargetId)) {
-      _tabTargetIndex = 0;
-    } else {
-      // Find where the current target sits in the freshly-sorted list
-      final currentIdx = targets.indexOf(currentTargetId!);
-      if (reverse) {
-        _tabTargetIndex = currentIdx - 1;
-        if (_tabTargetIndex < 0) _tabTargetIndex = targets.length - 1;
-      } else {
-        _tabTargetIndex = currentIdx + 1;
-        if (_tabTargetIndex >= targets.length) _tabTargetIndex = 0;
-      }
-    }
-
-    currentTargetId = targets[_tabTargetIndex];
-  }
-
-  /// Check if a specific entity is the current target
-  bool isTargeted(String id) => currentTargetId == id;
-
-  /// Validate current target — auto-acquire next nearest enemy if target dies.
-  void validateTarget() {
-    if (currentTargetId == null) return;
-
-    if (currentTargetId == 'player') {
-      return;
-    }
-
-    bool targetDead = false;
-
-    if (currentTargetId == 'boss') {
-      if (monsterHealth <= 0) targetDead = true;
-    } else if (currentTargetId == TargetDummy.instanceId) {
-      if (targetDummy == null || !targetDummy!.isSpawned) targetDead = true;
-    } else if (currentTargetId!.startsWith('ally_')) {
-      final index = int.tryParse(currentTargetId!.substring(5));
-      if (index == null || index >= allies.length || allies[index].health <= 0) {
-        clearTarget();
-        return;
-      }
-    } else {
-      final minion = minions.where((m) => m.instanceId == currentTargetId).firstOrNull;
-      if (minion == null || !minion.isAlive) targetDead = true;
-    }
-
-    // Reason: When an enemy target dies, auto-acquire the next nearest enemy
-    // so melee players can keep swinging without manual re-targeting.
-    if (targetDead) {
-      clearTarget();
-      if (activeTransform != null) {
-        final pos = activeTransform!.position;
-        // Invalidate cache so we get a fresh sort
-        _targetListCacheTime = 0.0;
-        final targets = getTargetableEnemies(pos.x, pos.z, activeRotation);
-        if (targets.isNotEmpty) {
-          _tabTargetIndex = 0;
-          currentTargetId = targets[0];
-        }
-      }
-    }
-  }
-
-  // Math helpers for targeting (delegates to dart:math for accuracy + hardware speed)
-  static double sqrt(double x) => x <= 0 ? 0.0 : math.sqrt(x);
-  static double sin(double x) => math.sin(x);
-  static double cos(double x) => math.cos(x);
-  static double acos(double x) => math.acos(x.clamp(-1.0, 1.0));
 
   // ==================== MINIMAP STATE ====================
 
@@ -1877,93 +605,9 @@ class GameState {
   /// Currently selected building (for interaction panel).
   Building? selectedBuilding;
 
-  /// Spawn the warchief's home at a fixed position near player start.
-  ///
-  /// Only spawns once — skips if a warchief_home already exists.
-  void spawnWarchiefHome(InfiniteTerrainManager? terrainManager) {
-    if (buildings.any((b) => b.definition.id == 'warchief_home')) return;
 
-    final config = globalBuildingConfig;
-    final typeDef = BuildingDefinition.fromConfig(
-      'warchief_home',
-      config?.getBuildingType('warchief_home'),
-    );
-    if (typeDef == null) {
-      print('[BUILDING] Warning: warchief_home definition not found in config');
-      return;
-    }
 
-    // Place near player start, offset to the side
-    final homeX = GameConfig.playerStartPosition.x + 15;
-    final homeZ = GameConfig.playerStartPosition.z + 15;
 
-    final building = _placeBuildingInternal(
-      definition: typeDef,
-      worldX: homeX,
-      worldZ: homeZ,
-      terrainManager: terrainManager,
-    );
-
-    buildings.add(building);
-    print('[BUILDING] Warchief Home placed at ($homeX, $homeZ)');
-  }
-
-  /// Internal helper: place a building and return it.
-  Building _placeBuildingInternal({
-    required BuildingDefinition definition,
-    required double worldX,
-    required double worldZ,
-    required InfiniteTerrainManager? terrainManager,
-    int tier = 0,
-  }) {
-    // Imported inline to avoid circular dependency
-    // Uses BuildingSystem.placeBuilding from systems layer
-    final tierDef = definition.getTier(tier);
-    final mesh = _createBuildingMeshFromTier(tierDef);
-    double y = 0.0;
-    if (terrainManager != null) {
-      y = terrainManager.getTerrainHeight(worldX, worldZ);
-    }
-    final transform = Transform3d(
-      position: Vector3(worldX, y, worldZ),
-    );
-    return Building(
-      instanceId: '${definition.id}_${buildings.length}',
-      definition: definition,
-      currentTier: tier,
-      mesh: mesh,
-      transform: transform,
-    );
-  }
-
-  /// Create building mesh from tier (delegates to BuildingMesh factory).
-  static Mesh _createBuildingMeshFromTier(BuildingTierDef tier) {
-    // Reason: import is at file level, keeping this as a static method
-    // avoids importing building_system.dart into game_state.dart (circular)
-    return _BuildingMeshHelper.create(tier);
-  }
-
-  /// Get the nearest building to player within a given range.
-  ///
-  /// Returns null if no building is within range.
-  Building? getNearestBuilding(double range) {
-    if (playerTransform == null) return null;
-    final px = playerTransform!.position.x;
-    final pz = playerTransform!.position.z;
-
-    Building? nearest;
-    double nearestDist = range;
-
-    for (final building in buildings) {
-      if (!building.isPlaced) continue;
-      final dist = building.distanceTo(px, pz);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearest = building;
-      }
-    }
-    return nearest;
-  }
 
   // ==================== GOALS ====================
 
@@ -1998,10 +642,14 @@ class GameState {
   /// Combat log entries (ability usage and effects).
   List<CombatLogEntry> combatLogMessages = [];
 
+  /// Console log entries (player actions for troubleshooting).
+  List<ConsoleLogEntry> consoleLogMessages = [];
+
+
   /// Whether the unified chat panel is open (backtick key).
   bool chatPanelOpen = false;
 
-  /// Active tab in the chat panel: 0 = Spirit, 1 = Raid, 2 = Combat.
+  /// Active tab in the chat panel: 0 = Spirit, 1 = Raid, 2 = Combat, 3 = Console.
   int chatPanelActiveTab = 0;
 
   /// Melee hit streak tracker (for mastery goals).
@@ -2038,51 +686,7 @@ class GameState {
   /// Target dummy for DPS testing (null when not spawned)
   TargetDummy? targetDummy;
 
-  /// Spawn a target dummy 40 yards in front of the player
-  void spawnTargetDummy(InfiniteTerrainManager? terrainManager) {
-    if (targetDummy != null && targetDummy!.isSpawned) return;
-    if (playerTransform == null) return;
 
-    // Calculate position 40 yards (units) in front of the player
-    final playerPos = playerTransform!.position;
-    final playerRot = playerRotation * 3.14159 / 180.0;
-
-    // Direction player is facing
-    final dirX = -sin(playerRot);
-    final dirZ = -cos(playerRot);
-
-    // Position 40 units ahead
-    const distance = 40.0;
-    final dummyX = playerPos.x + dirX * distance;
-    final dummyZ = playerPos.z + dirZ * distance;
-
-    // Get terrain height at dummy position
-    double dummyY = playerPos.y;
-    if (terrainManager != null) {
-      final terrainHeight = terrainManager.getTerrainHeight(dummyX, dummyZ);
-      dummyY = terrainHeight + TargetDummy.size / 2 + 0.15;
-    }
-
-    targetDummy = TargetDummy.spawn(Vector3(dummyX, dummyY, dummyZ));
-
-    // Start DPS tracking session
-    dpsTracker.startSession();
-
-    print('[DPS] Target Dummy spawned at ($dummyX, $dummyY, $dummyZ)');
-  }
-
-  /// Despawn the target dummy
-  void despawnTargetDummy() {
-    if (targetDummy == null) return;
-
-    targetDummy!.isSpawned = false;
-    targetDummy = null;
-
-    // End DPS tracking session
-    dpsTracker.endSession();
-
-    print('[DPS] Target Dummy despawned');
-  }
 
   /// Check if target dummy is the current target
   bool get isTargetingDummy => currentTargetId == TargetDummy.instanceId;
@@ -2095,76 +699,6 @@ class GameState {
   /// Whether the inventory has been initialized with items
   bool inventoryInitialized = false;
 
-  /// Initialize player inventory with sample items from database
-  Future<void> initializeInventory() async {
-    if (inventoryInitialized) return;
-
-    // Load the item database
-    await ItemDatabase.instance.load();
-
-    // Add sample items to bag
-    final sampleItems = [
-      'health_potion',
-      'health_potion',
-      'mana_potion',
-      'iron_sword',
-      'chainmail_armor',
-      'iron_helm',
-      'leather_boots',
-      'leather_gloves',
-      'iron_greaves',
-      'travelers_cloak',
-      'wooden_shield',
-      'ring_of_strength',
-      'amulet_of_fortitude',
-      'talisman_of_ley',
-      'talisman_of_blood',
-      'talisman_of_wind',
-      'talisman_of_growth',
-      'iron_ore',
-      'gold_coin',
-      'dragon_scale',
-    ];
-
-    for (final itemId in sampleItems) {
-      final item = ItemDatabase.instance.createItem(itemId);
-      if (item != null) {
-        playerInventory.addToBag(item);
-      }
-    }
-
-    // Pre-equip some items on the player
-    final startingEquipment = [
-      'steel_plate',
-      'steel_helm',
-      'war_axe',
-      'tower_shield',
-      'boots_of_swiftness',
-      'gauntlets_of_might',
-      'legplates_of_valor',
-      'cloak_of_shadows',
-      'signet_of_the_warchief',
-      'band_of_protection',
-      'all_source_talisman',
-    ];
-
-    for (final itemId in startingEquipment) {
-      final item = ItemDatabase.instance.createItem(itemId);
-      if (item != null && item.isEquippable) {
-        playerInventory.equip(item);
-      }
-    }
-
-    // Set player health to full after equipping starting gear
-    playerHealth = playerMaxHealth;
-
-    // Reason: attunement cache may have been populated before equipment was loaded
-    invalidatePlayerAttunementCache();
-
-    inventoryInitialized = true;
-    print('[GameState] Inventory initialized with ${playerInventory.usedBagSlots} bag items and equipment');
-    print('[GameState] Player max health: $playerMaxHealth (base $basePlayerMaxHealth + ${playerInventory.totalEquippedStats.health} from gear)');
-  }
 
   // ==================== FLIGHT STATE ====================
 
@@ -2207,56 +741,8 @@ class GameState {
   /// Remaining time on Wind Warp speed buff
   double windWarpSpeedTimer = 0.0;
 
-  /// Start flight if player has enough White Mana for initial cost.
-  ///
-  /// Spends the initial mana cost and sets isFlying = true.
-  void startFlight() {
-    final config = globalWindConfig;
-    final cost = config?.initialManaCost ?? 15.0;
-    if (!hasWhiteMana(cost)) {
-      print('[FLIGHT] Not enough White Mana to take flight (need $cost)');
-      return;
-    }
-    spendWhiteMana(cost);
-    isFlying = true;
-    flightPitchAngle = 0.0;
-    flightBankAngle = 0.0;
-    flightSpeed = config?.flightSpeed ?? 7.0;
-    flightGroundSpeed = 0.0;
-    // Reset visual pitch and roll
-    if (playerTransform != null) {
-      playerTransform!.rotation.x = 0.0;
-      playerTransform!.rotation.z = 0.0;
-    }
-    // Cancel any cast/windup when entering flight
-    cancelCast();
-    cancelWindup();
-    print('[FLIGHT] Taking flight! (spent ${cost.toStringAsFixed(0)} White Mana)');
-  }
 
-  /// End flight — reset all flight state.
-  void endFlight() {
-    isFlying = false;
-    flightPitchAngle = 0.0;
-    flightBankAngle = 0.0;
-    flightSpeed = globalWindConfig?.flightSpeed ?? 7.0;
-    flightGroundSpeed = 0.0;
-    // Reset visual pitch and roll
-    if (playerTransform != null) {
-      playerTransform!.rotation.x = 0.0;
-      playerTransform!.rotation.z = 0.0;
-    }
-    print('[FLIGHT] Flight ended');
-  }
 
-  /// Toggle flight on/off.
-  void toggleFlight() {
-    if (isFlying) {
-      endFlight();
-    } else {
-      startFlight();
-    }
-  }
 
   // ==================== JUMP/PHYSICS STATE ====================
 
@@ -2323,41 +809,55 @@ class GameState {
   double get effectivePlayerSpeed =>
       playerSpeed * windupMovementSpeedModifier * activeStance.movementSpeedMultiplier;
 
-  /// Cancel any active cast (called when player moves during stationary cast)
-  void cancelCast() {
-    if (isCasting) {
-      print('[CAST] $castingAbilityName cast cancelled — mana and cooldown preserved');
-      isCasting = false;
-      castProgress = 0.0;
-      currentCastTime = 0.0;
-      castingSlotIndex = null;
-      castingAbilityName = '';
-      pendingManaCost = 0.0;
-    }
-  }
 
-  /// Cancel any active windup
-  void cancelWindup() {
-    if (isWindingUp) {
-      print('[WINDUP] $windupAbilityName windup cancelled — mana and cooldown preserved');
-      isWindingUp = false;
-      windupProgress = 0.0;
-      currentWindupTime = 0.0;
-      windupSlotIndex = null;
-      windupAbilityName = '';
-      windupMovementSpeedModifier = 1.0;
-      pendingManaCost = 0.0;
-    }
-  }
 
-  /// Check if player is performing any cast/windup action
-  bool get isPerformingAction => isCasting || isWindingUp;
+  // ==================== CHANNELING STATE ====================
+
+  /// Whether the player is currently channeling a spell
+  bool isChanneling = false;
+
+  /// Current channel elapsed time in seconds (0 to channelDuration)
+  double channelProgress = 0.0;
+
+  /// Total channel duration of the current spell
+  double channelDuration = 0.0;
+
+  /// Name of the ability being channeled (for UI display)
+  String channelingAbilityName = '';
+
+  /// The slot index of the ability being channeled
+  int? channelingSlotIndex;
+
+  /// Center position for AoE channeled abilities (stored at channel start)
+  Vector3? channelAoeCenter;
+
+
+  /// Get channel progress as percentage (1.0 = just started, 0.0 = about to finish)
+  /// Reason: Channeling bar drains from full to empty, opposite of cast bar
+  double get channelPercentage => channelDuration > 0 ? (1.0 - channelProgress / channelDuration).clamp(0.0, 1.0) : 0.0;
+
+  /// Check if player is performing any cast/windup/channel action
+  bool get isPerformingAction => isCasting || isWindingUp || isChanneling;
 
   /// Get cast progress as percentage (0.0 to 1.0)
   double get castPercentage => currentCastTime > 0 ? castProgress / currentCastTime : 0.0;
 
   /// Get windup progress as percentage (0.0 to 1.0)
   double get windupPercentage => currentWindupTime > 0 ? windupProgress / currentWindupTime : 0.0;
+
+  // ==================== GLOBAL COOLDOWN ====================
+
+  /// GCD remaining for the Warchief (seconds)
+  double gcdRemaining = 0.0;
+
+  /// GCD max duration for UI display (seconds)
+  double gcdMax = 0.0;
+
+  /// GCD remaining for the currently active character
+  double get activeGcdRemaining {
+    if (isWarchiefActive) return gcdRemaining;
+    return activeAlly?.gcdRemaining ?? 0.0;
+  }
 
   // ==================== ABILITY COOLDOWNS (slots 0-9) ====================
 
@@ -2435,33 +935,12 @@ class GameState {
   /// preventing timing drift in cast bars and windups.
   double? lastTimestamp;
   int frameCount = 0;
+
+  // ==================== SUMMONED UNITS ====================
+
+
+
+
+
 }
 
-/// Helper class for sorting target candidates
-class _TargetCandidate {
-  final String id;
-  final double distance;
-  final double angle; // Angle from player's facing direction
-
-  _TargetCandidate(this.id, this.distance, this.angle);
-}
-
-/// Helper to create building meshes without importing building_system.dart.
-///
-/// Reason: game_state.dart must not import building_system.dart because
-/// building_system.dart imports game_state.dart. This helper delegates
-/// to BuildingMesh directly instead.
-class _BuildingMeshHelper {
-  static Mesh create(BuildingTierDef tier) {
-    // Inline import to avoid circular dependency
-    return _createFromParts(tier);
-  }
-
-  /// Minimal mesh creation from tier parts.
-  /// Delegates to the BuildingMesh factory via the rendering3d layer.
-  static Mesh _createFromParts(BuildingTierDef tier) {
-    // Use the same factory as building_mesh.dart
-    // This import is safe because rendering3d has no dependency on game3d/state
-    return BuildingMesh.createBuilding(tier);
-  }
-}

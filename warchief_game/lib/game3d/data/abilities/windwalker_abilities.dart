@@ -311,6 +311,51 @@ class WindWalkerAbilities {
     category: 'windwalker',
   );
 
+  // ==================== BASIC NO-MANA MELEE ====================
+
+  /// Basic no-mana melee: quick jab
+  static final swiftJab = AbilityData(
+    name: 'Swift Jab',
+    description: 'A quick, manaless jab.',
+    type: AbilityType.melee,
+    damage: 12.0,
+    cooldown: 1.0,
+    range: 2.0,
+    color: Vector3(0.8, 0.9, 1.0),
+    impactColor: Vector3(0.9, 1.0, 1.0),
+    impactSize: 0.4,
+    category: 'windwalker',
+  );
+
+  /// Basic no-mana melee: wind punch
+  static final galePunch = AbilityData(
+    name: 'Gale Punch',
+    description: 'A forceful wind-enhanced punch.',
+    type: AbilityType.melee,
+    damage: 14.0,
+    cooldown: 1.0,
+    range: 2.5,
+    color: Vector3(0.7, 0.9, 1.0),
+    impactColor: Vector3(0.8, 1.0, 1.0),
+    impactSize: 0.5,
+    category: 'windwalker',
+  );
+
+  /// Medium-cooldown permanent physical vulnerability
+  static final pressurePoint = AbilityData(
+    name: 'Pressure Point',
+    description: 'A precise strike that permanently exposes the target\'s physical weakness.',
+    type: AbilityType.melee,
+    damage: 10.0,
+    cooldown: 12.0,
+    range: 2.5,
+    color: Vector3(0.9, 0.8, 0.7),
+    impactColor: Vector3(1.0, 0.9, 0.8),
+    impactSize: 0.6,
+    category: 'windwalker',
+    appliesPermanentVulnerability: true,
+  );
+
   /// All Wind Walker abilities as a list
   static List<AbilityData> get all => [
     galeStep,
@@ -330,5 +375,8 @@ class WindWalkerAbilities {
     zephyrPalm,
     cycloneKick,
     stormfistBarrage,
+    swiftJab,
+    galePunch,
+    pressurePoint,
   ];
 }

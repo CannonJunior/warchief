@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../state/game_state.dart';
+import '../state/gameplay_settings.dart';
 
 /// Cast bar widget that shows the progress of spell casts and melee windups
 ///
@@ -17,25 +18,57 @@ class CastBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Don't show if not casting or winding up
-    if (!gameState.isCasting && !gameState.isWindingUp) {
+    // Don't show if not casting, winding up, or channeling
+    if (!gameState.isCasting && !gameState.isWindingUp && !gameState.isChanneling) {
       return const SizedBox.shrink();
     }
 
-    final isCast = gameState.isCasting;
-    final progress = isCast ? gameState.castPercentage : gameState.windupPercentage;
-    final abilityName = isCast ? gameState.castingAbilityName : gameState.windupAbilityName;
-    final totalTime = isCast ? gameState.currentCastTime : gameState.currentWindupTime;
-    final currentTime = isCast ? gameState.castProgress : gameState.windupProgress;
-    final label = isCast ? 'Casting' : 'Winding Up';
+    // Reason: Channel bar can be hidden via settings; cast/windup bars always show
+    if (gameState.isChanneling && !(globalGameplaySettings?.showChannelBar ?? true)) {
+      return const SizedBox.shrink();
+    }
+
+    final bool isChannel = gameState.isChanneling;
+    final bool isCast = !isChannel && gameState.isCasting;
+
+    double progress;
+    String abilityName;
+    double totalTime;
+    double currentTime;
+    String label;
+
+    if (isChannel) {
+      // Reason: Channeling bar drains from full to empty (progress = remaining fraction)
+      progress = gameState.channelPercentage;
+      abilityName = gameState.channelingAbilityName;
+      totalTime = gameState.channelDuration;
+      currentTime = gameState.channelProgress;
+      label = 'Channeling';
+    } else if (isCast) {
+      progress = gameState.castPercentage;
+      abilityName = gameState.castingAbilityName;
+      totalTime = gameState.currentCastTime;
+      currentTime = gameState.castProgress;
+      label = 'Casting';
+    } else {
+      progress = gameState.windupPercentage;
+      abilityName = gameState.windupAbilityName;
+      totalTime = gameState.currentWindupTime;
+      currentTime = gameState.windupProgress;
+      label = 'Winding Up';
+    }
 
     // Colors
-    final barColor = isCast
-        ? const Color(0xFF4A90D9) // Blue for casts
-        : const Color(0xFFD97B4A); // Orange for windups
-    final bgColor = isCast
-        ? const Color(0xFF1A3A5C) // Dark blue bg
-        : const Color(0xFF5C3A1A); // Dark orange bg
+    final barColor = isChannel
+        ? const Color(0xFF9B59B6) // Purple for channels
+        : isCast
+            ? const Color(0xFF4A90D9) // Blue for casts
+            : const Color(0xFFD97B4A); // Orange for windups
+    final bgColor = isChannel
+        ? const Color(0xFF3A1A5C) // Dark purple bg
+        : isCast
+            ? const Color(0xFF1A3A5C) // Dark blue bg
+            : const Color(0xFF5C3A1A); // Dark orange bg
 
     return Positioned(
       bottom: 140, // Above action bar

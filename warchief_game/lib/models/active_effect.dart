@@ -9,7 +9,7 @@ class ActiveEffect {
   final StatusEffect type;
   double remainingDuration;
   final double totalDuration;
-  final double strength;
+  double strength;
 
   /// Damage to apply each tick (0 = no damage, pure status effect)
   final double damagePerTick;
@@ -23,6 +23,9 @@ class ActiveEffect {
   /// Name of the ability that created this effect (for combat log)
   final String sourceName;
 
+  /// Whether this effect persists until death/cleanse (ignores duration)
+  bool isPermanent;
+
   ActiveEffect({
     required this.type,
     required this.remainingDuration,
@@ -32,16 +35,17 @@ class ActiveEffect {
     this.tickInterval = 0.0,
     this.tickAccumulator = 0.0,
     this.sourceName = '',
+    this.isPermanent = false,
   });
 
   /// Whether this effect deals periodic damage
   bool get isDoT => damagePerTick > 0 && tickInterval > 0;
 
   /// Whether this effect has expired.
-  bool get isExpired => remainingDuration <= 0;
+  bool get isExpired => !isPermanent && remainingDuration <= 0;
 
   /// Progress from 1.0 (full) to 0.0 (expired).
-  double get progress => (remainingDuration / totalDuration).clamp(0.0, 1.0);
+  double get progress => isPermanent ? 1.0 : (remainingDuration / totalDuration).clamp(0.0, 1.0);
 
   /// Buffs = positive effects on self/allies.
   bool get isBuff =>
@@ -55,7 +59,8 @@ class ActiveEffect {
 
   /// Tick the effect timer by dt seconds.
   void tick(double dt) {
-    remainingDuration -= dt;
+    // Reason: Permanent effects never expire — skip duration decrement
+    if (!isPermanent) remainingDuration -= dt;
   }
 
   /// Icon for each status effect type.
@@ -91,6 +96,15 @@ class ActiveEffect {
         return Icons.trending_down;
       case StatusEffect.fear:
         return Icons.warning;
+      case StatusEffect.vulnerablePhysical:
+      case StatusEffect.vulnerableFire:
+      case StatusEffect.vulnerableFrost:
+      case StatusEffect.vulnerableLightning:
+      case StatusEffect.vulnerableNature:
+      case StatusEffect.vulnerableShadow:
+      case StatusEffect.vulnerableArcane:
+      case StatusEffect.vulnerableHoly:
+        return Icons.shield_outlined;
       case StatusEffect.none:
         return Icons.circle;
     }
@@ -129,6 +143,22 @@ class ActiveEffect {
         return const Color(0xFF996633);
       case StatusEffect.fear:
         return const Color(0xFF9933CC);
+      case StatusEffect.vulnerablePhysical:
+        return const Color(0xFFCC9966);
+      case StatusEffect.vulnerableFire:
+        return const Color(0xFFFF6600);
+      case StatusEffect.vulnerableFrost:
+        return const Color(0xFF66CCFF);
+      case StatusEffect.vulnerableLightning:
+        return const Color(0xFFFFFF00);
+      case StatusEffect.vulnerableNature:
+        return const Color(0xFF66FF66);
+      case StatusEffect.vulnerableShadow:
+        return const Color(0xFF9933CC);
+      case StatusEffect.vulnerableArcane:
+        return const Color(0xFFCC66FF);
+      case StatusEffect.vulnerableHoly:
+        return const Color(0xFFFFFF99);
       case StatusEffect.none:
         return const Color(0xFF666666);
     }
