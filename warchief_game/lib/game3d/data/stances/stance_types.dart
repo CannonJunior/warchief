@@ -9,6 +9,7 @@ enum StanceId {
   tide,
   phantomDance,
   furyOfTheAncestors,
+  starbreaker,
 }
 
 /// Immutable data class holding all modifier values and passive mechanics
@@ -47,6 +48,9 @@ class StanceData {
   // Combat interaction modifiers
   final double spellPushbackInflicted;
   final double spellPushbackResistance;
+  /// Wind resistance [0.0, 1.0]: scales down wind drift and headwind speed penalty.
+  /// 1.0 = fully immune to wind pushback. Default 0.0 (no protection).
+  final double windResistance;
   final double ccDurationInflicted;
   final double ccDurationReceived;
   final double lifestealRatio;
@@ -84,6 +88,7 @@ class StanceData {
     this.rerollDamageTakenMax = 1.30,
     this.spellPushbackInflicted = 0.0,
     this.spellPushbackResistance = 0.0,
+    this.windResistance = 0.0,
     this.ccDurationInflicted = 1.0,
     this.ccDurationReceived = 1.0,
     this.lifestealRatio = 0.0,
@@ -130,6 +135,7 @@ class StanceData {
     double? rerollDamageTakenMax,
     double? spellPushbackInflicted,
     double? spellPushbackResistance,
+    double? windResistance,
     double? ccDurationInflicted,
     double? ccDurationReceived,
     double? lifestealRatio,
@@ -165,6 +171,7 @@ class StanceData {
       rerollDamageTakenMax: rerollDamageTakenMax ?? this.rerollDamageTakenMax,
       spellPushbackInflicted: spellPushbackInflicted ?? this.spellPushbackInflicted,
       spellPushbackResistance: spellPushbackResistance ?? this.spellPushbackResistance,
+      windResistance: windResistance ?? this.windResistance,
       ccDurationInflicted: ccDurationInflicted ?? this.ccDurationInflicted,
       ccDurationReceived: ccDurationReceived ?? this.ccDurationReceived,
       lifestealRatio: lifestealRatio ?? this.lifestealRatio,
@@ -227,6 +234,7 @@ class StanceData {
       rerollDamageTakenMax: ov<double>('rerollDamageTakenMax', rerollDamageTakenMax),
       spellPushbackInflicted: ov<double>('spellPushbackInflicted', spellPushbackInflicted),
       spellPushbackResistance: ov<double>('spellPushbackResistance', spellPushbackResistance),
+      windResistance: ov<double>('windResistance', windResistance),
       ccDurationInflicted: ov<double>('ccDurationInflicted', ccDurationInflicted),
       ccDurationReceived: ov<double>('ccDurationReceived', ccDurationReceived),
       lifestealRatio: ov<double>('lifestealRatio', lifestealRatio),
@@ -270,6 +278,11 @@ class StanceData {
       } else {
         lines.add('${(spellPushbackResistance * 100).round()}% pushback resistance');
       }
+    }
+    if (windResistance >= 1.0) {
+      lines.add('Immune to wind pushback');
+    } else if (windResistance > 0) {
+      lines.add('${(windResistance * 100).round()}% wind resistance');
     }
     add('CC duration inflicted', ccDurationInflicted);
     add('CC duration received', ccDurationReceived);

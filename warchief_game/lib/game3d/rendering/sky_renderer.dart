@@ -6,6 +6,7 @@ import '../../rendering3d/webgl_renderer.dart';
 import '../../rendering3d/camera3d.dart';
 import '../state/comet_state.dart';
 import '../state/comet_config.dart';
+import 'comet_tail_particles.dart';
 
 /// Sky and comet billboard renderer.
 ///
@@ -32,10 +33,15 @@ class SkyRenderer {
     position: Vector3(400, 180, 400),
   );
 
+  final CometTailParticleSystem _tailParticles = CometTailParticleSystem();
+
   // ── Public API ────────────────────────────────────────────────────────────
 
-  /// Call once per frame to rebuild meshes when comet state changes appreciably.
-  void update(CometState cometState) {
+  /// Call once per frame to rebuild meshes and advance the tail particle simulation.
+  ///
+  /// [dt] is used for particle physics; use an approximate value (e.g. 0.016)
+  /// when the exact frame delta is unavailable.
+  void update(CometState cometState, double dt) {
     final intensityDelta = (cometState.cometIntensity - _lastBuiltIntensity).abs();
     final phaseDelta = (cometState.orbitalPhase - _lastBuiltPhase).abs();
 
@@ -46,6 +52,9 @@ class SkyRenderer {
       _lastBuiltIntensity = cometState.cometIntensity;
       _lastBuiltPhase = cometState.orbitalPhase;
     }
+
+    // Advance streaming tail particles every frame
+    _tailParticles.update(dt, cometState);
   }
 
   /// Render the sky gradient background quad.
@@ -71,9 +80,10 @@ class SkyRenderer {
     gl.depthMask(true);
   }
 
-  /// Render the comet billboard (coma + tails) with additive blending.
+  /// Render the comet: particle tail streaks + static billboard (coma + tails).
   ///
   /// Must be called AFTER opaque terrain/characters so additive blend works.
+  /// Render order: tail particles first (behind coma), then the bright billboard.
   void renderComet(
     WebGLRenderer renderer,
     Camera3D camera,
@@ -81,18 +91,21 @@ class SkyRenderer {
   ) {
     if (cometState.cometIntensity < 0.01) return;
 
-    if (_cometMesh == null) _buildCometMesh(cometState);
-    final mesh = _cometMesh;
-    if (mesh == null) return;
-
-    _updateCometTransform(cometState);
-
     final gl = renderer.gl;
     gl.enable(0x0BE2); // GL_BLEND
     gl.blendFunc(0x0302, 0x0001); // SRC_ALPHA, ONE (additive glow)
     gl.depthMask(false);
 
-    renderer.render(mesh, _cometTransform, camera);
+    // Render dynamic particle tail first (behind the bright coma)
+    _tailParticles.render(renderer, camera);
+
+    // Render static comet billboard (coma + ion/dust tails) on top
+    if (_cometMesh == null) _buildCometMesh(cometState);
+    final mesh = _cometMesh;
+    if (mesh != null) {
+      _updateCometTransform(cometState);
+      renderer.render(mesh, _cometTransform, camera);
+    }
 
     gl.depthMask(true);
     gl.disable(0x0BE2);

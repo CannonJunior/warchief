@@ -2,7 +2,54 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-26
+
+#### Melee Combo System — Chain Combos + Per-Class Primers
+- ✅ **`assets/data/combo_config.json`**: All thresholds normalized to 3; buff durations 8s, debuff durations 4s. Added per-class `chain` sub-config objects. Added `chainWindow: 7.0`.
+- ✅ **`lib/game3d/state/combo_config.dart`**: Added `chainWindow` getter.
+- ✅ **`lib/game3d/data/abilities/ability_types.dart`**: Added `enablesComboChain: bool = false` to `AbilityData` constructor, `copyWith`, and `applyOverrides`.
+- ✅ **`lib/game3d/state/game_state.dart`**: Added `meleeChainModeActive`, `meleeChainCount`, `meleeChainTimer`, `meleeChainCategory` fields. Updated `effectivePlayerSpeed` to apply haste effect multiplier.
+- ✅ **`lib/game3d/systems/melee_combo_system.dart`**: Full chain combo logic — primer detection (`enablesComboChain`), chain hit tracking (hit 3 fires regular effect, hit 7 fires chain effect), chain timer decay in `update()`. Added `_triggerChainEffect()` dispatch + per-class chain handlers: `_applyWeakness`, `_applyRoot`, `_applyPoison`. Added `_logChainActivated` / `_logChainTrigger` helpers.
+- ✅ **12 class ability files** — added chain primer ability to each:
+  - `warrior_abilities.dart` → `Iron Momentum` (red mana 20, CD 10)
+  - `rogue_abilities.dart` → `Shadow Chain` (red mana 15, CD 10)
+  - `windwalker_abilities.dart` → `Gale Fury` (white mana 15, CD 10)
+  - `starbreaker_abilities.dart` → `Void Cascade` (black mana 20, CD 10)
+  - `stormheart_abilities.dart` → `Thunderstorm Strike` (white 15 + red 10, CD 10)
+  - `healer_abilities.dart` → `Battle Blessing` (blue mana 20, CD 10)
+  - `necromancer_abilities.dart` → `Soul Chain` (black mana 20, CD 10)
+  - `nature_abilities.dart` → `Ancient Surge` (green mana 15, CD 10)
+  - `greenseer_abilities.dart` → `Earth Bond` (green mana 15, CD 10)
+  - `mage_abilities.dart` → `Arcane Focus` (blue mana 20, CD 10)
+  - `spiritkin_abilities.dart` → `Spirit Rush` (green mana 15, CD 10)
+  - `elemental_abilities.dart` → `Elemental Chain` (red mana 20, CD 10)
+- ✅ Build verified clean (`flutter analyze --no-pub` — 0 new errors).
+
 ### ✅ Completed - 2026-02-25
+
+#### Wind Curl Visibility + Impassable Movement Fix
+- ✅ **`lib/game3d/state/wind_state.dart`** (`getMovementModifier`): Root cause was `headFactor=0.15` keeping `rawMod` at 0.625 even at threshold — the `impassMin` floor was never reached. Fix: above `impassableThreshold`, `effectiveHeadFactor` ramps from `0.15` toward `1.0` (amplified by `t × (1−resistance)`), forcing rawMod deeply negative so the clamp always triggers. Tide (resistance=1) keeps base factor; no-stance units hit `impassMin=0.02` by ~effStr=5.
+- ✅ **`lib/game3d/rendering/wind_particles.dart`** (`_rebuildMesh`): Replaced 4-vertex parallelogram (imperceptible as curved) with 6-vertex 2-segment bent strip (head → elbow at centre → tail). Mid-perpendicular uses `midAngle = windAngle − offset × 0.5`. Added `curveDurationMult=2.0` amplification and `clamp(−π/2, π/2)` to prevent spiral artifacts.
+- ✅ **`lib/game3d/ui/minimap/minimap_wind_painter.dart`** (`_drawParticles`): Replaced `trailDuration = trailPx / pixelSpeed` (which shrank at high effStr, cancelling angular offset) with fixed `curveSecs=1.5`. Bumped `trailPx` 10→12. Added `clamp(−3π/4, 3π/4)` on angle offset.
+- ✅ Build verified clean (`flutter analyze --no-pub` — 0 new errors).
+
+#### Wind Threshold Tuning + Curving Wind Trails
+- ✅ **`assets/data/wind_config.json`**: Lowered `driftThreshold` 2.0→1.0, `driftMaxSpeed` 0.6→1.0, `impassableThreshold` 5.0→2.5. Previous values were barely reachable given `baseStrength 0.3 × 10× derecho = 3.0` typical peak.
+- ✅ **`lib/game3d/state/wind_state.dart`**: Added `windAngularVelocity` (EMA-smoothed `Δangle/dt`, shortest-arc-safe). Used by renderers to curve trail geometry.
+- ✅ **`lib/game3d/rendering/wind_particles.dart`**: Bent trail quads — head end uses current `windAngle`, tail end uses `windAngle − ω × trailDuration`. Trails now curve in the direction the wind is turning, proportional to turn rate.
+- ✅ **`lib/game3d/ui/minimap/minimap_wind_painter.dart`**: Replaced `drawLine(prev, curr)` with quadratic bezier whose tail is analytically computed from `windAngularVelocity`. Control point at the mid-direction angle produces smooth curves; falls through to straight line when `|ω| < 0.05`.
+- ✅ Build verified clean (`flutter analyze --no-pub` — 0 new errors).
+
+#### Wind Physical Effects on Units (Derecho Pushback)
+- ✅ **`assets/data/wind_config.json`**: Added `physics` section (`driftThreshold`, `driftMaxSpeed`, `impassableThreshold`, `impassableMinSpeed`).
+- ✅ **`lib/game3d/state/wind_config.dart`**: Added 4 physics getters in a new `WIND PHYSICS GETTERS` section.
+- ✅ **`lib/game3d/state/wind_state.dart`**: Added `getWindDrift(dt, {resistance})` for passive position drift; updated `getMovementModifier` to accept `resistance` and apply impassable threshold logic; added `isWindImpassable` getter.
+- ✅ **`lib/game3d/data/stances/stance_types.dart`**: Added `windResistance` field with default 0.0; wired into constructor, `copyWith`, `applyOverrides`, and `modifierSummary`.
+- ✅ **`lib/game3d/data/stances/stance_definitions.dart`**: Added `windResistance` parse in `_parseStance()`.
+- ✅ **`assets/data/stance_config.json`**: Added `windResistance` per stance — Drunken (0.0), Blood (0.0), Tide (1.0), Phantom (0.5), Fury (0.75).
+- ✅ **`lib/game3d/systems/input_system.dart`**: Player movement modifier now passes `gameState.activeStance.windResistance`; passive drift applied at end of `handlePlayerMovement`.
+- ✅ **`lib/game3d/game3d_widget_update.dart`**: Added `_applyWindDrift(dt)` helper; called after `AISystem.update` to drift allies and monster.
+- ✅ Build verified clean (`flutter analyze --no-pub` — 0 new errors).
 
 #### Comet System (Options A + B) with Black Mana
 - ✅ **`assets/data/comet_config.json`**: All tunable values for orbital, blackMana, sky, comet visual, and meteor sections.
@@ -40,6 +87,8 @@
 10. ✅ **macro_builder_panel.dart** (737 lines) → Split into 2 part files via extension: panel scaffold+state+header (316), list+editor views (427). All under 500 lines. Build verified clean.
 11. ✅ **mesh.dart** (615 lines) → Split into 2 part files: core mesh+basic factories (408), `targetIndicator`+`auraDisc` implementations+math helpers (221). All under 500 lines. Build verified clean.
 12. ✅ **ley_lines.dart** (606 lines) → Split into 2 part files: data types (193), `LeyLineManager`+`_Intersection` (416). All under 500 lines. Build verified clean.
+13. ✅ **stance_editor_panel.dart** (651 lines) → Split into 2 part files via extension: core+state+sections (479), `_tooltips` map+field widgets+styles via `_StanceEditorFields` extension (193). All under 500 lines. Analyze clean (0 new errors).
+14. ✅ **minion_frames.dart** (592 lines) → Split into 2 part files via extension: MinionFrames widget+grouping+frame layout (284), `_MinionFrameWidgets` extension with all `_build*`+`_get*` helpers (305). All under 500 lines. Analyze clean (0 new errors).
 
 ### ✅ Completed - 2026-02-22
 

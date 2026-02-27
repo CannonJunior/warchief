@@ -23,6 +23,12 @@
   "projectile": {
     "windForceMultiplier": 0.8
   },
+  "physics": {
+    "driftThreshold": 1.0,
+    "driftMaxSpeed": 1.0,
+    "impassableThreshold": 2.5,
+    "impassableMinSpeed": 0.02
+  },
   "particles": {
     "count": 150,
     "speed": 3.0,
@@ -46,6 +52,19 @@
     "rampUpTime": 5.0,
     "rampDownTime": 5.0,
     "color": [0.9, 0.95, 1.0, 0.85]
+  },
+  "swirls": {
+    "spawnInterval": 15.0,
+    "minSpawnDist": 8.0,
+    "maxSpawnDist": 30.0,
+    "radius": 2.0,
+    "height": 5.0,
+    "speed": 4.0,
+    "liftForce": 12.0,
+    "lifetime": 10.0,
+    "particleCount": 60,
+    "angularSpeed": 4.5,
+    "particleSize": 0.18
   },
   "flight": {
     "flightSpeed": 7.0,

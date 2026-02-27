@@ -182,6 +182,10 @@ class AbilityData {
   /// Whether this ability applies a permanent vulnerability debuff on hit
   final bool appliesPermanentVulnerability;
 
+  /// Whether landing this ability activates chain-combo mode for its class.
+  /// When true, the next 7 consecutive same-class melee hits fire the chain combo.
+  final bool enablesComboChain;
+
   const AbilityData({
     required this.name,
     required this.description,
@@ -216,6 +220,7 @@ class AbilityData {
     // Damage school defaults
     this.damageSchool = DamageSchool.physical,
     this.appliesPermanentVulnerability = false,
+    this.enablesComboChain = false,
     // Mana cost defaults
     this.manaColor = ManaColor.none,
     this.manaCost = 0.0,
@@ -315,6 +320,7 @@ class AbilityData {
     ChannelEffect? channelEffect,
     DamageSchool? damageSchool,
     bool? appliesPermanentVulnerability,
+    bool? enablesComboChain,
   }) {
     return AbilityData(
       name: name ?? this.name,
@@ -351,6 +357,7 @@ class AbilityData {
       channelEffect: channelEffect ?? this.channelEffect,
       damageSchool: damageSchool ?? this.damageSchool,
       appliesPermanentVulnerability: appliesPermanentVulnerability ?? this.appliesPermanentVulnerability,
+      enablesComboChain: enablesComboChain ?? this.enablesComboChain,
     );
   }
 

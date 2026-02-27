@@ -114,6 +114,7 @@ class _CombatAdvanced {
         gameState.consecutiveMeleeHits++;
         GoalSystem.processEvent(gameState, 'consecutive_melee_hits',
             metadata: {'streak': gameState.consecutiveMeleeHits});
+        MeleeComboSystem.onMeleeHit(gameState, attackType);
       }
       // Emit goal events on boss kill
       if (bossHealthBefore > 0 && gameState.monsterHealth <= 0) {
@@ -144,6 +145,7 @@ class _CombatAdvanced {
         gameState.consecutiveMeleeHits++;
         GoalSystem.processEvent(gameState, 'consecutive_melee_hits',
             metadata: {'streak': gameState.consecutiveMeleeHits});
+        MeleeComboSystem.onMeleeHit(gameState, attackType);
       }
       // Check for minion kills — checkAndDamageMinions hits at most one per call
       gameState.refreshAliveMinions();

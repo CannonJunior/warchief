@@ -13,9 +13,18 @@ class _MonsterAI {
   static void updateMonsterMovement(double dt, GameState gameState) {
     if (gameState.monsterTransform == null || gameState.monsterHealth <= 0) return;
 
+    // Slow effect: reduce move speed by the slow strength fraction
+    double slowMult = 1.0;
+    for (final e in gameState.monsterActiveEffects) {
+      if (e.type == StatusEffect.slow) {
+        slowMult = (1.0 - e.strength.clamp(0.0, 0.9));
+        break;
+      }
+    }
+
     // Follow current path if one exists
     if (gameState.monsterCurrentPath != null) {
-      final distance = gameState.monsterMoveSpeed * dt;
+      final distance = gameState.monsterMoveSpeed * slowMult * dt;
       final newPos = gameState.monsterCurrentPath!.advance(distance);
 
       if (newPos != null) {

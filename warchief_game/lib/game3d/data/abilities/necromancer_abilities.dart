@@ -161,9 +161,31 @@ class NecromancerAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== CHAIN COMBO PRIMER ====================
+
+  /// Soul Chain — Activates chain-combo mode for necromancers.
+  /// Land 7 consecutive necromancer strikes within 7 seconds to fire the chain combo.
+  static final soulChain = AbilityData(
+    name: 'Soul Chain',
+    description: 'Link your strikes with soul-chains — activate chain-combo mode. '
+        'Land 7 necromancer hits within 7 seconds to trigger a red mana surge and weakness debuff.',
+    type: AbilityType.melee,
+    damage: 18.0,
+    cooldown: 10.0,
+    range: 2.0,
+    color: Vector3(0.35, 0.08, 0.28),
+    impactColor: Vector3(0.55, 0.15, 0.45),
+    impactSize: 0.55,
+    manaColor: ManaColor.black,
+    manaCost: 20.0,
+    damageSchool: DamageSchool.shadow,
+    category: 'necromancer',
+    enablesComboChain: true,
+  );
+
   /// All necromancer abilities as a list
   static List<AbilityData> get all => [
     lifeDrain, curseOfWeakness, fear, soulRot, summonSkeleton, summonSkeletonMage,
-    graveTouch, soulScythe, soulFracture,
+    graveTouch, soulScythe, soulFracture, soulChain,
   ];
 }

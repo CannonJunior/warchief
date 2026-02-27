@@ -36,7 +36,7 @@ import '../utils/movement_prediction.dart';
 import '../utils/bezier_path.dart';
 import '../ai/tactical_positioning.dart';
 import '../data/monsters/minion_definitions.dart';
-import '../data/abilities/ability_types.dart' show ManaColor, AbilityData;
+import '../data/abilities/ability_types.dart' show ManaColor, AbilityData, StatusEffect;
 import '../data/stances/stances.dart';
 import 'gameplay_settings.dart';
 import 'action_bar_config.dart' show globalActionBarConfigManager;
@@ -691,6 +691,34 @@ class GameState {
   /// Melee hit streak tracker (for mastery goals).
   int consecutiveMeleeHits = 0;
 
+  // ==================== MELEE COMBO STATE ====================
+
+  /// Number of consecutive same-category melee hits in the current combo.
+  int meleeComboCount = 0;
+
+  /// Seconds since the last melee hit in the current combo.
+  /// Resets to 0 on each hit; combo breaks when this exceeds [ComboConfig.comboWindow].
+  double meleeComboTimer = 0.0;
+
+  /// The ability category driving the current combo (e.g. 'warrior', 'rogue').
+  /// Null when no combo is active.
+  String? meleeComboCategory;
+
+  // ==================== CHAIN COMBO STATE ====================
+
+  /// Whether chain-combo mode is currently active (primed by a chain primer ability).
+  bool meleeChainModeActive = false;
+
+  /// Consecutive same-category hits landed since chain mode was activated.
+  int meleeChainCount = 0;
+
+  /// Seconds elapsed since chain mode was activated.
+  /// Chain expires if this exceeds [ComboConfig.chainWindow].
+  double meleeChainTimer = 0.0;
+
+  /// The class category that chain mode is primed for.
+  String? meleeChainCategory;
+
   /// Visited power node IDs (for exploration goals).
   Set<String> visitedPowerNodes = {};
 
@@ -841,9 +869,18 @@ class GameState {
   /// Pending mana type: 0=blue, 1=red, 2=white
   int pendingManaType = 0;
 
-  /// Get the effective movement speed considering windup modifier and stance.
-  double get effectivePlayerSpeed =>
-      playerSpeed * windupMovementSpeedModifier * activeStance.movementSpeedMultiplier;
+  /// Get the effective movement speed considering windup modifier, stance, and active effects.
+  double get effectivePlayerSpeed {
+    double hasteBonus = 1.0;
+    for (final e in playerActiveEffects) {
+      if (e.type == StatusEffect.haste) {
+        // Reason: additive bonus so a 0.35 strength haste gives 35% speed increase
+        hasteBonus += e.strength.clamp(0.0, 1.0);
+        break;
+      }
+    }
+    return playerSpeed * windupMovementSpeedModifier * activeStance.movementSpeedMultiplier * hasteBonus;
+  }
 
 
 

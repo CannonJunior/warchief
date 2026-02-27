@@ -184,10 +184,31 @@ class WarriorAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== CHAIN COMBO PRIMER ====================
+
+  /// Iron Momentum — Activates chain-combo mode for warriors.
+  /// Land 7 consecutive warrior strikes within 7 seconds to fire the chain combo.
+  static final ironMomentum = AbilityData(
+    name: 'Iron Momentum',
+    description: 'Channel iron resolve — activate chain-combo mode. '
+        'Land 7 warrior strikes within 7 seconds to trigger a devastating AoE knockback.',
+    type: AbilityType.melee,
+    damage: 20.0,
+    cooldown: 10.0,
+    range: 2.0,
+    color: Vector3(0.75, 0.6, 0.3),
+    impactColor: Vector3(0.9, 0.75, 0.4),
+    impactSize: 0.6,
+    manaColor: ManaColor.red,
+    manaCost: 20.0,
+    category: 'warrior',
+    enablesComboChain: true,
+  );
+
   /// All warrior abilities as a list
   static List<AbilityData> get all => [
     shieldBash, whirlwind, charge, taunt, fortify,
     gauntletJab, ironSweep, rendingChains, warcryUppercut, executionStrike,
-    sunderArmor,
+    sunderArmor, ironMomentum,
   ];
 }

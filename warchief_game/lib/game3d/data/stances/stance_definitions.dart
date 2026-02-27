@@ -69,6 +69,7 @@ class StanceRegistry {
       case 'tide': return StanceId.tide;
       case 'phantom_dance': return StanceId.phantomDance;
       case 'fury_of_the_ancestors': return StanceId.furyOfTheAncestors;
+      case 'starbreaker': return StanceId.starbreaker;
       default: return null;
     }
   }
@@ -81,6 +82,7 @@ class StanceRegistry {
       case 'waves': return Icons.waves;
       case 'blur_on': return Icons.blur_on;
       case 'bolt': return Icons.bolt;
+      case 'dark_mode': return Icons.dark_mode;
       default: return Icons.help_outline;
     }
   }
@@ -120,6 +122,7 @@ class StanceRegistry {
       rerollDamageTakenMax: (data['rerollDamageTakenMax'] as num?)?.toDouble() ?? 1.30,
       spellPushbackInflicted: (data['spellPushbackInflicted'] as num?)?.toDouble() ?? 0.0,
       spellPushbackResistance: (data['spellPushbackResistance'] as num?)?.toDouble() ?? 0.0,
+      windResistance: (data['windResistance'] as num?)?.toDouble() ?? 0.0,
       ccDurationInflicted: (data['ccDurationInflicted'] as num?)?.toDouble() ?? 1.0,
       ccDurationReceived: (data['ccDurationReceived'] as num?)?.toDouble() ?? 1.0,
       lifestealRatio: (data['lifestealRatio'] as num?)?.toDouble() ?? 0.0,

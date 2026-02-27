@@ -177,8 +177,11 @@ class InputSystem {
       moveDz += right.z;
     }
 
-    // Reason: headwind slows player, tailwind speeds up
-    final windMod = globalWindState?.getMovementModifier(moveDx, moveDz) ?? 1.0;
+    // Reason: headwind slows player, tailwind speeds up; resistance from active stance reduces penalty
+    final windMod = globalWindState?.getMovementModifier(
+      moveDx, moveDz,
+      resistance: gameState.activeStance.windResistance,
+    ) ?? 1.0;
     effectiveSpeed *= windMod;
 
     // W = Forward
@@ -211,6 +214,17 @@ class InputSystem {
     // E = Strafe Right
     if (inputManager.isActionPressed(GameAction.strafeRight)) {
       gameState.activeTransform!.position += right * effectiveSpeed * dt;
+    }
+
+    // Passive wind drift — pushes ground units in high derecho conditions.
+    // Reason: applied last so drift doesn't compound with the stance speed multiplier.
+    // No flying guard needed — _handleFlightMovement already early-returns above this block.
+    final drift = globalWindState?.getWindDrift(
+      dt, resistance: gameState.activeStance.windResistance,
+    ) ?? const [0.0, 0.0];
+    if (drift[0] != 0.0 || drift[1] != 0.0) {
+      gameState.activeTransform!.position.x += drift[0];
+      gameState.activeTransform!.position.z += drift[1];
     }
   }
 

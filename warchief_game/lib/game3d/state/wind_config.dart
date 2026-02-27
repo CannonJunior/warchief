@@ -112,6 +112,27 @@ class WindConfig extends ChangeNotifier {
     return [0.9, 0.95, 1.0, 0.85];
   }
 
+  // ==================== SWIRL GETTERS ====================
+
+  double get swirlSpawnInterval => _resolve('swirls.spawnInterval', 15.0);
+  double get swirlMinSpawnDist  => _resolve('swirls.minSpawnDist',   8.0);
+  double get swirlMaxSpawnDist  => _resolve('swirls.maxSpawnDist',  30.0);
+  double get swirlRadius        => _resolve('swirls.radius',         2.0);
+  double get swirlHeight        => _resolve('swirls.height',         5.0);
+  double get swirlSpeed         => _resolve('swirls.speed',          4.0);
+  double get swirlLiftForce     => _resolve('swirls.liftForce',     12.0);
+  double get swirlLifetime      => _resolve('swirls.lifetime',      10.0);
+  int    get swirlParticleCount => _resolveInt('swirls.particleCount', 60);
+  double get swirlAngularSpeed  => _resolve('swirls.angularSpeed',   4.5);
+  double get swirlParticleSize  => _resolve('swirls.particleSize',   0.18);
+
+  // ==================== WIND PHYSICS GETTERS ====================
+
+  double get windDriftThreshold      => _resolve('physics.driftThreshold',       2.0);
+  double get windDriftMaxSpeed       => _resolve('physics.driftMaxSpeed',         0.6);
+  double get windImpassableThreshold => _resolve('physics.impassableThreshold',   5.0);
+  double get windImpassableMinSpeed  => _resolve('physics.impassableMinSpeed',    0.02);
+
   // ==================== PARTICLE GETTERS ====================
 
   int get particleCount => _resolveInt('particles.count', 60);

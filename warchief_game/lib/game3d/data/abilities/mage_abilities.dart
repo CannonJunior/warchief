@@ -182,10 +182,32 @@ class MageAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== CHAIN COMBO PRIMER ====================
+
+  /// Arcane Focus — Activates chain-combo mode for mages.
+  /// Land 7 consecutive mage strikes within 7 seconds to fire the chain combo.
+  static final arcaneFocus = AbilityData(
+    name: 'Arcane Focus',
+    description: 'Focus arcane energy into every strike — activate chain-combo mode. '
+        'Land 7 mage hits within 7 seconds to trigger a strength buff and arcane AoE burst.',
+    type: AbilityType.melee,
+    damage: 18.0,
+    cooldown: 10.0,
+    range: 2.5,
+    color: Vector3(0.55, 0.28, 0.88),
+    impactColor: Vector3(0.68, 0.4, 1.0),
+    impactSize: 0.6,
+    manaColor: ManaColor.blue,
+    manaCost: 20.0,
+    damageSchool: DamageSchool.arcane,
+    category: 'mage',
+    enablesComboChain: true,
+  );
+
   /// All mage abilities as a list
   static List<AbilityData> get all => [
     frostBolt, blizzard, lightningBolt, chainLightning,
     meteor, arcaneShield, teleport,
-    arcanePulse, riftBlade, arcaneBreach,
+    arcanePulse, riftBlade, arcaneBreach, arcaneFocus,
   ];
 }

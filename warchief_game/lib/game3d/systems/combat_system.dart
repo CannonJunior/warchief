@@ -11,6 +11,7 @@ import '../../models/impact_effect.dart';
 import '../../models/combat_log_entry.dart';
 import '../../models/monster.dart';
 import 'goal_system.dart';
+import 'melee_combo_system.dart';
 import '../data/stances/stances.dart';
 import '../data/abilities/ability_types.dart' show DamageSchool, StatusEffect, vulnerabilityForSchool;
 

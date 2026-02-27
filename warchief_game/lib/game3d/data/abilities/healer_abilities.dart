@@ -139,9 +139,31 @@ class HealerAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== CHAIN COMBO PRIMER ====================
+
+  /// Battle Blessing — Activates chain-combo mode for healers.
+  /// Land 7 consecutive healer strikes within 7 seconds to fire the chain combo.
+  static final battleBlessing = AbilityData(
+    name: 'Battle Blessing',
+    description: 'Bless your strikes with battle-light — activate chain-combo mode. '
+        'Land 7 healer hits within 7 seconds to trigger a massive heal and regeneration burst.',
+    type: AbilityType.melee,
+    damage: 10.0,
+    cooldown: 10.0,
+    range: 2.0,
+    color: Vector3(1.0, 0.95, 0.5),
+    impactColor: Vector3(1.0, 1.0, 0.7),
+    impactSize: 0.7,
+    manaColor: ManaColor.blue,
+    manaCost: 20.0,
+    damageSchool: DamageSchool.holy,
+    category: 'healer',
+    enablesComboChain: true,
+  );
+
   /// All healer abilities as a list
   static List<AbilityData> get all => [
     holyLight, rejuvenation, circleOfHealing, blessingOfStrength, purify,
-    holySmite, judgmentHammer, judgmentMark,
+    holySmite, judgmentHammer, judgmentMark, battleBlessing,
   ];
 }

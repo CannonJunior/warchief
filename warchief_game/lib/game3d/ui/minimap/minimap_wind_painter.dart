@@ -135,7 +135,7 @@ class MinimapWindPainter extends CustomPainter {
     // Reason: clamp dt to avoid particle teleportation on tab-switch or lag spike
     final safeDt = dt.clamp(0.0, 0.1);
     _advanceParticles(safeDt, drawAngle, effectiveStr, half, targetCount);
-    _drawParticles(canvas, half, strength, effectiveStr, isDerecho, derechoInt);
+    _drawParticles(canvas, half, strength, effectiveStr, isDerecho, derechoInt, drawAngle);
 
     // DERECHO label
     if (isDerecho && derechoInt > 0.3) {
@@ -264,9 +264,9 @@ class MinimapWindPainter extends CustomPainter {
 
   // ==================== DRAWING ====================
 
-  /// Render all particles as short colored trails.
+  /// Render all particles as short colored trails, curved by wind angular velocity.
   void _drawParticles(Canvas canvas, double half, double baseStrength,
-      double effectiveStr, bool isDerecho, double derechoInt) {
+      double effectiveStr, bool isDerecho, double derechoInt, double drawAngle) {
     if (_particles == null) return;
 
     final paint = Paint()
@@ -276,7 +276,27 @@ class MinimapWindPainter extends CustomPainter {
     // Reason: normalize effective strength into 0..1 range for color lookup.
     // Normal max is 1.0; during derecho effective strength can exceed 1.0,
     // map that into the hot end of the color scale.
-    final maxNormalStr = 1.0;
+    const maxNormalStr = 1.0;
+
+    // Compute curved trail parameters once per frame.
+    // Reason: using a fixed look-back time (curveSecs) decouples curvature from
+    // particle speed, so high-effStr derecho doesn't shrink trailDuration and
+    // accidentally cancel the angular offset. The clamp prevents spiral artifacts.
+    final angVel = windState.windAngularVelocity;
+    const trailPx   = 12.0;  // visible trail length in minimap pixels
+    const curveSecs = 1.5;   // seconds of wind history to represent as curvature
+    const maxAngOff = math.pi * 0.75;
+    final angOffset = (angVel * curveSecs).clamp(-maxAngOff, maxAngOff);
+    // Tail angle: where the wind was pointing curveSecs seconds ago.
+    final tailAngle = drawAngle - angOffset;
+    // Mid-trail angle: halfway between tail and head directions.
+    final midAngle  = drawAngle - angOffset * 0.5;
+    // Precompute trig for tail and mid so inner loop stays light.
+    final tailCos = math.cos(tailAngle);
+    final tailSin = math.sin(tailAngle);
+    final midCos  = math.cos(midAngle);
+    final midSin  = math.sin(midAngle);
+    final useBezier = angVel.abs() > 0.05;
 
     for (final p in _particles!) {
       // Fade in at birth, fade out near death
@@ -307,12 +327,28 @@ class MinimapWindPainter extends CustomPainter {
         ..color = color.withOpacity(alpha * (0.4 + effectiveStr.clamp(0.0, 1.0) * 0.4))
         ..strokeWidth = strokeWidth;
 
-      // Draw trail from previous to current position (offset to center)
-      canvas.drawLine(
-        Offset(p.prevX + half, p.prevY + half),
-        Offset(p.x + half, p.y + half),
-        paint,
-      );
+      // Head = current particle position.
+      final hx = p.x + half;
+      final hy = p.y + half;
+      // Tail = particle position minus the trail vector in the historical wind direction.
+      final tx = p.x - tailCos * trailPx + half;
+      final ty = p.y - tailSin * trailPx + half;
+
+      if (useBezier) {
+        // Quadratic bezier: tail → (control at mid-direction) → head.
+        // Reason: curvature of the bezier encodes the wind's turn rate —
+        // fast turning produces tight curves, steady wind stays straight.
+        final cpx = p.x - midCos * trailPx * 0.5 + half;
+        final cpy = p.y - midSin * trailPx * 0.5 + half;
+        canvas.drawPath(
+          Path()
+            ..moveTo(tx, ty)
+            ..quadraticBezierTo(cpx, cpy, hx, hy),
+          paint,
+        );
+      } else {
+        canvas.drawLine(Offset(tx, ty), Offset(hx, hy), paint);
+      }
     }
   }
 

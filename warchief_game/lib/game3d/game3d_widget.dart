@@ -60,6 +60,7 @@ import 'state/item_config.dart';
 import 'state/custom_item_manager.dart';
 import 'state/wind_config.dart';
 import 'state/wind_state.dart';
+import 'state/wind_swirl_state.dart';
 import 'state/comet_config.dart';
 import 'state/comet_state.dart';
 import 'state/minimap_config.dart';
@@ -69,6 +70,8 @@ import 'state/goals_config.dart';
 import 'state/macro_config.dart';
 import 'state/macro_manager.dart';
 import 'state/gameplay_settings.dart';
+import 'state/combo_config.dart';
+import 'systems/melee_combo_system.dart';
 import 'data/stances/stances.dart';
 import 'state/ability_order_manager.dart';
 import 'ui/minimap/minimap_widget.dart';
@@ -260,6 +263,9 @@ class _Game3DState extends _GameStateBase
 
     // Initialize gameplay settings (attunement toggles, etc.)
     _initializeGameplaySettings();
+
+    // Initialize melee combo configuration (per-class thresholds and effects)
+    _initializeComboConfig();
 
     // Initialize stance registry (JSON definitions for exotic stances)
     _initializeStanceRegistry();

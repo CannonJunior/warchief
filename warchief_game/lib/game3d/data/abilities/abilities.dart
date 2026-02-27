@@ -36,6 +36,7 @@ export 'spiritkin_abilities.dart';
 export 'stormheart_abilities.dart';
 export 'greenseer_abilities.dart';
 export 'ability_balance.dart';
+export 'starbreaker_abilities.dart';
 
 import 'ability_types.dart';
 import '../../state/custom_ability_manager.dart';
@@ -54,6 +55,7 @@ import 'windwalker_abilities.dart';
 import 'spiritkin_abilities.dart';
 import 'stormheart_abilities.dart';
 import 'greenseer_abilities.dart';
+import 'starbreaker_abilities.dart';
 
 /// Ability Registry - Central access point for all abilities
 ///
@@ -79,6 +81,7 @@ class AbilityRegistry {
     'spiritkin',
     'stormheart',
     'greenseer',
+    'starbreaker',
   ];
 
   /// Get all abilities for a category
@@ -99,6 +102,7 @@ class AbilityRegistry {
       case 'spiritkin': return SpiritkinAbilities.all;
       case 'stormheart': return StormheartAbilities.all;
       case 'greenseer': return GreenseerAbilities.all;
+      case 'starbreaker': return StarbreakerAbilities.all;
       default: return [];
     }
   }
@@ -117,6 +121,7 @@ class AbilityRegistry {
     ...SpiritkinAbilities.all,
     ...StormheartAbilities.all,
     ...GreenseerAbilities.all,
+    ...StarbreakerAbilities.all,
   ];
 
   /// Get all abilities of a specific type
@@ -173,5 +178,6 @@ class AbilityRegistry {
     'spiritkin': SpiritkinAbilities.all.length,
     'stormheart': StormheartAbilities.all.length,
     'greenseer': GreenseerAbilities.all.length,
+    'starbreaker': StarbreakerAbilities.all.length,
   };
 }

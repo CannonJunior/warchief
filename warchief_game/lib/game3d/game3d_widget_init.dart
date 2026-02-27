@@ -121,6 +121,12 @@ mixin _WidgetInitMixin on _GameStateBase {
     globalGameplaySettings!.load();
   }
 
+  /// Initialize the global melee combo configuration (JSON defaults)
+  void _initializeComboConfig() {
+    globalComboConfig ??= ComboConfig();
+    globalComboConfig!.initialize();
+  }
+
   /// Initialize the global stance registry (JSON definitions)
   void _initializeStanceRegistry() {
     globalStanceRegistry ??= StanceRegistry();

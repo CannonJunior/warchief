@@ -335,6 +335,28 @@ class SpiritkinAbilities {
     damageSchool: DamageSchool.nature,
   );
 
+  // ==================== CHAIN COMBO PRIMER ====================
+
+  /// Spirit Rush — Activates chain-combo mode for spiritkin.
+  /// Land 7 consecutive spiritkin strikes within 7 seconds to fire the chain combo.
+  static final spiritRush = AbilityData(
+    name: 'Spirit Rush',
+    description: 'Rush with spirit-fueled frenzy — activate chain-combo mode. '
+        'Land 7 spiritkin hits within 7 seconds to trigger a powerful haste burst and healing regen.',
+    type: AbilityType.melee,
+    damage: 16.0,
+    cooldown: 10.0,
+    range: 2.0,
+    color: Vector3(0.48, 0.80, 0.28),
+    impactColor: Vector3(0.58, 0.90, 0.38),
+    impactSize: 0.55,
+    manaColor: ManaColor.green,
+    manaCost: 15.0,
+    damageSchool: DamageSchool.nature,
+    category: 'spiritkin',
+    enablesComboChain: true,
+  );
+
   /// All Spiritkin abilities as a flat list (used by the codex and action bar).
   static List<AbilityData> get all => [
     // Group 1: Basic melee
@@ -353,5 +375,7 @@ class SpiritkinAbilities {
     thornbind,
     verdantStride,
     ironbarkShell,
+    // Chain primer
+    spiritRush,
   ];
 }

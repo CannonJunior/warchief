@@ -201,6 +201,31 @@ class WindParticleSystem {
     final halfLen = trailLength * 0.5;
     final halfWid = trailWidth * 0.5;
 
+    // Reason: compute a 2-segment bent strip so the trail has a visible elbow
+    // rather than an imperceptible parallelogram deformation.
+    // curveDurationMult amplifies the look-back time so normal-wind curves
+    // are clearly visible; clamp prevents spiral artifacts at extreme angVel.
+    final angVel = windState.windAngularVelocity;
+    final particleSpeedConfig = config?.particleSpeed ?? 2.0;
+    final speedFactor = 0.5 + effStr * 0.5;
+    final trailDuration =
+        trailLength / (particleSpeedConfig * speedFactor).clamp(0.001, double.infinity);
+    const curveDurationMult = 2.0;
+    final angleOffset = (angVel * trailDuration * curveDurationMult)
+        .clamp(-math.pi / 2, math.pi / 2);
+
+    final tailAngle = windAngle - angleOffset;
+    final midAngle  = windAngle - angleOffset * 0.5;
+
+    final tailDirX  = math.cos(tailAngle);
+    final tailDirZ  = math.sin(tailAngle);
+    final tailPerpX = -tailDirZ;
+    final tailPerpZ =  tailDirX;
+
+    // Mid-elbow perpendicular (at particle centre)
+    final midPerpX = -math.sin(midAngle);
+    final midPerpZ =  math.cos(midAngle);
+
     for (final p in _particles) {
       if (p.life <= 0) continue;
 
@@ -230,25 +255,41 @@ class WindParticleSystem {
       final g = baseG * alpha;
       final b = baseB * alpha;
 
-      // Elongated trail quad: 4 vertices oriented along wind direction
-      //   front = center + dir * halfLen
-      //   back  = center - dir * halfLen
-      //   width along perpendicular axis
+      // 6-vertex 2-segment bent strip.
+      // v0,v1 = head (downwind, current wind direction)
+      // v2,v3 = elbow at particle centre (mid-direction perpendicular)
+      // v4,v5 = tail (upwind, historical wind direction)
+      // Reason: a flat 4-vertex parallelogram looks like a rotated line even
+      // with 20°+ skew. Two joined segments with a visible elbow read as curved.
       vertices.addAll([
-        p.x + dirX * halfLen + perpX * halfWid, p.y,
-        p.z + dirZ * halfLen + perpZ * halfWid, r, g, b,
-        p.x + dirX * halfLen - perpX * halfWid, p.y,
-        p.z + dirZ * halfLen - perpZ * halfWid, r, g, b,
-        p.x - dirX * halfLen - perpX * halfWid, p.y,
-        p.z - dirZ * halfLen - perpZ * halfWid, r, g, b,
-        p.x - dirX * halfLen + perpX * halfWid, p.y,
-        p.z - dirZ * halfLen + perpZ * halfWid, r, g, b,
+        // v0: head right
+        p.x + dirX     * halfLen + perpX     * halfWid, p.y,
+        p.z + dirZ     * halfLen + perpZ     * halfWid, r, g, b,
+        // v1: head left
+        p.x + dirX     * halfLen - perpX     * halfWid, p.y,
+        p.z + dirZ     * halfLen - perpZ     * halfWid, r, g, b,
+        // v2: elbow right (particle centre, mid-direction perp)
+        p.x + midPerpX * halfWid, p.y,
+        p.z + midPerpZ * halfWid, r, g, b,
+        // v3: elbow left
+        p.x - midPerpX * halfWid, p.y,
+        p.z - midPerpZ * halfWid, r, g, b,
+        // v4: tail right
+        p.x - tailDirX * halfLen + tailPerpX * halfWid, p.y,
+        p.z - tailDirZ * halfLen + tailPerpZ * halfWid, r, g, b,
+        // v5: tail left
+        p.x - tailDirX * halfLen - tailPerpX * halfWid, p.y,
+        p.z - tailDirZ * halfLen - tailPerpZ * halfWid, r, g, b,
       ]);
 
       final base = vertexCount;
-      indices.addAll([base, base + 1, base + 2]);
-      indices.addAll([base, base + 2, base + 3]);
-      vertexCount += 4;
+      // Front segment: head → elbow
+      indices.addAll([base,     base + 1, base + 3]);
+      indices.addAll([base,     base + 3, base + 2]);
+      // Back segment: elbow → tail
+      indices.addAll([base + 2, base + 3, base + 5]);
+      indices.addAll([base + 2, base + 5, base + 4]);
+      vertexCount += 6;
     }
 
     if (vertices.isEmpty) {

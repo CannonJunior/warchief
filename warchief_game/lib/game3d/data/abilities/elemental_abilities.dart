@@ -117,9 +117,31 @@ class ElementalAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== CHAIN COMBO PRIMER ====================
+
+  /// Elemental Chain — Activates chain-combo mode for elementals.
+  /// Land 7 consecutive elemental strikes within 7 seconds to fire the chain combo.
+  static final elementalChain = AbilityData(
+    name: 'Elemental Chain',
+    description: 'Chain elemental forces through your blows — activate chain-combo mode. '
+        'Land 7 elemental hits within 7 seconds to trigger a red mana surge and elemental AoE.',
+    type: AbilityType.melee,
+    damage: 20.0,
+    cooldown: 10.0,
+    range: 2.5,
+    color: Vector3(0.9, 0.45, 0.12),
+    impactColor: Vector3(1.0, 0.58, 0.22),
+    impactSize: 0.65,
+    manaColor: ManaColor.red,
+    manaCost: 20.0,
+    damageSchool: DamageSchool.fire,
+    category: 'elemental',
+    enablesComboChain: true,
+  );
+
   /// All elemental abilities as a list
   static List<AbilityData> get all => [
     iceLance, flameWave, earthquake,
-    frostbiteSlash, magmaStrike, elementalRend,
+    frostbiteSlash, magmaStrike, elementalRend, elementalChain,
   ];
 }

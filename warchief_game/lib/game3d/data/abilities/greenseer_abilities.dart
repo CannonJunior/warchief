@@ -292,6 +292,28 @@ class GreenseerAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== CHAIN COMBO PRIMER ====================
+
+  /// Earth Bond — Activates chain-combo mode for greenseers.
+  /// Land 7 consecutive greenseer strikes within 7 seconds to fire the chain combo.
+  static final earthBond = AbilityData(
+    name: 'Earth Bond',
+    description: 'Bond your strikes with earth vitality — activate chain-combo mode. '
+        'Land 7 greenseer hits within 7 seconds to trigger a powerful long-duration regen.',
+    type: AbilityType.melee,
+    damage: 12.0,
+    cooldown: 10.0,
+    range: 2.0,
+    color: Vector3(0.32, 0.72, 0.38),
+    impactColor: Vector3(0.42, 0.88, 0.48),
+    impactSize: 0.55,
+    manaColor: ManaColor.green,
+    manaCost: 15.0,
+    damageSchool: DamageSchool.nature,
+    category: 'greenseer',
+    enablesComboChain: true,
+  );
+
   /// All greenseer abilities as a list
   static List<AbilityData> get all => [
     lifeThread,
@@ -309,5 +331,6 @@ class GreenseerAbilities {
     thornLash,
     barkFist,
     verdantCurse,
+    earthBond,
   ];
 }

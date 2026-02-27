@@ -180,10 +180,31 @@ class RogueAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== CHAIN COMBO PRIMER ====================
+
+  /// Shadow Chain — Activates chain-combo mode for rogues.
+  /// Land 7 consecutive rogue strikes within 7 seconds to fire the chain combo.
+  static final shadowChain = AbilityData(
+    name: 'Shadow Chain',
+    description: 'Weave shadow energy through your attacks — activate chain-combo mode. '
+        'Land 7 rogue strikes within 7 seconds to trigger an enhanced slow and lifesteal regen.',
+    type: AbilityType.melee,
+    damage: 15.0,
+    cooldown: 10.0,
+    range: 1.5,
+    color: Vector3(0.25, 0.15, 0.35),
+    impactColor: Vector3(0.45, 0.25, 0.55),
+    impactSize: 0.5,
+    manaColor: ManaColor.red,
+    manaCost: 15.0,
+    category: 'rogue',
+    enablesComboChain: true,
+  );
+
   /// All rogue abilities as a list
   static List<AbilityData> get all => [
     backstab, poisonBlade, smokeBomb, fanOfKnives, shadowStep,
     shiv, shadowfangRake, shadowSpike, umbralLunge, deathMark,
-    exposeWeakness,
+    exposeWeakness, shadowChain,
   ];
 }

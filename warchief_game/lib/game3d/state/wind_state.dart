@@ -19,6 +19,14 @@ class WindState {
   /// Internal noise time accumulator
   double _noiseTime = 0.0;
 
+  /// Smoothed angular velocity of wind direction (radians/second).
+  /// Positive = counter-clockwise, negative = clockwise.
+  /// Used by particle renderers to curve trail geometry.
+  double windAngularVelocity = 0.0;
+
+  /// Previous wind angle, for finite-difference angular velocity calculation.
+  double _prevWindAngle = 0.0;
+
   // ==================== DERECHO STATE ====================
 
   /// Whether a derecho storm is currently active (including ramp phases)
@@ -94,6 +102,17 @@ class WindState {
     // Keep angle in [0, 2*pi]
     while (windAngle < 0) windAngle += 2 * math.pi;
     while (windAngle >= 2 * math.pi) windAngle -= 2 * math.pi;
+
+    // Track angular velocity as EMA of angle delta / dt.
+    // Reason: shortest-arc delta handles the 0/2π wraparound so a wind
+    // that crosses north doesn't appear to spin a full revolution.
+    if (dt > 0) {
+      double delta = windAngle - _prevWindAngle;
+      if (delta > math.pi)  delta -= 2 * math.pi;
+      if (delta < -math.pi) delta += 2 * math.pi;
+      windAngularVelocity = windAngularVelocity * 0.85 + (delta / dt) * 0.15;
+      _prevWindAngle = windAngle;
+    }
 
     // Strength drift: base + layered gusts
     final gust1 = math.sin(_noiseTime * gustFreq * 1.0) * gustAmp * 0.6;
@@ -180,8 +199,9 @@ class WindState {
   /// Uses dot product of unit's normalized movement direction with the wind
   /// vector to determine headwind (slows) vs tailwind (speeds up) effect.
   ///
+  /// [resistance]: 0.0 = fully affected by wind, 1.0 = immune to wind penalty.
   /// Returns a multiplier around 1.0 (e.g. 0.85 for headwind, 1.10 for tailwind).
-  double getMovementModifier(double unitDx, double unitDz) {
+  double getMovementModifier(double unitDx, double unitDz, {double resistance = 0.0}) {
     final config = globalWindConfig;
     final headFactor = config?.headwindFactor ?? 0.15;
     final tailFactor = config?.tailwindFactor ?? 0.10;
@@ -205,9 +225,53 @@ class WindState {
     if (dot > 0) {
       return 1.0 + dot * tailFactor * effStr;
     } else {
-      // Reason: clamp to 0.1 minimum so player can still crawl against derecho winds
-      return (1.0 + dot * headFactor * effStr).clamp(0.1, double.infinity);
+      final impassThreshold = config?.windImpassableThreshold ?? 5.0;
+      final impassMin       = config?.windImpassableMinSpeed  ?? 0.02;
+
+      // Reason: base headFactor (0.15) keeps rawMod above 0.1 for effStr < ~6,
+      // so the impassMin floor is never reached through the formula alone.
+      // Above the impassable threshold, ramp effectiveHeadFactor toward 1.0 so
+      // rawMod goes deeply negative and the clamp kicks in regardless of effStr.
+      // resistance scales the ramp down so immune stances (Tide) keep the base factor.
+      double effectiveHeadFactor = headFactor;
+      double minSpeed = 0.1;
+      if (effStr >= impassThreshold) {
+        final maxEffStr = (config?.derechoStrengthMultiplier ?? 10.0) *
+                          (config?.maxStrength ?? 1.0);
+        final t = ((effStr - impassThreshold) / (maxEffStr - impassThreshold))
+            .clamp(0.0, 1.0);
+        effectiveHeadFactor = headFactor + (1.0 - headFactor) * t * (1.0 - resistance);
+        // Resistant units get a higher floor — Tide (resistance=1) stays at 0.1
+        minSpeed = impassMin + (0.1 - impassMin) * resistance;
+      }
+
+      return (1.0 + dot * effectiveHeadFactor * effStr * (1.0 - resistance * 0.5))
+          .clamp(minSpeed, double.infinity);
     }
+  }
+
+  /// Passive position drift this frame for ground units in strong winds.
+  ///
+  /// Returns [dx, dz]. Zero when effective wind is below drift threshold.
+  /// [resistance]: 0.0 = fully affected, 1.0 = immune to wind drift.
+  List<double> getWindDrift(double dt, {double resistance = 0.0}) {
+    final config = globalWindConfig;
+    final threshold = config?.windDriftThreshold ?? 2.0;
+    final maxDrift  = config?.windDriftMaxSpeed  ?? 0.6;
+    final effStr    = effectiveWindStrength;
+    if (effStr < threshold) return [0.0, 0.0];
+
+    // Reason: scale linearly from threshold to full derecho cap so drift
+    // builds gradually rather than snapping on at full force.
+    final maxEff  = (config?.derechoStrengthMultiplier ?? 10.0) * (config?.maxStrength ?? 1.0);
+    final frac    = ((effStr - threshold) / (maxEff - threshold)).clamp(0.0, 1.0);
+    final speed   = maxDrift * frac * (1.0 - resistance);
+    return [math.cos(windAngle) * speed * dt, math.sin(windAngle) * speed * dt];
+  }
+
+  /// True when wind is strong enough to nearly block counter-wind movement for normal units.
+  bool get isWindImpassable {
+    return effectiveWindStrength >= (globalWindConfig?.windImpassableThreshold ?? 5.0);
   }
 
   /// Current wind exposure level for White Mana regeneration.

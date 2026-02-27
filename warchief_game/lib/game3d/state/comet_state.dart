@@ -1,13 +1,58 @@
 import 'dart:math' as math;
 import 'comet_config.dart';
 
+/// Public snapshot of one active impact crater, consumed by [MeteorCraterRenderer].
+class ImpactCraterData {
+  final double x;
+
+  /// Terrain Y height at the impact point (for 3D debris placement).
+  final double y;
+  final double z;
+
+  /// How old the crater is [0.0 = just landed, 1.0 = about to expire].
+  final double ageFraction;
+
+  /// Glow intensity [1.0 = scorching hot, 0.0 = cold ash]. High for first 40% of life.
+  final double glowIntensity;
+
+  const ImpactCraterData({
+    required this.x,
+    required this.y,
+    required this.z,
+    required this.ageFraction,
+    required this.glowIntensity,
+  });
+}
+
 /// A meteor impact crater — emits black mana regen while fresh.
 class _ImpactCrater {
   final double x;
+
+  /// Terrain height at the impact site (static — set on impact, never changes).
+  final double y;
   final double z;
   double remainingLife; // seconds
+  final double maxLife; // seconds at creation
 
-  _ImpactCrater({required this.x, required this.z, required this.remainingLife});
+  _ImpactCrater({
+    required this.x,
+    required this.y,
+    required this.z,
+    required this.remainingLife,
+  }) : maxLife = remainingLife;
+
+  double get ageFraction => 1.0 - (remainingLife / maxLife).clamp(0.0, 1.0);
+
+  /// Hot glow fades over first 40% of lifetime, then goes cold ash.
+  double get glowIntensity => (1.0 - ageFraction / 0.4).clamp(0.0, 1.0);
+
+  ImpactCraterData toData() => ImpactCraterData(
+        x: x,
+        y: y,
+        z: z,
+        ageFraction: ageFraction,
+        glowIntensity: glowIntensity,
+      );
 }
 
 /// Runtime orbital and environmental state for the comet system.
@@ -54,6 +99,35 @@ class CometState {
 
   // ==================== PUBLIC API ====================
 
+  /// World-space XYZ position of the comet [x, y, z].
+  ///
+  /// Matches the transform used by [SkyRenderer._updateCometTransform] so
+  /// the particle tail spawns exactly at the comet's rendered location.
+  List<double> get cometWorldPosition {
+    final azimuth = skyAzimuthFraction * 2.0 * math.pi;
+    const orbitRadius = 450.0;
+    const minAlt = 150.0;
+    const maxAlt = 220.0;
+    return [
+      math.cos(azimuth) * orbitRadius,
+      minAlt + (maxAlt - minAlt) * skyElevationFraction,
+      math.sin(azimuth) * orbitRadius,
+    ];
+  }
+
+  /// Normalised direction the comet is travelling [dx, dy, dz].
+  ///
+  /// Derivative of position w.r.t. azimuth, projected onto the XZ plane.
+  /// Reversed (anti-tangent) gives the tail streaming direction.
+  List<double> get orbitalTangent {
+    final azimuth = skyAzimuthFraction * 2.0 * math.pi;
+    return [-math.sin(azimuth), 0.0, math.cos(azimuth)];
+  }
+
+  /// Snapshots of all active craters for the meteor crater renderer.
+  List<ImpactCraterData> get craterDataForRendering =>
+      _activeCraters.map((c) => c.toData()).toList(growable: false);
+
   /// Advance orbital mechanics by [dt] seconds and recompute all derived values.
   void update(double dt) {
     final config = globalCometConfig;
@@ -70,13 +144,14 @@ class CometState {
     _decayCraters(dt);
   }
 
-  /// Register a new impact crater at world position (x, z).
+  /// Register a new impact crater at world position (x, y, z).
   ///
+  /// [y] is the terrain height at (x, z) for 3D debris placement.
   /// Craters decay over [impactCraterDecayTime] seconds, providing a bonus
   /// black mana regen source to players standing within [impactCraterRadius].
-  void addImpactCrater(double x, double z) {
+  void addImpactCrater(double x, double y, double z) {
     final decayTime = globalCometConfig?.impactCraterDecayTime ?? 60.0;
-    _activeCraters.add(_ImpactCrater(x: x, z: z, remainingLife: decayTime));
+    _activeCraters.add(_ImpactCrater(x: x, y: y, z: z, remainingLife: decayTime));
     // Reason: cap to 20 simultaneous craters to prevent unbounded list growth
     if (_activeCraters.length > 20) {
       _activeCraters.removeAt(0);
@@ -90,7 +165,6 @@ class CometState {
     final config = globalCometConfig;
     final radius = config?.impactCraterRadius ?? 8.0;
     final bonusPerCrater = config?.impactCraterBonus ?? 8.0;
-    final decayTime = config?.impactCraterDecayTime ?? 60.0;
 
     double total = 0.0;
     for (final crater in _activeCraters) {
@@ -98,8 +172,8 @@ class CometState {
       final dz = playerZ - crater.z;
       final dist = math.sqrt(dx * dx + dz * dz);
       if (dist <= radius) {
-        // Reason: crater bonus fades linearly as it ages, so fresh impacts are most potent
-        final ageFraction = crater.remainingLife / decayTime;
+        // Reason: use per-crater maxLife for age fraction (config may change at runtime)
+        final ageFraction = crater.remainingLife / crater.maxLife;
         total += bonusPerCrater * ageFraction;
       }
     }

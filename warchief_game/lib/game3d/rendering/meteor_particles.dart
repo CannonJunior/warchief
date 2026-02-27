@@ -108,8 +108,8 @@ class MeteorParticleSystem {
       // Check terrain impact
       final th = terrainHeight(p.x, p.z);
       if (p.y <= th + 0.5) {
-        // Impact! Register crater and start flash
-        cometState.addImpactCrater(p.x, p.z);
+        // Impact! Register crater with terrain height for 3D debris placement
+        cometState.addImpactCrater(p.x, th, p.z);
         p.flashTimer = flashDuration;
         p.flashX = p.x;
         p.flashZ = p.z;

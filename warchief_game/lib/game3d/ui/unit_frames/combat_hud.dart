@@ -137,76 +137,81 @@ class CombatHUD extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start, // Align at top
       children: [
-        // Player frame with buff/debuff icons to the LEFT
-        Row(
+        // Player frame with buff/debuff icons ABOVE (prevents layout shift)
+        Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Buff/debuff icons above the player frame so they don't shift the layout
             if (gameState != null && gameState!.activeCharacterActiveEffects.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(right: 4),
+                padding: const EdgeInsets.only(bottom: 4),
                 child: BuffDebuffIcons(
                   effects: gameState!.activeCharacterActiveEffects,
-                  maxWidth: 80,
+                  maxWidth: 200,
                 ),
               ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Flight buff icon (above player frame when flying)
-                if (gameState != null && gameState!.isFlying)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: FlightBuffIcon(gameState: gameState!),
-                  ),
-                // Stance icon bar (above player health bar)
-                if (gameState != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: StanceIconBar(
-                      gameState: gameState!,
-                      onStateChanged: onStateChanged,
-                    ),
-                  ),
-                // Player frame (portrait on left)
-                UnitFrame(
-                  name: playerName,
-                  health: playerHealth,
-                  maxHealth: playerMaxHealth,
-                  power: playerPower,
-                  maxPower: playerMaxPower,
-                  isPlayer: true,
-                  level: playerLevel,
-                  portraitWidget: playerPortraitWidget,
-                  borderColor: const Color(0xFF4cc9f0),
-                  healthColor: const Color(0xFF4CAF50),
-                  powerColor: const Color(0xFF2196F3),
-                  width: 200,
+            // Flight buff icon (above player frame when flying)
+            if (gameState != null && gameState!.isFlying)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: FlightBuffIcon(gameState: gameState!),
+              ),
+            // Stance icon bar (above player health bar)
+            if (gameState != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: StanceIconBar(
+                  gameState: gameState!,
+                  onStateChanged: onStateChanged,
                 ),
-                // Mana bar below player frame (same width)
-                if (gameState != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: ManaBar(
-                      gameState: gameState!,
-                      width: 200,
-                      height: 14,
-                    ),
-                  ),
-              ],
+              ),
+            // Player frame (portrait on left)
+            UnitFrame(
+              name: playerName,
+              health: playerHealth,
+              maxHealth: playerMaxHealth,
+              power: playerPower,
+              maxPower: playerMaxPower,
+              isPlayer: true,
+              level: playerLevel,
+              portraitWidget: playerPortraitWidget,
+              borderColor: const Color(0xFF4cc9f0),
+              healthColor: const Color(0xFF4CAF50),
+              powerColor: const Color(0xFF2196F3),
+              width: 200,
             ),
+            // Mana bar below player frame (same width)
+            if (gameState != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: ManaBar(
+                  gameState: gameState!,
+                  width: 200,
+                  height: 14,
+                ),
+              ),
           ],
         ),
         const SizedBox(width: 12),
         // VS indicator
         if (hasTarget) const VSIndicator(inCombat: true),
         if (hasTarget) const SizedBox(width: 12),
-        // Target frame with debuff icons to the RIGHT
+        // Target frame with buff/debuff icons ABOVE (prevents layout shift)
         if (hasTarget)
-          Row(
+          Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Buff/debuff icons above the target frame so they don't shift the layout
+              if (gameState != null && gameState!.currentTargetActiveEffects.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: BuffDebuffIcons(
+                    effects: gameState!.currentTargetActiveEffects,
+                    maxWidth: 200,
+                  ),
+                ),
               Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -246,14 +251,6 @@ class CombatHUD extends StatelessWidget {
                     ),
                 ],
               ),
-              if (gameState != null && gameState!.currentTargetActiveEffects.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: BuffDebuffIcons(
-                    effects: gameState!.currentTargetActiveEffects,
-                    maxWidth: 80,
-                  ),
-                ),
             ],
           ),
       ],

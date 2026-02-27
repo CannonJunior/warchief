@@ -80,6 +80,9 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     // Update macro execution engine (spell rotations + raid chat alerts)
     MacroSystem.update(dt, gameState);
 
+    // Decay melee combo timer; break combo if window expires
+    MeleeComboSystem.update(dt, gameState);
+
     // Track flight duration for mastery goals
     if (gameState.isFlying) {
       _flightDurationAccum += dt;
@@ -113,6 +116,12 @@ mixin _WidgetUpdateMixin on _GameStateBase {
       activateMonsterAbility2: _activateMonsterAbility2,
       activateMonsterAbility3: _activateMonsterAbility3,
     );
+
+    // Apply wind drift to allies and monster (normal units have no wind resistance)
+    _applyWindDrift(dt);
+
+    // Update dust devil swirls: move columns, apply unit lift
+    _updateDustDevils(dt);
 
     // Handle player ability input (slots 1-10)
     AbilitySystem.handleAbility1Input(inputManager!.isActionPressed(GameAction.actionBar1), gameState);
@@ -225,6 +234,36 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     } else {
       camera!.rollAngle = 0.0;
       camera!.targetPitchOffset = 0.0;
+    }
+  }
+
+  /// Update dust devil swirl columns: move them along wind, apply unit lift.
+  ///
+  /// Lazily initializes [globalWindSwirlState] on first call.
+  void _updateDustDevils(double dt) {
+    final wind = globalWindState;
+    if (wind == null) return;
+    globalWindSwirlState ??= WindSwirlState();
+    globalWindSwirlState!.update(dt, gameState, wind);
+  }
+
+  /// Apply passive wind drift to non-player units during strong derechos.
+  ///
+  /// Player drift is handled in input_system.dart (respects active stance resistance).
+  /// Normal units — allies and monster — have no wind resistance and are always fully pushed.
+  void _applyWindDrift(double dt) {
+    final wind = globalWindState;
+    if (wind == null) return;
+    final drift = wind.getWindDrift(dt); // resistance defaults to 0.0 for normal units
+    if (drift[0] == 0.0 && drift[1] == 0.0) return;
+
+    for (final ally in gameState.allies) {
+      ally.transform.position.x += drift[0];
+      ally.transform.position.z += drift[1];
+    }
+    if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
+      gameState.monsterTransform!.position.x += drift[0];
+      gameState.monsterTransform!.position.z += drift[1];
     }
   }
 }

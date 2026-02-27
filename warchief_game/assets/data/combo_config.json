@@ -1,0 +1,86 @@
+{
+  "comboWindow": 4.0,
+  "chainWindow": 7.0,
+  "categories": {
+    "warrior": {
+      "threshold": 3,
+      "effect": "knockback",
+      "knockbackForce": 5.0,
+      "chain": { "knockbackForce": 10.0, "damage": 60.0, "radius": 6.0 }
+    },
+    "rogue": {
+      "threshold": 3,
+      "effect": "slow",
+      "duration": 4.0,
+      "strength": 0.40,
+      "chain": { "strength": 0.60, "healPerTick": 4.0, "tickInterval": 0.5 }
+    },
+    "windwalker": {
+      "threshold": 3,
+      "effect": "haste",
+      "duration": 8.0,
+      "strength": 0.35,
+      "chain": { "strength": 0.60 }
+    },
+    "starbreaker": {
+      "threshold": 3,
+      "effect": "redMana",
+      "amount": 25.0,
+      "chain": { "redManaAmount": 60.0, "blackManaAmount": 30.0 }
+    },
+    "stormheart": {
+      "threshold": 3,
+      "effect": "aoe",
+      "damage": 30.0,
+      "radius": 4.0,
+      "chain": { "damage": 80.0, "radius": 7.0 }
+    },
+    "healer": {
+      "threshold": 3,
+      "effect": "heal",
+      "amount": 20.0,
+      "chain": { "amount": 60.0, "healPerTick": 6.0, "tickInterval": 0.5 }
+    },
+    "necromancer": {
+      "threshold": 3,
+      "effect": "redMana",
+      "amount": 20.0,
+      "chain": { "redManaAmount": 50.0, "debuffDuration": 4.0, "debuffStrength": 0.30 }
+    },
+    "nature": {
+      "threshold": 3,
+      "effect": "slow",
+      "duration": 4.0,
+      "strength": 0.35,
+      "chain": { "rootDuration": 3.0, "poisonDps": 8.0, "poisonDuration": 5.0 }
+    },
+    "greenseer": {
+      "threshold": 3,
+      "effect": "regen",
+      "duration": 8.0,
+      "healPerTick": 4.0,
+      "tickInterval": 0.5,
+      "chain": { "healPerTick": 12.0, "duration": 10.0 }
+    },
+    "mage": {
+      "threshold": 3,
+      "effect": "strength",
+      "duration": 8.0,
+      "strength": 0.25,
+      "chain": { "strength": 0.50, "damage": 40.0 }
+    },
+    "spiritkin": {
+      "threshold": 3,
+      "effect": "haste",
+      "duration": 8.0,
+      "strength": 0.30,
+      "chain": { "hasteStrength": 0.60, "healPerTick": 6.0, "tickInterval": 0.5 }
+    },
+    "elemental": {
+      "threshold": 3,
+      "effect": "redMana",
+      "amount": 20.0,
+      "chain": { "redManaAmount": 40.0, "damage": 50.0, "radius": 5.0 }
+    }
+  }
+}

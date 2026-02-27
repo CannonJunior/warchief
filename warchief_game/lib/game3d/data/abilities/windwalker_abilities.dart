@@ -356,6 +356,27 @@ class WindWalkerAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== CHAIN COMBO PRIMER ====================
+
+  /// Gale Fury — Activates chain-combo mode for windwalkers.
+  /// Land 7 consecutive windwalker strikes within 7 seconds to fire the chain combo.
+  static final galeFury = AbilityData(
+    name: 'Gale Fury',
+    description: 'Unleash the fury of the gale — activate chain-combo mode. '
+        'Land 7 windwalker strikes within 7 seconds to trigger a powerful haste surge.',
+    type: AbilityType.melee,
+    damage: 18.0,
+    cooldown: 10.0,
+    range: 2.0,
+    color: Vector3(0.8, 0.92, 1.0),
+    impactColor: Vector3(0.7, 0.85, 1.0),
+    impactSize: 0.5,
+    manaColor: ManaColor.white,
+    manaCost: 15.0,
+    category: 'windwalker',
+    enablesComboChain: true,
+  );
+
   /// All Wind Walker abilities as a list
   static List<AbilityData> get all => [
     galeStep,
@@ -378,5 +399,6 @@ class WindWalkerAbilities {
     swiftJab,
     galePunch,
     pressurePoint,
+    galeFury,
   ];
 }

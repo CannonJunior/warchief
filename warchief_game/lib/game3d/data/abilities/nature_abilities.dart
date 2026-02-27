@@ -108,9 +108,31 @@ class NatureAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== CHAIN COMBO PRIMER ====================
+
+  /// Ancient Surge — Activates chain-combo mode for nature.
+  /// Land 7 consecutive nature strikes within 7 seconds to fire the chain combo.
+  static final ancientSurge = AbilityData(
+    name: 'Ancient Surge',
+    description: 'Channel ancient forest power through your strikes — activate chain-combo mode. '
+        'Land 7 nature hits within 7 seconds to trigger a root + sustained poison burst.',
+    type: AbilityType.melee,
+    damage: 16.0,
+    cooldown: 10.0,
+    range: 2.5,
+    color: Vector3(0.38, 0.58, 0.22),
+    impactColor: Vector3(0.5, 0.72, 0.3),
+    impactSize: 0.6,
+    manaColor: ManaColor.green,
+    manaCost: 15.0,
+    damageSchool: DamageSchool.nature,
+    category: 'nature',
+    enablesComboChain: true,
+  );
+
   /// All nature abilities as a list
   static List<AbilityData> get all => [
     entanglingRoots, thorns, naturesWrath,
-    briarLash, ironwoodSmash, thornbindMark,
+    briarLash, ironwoodSmash, thornbindMark, ancientSurge,
   ];
 }

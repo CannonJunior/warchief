@@ -350,6 +350,30 @@ class StormheartAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== CHAIN COMBO PRIMER ====================
+
+  /// Thunderstorm Strike — Activates chain-combo mode for stormhearts.
+  /// Land 7 consecutive stormheart strikes within 7 seconds to fire the chain combo.
+  static final thunderstormStrike = AbilityData(
+    name: 'Thunderstorm Strike',
+    description: 'Channel storm fury through your fists — activate chain-combo mode. '
+        'Land 7 stormheart hits within 7 seconds to trigger a devastating lightning AoE burst.',
+    type: AbilityType.melee,
+    damage: 22.0,
+    cooldown: 10.0,
+    range: 2.5,
+    color: Vector3(0.65, 0.78, 1.0),
+    impactColor: Vector3(0.8, 0.9, 1.0),
+    impactSize: 0.65,
+    manaColor: ManaColor.white,
+    manaCost: 15.0,
+    secondaryManaColor: ManaColor.red,
+    secondaryManaCost: 10.0,
+    damageSchool: DamageSchool.lightning,
+    category: 'stormheart',
+    enablesComboChain: true,
+  );
+
   /// All stormheart abilities as a list
   static List<AbilityData> get all => [
     thunderStrike,
@@ -369,5 +393,6 @@ class StormheartAbilities {
     voltStrike,
     arcPunch,
     lightningBrand,
+    thunderstormStrike,
   ];
 }

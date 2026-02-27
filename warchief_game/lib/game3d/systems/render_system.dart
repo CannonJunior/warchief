@@ -8,8 +8,11 @@ import '../../rendering3d/math/transform3d.dart';
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/ley_lines.dart';
 import '../rendering/wind_particles.dart';
+import '../rendering/dust_devil_particles.dart';
+import '../state/wind_swirl_state.dart';
 import '../rendering/green_mana_sparkles.dart';
 import '../rendering/meteor_particles.dart';
+import '../rendering/meteor_crater_renderer.dart';
 import '../rendering/sky_renderer.dart';
 import '../state/gameplay_settings.dart';
 import '../state/comet_state.dart' show globalCometState;
@@ -33,6 +36,12 @@ class RenderSystem {
 
   /// Meteor shower particle system (initialized on first use)
   static final MeteorParticleSystem _meteorParticles = MeteorParticleSystem();
+
+  /// Persistent meteor impact crater renderer (initialized on first use)
+  static final MeteorCraterRenderer _craterRenderer = MeteorCraterRenderer();
+
+  /// Dust devil swirl particle system (initialized on first use)
+  static final DustDevilParticleSystem _dustDevils = DustDevilParticleSystem();
 
   /// Sky gradient and comet billboard renderer
   static final SkyRenderer _skyRenderer = SkyRenderer();
@@ -82,7 +91,7 @@ class RenderSystem {
 
     // Render sky background (before terrain so it sits behind everything)
     if (cometState != null) {
-      _skyRenderer.update(cometState);
+      _skyRenderer.update(cometState, 0.016);
       _skyRenderer.renderSky(renderer, camera, cometState);
     }
 
@@ -218,6 +227,9 @@ class RenderSystem {
     // Render wind particles (Effects pass)
     _renderWindParticles(renderer, camera, gameState);
 
+    // Render dust devil swirl columns (Effects pass)
+    _renderDustDevils(renderer, camera);
+
     // Render green mana sparkles (Effects pass)
     _renderGreenManaSparkles(renderer, camera, gameState);
 
@@ -228,6 +240,9 @@ class RenderSystem {
 
     // Render meteor shower particles
     _renderMeteors(renderer, camera, gameState);
+
+    // Render persistent 3D meteor impact craters (scorched disc + rock debris)
+    _renderMeteorCraters(renderer, camera);
   }
 
   /// Render aura glow discs at unit bases with additive blending.
@@ -293,6 +308,15 @@ class RenderSystem {
     _windParticles.render(renderer, camera);
   }
 
+  /// Update and render dust devil swirl columns.
+  static void _renderDustDevils(WebGLRenderer renderer, Camera3D camera) {
+    final swirls = globalWindSwirlState;
+    if (swirls == null || !swirls.hasActiveDevils) return;
+    if (!_dustDevils.isInitialized) _dustDevils.init();
+    _dustDevils.update(swirls.getDevilData());
+    _dustDevils.render(renderer, camera);
+  }
+
   /// Update and render green mana sparkle particles.
   static void _renderGreenManaSparkles(
     WebGLRenderer renderer,
@@ -340,6 +364,15 @@ class RenderSystem {
     );
 
     _meteorParticles.render(renderer, camera);
+  }
+
+  /// Update and render persistent 3D meteor impact craters.
+  static void _renderMeteorCraters(WebGLRenderer renderer, Camera3D camera) {
+    final cometState = globalCometState;
+    if (cometState == null || cometState.activeCraterCount == 0) return;
+    if (!_craterRenderer.isInitialized) _craterRenderer.init();
+    _craterRenderer.update(cometState.craterDataForRendering);
+    _craterRenderer.render(renderer, camera);
   }
 
   /// Render target indicator around the current target
