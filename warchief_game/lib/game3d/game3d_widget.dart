@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:html' as html;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -66,12 +67,20 @@ import 'state/comet_state.dart';
 import 'state/minimap_config.dart';
 import 'state/minimap_state.dart';
 import 'state/building_config.dart';
+import 'state/scenario_config.dart';
 import 'state/goals_config.dart';
 import 'state/macro_config.dart';
 import 'state/macro_manager.dart';
 import 'state/gameplay_settings.dart';
 import 'state/combo_config.dart';
 import 'systems/melee_combo_system.dart';
+import 'systems/duel_system.dart';
+import 'state/duel_config.dart';
+import 'state/duel_manager.dart';
+import 'state/duel_banner_state.dart';
+import 'rendering/duel_banner_renderer.dart';
+import 'data/duel/duel_definitions.dart';
+import 'ui/duel/duel_panel.dart';
 import 'data/stances/stances.dart';
 import 'state/ability_order_manager.dart';
 import 'ui/minimap/minimap_widget.dart';
@@ -96,8 +105,13 @@ part 'game3d_widget_init.dart';
 part 'game3d_widget_update.dart';
 part 'game3d_widget_input.dart';
 part 'game3d_widget_commands.dart';
+part 'game3d_widget_duel.dart';
 part 'game3d_widget_ui.dart';
 part 'game3d_widget_ui_helpers.dart';
+
+// Reason: top-level so all part files in this library can access it unqualified.
+// Mixin `on _GameStateBase` cannot use static const members of the base class.
+const double _cameraMouseSensitivity = 0.25; // degrees per logical pixel
 
 /// Abstract base holding all instance fields shared across mixin parts.
 ///
@@ -131,6 +145,13 @@ abstract class _GameStateBase extends State<Game3D> {
   // _WidgetCommandsMixin (no longer owns it) share a single field.
   double _flightDurationAccum = 0;
 
+  // ── Right-click camera drag (WoW-style pointer-lock rotation) ─────────────
+  // Reason: fields live in base so _WidgetInputMixin (implements the drag) and
+  // _WidgetUIMixin (triggers it from the Listener) can both access them.
+  bool _isRightDragging = false;
+  StreamSubscription<html.MouseEvent>? _dragMoveSubscription;
+  StreamSubscription<html.MouseEvent>? _dragUpSubscription;
+
   // ==================== ABSTRACT CROSS-MIXIN INTERFACE ====================
   // Each stub is declared here so every mixin (which uses `on _GameStateBase`)
   // can call methods defined in sibling mixins.  Concrete implementations are
@@ -138,6 +159,7 @@ abstract class _GameStateBase extends State<Game3D> {
 
   // --- from _Game3DState ---
   void _startGameLoop();
+  void _initializeScenarioConfig();
 
   // --- from _WidgetCommandsMixin ---
   bool _isVisible(String id);
@@ -156,11 +178,16 @@ abstract class _GameStateBase extends State<Game3D> {
   void _changeFormation(FormationType newFormation);
   AllyCommand _getCurrentAllyCommand();
   void _setAllyCommand(AllyCommand command);
+  void _startDuel(DuelSetupConfig setup);
+  void _duelResetCooldowns();
+  void _cancelDuel();
 
   // --- from _WidgetInputMixin ---
   bool _isTextFieldFocused();
   void _onKeyEvent(KeyEvent event);
   void _handleWorldClick(PointerDownEvent event);
+  void _startCameraDrag();
+  void _endCameraDrag();
   void _handleMinimapPing(double worldX, double worldZ);
   void _activateAbility1();
   void _activateAbility2();
@@ -207,7 +234,7 @@ class Game3D extends StatefulWidget {
 
 class _Game3DState extends _GameStateBase
     with _WidgetInitMixin, _WidgetUpdateMixin, _WidgetInputMixin,
-         _WidgetCommandsMixin, _WidgetUIMixin, _WidgetUIHelpersMixin {
+         _WidgetCommandsMixin, _WidgetDuelMixin, _WidgetUIMixin, _WidgetUIHelpersMixin {
   @override
   void initState() {
     super.initState();
@@ -230,6 +257,9 @@ class _Game3DState extends _GameStateBase
 
     // Initialize mana config (JSON defaults + SharedPreferences overrides)
     _initializeManaConfig();
+
+    // Initialize scenario config (entity/world setup for game start)
+    _initializeScenarioConfig();
 
     // Initialize wind config (JSON defaults for wind simulation)
     _initializeWindConfig();
@@ -278,6 +308,10 @@ class _Game3DState extends _GameStateBase
 
     // Initialize player inventory with sample items
     _initializeInventory();
+
+    // Initialize duel arena system (config + manager with persisted history)
+    _initializeDuelConfig();
+    _initializeDuelManager();
 
     // Create canvas element immediately
     _initializeGame();
@@ -330,6 +364,9 @@ class _Game3DState extends _GameStateBase
 
   @override
   void dispose() {
+    // Release pointer lock if active (prevents cursor getting stuck hidden)
+    _endCameraDrag();
+
     // Stop game loop
     if (gameState.animationFrameId != null) {
       html.window.cancelAnimationFrame(gameState.animationFrameId!);

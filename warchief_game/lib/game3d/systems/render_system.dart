@@ -9,7 +9,9 @@ import '../../rendering3d/mesh.dart';
 import '../../rendering3d/ley_lines.dart';
 import '../rendering/wind_particles.dart';
 import '../rendering/dust_devil_particles.dart';
+import '../rendering/duel_banner_renderer.dart';
 import '../state/wind_swirl_state.dart';
+import '../state/duel_banner_state.dart' show DuelBannerPhase;
 import '../rendering/green_mana_sparkles.dart';
 import '../rendering/meteor_particles.dart';
 import '../rendering/meteor_crater_renderer.dart';
@@ -131,6 +133,17 @@ class RenderSystem {
 
     // Render aura glow discs at unit bases (additive blending)
     _renderAuras(renderer, camera, gameState);
+
+    // Render duel arena banner (pole + cloth + victory flag, normal blending)
+    final duelBanner = gameState.duelBannerState;
+    if (duelBanner != null && duelBanner.phase != DuelBannerPhase.idle) {
+      DuelBannerRenderer.render(renderer, camera, duelBanner);
+    }
+
+    // Render duel combatants with normal blending (not inside the aura pass)
+    for (final combatant in gameState.duelCombatants) {
+      renderer.render(combatant.mesh, combatant.transform, camera);
+    }
 
     // Render target indicator (yellow dashed rectangle around target's base)
     _renderTargetIndicator(renderer, camera, gameState);
@@ -406,6 +419,21 @@ class RenderSystem {
         targetPosition = gameState.allies[index].transform.position;
         targetSize = GameConfig.allySize * 1.5;
         indicatorColor = Vector3(0.2, 1.0, 0.2); // Green for allies
+      }
+    } else if (gameState.currentTargetId!.startsWith('duel_')) {
+      // Duel combatant — blue for challengers, red for enemies
+      final index = int.tryParse(gameState.currentTargetId!.substring(5));
+      if (index != null && index < gameState.duelCombatants.length) {
+        final combatant = gameState.duelCombatants[index];
+        if (combatant.health > 0) {
+          targetPosition = combatant.transform.position;
+          targetSize = 0.8 * 1.5; // cube size × indicator scale
+          final mgr = gameState.duelManager;
+          final isChallenger = mgr != null && index < mgr.challengerPartySize;
+          indicatorColor = isChallenger
+              ? Vector3(0.25, 0.55, 1.0)  // blue side
+              : Vector3(1.0, 0.25, 0.25); // red side
+        }
       }
     } else {
       // Find minion by instance ID

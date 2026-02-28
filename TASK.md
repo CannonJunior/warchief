@@ -2,7 +2,71 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-02-27
+
+#### Duel Arena — Banner Pole + Wind Flutter + Victory Flag
+- ✅ **`lib/game3d/state/duel_banner_state.dart`** (new, 119 lines): `DuelBannerPhase` enum (`idle/dropping/fluttering/flagRising/complete`) + `DuelBannerState` class. Drives pole drop (cubic ease-out, 2 s), wind-reactive banner flutter (yaw faces wind direction, roll oscillates with amplitude ∝ wind strength), and victory flag rise animation (1.5 s).
+- ✅ **`lib/game3d/rendering/duel_banner_renderer.dart`** (new, 110 lines): Lazily builds and reuses pole (`Mesh.cube` scaled thin+tall, warm wood color), banner cloth (`Mesh.plane` pitched −90° to vertical, gold/ochre), and per-winner flag (blue/red/gold depending on `winnerId`). Static Transform3d objects mutated each frame — no per-frame allocation.
+- ✅ **`lib/game3d/state/game_state.dart`**: Added `duel_banner_state.dart` import + `DuelBannerState? duelBannerState` field in the DUEL STATE section.
+- ✅ **`lib/game3d/game3d_widget.dart`**: Added imports for `duel_banner_state.dart` and `duel_banner_renderer.dart`.
+- ✅ **`lib/game3d/game3d_widget_duel.dart`** (108 lines): Arena now spawns **in front of the active character** (15 m along forward vector). Challengers spread along forward axis on the left (−right), enemies on the right. `_startDuel` calls `duelBannerState.start(baseX, baseZ)`. `_cancelDuel` calls `duelBannerState.reset()`.
+- ✅ **`lib/game3d/game3d_widget_update.dart`**: Added `gameState.duelBannerState?.update(dt, globalWindState)` after `DuelSystem.update`.
+- ✅ **`lib/game3d/systems/render_system.dart`**: Added `DuelBannerRenderer.render()` call with normal blending, placed after `_renderAuras()` so it renders with proper depth.
+- ✅ **`lib/game3d/systems/duel_system.dart`**: Added `gameState.duelBannerState?.notifyWinner(winnerId)` after `finalizeDuel` to trigger flag-rise animation.
+- ✅ Build verified: `flutter analyze --no-pub` — 0 new errors.
+
+#### Duel Arena — End Conditions + Previous Selections
+- ✅ **`lib/models/duel_result.dart`**: Added `DuelEndCondition` enum (`firstKill`, `totalAnnihilation`) + labels map. Expanded `DuelResult` with `challengerClasses`, `enemyTypes`, `challengerGearTiers`, `enemyGearTiers`, `endCondition` fields; backward-compat `fromJson` fallbacks for old records.
+- ✅ **`lib/game3d/state/duel_manager.dart`**: Added `endCondition` to `DuelSetupConfig` and `DuelManager`; `finalizeDuel` now stores full party composition + end condition in result; `reset()` clears `endCondition`.
+- ✅ **`lib/game3d/systems/duel_system.dart`**: Win-check now dispatches on `manager.endCondition` — `firstKill` triggers on the first `any()` death; `totalAnnihilation` keeps the existing `every()` check.
+- ✅ **`lib/game3d/game3d_widget_duel.dart`**: `_startDuel` writes `mgr.endCondition = setup.endCondition`.
+- ✅ **`lib/game3d/ui/duel/duel_panel.dart`**: Added `_endCondition` and `_showRecents` state fields; added `part 'duel_panel_recents.dart'`.
+- ✅ **`lib/game3d/ui/duel/duel_panel_setup.dart`**: Added "Ends:" toggle row (First Kill / Total Annihilation); calls `_buildPastPerformance()` and `_buildRecentsSection()` from the new recents part file; `_doStartDuel` passes `endCondition`.
+- ✅ **`lib/game3d/ui/duel/duel_panel_recents.dart`**: New part file — `_MatchupRecord` aggregate helper, `_DuelPanelRecents` extension with: live past-performance bar (# duels / blue win% / avg time for current selection), collapsible "Recent Configurations" list (up to 8 unique matchups, each with stats + Load button that restores all setup fields including gear tiers).
+- ✅ File splitting: commands file refactor to `game3d_widget_duel.dart` (87 lines); all duel UI files ≤ 421 lines.
+- ✅ Build verified: `flutter analyze --no-pub` — 0 new errors.
+
 ### ✅ Completed - 2026-02-26
+
+#### Duel Arena — Multi-Party + Gear + Strategy Enhancement
+- ✅ **`assets/data/duel_config.json`**: Added `gearTiers` block (5 tiers: health/mana/damage multipliers).
+- ✅ **`lib/game3d/state/duel_config.dart`**: Added `gearTierNames`, `gearTierHealthMultipliers`, `gearTierManaMultipliers`, `gearTierDamageMultipliers` getters.
+- ✅ **`lib/game3d/state/duel_manager.dart`**: Added `DuelStrategy` enum (aggressive/defensive/balanced/support/berserker), `duelStrategyLabels`, `DuelSetupConfig` snapshot class, multi-party fields (`challengerPartySize`, `enemyPartySize`, `challengerPartyClasses`, `enemyPartyTypes`, `challengerGearTiers`, `enemyGearTiers`, `challengerStrategy`, `enemyStrategy`, `challengerPartyAbilities`, `enemyPartyAbilities`).
+- ✅ **`lib/game3d/systems/duel_system.dart`**: Full rewrite — multi-party support (0..chalSize = blue, chalSize.. = red), `resetCooldowns(List<Ally>)` static method, priority-scored ability selection per strategy, `_preferredDistance` kiting, Support strategy party-heal targeting, gear damage multiplier applied at deal time.
+- ✅ **`lib/game3d/ui/duel/duel_panel.dart`**: Resized to 560×640, added `onResetCooldowns` callback, multi-party state, `_setPartySize()` helper, Reset Cooldowns button in Active tab, `part 'duel_panel_setup.dart'`.
+- ✅ **`lib/game3d/ui/duel/duel_panel_setup.dart`**: New part file — Setup tab with side headers, party size 1-5, strategy dropdown, per-slot class selector + 5 gear tier circles.
+- ✅ **`lib/game3d/game3d_widget_commands.dart`**: Updated `_startDuel(DuelSetupConfig)` with multi-party spawn + gear scaling, added `_duelResetCooldowns()`.
+- ✅ **`lib/game3d/game3d_widget.dart`**: Added `_duelResetCooldowns` abstract stub.
+- ✅ **`lib/game3d/game3d_widget_ui.dart`**: Updated DuelPanel instantiation with `onResetCooldowns`, new 560/640 size.
+- ✅ **`docs/DUEL_INTERFACE.md`**: New documentation — panel structure, gear tier table, strategy reference, AI heuristic description, 8 suggested next steps.
+- ✅ Build verified: `flutter analyze --no-pub` — 0 new errors.
+
+#### File Splitting — stance_editor_panel + minion_frames
+- ✅ **`lib/game3d/ui/stance_editor_panel.dart`**: Split from 651 → 479 lines. Extracted `_tooltips` map + all `_build*` field/style methods.
+- ✅ **`lib/game3d/ui/stance_editor_panel_fields.dart`**: New part file (193 lines) — `_tooltips` const map + extension `_StanceEditorFields`.
+- ✅ **`lib/game3d/ui/unit_frames/minion_frames.dart`**: Split from 592 → 284 lines. Extracted all helper widget methods.
+- ✅ **`lib/game3d/ui/unit_frames/minion_frame_widgets.dart`**: New part file (305 lines) — extension `_MinionFrameWidgets`.
+- ✅ Build verified: `flutter analyze --no-pub` — 0 new errors.
+
+#### Duel Arena System — Third Faction Balance Testing
+- ✅ **`assets/data/duel_config.json`**: Arena offset, separation distance, duration, mana regen, history cap, challenger/enemy health/mana defaults.
+- ✅ **`lib/game3d/state/duel_config.dart`**: Lightweight JSON config model with dot-notation getters. Global `globalDuelConfig` instance.
+- ✅ **`lib/models/duel_result.dart`**: `DuelEvent`, `DuelCombatantStats`, `DuelResult` data models with full JSON round-trip.
+- ✅ **`lib/game3d/state/duel_manager.dart`**: State machine (`idle/active/completed`), event recording, SharedPreferences persistence (key `duel_history`, capped at 200 entries FIFO), `reset()` / `finalizeDuel()`.
+- ✅ **`lib/game3d/data/duel/duel_definitions.dart`**: `DuelDefinitions` factory — creates `Ally` instances for all 12 challenger classes and 4 enemy faction types; returns ability lists per combatant.
+- ✅ **`lib/game3d/systems/duel_system.dart`**: Per-frame duel orchestration — AI movement, ability cycling, mana regen, cooldown ticking, win/draw/timeout detection.
+- ✅ **`lib/game3d/ui/duel/duel_panel.dart`**: 3-tab draggable panel (Setup / Active / History, 440×520). Setup: dropdowns + Start button. Active: elapsed timer, damage/heal stats, last-50-events log, Cancel button. History: scrollable result rows, Clear button.
+- ✅ **`lib/game3d/state/game_state.dart`**: Added `duelCombatants`, `duelManager`, `duelPanelOpen` fields + imports.
+- ✅ **`lib/game3d/systems/render_system.dart`**: Duel combatant meshes rendered in aura pass.
+- ✅ **`lib/game3d/game3d_widget_init.dart`**: `_initializeDuelConfig()` and `_initializeDuelManager()` methods added.
+- ✅ **`lib/game3d/game3d_widget.dart`**: Added imports + init calls + abstract stubs for `_startDuel` / `_cancelDuel`.
+- ✅ **`lib/game3d/game3d_widget_update.dart`**: `DuelSystem.update(dt, gameState)` called after AI system.
+- ✅ **`lib/game3d/game3d_widget_ui.dart`**: Duel panel added to Stack with `_draggable()` wrapper.
+- ✅ **`lib/game3d/game3d_widget_commands.dart`**: `_startDuel()` and `_cancelDuel()` helpers implemented.
+- ✅ **`lib/game3d/game3d_widget_input.dart`**: `U` key toggles `gameState.duelPanelOpen`.
+- ✅ Build verified: `flutter analyze --no-pub` — 0 new errors.
+
+### ✅ Completed - 2026-02-26 (earlier)
 
 #### Melee Combo System — Chain Combos + Per-Class Primers
 - ✅ **`assets/data/combo_config.json`**: All thresholds normalized to 3; buff durations 8s, debuff durations 4s. Added per-class `chain` sub-config objects. Added `chainWindow: 7.0`.

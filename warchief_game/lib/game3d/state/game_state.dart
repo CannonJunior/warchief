@@ -16,6 +16,9 @@ import '../../models/inventory.dart';
 import '../../models/item.dart';
 import '../../models/damage_event.dart';
 import '../../models/target_dummy.dart';
+import '../../models/duel_result.dart' show DuelResult;
+import 'duel_manager.dart';
+import 'duel_banner_state.dart';
 import '../../models/building.dart';
 import '../../models/goal.dart';
 import '../../models/raid_chat_message.dart';
@@ -754,6 +757,21 @@ class GameState {
 
   /// Check if target dummy is the current target
   bool get isTargetingDummy => currentTargetId == TargetDummy.instanceId;
+
+  // ==================== DUEL STATE ====================
+
+  /// Active duel combatants: [0]=challenger, [1]=enemy. Empty when no duel.
+  List<Ally> duelCombatants = [];
+
+  /// Duel state manager — initialized in game3d_widget_init, never null after init.
+  DuelManager? duelManager;
+
+  /// Whether the duel panel is currently open.
+  bool duelPanelOpen = false;
+
+  /// Banner animation state for the pole that drops into the arena.
+  /// Null until the first duel is started.
+  DuelBannerState? duelBannerState;
 
   // ==================== INVENTORY STATE ====================
 

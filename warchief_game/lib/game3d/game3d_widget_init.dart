@@ -12,6 +12,16 @@ mixin _WidgetInitMixin on _GameStateBase {
     globalGameConfig!.initialize();
   }
 
+  /// Initialize the global scenario configuration (entity/world setup).
+  ///
+  /// Creates the [ScenarioConfig] object with hardcoded defaults so callers
+  /// can read safe values immediately.  Async JSON + SharedPreferences loading
+  /// is awaited inside [_initializeGame] before any spawn calls.
+  @override
+  void _initializeScenarioConfig() {
+    globalScenarioConfig ??= ScenarioConfig();
+  }
+
   /// Initialize the global action bar configuration manager
   void _initializeActionBarConfig() {
     globalActionBarConfigManager ??= ActionBarConfigManager();
@@ -67,8 +77,12 @@ mixin _WidgetInitMixin on _GameStateBase {
   void _initializeBuildingConfig() {
     globalBuildingConfig ??= BuildingConfig();
     globalBuildingConfig!.initialize().then((_) {
-      // Spawn warchief's home after config is loaded
-      gameState.spawnWarchiefHome(gameState.infiniteTerrainManager);
+      // Spawn warchief's home only if the scenario config enables it.
+      // Reason: ScenarioConfig defaults to true so behavior is unchanged
+      // on first run; user overrides are respected on subsequent runs.
+      if (globalScenarioConfig?.spawnWarchiefHome ?? true) {
+        gameState.spawnWarchiefHome(gameState.infiniteTerrainManager);
+      }
       if (mounted) setState(() {});
     });
   }
@@ -138,6 +152,18 @@ mixin _WidgetInitMixin on _GameStateBase {
     });
   }
 
+  /// Initialize the global duel configuration (JSON defaults)
+  void _initializeDuelConfig() {
+    globalDuelConfig ??= DuelConfig();
+    globalDuelConfig!.initialize();
+  }
+
+  /// Initialize the duel manager and load persisted history
+  Future<void> _initializeDuelManager() async {
+    gameState.duelManager = DuelManager();
+    await gameState.duelManager!.loadHistory();
+  }
+
   /// Initialize player inventory with sample items from database
   void _initializeInventory() {
     gameState.initializeInventory().then((_) {
@@ -149,7 +175,9 @@ mixin _WidgetInitMixin on _GameStateBase {
 
   // ==================== GAME INITIALIZATION ====================
 
-  void _initializeGame() {
+  // Reason: async so we can await scenario config (and future async inits)
+  // before running spawn calls. Called fire-and-forget from initState.
+  Future<void> _initializeGame() async {
     try {
       print('=== Game3D Initialization Starting ===');
 
@@ -295,17 +323,27 @@ mixin _WidgetInitMixin on _GameStateBase {
         scale: Vector3(1, 1, 1),
       );
 
+      // Ensure scenario config is fully loaded (JSON + SharedPreferences) before
+      // reading spawn settings.  No-ops if already loaded.
+      await globalScenarioConfig!.initialize();
+      final scenario = globalScenarioConfig!;
+
       // Adjust player and monster starting positions to terrain height
       _adjustStartingPositionsToTerrain();
 
-      // Spawn minions (8 Goblin Rogues, 4 Orc Warlocks, 2 Cultist Priests, 1 Skeleton Champion)
-      gameState.spawnMinions(gameState.infiniteTerrainManager);
+      // Spawn minions using scenario-configured counts (defaults match DefaultMinionSpawns)
+      if (scenario.spawnMinions) {
+        gameState.spawnMinions(
+          gameState.infiniteTerrainManager,
+          spawns: scenario.minionSpawns,
+        );
+      }
 
-      // Initialize Ley Lines for mana regeneration
+      // Initialize Ley Lines using scenario-configured seed and dimensions
       gameState.initializeLeyLines(
-        seed: 42,
-        worldSize: 300.0,
-        siteCount: 30,
+        seed: scenario.leyLineSeed,
+        worldSize: scenario.leyLineWorldSize,
+        siteCount: scenario.leyLineSiteCount,
       );
 
       print('Game3D initialized successfully!');

@@ -1,0 +1,15 @@
+{
+  "initial_ally_count": 0,
+  "spawn_boss_monster": true,
+  "spawn_warchief_home": true,
+  "spawn_minions": true,
+  "minion_spawns": [
+    { "definition_id": "gnoll_marauder",   "count": 8, "spread_radius": 5.0 },
+    { "definition_id": "satyr_hexblade",   "count": 4, "spread_radius": 3.0 },
+    { "definition_id": "dryad_lifebinder", "count": 2, "spread_radius": 2.0 },
+    { "definition_id": "minotaur_bulwark", "count": 1, "spread_radius": 0.0 }
+  ],
+  "ley_line_seed": 42,
+  "ley_line_world_size": 300.0,
+  "ley_line_site_count": 30
+}

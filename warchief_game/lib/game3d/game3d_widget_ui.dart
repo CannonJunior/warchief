@@ -24,11 +24,26 @@ mixin _WidgetUIMixin on _GameStateBase {
         color: Colors.transparent, // Transparent to show canvas behind
         child: Stack(
           children: [
-            // Canvas will be created and appended to body in initState
-            // Listener captures left-clicks for entity picking (click-to-select)
+            // Canvas will be created and appended to body in initState.
+            // Listener captures left-clicks for entity picking and right-clicks
+            // for WoW-style pointer-lock camera rotation.
             Listener(
               behavior: HitTestBehavior.translucent,
-              onPointerDown: (event) => _handleWorldClick(event),
+              onPointerDown: (event) {
+                if (event.buttons == 2) {
+                  // Right mouse button — start pointer-lock camera drag.
+                  // Guard: don't grab pointer if a text field is focused so that
+                  // right-clicking in chat/editor fields is unaffected.
+                  if (!_isTextFieldFocused()) _startCameraDrag();
+                } else {
+                  _handleWorldClick(event);
+                }
+              },
+              // Safety net: if the browser delivers a pointer-up event before
+              // the html.document.onMouseUp subscription fires, end the drag.
+              onPointerUp: (event) {
+                if (event.buttons == 0 && _isRightDragging) _endCameraDrag();
+              },
               child: SizedBox.expand(),
             ),
 
@@ -431,6 +446,18 @@ mixin _WidgetUIMixin on _GameStateBase {
                 onClose: () => setState(() {
                   gameState.warriorSpiritPanelOpen = false;
                 }),
+              ),
+
+            // Duel Arena Panel (Press U to toggle)
+            if (gameState.duelPanelOpen && gameState.duelManager != null)
+              _draggable('duel_panel',
+                DuelPanel(
+                  manager: gameState.duelManager!,
+                  onStartDuel: _startDuel,
+                  onCancelDuel: _cancelDuel,
+                  onResetCooldowns: _duelResetCooldowns,
+                ),
+                width: 560, height: 640,
               ),
 
             // Cast Bar (shows when casting or winding up)

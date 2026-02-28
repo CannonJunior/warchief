@@ -62,10 +62,15 @@ extension GameStateWorldExt on GameState {
     );
   }
 
-  /// Spawn all minions according to DefaultMinionSpawns configuration
-  /// Total: 8 Goblin Rogues + 4 Orc Warlocks + 2 Cultist Priests + 1 Skeleton Champion = 15 minions
-  void spawnMinions(InfiniteTerrainManager? terrainManager) {
+  /// Spawn all minions according to the provided [spawns] list, or
+  /// [DefaultMinionSpawns.spawns] if none is given.
+  void spawnMinions(
+    InfiniteTerrainManager? terrainManager, {
+    List<MinionSpawnConfig>? spawns,
+  }) {
     if (minionsSpawned) return;
+
+    final spawnList = spawns ?? DefaultMinionSpawns.spawns;
 
     print('[MINIONS] Spawning minions...');
     print(DefaultMinionSpawns.summary);
@@ -76,7 +81,7 @@ extension GameStateWorldExt on GameState {
 
     int totalSpawned = 0;
 
-    for (final spawnConfig in DefaultMinionSpawns.spawns) {
+    for (final spawnConfig in spawnList) {
       final definition = MinionDefinitions.getById(spawnConfig.definitionId);
       if (definition == null) {
         print('[MINIONS] Warning: Unknown definition ${spawnConfig.definitionId}');

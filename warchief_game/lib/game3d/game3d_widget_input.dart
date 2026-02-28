@@ -176,6 +176,14 @@ mixin _WidgetInputMixin on _GameStateBase {
       }
     }
 
+    // Handle U key for Duel Arena panel (only on key down, not repeat)
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyU) {
+      setState(() {
+        gameState.duelPanelOpen = !gameState.duelPanelOpen;
+      });
+      return;
+    }
+
     // Handle Tab/Shift+Tab for target cycling (WoW-style)
     // Shift+Tab = cycle friendly targets, Tab = cycle enemy targets
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.tab) {
@@ -307,6 +315,63 @@ mixin _WidgetInputMixin on _GameStateBase {
     if (inputManager != null) {
       inputManager!.handleKeyEvent(event);
     }
+  }
+
+  // ==================== RIGHT-CLICK CAMERA DRAG (WoW-style) ====================
+
+  // Reason: lives in the mixin rather than the base class — only this mixin uses it.
+  StreamSubscription<html.Event>? _contextMenuSubscription;
+
+  /// Right-click + drag rotates the camera (yaw + pitch) via pointer lock.
+  ///
+  /// Pointer lock hides the cursor and delivers raw movementX/Y deltas with no
+  /// screen-edge clamping, matching WoW's right-click camera behaviour.
+  @override
+  void _startCameraDrag() {
+    if (_isRightDragging) return;
+    _isRightDragging = true;
+
+    // Suppress context menu for the entire drag session.
+    // Reason: the old pattern used .first, which only swallowed one event —
+    // subsequent right-clicks surfaced the context menu.
+    _contextMenuSubscription?.cancel();
+    _contextMenuSubscription =
+        html.document.onContextMenu.listen((e) => e.preventDefault());
+
+    // Request pointer lock — hides cursor, enables raw movementX/Y.
+    canvas.requestPointerLock();
+
+    _dragMoveSubscription = html.document.onMouseMove.listen((html.MouseEvent e) {
+      // Discard events that arrive before lock is active.
+      // Reason: requestPointerLock() is async; pre-lock events carry absolute
+      // screen coords rather than deltas and would violently jump the camera.
+      if (html.document.pointerLockElement == null) return;
+      if (camera == null) return;
+      final dx = e.movement.x.toDouble();
+      final dy = e.movement.y.toDouble();
+      if (dx == 0.0 && dy == 0.0) return;
+      camera!.yawBy(dx * _cameraMouseSensitivity);
+      camera!.pitchBy(-dy * _cameraMouseSensitivity);
+    });
+
+    // document.onMouseUp fires even while pointer-locked.
+    _dragUpSubscription = html.document.onMouseUp.listen((html.MouseEvent e) {
+      if (e.button == 2) _endCameraDrag();
+    });
+  }
+
+  /// Release pointer lock and cancel all drag subscriptions.
+  @override
+  void _endCameraDrag() {
+    if (!_isRightDragging) return;
+    _isRightDragging = false;
+    _dragMoveSubscription?.cancel();
+    _dragMoveSubscription = null;
+    _dragUpSubscription?.cancel();
+    _dragUpSubscription = null;
+    _contextMenuSubscription?.cancel();
+    _contextMenuSubscription = null;
+    html.document.exitPointerLock();
   }
 
   // ==================== MOUSE INPUT ====================

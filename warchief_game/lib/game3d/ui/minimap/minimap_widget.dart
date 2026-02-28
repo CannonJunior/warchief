@@ -198,8 +198,8 @@ class MinimapWidget extends StatelessWidget {
             ],
           ),
         ),
-        // Clock below minimap
-        _buildClock(minimapState),
+        // Clock + coordinates below minimap
+        _buildClock(minimapState, playerX, playerZ),
       ],
     );
   }
@@ -237,8 +237,8 @@ class MinimapWidget extends StatelessWidget {
     onPingCreated(worldX, worldZ);
   }
 
-  /// Build the clock widget below the minimap.
-  Widget _buildClock(MinimapState minimapState) {
+  /// Build the clock + coordinate widget below the minimap.
+  Widget _buildClock(MinimapState minimapState, double playerX, double playerZ) {
     final config = globalMinimapConfig;
     if (!(config?.clockShowByDefault ?? true)) return const SizedBox.shrink();
 
@@ -254,6 +254,9 @@ class MinimapWidget extends StatelessWidget {
       timeString =
           '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     }
+
+    final coordString =
+        '${playerX.round()}, ${playerZ.round()}';
 
     return GestureDetector(
       onTap: warchiefEnabled
@@ -276,14 +279,28 @@ class MinimapWidget extends StatelessWidget {
           message: minimapState.warchiefTimeMode
               ? 'Coming soon'
               : (warchiefEnabled ? 'Tap for Warchief time' : ''),
-          child: Text(
-            timeString,
-            style: TextStyle(
-              color: const Color(0xFFCCCCCC),
-              fontSize: fontSize,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'monospace',
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                timeString,
+                style: TextStyle(
+                  color: const Color(0xFFCCCCCC),
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                coordString,
+                style: TextStyle(
+                  color: const Color(0xFF888899),
+                  fontSize: fontSize,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ],
           ),
         ),
       ),

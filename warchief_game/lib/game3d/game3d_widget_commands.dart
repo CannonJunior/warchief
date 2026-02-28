@@ -455,4 +455,5 @@ mixin _WidgetCommandsMixin on _GameStateBase {
       _updateAllyAuraColor(gameState.allies[i], i + 1);
     }
   }
+
 }

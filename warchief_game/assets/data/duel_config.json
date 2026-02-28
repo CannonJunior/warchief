@@ -1,0 +1,28 @@
+{
+  "arena": {
+    "offsetX": 200.0,
+    "offsetZ": 200.0,
+    "separationDistance": 20.0
+  },
+  "duel": {
+    "maxDurationSeconds": 120.0,
+    "manaRegenPerSecond": 5.0,
+    "historyMaxEntries": 200,
+    "gcdSeconds": 1.0,
+    "comboWindowSeconds": 3.0
+  },
+  "challengers": {
+    "health": 100.0,
+    "manaPool": 100.0
+  },
+  "enemyFaction": {
+    "health": 100.0,
+    "manaPool": 60.0
+  },
+  "gearTiers": {
+    "names":             ["Common", "Uncommon", "Rare", "Epic", "Legendary"],
+    "healthMultipliers": [1.0, 1.2, 1.5, 1.85, 2.3],
+    "manaMultipliers":   [1.0, 1.2, 1.5, 1.85, 2.3],
+    "damageMultipliers": [1.0, 1.1, 1.25, 1.45, 1.7]
+  }
+}

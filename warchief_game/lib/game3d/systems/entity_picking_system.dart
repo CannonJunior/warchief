@@ -96,6 +96,22 @@ class EntityPickingSystem {
       }
     }
 
+    // Duel combatants
+    for (int i = 0; i < gameState.duelCombatants.length; i++) {
+      final combatant = gameState.duelCombatants[i];
+      if (combatant.health > 0) {
+        _addCandidate(
+          candidates,
+          'duel_$i',
+          combatant.transform.position,
+          clickPos,
+          viewMatrix,
+          projMatrix,
+          screenSize,
+        );
+      }
+    }
+
     // Target dummy
     if (gameState.targetDummy != null && gameState.targetDummy!.isSpawned) {
       _addCandidate(

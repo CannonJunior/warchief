@@ -117,6 +117,12 @@ mixin _WidgetUpdateMixin on _GameStateBase {
       activateMonsterAbility3: _activateMonsterAbility3,
     );
 
+    // Update duel arena system (automated combatant AI + win detection)
+    DuelSystem.update(dt, gameState);
+
+    // Animate duel arena banner (drop, flutter, victory flag)
+    gameState.duelBannerState?.update(dt, globalWindState);
+
     // Apply wind drift to allies and monster (normal units have no wind resistance)
     _applyWindDrift(dt);
 
