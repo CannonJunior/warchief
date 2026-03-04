@@ -46,10 +46,13 @@ class AllyBehaviorContext {
   /// Combat role based on ability
   CombatRole get combatRole => TacticalPositioning.getAllyRole(ally);
 
-  /// Distance to tactical position
+  /// Distance to tactical position (component-wise to avoid Vector3 temp allocation)
   double get distanceToTacticalPosition {
     if (tacticalPosition == null) return double.infinity;
-    return (ally.transform.position - tacticalPosition!.position).length;
+    final ap = ally.transform.position;
+    final tp = tacticalPosition!.position;
+    final dx = ap.x - tp.x; final dy = ap.y - tp.y; final dz = ap.z - tp.z;
+    return math.sqrt(dx*dx + dy*dy + dz*dz);
   }
 
   AllyBehaviorContext({
@@ -64,8 +67,27 @@ class AllyBehaviorContext {
 
   /// Create context from ally and game state
   factory AllyBehaviorContext.create(Ally ally, GameState gameState) {
-    final playerPos = gameState.playerTransform?.position ?? Vector3.zero();
-    final monsterPos = gameState.monsterTransform?.position ?? Vector3.zero();
+    // Reason: avoid Vector3 temp allocations for distance — read components directly
+    // instead of (a - b).length which allocates a throw-away Vector3.
+    final ap = ally.transform.position;
+
+    double distToPlayer = 0.0;
+    final playerTf = gameState.playerTransform;
+    if (playerTf != null) {
+      final dx = ap.x - playerTf.position.x;
+      final dy = ap.y - playerTf.position.y;
+      final dz = ap.z - playerTf.position.z;
+      distToPlayer = math.sqrt(dx*dx + dy*dy + dz*dz);
+    }
+
+    double distToMonster = 0.0;
+    final monsterTf = gameState.monsterTransform;
+    if (monsterTf != null) {
+      final dx = ap.x - monsterTf.position.x;
+      final dy = ap.y - monsterTf.position.y;
+      final dz = ap.z - monsterTf.position.z;
+      distToMonster = math.sqrt(dx*dx + dy*dy + dz*dz);
+    }
 
     // Get tactical position for this ally
     final tacticalPositions = gameState.getTacticalPositions();
@@ -74,8 +96,8 @@ class AllyBehaviorContext {
     return AllyBehaviorContext(
       ally: ally,
       gameState: gameState,
-      distanceToPlayer: (ally.transform.position - playerPos).length,
-      distanceToMonster: (ally.transform.position - monsterPos).length,
+      distanceToPlayer: distToPlayer,
+      distanceToMonster: distToMonster,
       monsterAlive: gameState.monsterHealth > 0,
       playerAlive: gameState.playerHealth > 0,
       tacticalPosition: tacticalPos,

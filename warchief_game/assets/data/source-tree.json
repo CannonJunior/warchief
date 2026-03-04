@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-03-03T22:28:30.719472",
+  "generated_at": "2026-03-03T22:37:20.821624",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
     "files": 322,
     "directories": 40,
-    "lines": 85023,
-    "size": 3015762
+    "lines": 85090,
+    "size": 3018600
   },
   "tree": {
     "name": "warchief_game",
@@ -153,10 +153,10 @@
                 "name": "source-tree.json",
                 "type": "file",
                 "path": "warchief_game/assets/data/source-tree.json",
-                "size": 117966,
+                "size": 119022,
                 "extension": ".json",
                 "icon": "📋",
-                "lines": 3153
+                "lines": 3180
               },
               {
                 "name": "stance_config.json",
@@ -610,10 +610,10 @@
                     "name": "ally_behavior_tree.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ai/ally_behavior_tree.dart",
-                    "size": 6602,
+                    "size": 7377,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 225
+                    "lines": 247
                   },
                   {
                     "name": "ally_behavior_tree_actions.dart",
@@ -1483,10 +1483,10 @@
                     "name": "ai_system_ally.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/ai_system_ally.dart",
-                    "size": 8968,
+                    "size": 9086,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 222
+                    "lines": 223
                   },
                   {
                     "name": "ai_system_minions.dart",
@@ -1519,10 +1519,10 @@
                     "name": "combat_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/combat_system.dart",
-                    "size": 20570,
+                    "size": 21459,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 507
+                    "lines": 524
                   },
                   {
                     "name": "combat_system_enemies.dart",

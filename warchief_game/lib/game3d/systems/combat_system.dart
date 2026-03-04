@@ -28,6 +28,23 @@ enum DamageTarget { player, monster, ally, minion, dummy }
 class CombatSystem {
   CombatSystem._(); // Private constructor to prevent instantiation
 
+  /// Cache of impact meshes keyed by "size,r,g,b".
+  /// Reason: Mesh.cube() allocates Float32List/Uint16List buffers on every call.
+  /// Impact geometry is immutable and identical for the same (size, color), so
+  /// sharing the mesh across concurrent ImpactEffect instances is safe.
+  static final Map<String, Mesh> _impactMeshCache = {};
+
+  /// Returns a cached Mesh.cube for the given size and color, creating it on
+  /// first use. Keys are rounded to 3 decimal places to collapse near-identical
+  /// float values from different call sites into the same cache entry.
+  static Mesh _getImpactMesh(double size, Vector3 color) {
+    final key = '${size.toStringAsFixed(3)},'
+        '${color.x.toStringAsFixed(3)},'
+        '${color.y.toStringAsFixed(3)},'
+        '${color.z.toStringAsFixed(3)}';
+    return _impactMeshCache.putIfAbsent(key, () => Mesh.cube(size: size, color: color));
+  }
+
   /// Creates an impact effect at the specified position
   ///
   /// Parameters:
@@ -41,7 +58,7 @@ class CombatSystem {
     required Vector3 color,
     required double size,
   }) {
-    final impactMesh = Mesh.cube(size: size, color: color);
+    final impactMesh = _getImpactMesh(size, color);
     final impactTransform = Transform3d(
       position: position.clone(),
       scale: Vector3(1, 1, 1),

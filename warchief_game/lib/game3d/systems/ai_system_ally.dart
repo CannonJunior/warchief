@@ -176,9 +176,10 @@ class _AllyAI {
         if (ally.movementMode == AllyMovementMode.tactical &&
             gameState.monsterTransform != null &&
             gameState.monsterHealth > 0) {
-          // In combat - face monster
-          final toMonster = gameState.monsterTransform!.position - ally.transform.position;
-          ally.rotation = math.atan2(-toMonster.x, -toMonster.z) * (180 / math.pi);
+          // In combat - face monster (component-wise to avoid Vector3 temp allocation)
+          final mx = gameState.monsterTransform!.position.x - ally.transform.position.x;
+          final mz = gameState.monsterTransform!.position.z - ally.transform.position.z;
+          ally.rotation = math.atan2(-mx, -mz) * (180 / math.pi);
         }
         // Otherwise rotation is set by movement direction in updateAllyMovement
         ally.directionIndicatorTransform!.rotation.y = ally.rotation;
