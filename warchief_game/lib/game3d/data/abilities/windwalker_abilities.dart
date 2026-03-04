@@ -377,6 +377,26 @@ class WindWalkerAbilities {
     enablesComboChain: true,
   );
 
+  /// Seal Palm — Swift palm strike that seals the target's spellcasting
+  /// Cooldown tunable (default 8 s, range 8–16 s) via ability overrides.
+  static final sealPalm = AbilityData(
+    name: 'Seal Palm',
+    description: 'A precise palm strike that disrupts the flow of magical energy, interrupting the target\'s spellcasting for 3 seconds',
+    type: AbilityType.melee,
+    damage: 11.0,
+    cooldown: 8.0,
+    range: 2.0,
+    color: Vector3(0.85, 0.90, 1.0),
+    impactColor: Vector3(0.95, 0.98, 1.0),
+    impactSize: 0.4,
+    statusEffect: StatusEffect.interrupt,
+    statusDuration: 3.0,
+    manaColor: ManaColor.white,
+    manaCost: 8.0,
+    category: 'windwalker',
+    damageSchool: DamageSchool.physical,
+  );
+
   /// All Wind Walker abilities as a list
   static List<AbilityData> get all => [
     galeStep,
@@ -400,5 +420,6 @@ class WindWalkerAbilities {
     galePunch,
     pressurePoint,
     galeFury,
+    sealPalm,
   ];
 }

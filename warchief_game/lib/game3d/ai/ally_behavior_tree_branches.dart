@@ -106,6 +106,39 @@ class _AllyBranches {
     );
   }
 
+  /// Kite away from monster when a ranged ally is dangerously close.
+  ///
+  /// Reason: WoW arena tactic — ranged units must back-pedal when melee closes
+  /// in to preserve firing distance and avoid taking melee damage while casting.
+  /// Inserted at Priority 1.5 (after self-preservation, before combat)  so that
+  /// the ally retreats before attempting to attack, not after.
+  static BehaviorNode createKiteBranch() {
+    return Sequence(
+      name: 'KiteFromMonster',
+      children: [
+        Condition(
+          name: 'MonsterAlive',
+          check: (ctx) => ctx.monsterAlive,
+        ),
+        // Only ranged allies (abilityIndex == 1) need to kite.
+        Condition(
+          name: 'IsRangedAlly',
+          check: (ctx) => ctx.ally.abilityIndex == 1,
+        ),
+        // Trigger when monster is within 55 % of preferred engagement range.
+        Condition(
+          name: 'MonsterDangerouslyClose',
+          check: (ctx) =>
+              ctx.distanceToMonster < ctx.strategy.preferredRange * 0.55,
+        ),
+        Action(
+          name: 'KiteBackwards',
+          execute: (ctx) => _AllyActions.executeKiteFromMonster(ctx),
+        ),
+      ],
+    );
+  }
+
   /// Self-preservation: heal when low health (uses strategy threshold)
   static BehaviorNode createSelfPreservationBranch() {
     return Sequence(
@@ -362,8 +395,6 @@ class _AllyBranches {
   /// Aggressive attack - move to and attack monster continuously
   static NodeStatus _executeAggressiveAttack(AllyBehaviorContext ctx) {
     if (ctx.gameState.monsterTransform == null) return NodeStatus.failure;
-
-    final monsterPos = ctx.gameState.monsterTransform!.position;
 
     // Determine attack range based on ability
     final attackRange = ctx.ally.abilityIndex == 0 ? 2.5 : 10.0;

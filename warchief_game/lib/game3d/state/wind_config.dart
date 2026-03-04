@@ -162,9 +162,9 @@ class WindConfig extends ChangeNotifier {
       final jsonString = await rootBundle.loadString(_assetPath);
       _defaults = jsonDecode(jsonString) as Map<String, dynamic>;
       notifyListeners();
-      print('[WindConfig] Loaded defaults from $_assetPath');
+      debugPrint('[WindConfig] Loaded defaults from $_assetPath');
     } catch (e) {
-      print('[WindConfig] Failed to load defaults: $e (using fallbacks)');
+      debugPrint('[WindConfig] Failed to load defaults: $e (using fallbacks)');
       _defaults = {};
     }
   }
@@ -179,10 +179,10 @@ class WindConfig extends ChangeNotifier {
           jsonDecode(json) as Map<String, dynamic>,
         );
         notifyListeners();
-        print('[WindConfig] Loaded ${_overrides.length} overrides');
+        debugPrint('[WindConfig] Loaded ${_overrides.length} overrides');
       }
     } catch (e) {
-      print('[WindConfig] Failed to load overrides: $e');
+      debugPrint('[WindConfig] Failed to load overrides: $e');
     }
   }
 
@@ -192,7 +192,7 @@ class WindConfig extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_overrides));
     } catch (e) {
-      print('[WindConfig] Failed to save overrides: $e');
+      debugPrint('[WindConfig] Failed to save overrides: $e');
     }
   }
 

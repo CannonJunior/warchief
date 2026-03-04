@@ -28,13 +28,15 @@ extension GameStateWorldExt on GameState {
       worldSize: worldSize,
       siteCount: siteCount,
     );
-    print('[LeyLines] Initialized with seed $seed, ${leyLineManager!.segments.length} segments');
+    debugPrint('[LeyLines] Initialized with seed $seed, ${leyLineManager!.segments.length} segments');
   }
 
   /// Get tactical positions for all allies (cached for performance)
   Map<Ally, TacticalPosition> getTacticalPositions() {
-    // Recalculate every 0.5 seconds or when cache is invalid
-    final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
+    // Recalculate every 0.5 seconds or when cache is invalid.
+    // Reason: use gameTimeSec (rAF-derived) instead of DateTime.now() to avoid
+    // syscall overhead in this hot path.
+    final now = gameTimeSec;
     if (_cachedTacticalPositions == null ||
         now - _tacticalPositionCacheTime > 0.5) {
       _cachedTacticalPositions = TacticalPositioning.calculatePositions(
@@ -72,8 +74,8 @@ extension GameStateWorldExt on GameState {
 
     final spawnList = spawns ?? DefaultMinionSpawns.spawns;
 
-    print('[MINIONS] Spawning minions...');
-    print(DefaultMinionSpawns.summary);
+    debugPrint('[MINIONS] Spawning minions...');
+    debugPrint(DefaultMinionSpawns.summary);
 
     // Base spawn position (offset from monster)
     final baseX = GameConfig.monsterStartPosition.x;
@@ -84,7 +86,7 @@ extension GameStateWorldExt on GameState {
     for (final spawnConfig in spawnList) {
       final definition = MinionDefinitions.getById(spawnConfig.definitionId);
       if (definition == null) {
-        print('[MINIONS] Warning: Unknown definition ${spawnConfig.definitionId}');
+        debugPrint('[MINIONS] Warning: Unknown definition ${spawnConfig.definitionId}');
         continue;
       }
 
@@ -128,14 +130,14 @@ extension GameStateWorldExt on GameState {
       minions.addAll(monsters);
       totalSpawned += spawnConfig.count;
 
-      print('[MINIONS] Spawned ${spawnConfig.count}x ${definition.name} '
+      debugPrint('[MINIONS] Spawned ${spawnConfig.count}x ${definition.name} '
           '(MP ${definition.monsterPower})');
     }
 
     minionsSpawned = true;
     rebuildMinionIndex();
-    print('[MINIONS] Total spawned: ${minions.length} minions');
-    print('[MINIONS] Total Monster Power: ${DefaultMinionSpawns.totalMonsterPower}');
+    debugPrint('[MINIONS] Total spawned: ${minions.length} minions');
+    debugPrint('[MINIONS] Total Monster Power: ${DefaultMinionSpawns.totalMonsterPower}');
   }
 
   /// Rebuild the alive minions cache. Call once per frame at the start of the update loop.
@@ -180,7 +182,7 @@ extension GameStateWorldExt on GameState {
       config?.getBuildingType('warchief_home'),
     );
     if (typeDef == null) {
-      print('[BUILDING] Warning: warchief_home definition not found in config');
+      debugPrint('[BUILDING] Warning: warchief_home definition not found in config');
       return;
     }
 
@@ -196,7 +198,7 @@ extension GameStateWorldExt on GameState {
     );
 
     buildings.add(building);
-    print('[BUILDING] Warchief Home placed at ($homeX, $homeZ)');
+    debugPrint('[BUILDING] Warchief Home placed at ($homeX, $homeZ)');
   }
 
   /// Internal helper: place a building and return it.
@@ -294,7 +296,7 @@ extension GameStateWorldExt on GameState {
     // Start DPS tracking session
     dpsTracker.startSession();
 
-    print('[DPS] Target Dummy spawned at ($dummyX, $dummyY, $dummyZ)');
+    debugPrint('[DPS] Target Dummy spawned at ($dummyX, $dummyY, $dummyZ)');
   }
 
   /// Despawn the target dummy
@@ -307,7 +309,7 @@ extension GameStateWorldExt on GameState {
     // End DPS tracking session
     dpsTracker.endSession();
 
-    print('[DPS] Target Dummy despawned');
+    debugPrint('[DPS] Target Dummy despawned');
   }
 
   /// Initialize player inventory with sample items from database
@@ -377,8 +379,8 @@ extension GameStateWorldExt on GameState {
     invalidatePlayerAttunementCache();
 
     inventoryInitialized = true;
-    print('[GameState] Inventory initialized with ${playerInventory.usedBagSlots} bag items and equipment');
-    print('[GameState] Player max health: $playerMaxHealth (base \${GameState.basePlayerMaxHealth} + ${playerInventory.totalEquippedStats.health} from gear)');
+    debugPrint('[GameState] Inventory initialized with ${playerInventory.usedBagSlots} bag items and equipment');
+    debugPrint('[GameState] Player max health: $playerMaxHealth (base \${GameState.basePlayerMaxHealth} + ${playerInventory.totalEquippedStats.health} from gear)');
   }
 
   /// Start flight if player has enough White Mana for initial cost.
@@ -388,7 +390,7 @@ extension GameStateWorldExt on GameState {
     final config = globalWindConfig;
     final cost = config?.initialManaCost ?? 15.0;
     if (!hasWhiteMana(cost)) {
-      print('[FLIGHT] Not enough White Mana to take flight (need $cost)');
+      debugPrint('[FLIGHT] Not enough White Mana to take flight (need $cost)');
       return;
     }
     spendWhiteMana(cost);
@@ -406,7 +408,7 @@ extension GameStateWorldExt on GameState {
     cancelCast();
     cancelWindup();
     cancelChannel();
-    print('[FLIGHT] Taking flight! (spent ${cost.toStringAsFixed(0)} White Mana)');
+    debugPrint('[FLIGHT] Taking flight! (spent ${cost.toStringAsFixed(0)} White Mana)');
   }
 
   /// End flight — reset all flight state.
@@ -421,7 +423,7 @@ extension GameStateWorldExt on GameState {
       playerTransform!.rotation.x = 0.0;
       playerTransform!.rotation.z = 0.0;
     }
-    print('[FLIGHT] Flight ended');
+    debugPrint('[FLIGHT] Flight ended');
   }
 
   /// Toggle flight on/off.
@@ -532,5 +534,40 @@ extension GameStateWorldExt on GameState {
     ]);
 
     addConsoleLog('Skeleton Mage summoned (60s duration)');
+  }
+
+  /// Spawn a spirit wolf bonded to the active Spiritkin.
+  ///
+  /// The wolf has no fixed summon duration — it persists until green mana
+  /// runs dry ([isSpiritChanneling] is used to track the bond). If a bond is
+  /// already active the old wolf is dismissed before spawning a new one.
+  void spawnSpiritAnimal(Transform3d casterTransform) {
+    // Reason: Dismiss any existing spirit before spawning a new one so the
+    // player can re-cast to reposition the wolf without paying a second cooldown.
+    dismissSpiritAnimal();
+
+    final pos = _summonSpawnPosition(casterTransform);
+
+    final wolf = Ally(
+      mesh: Mesh.cube(size: 0.55, color: Vector3(0.50, 0.85, 0.38)),
+      transform: Transform3d(position: pos),
+      name: 'Spirit Wolf',
+      isSummoned: true,
+      summonDuration: -1,      // Indefinite — controlled by mana drain
+      summonDurationMax: -1,
+      health: 50.0,
+      maxHealth: 50.0,
+      abilityIndex: 0,
+      moveSpeed: 2.8,
+      movementMode: AllyMovementMode.followPlayer,
+    );
+    // Reason: Green attunement labels the wolf as a nature spirit for aura/visual systems.
+    wolf.temporaryAttunements = {ManaColor.green};
+    wolf.invalidateAttunementCache();
+
+    allies.add(wolf);
+    isSpiritChanneling = true;
+    addConsoleLog('Spirit Wolf summoned — spirit bond active (5 green/sec)');
+    debugPrint('[SPIRIT] Spirit wolf spawned at ${pos.x.toStringAsFixed(1)}, ${pos.z.toStringAsFixed(1)}');
   }
 }

@@ -8,7 +8,8 @@ import '../abilities/rogue_abilities.dart';
 import '../abilities/windwalker_abilities.dart';
 import '../abilities/starbreaker_abilities.dart';
 import '../abilities/stormheart_abilities.dart';
-import '../abilities/healer_abilities.dart';
+import '../abilities/leyweaver_abilities.dart';
+import '../abilities/aethermancer_abilities.dart';
 import '../abilities/necromancer_abilities.dart';
 import '../abilities/nature_abilities.dart';
 import '../abilities/greenseer_abilities.dart';
@@ -28,7 +29,7 @@ class DuelDefinitions {
 
   static const List<String> challengerClasses = [
     'warrior', 'rogue', 'windwalker', 'starbreaker', 'stormheart',
-    'healer', 'necromancer', 'nature', 'greenseer', 'mage',
+    'leyweaver', 'aethermancer', 'necromancer', 'nature', 'greenseer', 'mage',
     'spiritkin', 'elemental',
   ];
 
@@ -50,7 +51,8 @@ class DuelDefinitions {
     'windwalker':  'Windwalker',
     'starbreaker': 'Starbreaker',
     'stormheart':  'Stormheart',
-    'healer':      'Healer',
+    'leyweaver':   'Leyweaver',
+    'aethermancer': 'Aethermancer',
     'necromancer': 'Necromancer',
     'nature':      'Nature',
     'greenseer':   'Greenseer',
@@ -116,38 +118,46 @@ class DuelDefinitions {
     switch (className) {
       case 'warrior':
         return [WarriorAbilities.gauntletJab, WarriorAbilities.shieldBash,
-                WarriorAbilities.charge, WarriorAbilities.whirlwind];
+                WarriorAbilities.charge, WarriorAbilities.whirlwind,
+                WarriorAbilities.pummel];
       case 'rogue':
         return [RogueAbilities.backstab, RogueAbilities.poisonBlade,
-                RogueAbilities.smokeBomb, RogueAbilities.fanOfKnives];
+                RogueAbilities.smokeBomb, RogueAbilities.fanOfKnives,
+                RogueAbilities.gouge];
       case 'windwalker':
         return [WindWalkerAbilities.galeStep, WindWalkerAbilities.zephyrRoll,
-                WindWalkerAbilities.tailwindRetreat];
+                WindWalkerAbilities.tailwindRetreat, WindWalkerAbilities.sealPalm];
       case 'starbreaker':
-        return [StarbreakerAbilities.voidStrike, StarbreakerAbilities.soulRend];
+        return [StarbreakerAbilities.voidStrike, StarbreakerAbilities.soulRend,
+                StarbreakerAbilities.voidFracture];
       case 'stormheart':
         return [StormheartAbilities.thunderStrike, StormheartAbilities.stormBolt,
-                StormheartAbilities.tempestFury, StormheartAbilities.lightningDash];
-      case 'healer':
-        return [HealerAbilities.holyLight, HealerAbilities.rejuvenation,
-                HealerAbilities.circleOfHealing];
+                StormheartAbilities.tempestFury, StormheartAbilities.lightningDash,
+                StormheartAbilities.staticDischarge];
+      case 'leyweaver':
+        return [LeyweaverAbilities.holyLight, LeyweaverAbilities.rejuvenation,
+                LeyweaverAbilities.circleOfHealing];
+      case 'aethermancer':
+        return [AethermancerAbilities.windMend, AethermancerAbilities.leyFlow,
+                AethermancerAbilities.aetherCircle];
       case 'necromancer':
         return [NecromancerAbilities.lifeDrain, NecromancerAbilities.curseOfWeakness,
-                NecromancerAbilities.soulRot];
+                NecromancerAbilities.soulRot, NecromancerAbilities.nullBolt];
       case 'nature':
         return [NatureAbilities.entanglingRoots, NatureAbilities.naturesWrath,
-                NatureAbilities.thorns];
+                NatureAbilities.thorns, NatureAbilities.silencingVine];
       case 'greenseer':
         return [GreenseerAbilities.thornLash, GreenseerAbilities.lifeThread,
                 GreenseerAbilities.verdantEmbrace, GreenseerAbilities.spiritBloom];
       case 'mage':
         return [MageAbilities.frostBolt, MageAbilities.lightningBolt,
-                MageAbilities.chainLightning];
+                MageAbilities.chainLightning, MageAbilities.counterspell];
       case 'spiritkin':
-        return [SpiritkinAbilities.swipe, SpiritkinAbilities.feralStrike];
+        return [SpiritkinAbilities.swipe, SpiritkinAbilities.feralStrike,
+                SpiritkinAbilities.spiritSever];
       case 'elemental':
         return [ElementalAbilities.iceLance, ElementalAbilities.flameWave,
-                ElementalAbilities.earthquake];
+                ElementalAbilities.earthquake, ElementalAbilities.magneticDisrupt];
       default:
         return [WarriorAbilities.gauntletJab];
     }
@@ -254,7 +264,8 @@ class DuelDefinitions {
       case 'windwalker':  return Vector3(0.85, 0.9, 1.0);
       case 'starbreaker': return Vector3(0.4, 0.0, 0.6);
       case 'stormheart':  return Vector3(0.5, 0.6, 1.0);
-      case 'healer':      return Vector3(1.0, 1.0, 0.5);
+      case 'leyweaver':    return Vector3(1.0, 1.0, 0.5);
+      case 'aethermancer': return Vector3(0.65, 0.82, 1.0);
       case 'necromancer': return Vector3(0.3, 0.0, 0.4);
       case 'nature':      return Vector3(0.3, 0.7, 0.2);
       case 'greenseer':   return Vector3(0.2, 0.6, 0.3);
@@ -282,7 +293,8 @@ class DuelDefinitions {
       case 'windwalker':  return ManaColor.white;
       case 'starbreaker': return ManaColor.black;
       case 'stormheart':  return ManaColor.white;
-      case 'healer':      return ManaColor.blue;
+      case 'leyweaver':    return ManaColor.blue;
+      case 'aethermancer': return ManaColor.white;
       case 'necromancer': return ManaColor.black;
       case 'nature':      return ManaColor.green;
       case 'greenseer':   return ManaColor.green;
@@ -297,8 +309,9 @@ class DuelDefinitions {
     switch (className) {
       case 'starbreaker': return ManaColor.red;
       case 'stormheart':  return ManaColor.red;
-      case 'spiritkin':   return ManaColor.blue;
-      default:            return ManaColor.none;
+      case 'spiritkin':    return ManaColor.blue;
+      case 'aethermancer': return ManaColor.blue;
+      default:             return ManaColor.none;
     }
   }
 

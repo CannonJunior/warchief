@@ -22,7 +22,7 @@ void _launchLightningBolt(int slotIndex, GameState gameState) {
     impactColor: Vector3(0.9, 0.9, 1.0),
     impactSize: 0.8,
   ));
-  print('Lightning Bolt launched!');
+  debugPrint('Lightning Bolt launched!');
 }
 
 /// Launch Pyroblast projectile after cast completes.
@@ -45,7 +45,7 @@ void _launchPyroblast(int slotIndex, GameState gameState) {
     impactColor: Vector3(1.0, 0.5, 0.1),
     impactSize: 1.5,
   ));
-  print('Pyroblast launched!');
+  debugPrint('Pyroblast launched!');
 }
 
 /// Launch Arcane Missile projectile after cast completes.
@@ -68,7 +68,7 @@ void _launchArcaneMissile(int slotIndex, GameState gameState) {
     impactColor: Vector3(0.8, 0.4, 1.0),
     impactSize: 0.7,
   ));
-  print('Arcane Missile launched!');
+  debugPrint('Arcane Missile launched!');
 }
 
 /// Execute Frost Nova AoE effect after cast completes.
@@ -90,7 +90,7 @@ void _executeFrostNovaEffect(int slotIndex, GameState gameState) {
     collisionThreshold: 8.0,
   );
   if (hit) _applyLifesteal(gameState, frostNovaDmg);
-  print('Frost Nova released!');
+  debugPrint('Frost Nova released!');
 }
 
 /// Execute Greater Heal effect after cast completes.
@@ -103,7 +103,7 @@ void _executeGreaterHealEffect(int slotIndex, GameState gameState) {
   gameState.ability3ActiveTime = 0.0;
   _logHeal(gameState, 'Greater Heal', healedAmount);
   _showHealIndicator(gameState, healedAmount, gameState.activeTransform?.position);
-  print('Greater Heal! Restored ${healedAmount.toStringAsFixed(1)} HP');
+  debugPrint('Greater Heal! Restored ${healedAmount.toStringAsFixed(1)} HP');
 }
 
 /// Generic projectile launch for unknown cast-time abilities.
@@ -126,7 +126,7 @@ void _executeGenericProjectileFromAbility(int slotIndex, GameState gameState, St
     impactColor: Vector3(1.0, 1.0, 1.0),
     impactSize: 0.6,
   ));
-  print('$abilityName launched!');
+  debugPrint('$abilityName launched!');
 }
 
 // ==================== WINDUP ABILITY EFFECTS ====================
@@ -147,7 +147,7 @@ void _executeHeavyStrikeEffect(int slotIndex, GameState gameState) {
         impactColor: Vector3(1.0, 0.4, 0.2), impactSize: 1.0,
         collisionThreshold: 4.0, isMeleeDamage: true);
   }
-  print('Heavy Strike hit!');
+  debugPrint('Heavy Strike hit!');
 }
 
 /// Execute Whirlwind AoE after windup completes.
@@ -165,7 +165,7 @@ void _executeWhirlwindEffect(int slotIndex, GameState gameState) {
       impactColor: Vector3(0.7, 0.7, 0.8), impactSize: 0.6,
       collisionThreshold: 5.0, isMeleeDamage: true);
   if (hit) _applyLifesteal(gameState, whirlwindDmg);
-  print('Whirlwind!');
+  debugPrint('Whirlwind!');
 }
 
 /// Execute Crushing Blow heavy melee hit after windup completes.
@@ -189,7 +189,7 @@ void _executeCrushingBlowEffect(int slotIndex, GameState gameState) {
         impactColor: Vector3(0.7, 0.3, 0.1), impactSize: 1.2,
         collisionThreshold: 3.5, isMeleeDamage: true);
   }
-  print('Crushing Blow devastates the target!');
+  debugPrint('Crushing Blow devastates the target!');
 }
 
 /// Generic windup melee for unknown windup abilities — reads damage/range from AbilityData.
@@ -221,7 +221,7 @@ void _executeGenericWindupMelee(int slotIndex, GameState gameState, String abili
     _applyMeleeStatusEffect(gameState, ability);
     _applyMeleeVulnerability(gameState, ability);
   }
-  print('$abilityName!');
+  debugPrint('$abilityName!');
 }
 
 /// Get target position or a point 30 units ahead of the player (for untargeted projectiles).

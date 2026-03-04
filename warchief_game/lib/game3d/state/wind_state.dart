@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'dart:math' as math;
 import 'wind_config.dart';
 
@@ -79,7 +80,6 @@ class WindState {
   /// storm lifecycle: random trigger, ramp up, sustain, ramp down.
   void update(double dt) {
     final config = globalWindConfig;
-    final driftSpeed = config?.driftSpeed ?? 0.1;
     final gustFreq = config?.gustFrequency ?? 0.05;
     final gustAmp = config?.gustAmplitude ?? 0.4;
     final dirDriftSpeed = config?.directionDriftSpeed ?? 0.08;
@@ -139,7 +139,7 @@ class WindState {
         derechoIntensity = 0.0;
         _derechoTimer = 0.0;
         _timeSinceLastDerecho = 0.0;
-        print('[DERECHO] Storm has passed');
+        debugPrint('[DERECHO] Storm has passed');
         return;
       }
 
@@ -182,7 +182,7 @@ class WindState {
     _derechoTimer = _derechoDuration;
     isDerechoActive = true;
     derechoIntensity = 0.0; // Will ramp up
-    print('[DERECHO] Storm incoming! Duration: ${_derechoDuration.toStringAsFixed(0)}s');
+    debugPrint('[DERECHO] Storm incoming! Duration: ${_derechoDuration.toStringAsFixed(0)}s');
   }
 
   /// Wind as a 2D vector on the XZ plane.

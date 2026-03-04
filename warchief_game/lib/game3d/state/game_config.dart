@@ -245,9 +245,9 @@ class GameConfig extends ChangeNotifier {
     try {
       final jsonString = await rootBundle.loadString(_assetPath);
       _defaults = jsonDecode(jsonString) as Map<String, dynamic>;
-      print('[GameConfig] Loaded defaults from $_assetPath');
+      debugPrint('[GameConfig] Loaded defaults from $_assetPath');
     } catch (e) {
-      print('[GameConfig] Failed to load defaults: $e (using fallbacks)');
+      debugPrint('[GameConfig] Failed to load defaults: $e (using fallbacks)');
       _defaults = {};
     }
   }
@@ -261,10 +261,10 @@ class GameConfig extends ChangeNotifier {
           jsonDecode(json) as Map<String, dynamic>,
         );
         notifyListeners();
-        print('[GameConfig] Loaded ${_overrides.length} overrides');
+        debugPrint('[GameConfig] Loaded ${_overrides.length} overrides');
       }
     } catch (e) {
-      print('[GameConfig] Failed to load overrides: $e');
+      debugPrint('[GameConfig] Failed to load overrides: $e');
     }
   }
 
@@ -273,7 +273,7 @@ class GameConfig extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_overrides));
     } catch (e) {
-      print('[GameConfig] Failed to save overrides: $e');
+      debugPrint('[GameConfig] Failed to save overrides: $e');
     }
   }
 

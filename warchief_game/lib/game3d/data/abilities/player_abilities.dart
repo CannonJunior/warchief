@@ -276,7 +276,7 @@ class PlayerAbilities {
     color: Vector3(0.3, 1.0, 0.5),
     impactColor: Vector3(0.4, 1.0, 0.6),
     impactSize: 2.0,
-    category: 'healer',
+    category: 'leyweaver',
     manaColor: ManaColor.blue,
     manaCost: 45.0,
   );

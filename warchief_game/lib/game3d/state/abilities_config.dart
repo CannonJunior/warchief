@@ -10,7 +10,8 @@
 /// - Edit warrior abilities: data/abilities/warrior_abilities.dart (~90 lines)
 /// - Edit mage abilities: data/abilities/mage_abilities.dart (~130 lines)
 /// - Edit rogue abilities: data/abilities/rogue_abilities.dart (~90 lines)
-/// - Edit healer abilities: data/abilities/healer_abilities.dart (~90 lines)
+/// - Edit leyweaver abilities: data/abilities/leyweaver_abilities.dart (~170 lines)
+/// - Edit aethermancer abilities: data/abilities/aethermancer_abilities.dart (~160 lines)
 /// - Add types/enums: data/abilities/ability_types.dart (~90 lines)
 library abilities_config;
 
@@ -70,13 +71,13 @@ class AbilitiesConfig {
   static AbilityData get fanOfKnives => RogueAbilities.fanOfKnives;
   static AbilityData get shadowStep => RogueAbilities.shadowStep;
 
-  // ==================== HEALER ABILITIES (Legacy Access) ====================
+  // ==================== LEYWEAVER ABILITIES (Legacy Access) ====================
 
-  static AbilityData get holyLight => HealerAbilities.holyLight;
-  static AbilityData get rejuvenation => HealerAbilities.rejuvenation;
-  static AbilityData get circleOfHealing => HealerAbilities.circleOfHealing;
-  static AbilityData get blessingOfStrength => HealerAbilities.blessingOfStrength;
-  static AbilityData get purify => HealerAbilities.purify;
+  static AbilityData get holyLight => LeyweaverAbilities.holyLight;
+  static AbilityData get rejuvenation => LeyweaverAbilities.rejuvenation;
+  static AbilityData get circleOfHealing => LeyweaverAbilities.circleOfHealing;
+  static AbilityData get blessingOfStrength => LeyweaverAbilities.blessingOfStrength;
+  static AbilityData get purify => LeyweaverAbilities.purify;
 
   // ==================== NATURE ABILITIES (Legacy Access) ====================
 

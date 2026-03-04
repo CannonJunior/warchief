@@ -5,6 +5,7 @@ import 'interface_config.dart';
 import 'interfaces_tab.dart';
 import 'tuning_tab.dart';
 import 'scenario_tab.dart';
+import 'ollama_tab.dart';
 import '../../state/gameplay_settings.dart';
 
 /// Settings panel with tabs for General, Interfaces, Source Code, and About
@@ -34,6 +35,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     _TabItem(id: 'scenario', label: 'Scenario', icon: Icons.map_outlined),
     _TabItem(id: 'tuning', label: 'Tuning', icon: Icons.tune),
     _TabItem(id: 'interfaces', label: 'Interfaces', icon: Icons.dashboard),
+    _TabItem(id: 'ai', label: 'AI', icon: Icons.smart_toy_outlined),
     _TabItem(id: 'source', label: 'Source Code', icon: Icons.folder_open),
     _TabItem(id: 'about', label: 'About', icon: Icons.info_outline),
   ];
@@ -244,6 +246,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
         return const TuningTab();
       case 'interfaces':
         return _buildInterfacesTab();
+      case 'ai':
+        return const OllamaTab();
       case 'source':
         return _buildSourceTab();
       case 'about':
@@ -272,9 +276,14 @@ class _SettingsPanelState extends State<SettingsPanel> {
           const SizedBox(height: 16),
           _buildSettingToggle(
             'Show FPS Counter',
-            'Display frames per second in the corner',
-            false,
-            (value) {},
+            'Display frames per second in the top-right corner.',
+            settings?.showFpsCounter ?? false,
+            (value) {
+              setState(() {
+                settings?.showFpsCounter = value;
+                settings?.save();
+              });
+            },
           ),
           _buildSettingToggle(
             'Sound Effects',
@@ -284,9 +293,14 @@ class _SettingsPanelState extends State<SettingsPanel> {
           ),
           _buildSettingToggle(
             'Show Debug Info',
-            'Display debug information overlay',
-            false,
-            (value) {},
+            'Display frame time, entity counts, and terrain stats.',
+            settings?.showDebugInfo ?? false,
+            (value) {
+              setState(() {
+                settings?.showDebugInfo = value;
+                settings?.save();
+              });
+            },
           ),
           const SizedBox(height: 20),
           _buildSectionHeader('Mana Attunement', Icons.auto_awesome),

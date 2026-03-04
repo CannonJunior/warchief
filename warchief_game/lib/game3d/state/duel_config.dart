@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
 
@@ -41,6 +42,18 @@ class DuelConfig {
       (_data?['duel']?['gcdSeconds'] as num?)?.toDouble() ?? 1.0;
   double get comboWindowSeconds =>
       (_data?['duel']?['comboWindowSeconds'] as num?)?.toDouble() ?? 3.0;
+  /// Distance (world units) at which a sturdy ally triggers a peel response
+  /// to protect a vulnerable party member.
+  double get peelTriggerRange =>
+      (_data?['duel']?['peelTriggerRange'] as num?)?.toDouble() ?? 5.0;
+  /// Fraction of preferred range at which a vulnerable combatant starts kiting.
+  /// 0.7 = retreat when an attacker closes to within 70 % of preferred range.
+  double get kiteThresholdMultiplier =>
+      (_data?['duel']?['kiteThresholdMultiplier'] as num?)?.toDouble() ?? 0.7;
+
+  /// Seconds a target cannot use spell-type abilities after being interrupted.
+  double get interruptLockoutSeconds =>
+      (_data?['interrupts']?['lockoutSeconds'] as num?)?.toDouble() ?? 3.0;
 
   // ==================== COMBATANT GETTERS ====================
 
@@ -67,9 +80,9 @@ class DuelConfig {
     try {
       final str = await rootBundle.loadString(_assetPath);
       _data = jsonDecode(str) as Map<String, dynamic>;
-      print('[DuelConfig] Loaded from $_assetPath');
+      debugPrint('[DuelConfig] Loaded from $_assetPath');
     } catch (e) {
-      print('[DuelConfig] Failed to load: $e (using fallbacks)');
+      debugPrint('[DuelConfig] Failed to load: $e (using fallbacks)');
       _data = {};
     }
     _buildCache();

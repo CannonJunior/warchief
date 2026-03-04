@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'dart:math' as math;
 import 'wind_state.dart';
 import 'wind_config.dart';
@@ -179,7 +180,7 @@ class WindSwirlState {
       maxAge: lifetime * (0.7 + _rng.nextDouble() * 0.6),
       angularPhase: _rng.nextDouble() * 2 * math.pi,
     ));
-    print('[WindSwirl] Dust devil spawned at '
+    debugPrint('[WindSwirl] Dust devil spawned at '
         '(${spawnX.toStringAsFixed(1)}, ${spawnZ.toStringAsFixed(1)})');
   }
 

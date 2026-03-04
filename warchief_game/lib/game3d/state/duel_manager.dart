@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/duel_result.dart';
@@ -76,6 +77,15 @@ class DuelManager {
 
   double elapsedSeconds = 0.0;
 
+  // ── Ollama strategy advisor ────────────────────────────────────────────────
+
+  /// Countdown to next Ollama strategy query; decremented each frame.
+  double ollamaAdvisoryTimer = 0.0;
+
+  /// Last strategy hint from Ollama: 'aggressive' | 'defensive' | 'balanced' | null.
+  /// Null means Ollama has not yet responded or is unavailable.
+  String? ollamaStrategyHint;
+
   // ── Ability lists (one list per combatant) ─────────────────────────────────
 
   /// Per-combatant ability lists for the challenger party.
@@ -103,6 +113,59 @@ class DuelManager {
   /// Per-combatant combo-window timers. Non-zero means the combatant fired a
   /// combo-primer ability and the next ability may bypass the GCD.
   List<double> combatantComboWindows = [];
+
+  // ── CC state (same flat index scheme as combatantGcds) ────────────────────
+
+  /// Hard CC remaining (stun / root / fear / silence): seconds.
+  /// While > 0, the combatant cannot move or cast abilities.
+  List<double> combatantCcRemaining = [];
+
+  /// Slow remaining: seconds. While > 0, move speed is scaled by [combatantSlowFactor].
+  List<double> combatantSlowRemaining = [];
+
+  /// Move-speed multiplier during a slow (e.g. 0.5 = half speed). 1.0 = none.
+  List<double> combatantSlowFactor = [];
+
+  /// Interrupt spell-lockout remaining per combatant (seconds).
+  /// While > 0, the combatant cannot use spell-type (ranged/channeled/heal) abilities.
+  List<double> combatantInterruptLockout = [];
+
+  // ── CC application helpers ─────────────────────────────────────────────────
+
+  /// Apply hard CC to combatant [idx]; extends duration if already CCed.
+  void applyCc(int idx, double seconds) {
+    if (idx < 0 || idx >= combatantCcRemaining.length) return;
+    if (seconds > combatantCcRemaining[idx]) combatantCcRemaining[idx] = seconds;
+  }
+
+  /// Apply a spell interrupt to combatant [idx]; extends duration if already locked.
+  void applyInterrupt(int idx, double seconds) {
+    if (idx < 0 || idx >= combatantInterruptLockout.length) return;
+    if (seconds > combatantInterruptLockout[idx]) combatantInterruptLockout[idx] = seconds;
+  }
+
+  /// True when combatant [idx] is spell-locked by an interrupt.
+  bool isInterrupted(int idx) =>
+      idx >= 0 && idx < combatantInterruptLockout.length &&
+      combatantInterruptLockout[idx] > 0;
+
+  /// Apply a slow to combatant [idx]; strongest/longest slow wins.
+  void applySlow(int idx, double seconds, double factor) {
+    if (idx < 0 || idx >= combatantSlowRemaining.length) return;
+    if (seconds > combatantSlowRemaining[idx]) combatantSlowRemaining[idx] = seconds;
+    // Lower factor = stronger slow; keep the weaker value (closer to 0).
+    if (factor < combatantSlowFactor[idx]) combatantSlowFactor[idx] = factor;
+  }
+
+  /// Effective move-speed multiplier for combatant [idx].
+  double slowFactorFor(int idx) {
+    if (idx < 0 || idx >= combatantSlowRemaining.length) return 1.0;
+    return combatantSlowRemaining[idx] > 0 ? combatantSlowFactor[idx] : 1.0;
+  }
+
+  /// True when combatant [idx] is hard-CCed (stun / root / fear / silence).
+  bool isCced(int idx) =>
+      idx >= 0 && idx < combatantCcRemaining.length && combatantCcRemaining[idx] > 0;
 
   /// Highest GCD remaining across all challenger combatants (0 when ready).
   double get challengerMaxGcd {
@@ -152,10 +215,10 @@ class DuelManager {
         history = list
             .map((e) => DuelResult.fromJson(e as Map<String, dynamic>))
             .toList();
-        print('[DuelManager] Loaded ${history.length} history entries');
+        debugPrint('[DuelManager] Loaded ${history.length} history entries');
       }
     } catch (e) {
-      print('[DuelManager] Failed to load history: $e');
+      debugPrint('[DuelManager] Failed to load history: $e');
     }
   }
 
@@ -165,7 +228,7 @@ class DuelManager {
       await prefs.setString(
           _storageKey, jsonEncode(history.map((r) => r.toJson()).toList()));
     } catch (e) {
-      print('[DuelManager] Failed to save history: $e');
+      debugPrint('[DuelManager] Failed to save history: $e');
     }
   }
 
@@ -190,7 +253,10 @@ class DuelManager {
 
   // ==================== LIFECYCLE ====================
 
-  Future<void> finalizeDuel(String winnerId, double duration) async {
+  Future<void> finalizeDuel(String winnerId, double duration, {
+    double challengerMaxHp = 0.0,
+    double enemyMaxHp      = 0.0,
+  }) async {
     final result = DuelResult(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       timestamp: DateTime.now().millisecondsSinceEpoch,
@@ -203,6 +269,8 @@ class DuelManager {
       winnerId:           winnerId,
       durationSeconds:    duration,
       endCondition:       endCondition,
+      challengerMaxHp:    challengerMaxHp,
+      enemyMaxHp:         enemyMaxHp,
       events:             List.from(currentEvents),
       challengerStats:    challengerStats,
       enemyStats:         enemyStats,
@@ -244,5 +312,11 @@ class DuelManager {
     enemyDamageMults         = const [];
     combatantGcds            = [];
     combatantComboWindows    = [];
+    combatantCcRemaining       = [];
+    combatantSlowRemaining     = [];
+    combatantSlowFactor        = [];
+    combatantInterruptLockout  = [];
+    ollamaAdvisoryTimer      = 0.0;
+    ollamaStrategyHint       = null;
   }
 }

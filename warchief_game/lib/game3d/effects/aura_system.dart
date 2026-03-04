@@ -1,6 +1,5 @@
 import 'package:vector_math/vector_math.dart';
 import '../../rendering3d/mesh.dart';
-import '../../rendering3d/math/transform3d.dart';
 import '../state/action_bar_config.dart';
 
 /// Types of aura effects that can be displayed at a unit's base.
@@ -33,7 +32,8 @@ class AuraSystem {
         return Vector3(0.2, 0.4, 1.0); // Blue
       case 'rogue':
         return Vector3(0.6, 0.6, 0.6); // Gray
-      case 'healer':
+      case 'leyweaver':
+      case 'aethermancer':
         return Vector3(0.2, 0.8, 0.2); // Green
       case 'nature':
         return Vector3(0.4, 0.9, 0.4); // Light green

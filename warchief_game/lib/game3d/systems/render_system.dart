@@ -10,6 +10,8 @@ import '../../rendering3d/ley_lines.dart';
 import '../rendering/wind_particles.dart';
 import '../rendering/dust_devil_particles.dart';
 import '../rendering/duel_banner_renderer.dart';
+import '../rendering/equipment_renderer.dart' show EquipmentRenderer;
+import '../rendering/equipment_visual.dart' show EquipmentVisual;
 import '../state/wind_swirl_state.dart';
 import '../state/duel_banner_state.dart' show DuelBannerPhase;
 import '../rendering/green_mana_sparkles.dart';
@@ -71,6 +73,7 @@ class RenderSystem {
     WebGLRenderer renderer,
     Camera3D camera,
     GameState gameState,
+    double dt,
   ) {
     // Tint clearColor toward void-purple during comet flyby
     // Reason: the sky mesh quad is outside the isometric camera frustum; clearColor
@@ -93,7 +96,7 @@ class RenderSystem {
 
     // Render sky background (before terrain so it sits behind everything)
     if (cometState != null) {
-      _skyRenderer.update(cometState, 0.016);
+      _skyRenderer.update(cometState, dt);
       _skyRenderer.renderSky(renderer, camera, cometState);
     }
 
@@ -143,6 +146,12 @@ class RenderSystem {
     // Render duel combatants with normal blending (not inside the aura pass)
     for (final combatant in gameState.duelCombatants) {
       renderer.render(combatant.mesh, combatant.transform, camera);
+      _renderEquipment(combatant.equipVisuals, combatant.transform, renderer, camera);
+    }
+
+    // Render in-flight duel projectiles
+    for (final proj in gameState.duelProjectiles) {
+      renderer.render(proj.mesh, proj.transform, camera);
     }
 
     // Render target indicator (yellow dashed rectangle around target's base)
@@ -151,6 +160,7 @@ class RenderSystem {
     // Render player
     if (gameState.playerMesh != null && gameState.playerTransform != null) {
       renderer.render(gameState.playerMesh!, gameState.playerTransform!, camera);
+      _renderEquipment(gameState.playerEquipVisuals, gameState.playerTransform!, renderer, camera);
     }
 
     // Render direction indicator
@@ -172,6 +182,7 @@ class RenderSystem {
     for (final ally in gameState.allies) {
       // Render ally mesh
       renderer.render(ally.mesh, ally.transform, camera);
+      _renderEquipment(ally.equipVisuals, ally.transform, renderer, camera);
 
       // Render ally projectiles
       for (final projectile in ally.projectiles) {
@@ -238,13 +249,13 @@ class RenderSystem {
     }
 
     // Render wind particles (Effects pass)
-    _renderWindParticles(renderer, camera, gameState);
+    _renderWindParticles(renderer, camera, gameState, dt);
 
     // Render dust devil swirl columns (Effects pass)
     _renderDustDevils(renderer, camera);
 
     // Render green mana sparkles (Effects pass)
-    _renderGreenManaSparkles(renderer, camera, gameState);
+    _renderGreenManaSparkles(renderer, camera, gameState, dt);
 
     // Render comet billboard (additive blending, after opaque geometry)
     if (cometState != null) {
@@ -252,10 +263,21 @@ class RenderSystem {
     }
 
     // Render meteor shower particles
-    _renderMeteors(renderer, camera, gameState);
+    _renderMeteors(renderer, camera, gameState, dt);
 
     // Render persistent 3D meteor impact craters (scorched disc + rock debris)
     _renderMeteorCraters(renderer, camera);
+  }
+
+  /// Render equipment visuals (helm, weapon, shield, cloak) for a character.
+  static void _renderEquipment(
+    List<EquipmentVisual> visuals,
+    Transform3d characterTransform,
+    WebGLRenderer renderer,
+    Camera3D camera,
+  ) {
+    if (visuals.isEmpty) return;
+    EquipmentRenderer.renderVisuals(visuals, characterTransform, renderer, camera);
   }
 
   /// Render aura glow discs at unit bases with additive blending.
@@ -297,6 +319,7 @@ class RenderSystem {
     WebGLRenderer renderer,
     Camera3D camera,
     GameState gameState,
+    double dt,
   ) {
     if (gameState.playerTransform == null) return;
 
@@ -312,7 +335,7 @@ class RenderSystem {
 
     // Update particle positions based on wind state
     _windParticles.update(
-      0.016, // Approximate dt; actual dt is not passed to render
+      dt,
       gameState.playerTransform!.position,
       gameState.windState,
     );
@@ -335,6 +358,7 @@ class RenderSystem {
     WebGLRenderer renderer,
     Camera3D camera,
     GameState gameState,
+    double dt,
   ) {
     // Gate visibility by green mana attunement if setting is enabled
     if (globalGameplaySettings?.manaSourceVisibilityGated ?? false) {
@@ -345,7 +369,7 @@ class RenderSystem {
       _greenSparkles.init();
     }
 
-    _greenSparkles.update(0.016, gameState);
+    _greenSparkles.update(dt, gameState);
     _greenSparkles.render(renderer, camera);
   }
 
@@ -354,6 +378,7 @@ class RenderSystem {
     WebGLRenderer renderer,
     Camera3D camera,
     GameState gameState,
+    double dt,
   ) {
     final cometState = globalCometState;
     if (cometState == null) return;
@@ -367,7 +392,7 @@ class RenderSystem {
     final terrainManager = gameState.infiniteTerrainManager;
 
     _meteorParticles.update(
-      0.016,
+      dt,
       pos.x,
       pos.z,
       terrainManager != null
@@ -511,9 +536,11 @@ class RenderSystem {
 
     if (segments.isEmpty) return;
 
-    // Hash based on segment count and endpoint positions for accurate
-    // cache invalidation (count-only hash missed content changes).
+    // Hash based on segment positions + loaded chunk count.
+    // Including the chunk count ensures the mesh is regenerated as terrain
+    // chunks stream in, so subdivided Y samples stay current.
     int hash = segments.length;
+    hash = hash * 31 + (gameState.infiniteTerrainManager?.loadedChunkCount ?? 0);
     for (final seg in segments) {
       hash = hash * 31 + seg.x1.hashCode;
       hash = hash * 31 + seg.z1.hashCode;
@@ -535,73 +562,84 @@ class RenderSystem {
     renderer.render(mesh, _originTransform, camera);
   }
 
-  /// Create a mesh for the visible Ley Line segments
+  /// Create a mesh for the visible Ley Line segments.
+  ///
+  /// Each segment is subdivided into sub-quads so that the line drapes
+  /// over terrain topology rather than cutting through hills in the middle.
+  /// Subdivision step is 6 world units; a 60-unit segment → 10 quads per layer.
   static Mesh _createLeyLineMesh(
     List<LeyLineSegment> segments,
     GameState gameState,
   ) {
+    const double _hoverOffset = 0.15;  // Float above terrain surface
+    const double _subdivStep  = 6.0;   // World units per sub-quad
+    const int    _maxSteps    = 40;    // Safety cap on sub-division count
+
+    final tm       = gameState.infiniteTerrainManager;
     final vertices = <double>[];
-    final indices = <int>[];
-    var vertexCount = 0;
+    final indices  = <int>[];
+    var   vertexCount = 0;
 
     for (final seg in segments) {
-      // Get terrain height at segment endpoints
-      double y1 = 0.15;
-      double y2 = 0.15;
-      if (gameState.infiniteTerrainManager != null) {
-        y1 = gameState.infiniteTerrainManager!.getTerrainHeight(seg.x1, seg.z1) + 0.15;
-        y2 = gameState.infiniteTerrainManager!.getTerrainHeight(seg.x2, seg.z2) + 0.15;
-      }
+      if (seg.length < 0.1) continue;
 
-      // Calculate perpendicular direction for width
-      final dx = seg.x2 - seg.x1;
-      final dz = seg.z2 - seg.z1;
-      final len = seg.length;
-      if (len < 0.1) continue;
+      final totalDx = seg.x2 - seg.x1;
+      final totalDz = seg.z2 - seg.z1;
 
-      final perpX = -dz / len;
-      final perpZ = dx / len;
+      // Subdivide the segment so height samples follow the terrain contour.
+      // More subdivisions = smoother draping at the cost of more triangles.
+      final steps = (seg.length / _subdivStep).ceil().clamp(1, _maxSteps);
 
-      // Create multiple quads with varying widths for wispy effect
-      for (int layer = 0; layer < 3; layer++) {
-        final layerWidth = seg.thickness * (1.0 - layer * 0.25);
-        final alpha = 0.8 - layer * 0.2;
+      for (int step = 0; step < steps; step++) {
+        final t0 = step       / steps;
+        final t1 = (step + 1) / steps;
 
-        final halfWidth = layerWidth / 2;
+        final sx1 = seg.x1 + totalDx * t0;
+        final sz1 = seg.z1 + totalDz * t0;
+        final sx2 = seg.x1 + totalDx * t1;
+        final sz2 = seg.z1 + totalDz * t1;
 
-        // Corner positions
-        final p1x = seg.x1 - perpX * halfWidth;
-        final p1z = seg.z1 - perpZ * halfWidth;
-        final p2x = seg.x1 + perpX * halfWidth;
-        final p2z = seg.z1 + perpZ * halfWidth;
-        final p3x = seg.x2 + perpX * halfWidth;
-        final p3z = seg.z2 + perpZ * halfWidth;
-        final p4x = seg.x2 - perpX * halfWidth;
-        final p4z = seg.z2 - perpZ * halfWidth;
+        // Sample terrain height at each sub-segment endpoint
+        final sy1 = tm != null
+            ? tm.getTerrainHeight(sx1, sz1) + _hoverOffset
+            : _hoverOffset;
+        final sy2 = tm != null
+            ? tm.getTerrainHeight(sx2, sz2) + _hoverOffset
+            : _hoverOffset;
 
-        // Blue color with varying intensity
-        final r = 0.2 * alpha;
-        final g = 0.5 * alpha;
-        final b = 1.0 * alpha;
+        // Perpendicular in XZ plane for quad width
+        final subDx  = sx2 - sx1;
+        final subDz  = sz2 - sz1;
+        final subLen = math.sqrt(subDx * subDx + subDz * subDz);
+        if (subLen < 0.001) continue;
 
-        // Add 4 vertices for this layer's quad
-        // Vertex format: x, y, z, r, g, b
-        vertices.addAll([p1x, y1, p1z, r, g, b]);
-        vertices.addAll([p2x, y1, p2z, r, g, b]);
-        vertices.addAll([p3x, y2, p3z, r, g, b]);
-        vertices.addAll([p4x, y2, p4z, r, g, b]);
+        final perpX = -subDz / subLen;
+        final perpZ =  subDx / subLen;
 
-        // Add indices for 2 triangles
-        final base = vertexCount;
-        indices.addAll([base, base + 1, base + 2]); // Triangle 1
-        indices.addAll([base, base + 2, base + 3]); // Triangle 2
+        // Three wispy layers per sub-quad (wide + faint to narrow + bright)
+        for (int layer = 0; layer < 3; layer++) {
+          final halfWidth = seg.thickness * (1.0 - layer * 0.25) / 2;
+          final alpha     = 0.8 - layer * 0.2;
 
-        vertexCount += 4;
+          final r = 0.2 * alpha;
+          final g = 0.5 * alpha;
+          final b = 1.0 * alpha;
+
+          // Four corners of the sub-quad (terrain-draped Y)
+          vertices.addAll([sx1 - perpX * halfWidth, sy1, sz1 - perpZ * halfWidth, r, g, b]);
+          vertices.addAll([sx1 + perpX * halfWidth, sy1, sz1 + perpZ * halfWidth, r, g, b]);
+          vertices.addAll([sx2 + perpX * halfWidth, sy2, sz2 + perpZ * halfWidth, r, g, b]);
+          vertices.addAll([sx2 - perpX * halfWidth, sy2, sz2 - perpZ * halfWidth, r, g, b]);
+
+          final base = vertexCount;
+          indices.addAll([base, base + 1, base + 2, base, base + 2, base + 3]);
+          vertexCount += 4;
+        }
       }
     }
 
     if (vertices.isEmpty) {
-      return Mesh.cube(size: 0.01, color: Vector3(0, 0, 0)); // Dummy mesh
+      return Mesh.cube(size: 0.01, color: Vector3(0, 0, 0));
     }
 
     return Mesh.fromVerticesAndIndices(

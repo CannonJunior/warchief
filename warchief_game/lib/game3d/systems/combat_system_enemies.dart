@@ -201,7 +201,7 @@ class _CombatAdvanced {
 
     minion.takeDamage(damage);
     assert(() {
-      print('$attackType hit ${minion.definition.name} for $damage damage! '
+      debugPrint('$attackType hit ${minion.definition.name} for $damage damage! '
           'Health: ${minion.health.toStringAsFixed(1)}/${minion.maxHealth}');
       return true;
     }());
@@ -260,12 +260,12 @@ class _CombatAdvanced {
         ));
       }
       assert(() {
-        print('[DPS] $abilityName hit Target Dummy for $damage damage'
+        debugPrint('[DPS] $abilityName hit Target Dummy for $damage damage'
             '${isCritical ? " (CRIT!)" : ""}');
         return true;
       }());
     } else {
-      assert(() { print('[DPS] $abilityName missed Target Dummy'); return true; }());
+      assert(() { debugPrint('[DPS] $abilityName missed Target Dummy'); return true; }());
     }
 
     return true;

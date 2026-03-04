@@ -292,6 +292,10 @@ class Item {
   final int levelRequirement;
   final ItemSentience sentience;
   final List<ManaColor> manaAttunement;
+  /// Optional 3D mesh color override [r, g, b] in 0.0–1.0 range.
+  final List<double>? visualColor;
+  /// Optional shape hint: "cube" or "plane". Overrides slot config meshType.
+  final String? visualShape;
 
   const Item({
     required this.id,
@@ -308,6 +312,8 @@ class Item {
     this.levelRequirement = 1,
     this.sentience = ItemSentience.inanimate,
     this.manaAttunement = const [],
+    this.visualColor,
+    this.visualShape,
   });
 
   /// Whether this item can be equipped
@@ -358,6 +364,10 @@ class Item {
               .where((c) => c != ManaColor.none)
               .toList()
           : const [],
+      visualColor: json['visualColor'] != null
+          ? (json['visualColor'] as List).map((v) => (v as num).toDouble()).toList()
+          : null,
+      visualShape: json['visualShape'] as String?,
     );
   }
 
@@ -376,6 +386,8 @@ class Item {
     'levelRequirement': levelRequirement,
     'sentience': sentience.name,
     if (manaAttunement.isNotEmpty) 'manaAttunement': manaAttunement.map((c) => c.name).toList(),
+    if (visualColor != null) 'visualColor': visualColor,
+    if (visualShape != null) 'visualShape': visualShape,
   };
 
   /// Create a copy with modified stack size
@@ -395,6 +407,8 @@ class Item {
       levelRequirement: levelRequirement,
       sentience: sentience,
       manaAttunement: manaAttunement,
+      visualColor: visualColor,
+      visualShape: visualShape,
     );
   }
 }

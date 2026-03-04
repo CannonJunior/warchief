@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import '../state/game_state.dart';
 import '../../models/ally.dart';
-import 'ally_strategy.dart';
 
 /// Formation types for ally positioning
 enum FormationType {

@@ -11,13 +11,12 @@
 /// - warrior_abilities.dart - Warrior category (5 abilities, ~90 lines)
 /// - mage_abilities.dart    - Mage category (7 abilities, ~130 lines)
 /// - rogue_abilities.dart   - Rogue category (5 abilities, ~90 lines)
-/// - healer_abilities.dart  - Healer category (5 abilities, ~90 lines)
+/// - leyweaver_abilities.dart  - Leyweaver category (9 abilities, ~170 lines)
+/// - aethermancer_abilities.dart - Aethermancer category (8 abilities, ~160 lines)
 /// - nature_abilities.dart  - Nature category (3 abilities, ~55 lines)
 /// - necromancer_abilities.dart - Necromancer category (4 abilities, ~75 lines)
 /// - elemental_abilities.dart - Elemental category (3 abilities, ~65 lines)
 /// - utility_abilities.dart - Utility category (2 abilities, ~45 lines)
-library abilities;
-
 // Export all ability files
 export 'ability_types.dart';
 export 'player_abilities.dart';
@@ -26,7 +25,8 @@ export 'ally_abilities.dart';
 export 'warrior_abilities.dart';
 export 'mage_abilities.dart';
 export 'rogue_abilities.dart';
-export 'healer_abilities.dart';
+export 'leyweaver_abilities.dart';
+export 'aethermancer_abilities.dart';
 export 'nature_abilities.dart';
 export 'necromancer_abilities.dart';
 export 'elemental_abilities.dart';
@@ -46,7 +46,8 @@ import 'ally_abilities.dart';
 import 'warrior_abilities.dart';
 import 'mage_abilities.dart';
 import 'rogue_abilities.dart';
-import 'healer_abilities.dart';
+import 'leyweaver_abilities.dart';
+import 'aethermancer_abilities.dart';
 import 'nature_abilities.dart';
 import 'necromancer_abilities.dart';
 import 'elemental_abilities.dart';
@@ -72,7 +73,8 @@ class AbilityRegistry {
     'warrior',
     'mage',
     'rogue',
-    'healer',
+    'leyweaver',
+    'aethermancer',
     'nature',
     'necromancer',
     'elemental',
@@ -93,7 +95,8 @@ class AbilityRegistry {
       case 'warrior': return WarriorAbilities.all;
       case 'mage': return MageAbilities.all;
       case 'rogue': return RogueAbilities.all;
-      case 'healer': return HealerAbilities.all;
+      case 'leyweaver': return LeyweaverAbilities.all;
+      case 'aethermancer': return AethermancerAbilities.all;
       case 'nature': return NatureAbilities.all;
       case 'necromancer': return NecromancerAbilities.all;
       case 'elemental': return ElementalAbilities.all;
@@ -112,7 +115,8 @@ class AbilityRegistry {
     ...WarriorAbilities.all,
     ...MageAbilities.all,
     ...RogueAbilities.all,
-    ...HealerAbilities.all,
+    ...LeyweaverAbilities.all,
+    ...AethermancerAbilities.all,
     ...NatureAbilities.all,
     ...NecromancerAbilities.all,
     ...ElementalAbilities.all,
@@ -169,7 +173,8 @@ class AbilityRegistry {
     'warrior': WarriorAbilities.all.length,
     'mage': MageAbilities.all.length,
     'rogue': RogueAbilities.all.length,
-    'healer': HealerAbilities.all.length,
+    'leyweaver': LeyweaverAbilities.all.length,
+    'aethermancer': AethermancerAbilities.all.length,
     'nature': NatureAbilities.all.length,
     'necromancer': NecromancerAbilities.all.length,
     'elemental': ElementalAbilities.all.length,

@@ -335,6 +335,85 @@ class SpiritkinAbilities {
     damageSchool: DamageSchool.nature,
   );
 
+  // ==================== GROUP 5: DIRECT HEALING ====================
+  // Two additional heals distinct from the HoT buffs in Group 4:
+  //   Nature Mend  — instant self or ally heal, no secondary effect
+  //   Spirit Bloom — AoE group heal centered on caster
+
+  /// Nature Mend — instant nature heal for self or a targeted ally.
+  /// Quick emergency top-up with no secondary effect. Costs green mana.
+  static final natureMend = AbilityData(
+    name: 'Nature Mend',
+    description: 'Channel raw nature energy into an instant heal of 30 HP. '
+        'Targets a friendly ally if one is selected, otherwise heals yourself. '
+        'Use as a quick emergency top-up between HoT refreshes.',
+    type: AbilityType.heal,
+    cooldown: 8.0,
+    range: 40.0,
+    healAmount: 30.0,
+    color: Vector3(0.42, 0.80, 0.30),
+    impactColor: Vector3(0.52, 0.90, 0.42),
+    impactSize: 0.85,
+    castTime: 0.8,
+    manaColor: ManaColor.green,
+    manaCost: 20.0,
+    category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
+  );
+
+  /// Spirit Bloom — AoE burst heal centered on the caster.
+  /// Heals up to 5 nearby allies (including self) for 20 HP each.
+  /// Shorter range than most AoEs — encourages tight group positioning.
+  static final spiritBloom = AbilityData(
+    name: 'Spirit Bloom',
+    description: 'Release a pulse of spirit energy that heals up to 5 nearby allies '
+        '(including yourself) for 20 HP each. Radius is intentionally short — '
+        'position your group tightly to get full value. Pairs with Ironbark Shell '
+        'for burst recovery after a spike of damage.',
+    type: AbilityType.heal,
+    cooldown: 20.0,
+    duration: 0.5,
+    range: 40.0,
+    healAmount: 20.0,
+    color: Vector3(0.48, 0.85, 0.35),
+    impactColor: Vector3(0.58, 0.95, 0.45),
+    impactSize: 1.2,
+    aoeRadius: 10.0,
+    maxTargets: 5,
+    manaColor: ManaColor.green,
+    manaCost: 30.0,
+    category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
+  );
+
+  // ==================== SPIRIT ANIMAL SUMMON ====================
+
+  /// Animal Spirit — Summon a spirit wolf bonded to the Spiritkin.
+  ///
+  /// Unlike normal channeled abilities, the Spiritkin CAN move and use other
+  /// abilities while the bond is active. The wolf persists as long as the
+  /// Spiritkin has green mana; it drains 5 green mana/sec from the caster.
+  /// Each second, the wolf restores 3 green mana to every other party member.
+  /// Damage taken by the Spiritkin is split 50/50 with the spirit wolf.
+  static final animalSpirit = AbilityData(
+    name: 'Animal Spirit',
+    description: 'Summon a spirit wolf bonded to your soul. '
+        'The wolf persists while you have green mana, draining 5/sec. '
+        'Each second it restores 3 green mana to every other party member. '
+        'Damage you take is split equally with the wolf. '
+        'Unlike most channels, you can move and cast freely while the bond holds.',
+    type: AbilityType.summon,
+    cooldown: 120.0,
+    range: 0.0,
+    color: Vector3(0.45, 0.78, 0.28),
+    impactColor: Vector3(0.55, 0.90, 0.40),
+    impactSize: 1.5,
+    manaColor: ManaColor.green,
+    manaCost: 30.0,
+    category: 'spiritkin',
+    damageSchool: DamageSchool.nature,
+  );
+
   // ==================== CHAIN COMBO PRIMER ====================
 
   /// Spirit Rush — Activates chain-combo mode for spiritkin.
@@ -357,6 +436,28 @@ class SpiritkinAbilities {
     enablesComboChain: true,
   );
 
+  // ==================== INTERRUPT ====================
+
+  /// Spirit Sever — Precise blow that severs the target's magical connection
+  /// Cooldown tunable (default 14 s, range 8–16 s) via ability overrides.
+  static final spiritSever = AbilityData(
+    name: 'Spirit Sever',
+    description: 'A razor-precise strike that severs the target\'s connection to the spirit realm, interrupting their spellcasting for 3 seconds',
+    type: AbilityType.melee,
+    damage: 13.0,
+    cooldown: 14.0,
+    range: 2.2,
+    color: Vector3(0.50, 0.78, 0.25),
+    impactColor: Vector3(0.60, 0.88, 0.35),
+    impactSize: 0.5,
+    statusEffect: StatusEffect.interrupt,
+    statusDuration: 3.0,
+    manaColor: ManaColor.green,
+    manaCost: 10.0,
+    damageSchool: DamageSchool.nature,
+    category: 'spiritkin',
+  );
+
   /// All Spiritkin abilities as a flat list (used by the codex and action bar).
   static List<AbilityData> get all => [
     // Group 1: Basic melee
@@ -371,11 +472,18 @@ class SpiritkinAbilities {
     spiritSurge,
     verdantWard,
     naturesGrace,
-    // Group 4: Healing buffs
+    // Group 4: Healing buffs (HoT)
     thornbind,
     verdantStride,
     ironbarkShell,
+    // Group 5: Direct healing
+    natureMend,
+    spiritBloom,
+    // Spirit animal
+    animalSpirit,
     // Chain primer
     spiritRush,
+    // Interrupt
+    spiritSever,
   ];
 }

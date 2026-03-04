@@ -5,11 +5,31 @@ part of 'ability_system.dart';
 /// Set cooldown for a slot, applying Melt reduction and stance cooldown multiplier.
 void _setCooldownForSlot(int slotIndex, double cooldown, GameState gameState) {
   final cds = gameState.activeAbilityCooldowns;
+  final maxes = gameState.activeAbilityCooldownMaxes;
   if (slotIndex < 0 || slotIndex >= cds.length) return;
   final melt = gameState.activeMelt;
   if (melt > 0) cooldown = cooldown / (1 + melt / 100.0);
   cooldown *= gameState.activeStance.cooldownMultiplier;
   cds[slotIndex] = cooldown;
+  // Reason: keep max in sync with actual cooldown so the ring animation sweeps
+  // the full arc correctly (ring progress = remaining / max).
+  maxes[slotIndex] = cooldown;
+}
+
+/// For each ability name in [primes], find its action-bar slot and apply a
+/// 0.5s GCD bonus so that slot's countdown shows as reduced (and yellow).
+void _applyComboGcdBonuses(List<String> primes, GameState gameState) {
+  final config = globalActionBarConfig;
+  if (config == null) return;
+  final slots = config.slotAssignments;
+  // Reason: only the Warchief action bar drives comboPrimes today;
+  // ally combo primes would need per-ally bonus lists which don't exist yet.
+  if (!gameState.isWarchiefActive) return;
+  for (int i = 0; i < slots.length; i++) {
+    if (primes.contains(slots[i])) {
+      gameState.abilityComboGcdBonuses[i] = 0.5;
+    }
+  }
 }
 
 // ==================== SLOT DISPATCH ====================
@@ -114,7 +134,7 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
 
   // Silent Mind: next white mana ability is free
   if (gameState.silentMindActive && manaType == _ManaType.white && manaCost > 0) {
-    print('[SILENT MIND] $abilityName mana cost overridden to 0 (was $manaCost)');
+    debugPrint('[SILENT MIND] $abilityName mana cost overridden to 0 (was $manaCost)');
     manaCost = 0;
   }
 
@@ -134,7 +154,7 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
   // Cast-time abilities: defer mana until cast completes
   if (abilityData != null && abilityData.hasCastTime) {
     if (gameState.silentMindActive && manaType == _ManaType.white) {
-      print('[SILENT MIND] $abilityName cast time skipped — instant cast!');
+      debugPrint('[SILENT MIND] $abilityName cast time skipped — instant cast!');
       // Fall through to instant execution
     } else {
       gameState.pendingManaCost = manaCost;
@@ -160,11 +180,21 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
     return;
   }
 
+  // Reason: short-range generic melee abilities check ability1Active AFTER the GCD
+  // trigger below, so without this guard the GCD fires (locking all slots for 1s)
+  // even though no attack actually lands. Return early so mana and GCD are untouched.
+  if (abilityData != null &&
+      abilityData.type == AbilityType.melee &&
+      abilityData.range < _gapCloserRangeThreshold &&
+      gameState.ability1Active) {
+    return;
+  }
+
   // Spend mana (or HP for Blood Weave) for instant abilities
   if (stance.usesHpForMana && manaCost > 0) {
     final hpCost = manaCost * stance.hpForManaRatio;
     gameState.activeHealth = (gameState.activeHealth - hpCost).clamp(1.0, gameState.activeMaxHealth);
-    print('[BLOOD WEAVE] $abilityName spent ${hpCost.toStringAsFixed(1)} HP instead of mana');
+    debugPrint('[BLOOD WEAVE] $abilityName spent ${hpCost.toStringAsFixed(1)} HP instead of mana');
   } else {
     _spendManaByType(gameState, manaType, manaCost, abilityName);
   }
@@ -175,7 +205,7 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
   // Consume Silent Mind buff after white mana ability
   if (gameState.silentMindActive && manaType == _ManaType.white) {
     gameState.silentMindActive = false;
-    print('[SILENT MIND] Buff consumed by $abilityName');
+    debugPrint('[SILENT MIND] Buff consumed by $abilityName');
   }
 
   gameState.addConsoleLog('$abilityName executed (slot $slotIndex)');
@@ -192,6 +222,11 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
       gameState.activeAlly!.gcdRemaining = gcd;
       gameState.activeAlly!.gcdMax = gcd;
     }
+  }
+
+  // Apply combo GCD bonuses: primed slots get 0.5s shaved off their GCD display.
+  if (abilityData != null && abilityData.comboPrimes.isNotEmpty) {
+    _applyComboGcdBonuses(abilityData.comboPrimes, gameState);
   }
 
   // ---- Named ability dispatch ----
@@ -241,6 +276,9 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
 
     // Stormheart channeled
     case 'Conduit': _executeConduit(slotIndex, gameState); break;
+
+    // Spiritkin
+    case 'Animal Spirit': _executeAnimalSpirit(slotIndex, gameState); break;
 
     // Necromancer
     case 'Life Drain': _executeLifeDrain(slotIndex, gameState); break;

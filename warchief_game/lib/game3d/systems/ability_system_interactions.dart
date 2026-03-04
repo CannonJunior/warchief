@@ -147,7 +147,7 @@ void _startDash(int slotIndex, GameState gameState, AbilityData ability, String 
   // Reason: snapshot target position so the dash tracks even if enemy moves
   gameState.dashTargetPosition = gameState.getCurrentTargetPosition()?.clone();
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-  print(message);
+  debugPrint(message);
 }
 
 /// End a dash and reset dash state fields.
@@ -188,7 +188,7 @@ void _executeGenericMelee(int slotIndex, GameState gameState, AbilityData rawAbi
   gameState.ability1ActiveTime = 0.0;
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
   gameState.ability1HitRegistered = false;
-  print(message);
+  debugPrint(message);
 }
 
 /// Generic homing projectile (uses ability data for speed, color, etc.).
@@ -220,7 +220,7 @@ void _executeGenericProjectile(int slotIndex, GameState gameState, AbilityData r
     dotTicks: ability.dotTicks,
   ));
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-  print('$message${targetId != null ? " (targeting $targetId)" : ""}');
+  debugPrint('$message${targetId != null ? " (targeting $targetId)" : ""}');
 }
 
 /// Generic AoE centered on the caster.
@@ -243,10 +243,14 @@ void _executeGenericAoE(int slotIndex, GameState gameState, AbilityData rawAbili
   );
   if (hit) _applyLifesteal(gameState, aoeDamage);
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-  print(message);
+  debugPrint(message);
 }
 
 /// Generic heal — applies to the current friendly target (ally) or self if no friendly is targeted.
+///
+/// If the ability has a [statusEffect] (e.g. shield, regen) with a positive
+/// [statusDuration], that buff is also applied to the healed target so that
+/// heal+shield abilities work without needing a named dispatch case.
 void _executeGenericHeal(int slotIndex, GameState gameState, AbilityData rawAbility, String message) {
   final ability = globalAbilityOverrideManager?.getEffectiveAbility(rawAbility) ?? rawAbility;
   if (gameState.ability3Active) return;
@@ -266,7 +270,8 @@ void _executeGenericHeal(int slotIndex, GameState gameState, AbilityData rawAbil
       final healedAmount = ally.health - oldHealth;
       _logHeal(gameState, ability.name, healedAmount);
       _showHealIndicator(gameState, healedAmount, ally.transform.position);
-      print('$message Restored ${healedAmount.toStringAsFixed(1)} HP to ${ally.name}');
+      _applyHealBuff(ally.activeEffects, ability);
+      debugPrint('$message Restored ${healedAmount.toStringAsFixed(1)} HP to ${ally.name}');
       return;
     }
   }
@@ -277,7 +282,28 @@ void _executeGenericHeal(int slotIndex, GameState gameState, AbilityData rawAbil
   final healedAmount = gameState.activeHealth - oldHealth;
   _logHeal(gameState, ability.name, healedAmount);
   _showHealIndicator(gameState, healedAmount, gameState.activeTransform?.position);
-  print('$message Restored ${healedAmount.toStringAsFixed(1)} HP');
+  _applyHealBuff(gameState.activeCharacterActiveEffects, ability);
+  debugPrint('$message Restored ${healedAmount.toStringAsFixed(1)} HP');
+}
+
+/// Apply a supportive buff from a heal ability to the given effect list.
+///
+/// Handles shield and regen. Re-applying the same buff type refreshes the
+/// duration rather than stacking.  The shield expires after [ability.statusDuration]
+/// seconds whether or not the absorption has been fully consumed.
+void _applyHealBuff(List<ActiveEffect> effects, AbilityData ability) {
+  if (ability.statusEffect == StatusEffect.none || ability.statusDuration <= 0) return;
+  // Reason: remove existing instance so recasting refreshes rather than stacks.
+  effects.removeWhere((e) => e.type == ability.statusEffect && !e.isPermanent);
+  effects.add(ActiveEffect(
+    type: ability.statusEffect,
+    remainingDuration: ability.statusDuration,
+    totalDuration: ability.statusDuration,
+    // Reason: statusStrength is the absorb amount for shields, or the speed
+    // multiplier for haste, etc. — preserved as-is from AbilityData.
+    strength: ability.statusStrength > 0 ? ability.statusStrength : 1.0,
+    sourceName: ability.name,
+  ));
 }
 
 /// Data-driven dispatcher: routes to the appropriate generic handler by ability type.
@@ -302,7 +328,7 @@ void _executeGenericAbility(int slotIndex, GameState gameState, AbilityData abil
     case AbilityType.channeled:
     case AbilityType.summon:
       _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-      print('${ability.name} activated!');
+      debugPrint('${ability.name} activated!');
       break;
   }
 }

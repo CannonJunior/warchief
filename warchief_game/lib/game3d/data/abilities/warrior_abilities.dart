@@ -20,6 +20,8 @@ class WarriorAbilities {
     statusEffect: StatusEffect.stun,
     statusDuration: 1.5,
     category: 'warrior',
+    // Stunned target is wide open for Whirlwind or Gauntlet Jab follow-up.
+    comboPrimes: ['Whirlwind', 'Gauntlet Jab'],
   );
 
   /// Whirlwind - Spinning AoE attack
@@ -37,6 +39,8 @@ class WarriorAbilities {
     aoeRadius: 3.0,
     maxTargets: 5,
     category: 'warrior',
+    // Scattered/slowed enemies are perfect targets for chain follow-up.
+    comboPrimes: ['Rending Chains'],
   );
 
   /// Charge - Rush forward and knockback
@@ -53,6 +57,8 @@ class WarriorAbilities {
     impactSize: 0.8,
     knockbackForce: 5.0,
     category: 'warrior',
+    // Closing the gap naturally leads into a bash or jab opener.
+    comboPrimes: ['Shield Bash', 'Gauntlet Jab'],
   );
 
   /// Taunt - Forces enemies to attack you
@@ -69,6 +75,8 @@ class WarriorAbilities {
     aoeRadius: 6.0,
     maxTargets: 3,
     category: 'warrior',
+    // Taunted enemies cluster around you — Whirlwind punishes the crowd.
+    comboPrimes: ['Whirlwind'],
   );
 
   /// Fortify - Defensive shield buff
@@ -86,8 +94,8 @@ class WarriorAbilities {
     category: 'warrior',
   );
 
-  // ==================== MELEE COMBO ABILITIES ====================
-  // Combo: Gauntlet Jab -> Iron Sweep -> Rending Chains -> Warcry Uppercut -> Execution Strike
+  // ==================== MELEE COMBO CHAIN ====================
+  // Designed flow: Gauntlet Jab → Iron Sweep → Rending Chains → Warcry Uppercut → Execution Strike
 
   /// Gauntlet Jab — Fast combo starter, short cooldown
   static final gauntletJab = AbilityData(
@@ -101,6 +109,8 @@ class WarriorAbilities {
     impactColor: Vector3(0.8, 0.8, 0.8),
     impactSize: 0.4,
     category: 'warrior',
+    // First link in the melee chain.
+    comboPrimes: ['Iron Sweep'],
   );
 
   /// Iron Sweep — Low sweep that slows the target
@@ -117,6 +127,8 @@ class WarriorAbilities {
     statusEffect: StatusEffect.slow,
     statusDuration: 2.0,
     category: 'warrior',
+    // Slowed target can't escape the chain follow-up.
+    comboPrimes: ['Rending Chains'],
   );
 
   /// Rending Chains — Chain whip with extended reach and bleed DoT
@@ -134,6 +146,8 @@ class WarriorAbilities {
     statusDuration: 4.0,
     dotTicks: 2,
     category: 'warrior',
+    // Bleeding target is primed for the uppercut to launch them.
+    comboPrimes: ['Warcry Uppercut'],
   );
 
   /// Warcry Uppercut — Launcher with stun and knockback, moves forward
@@ -151,6 +165,8 @@ class WarriorAbilities {
     statusDuration: 1.0,
     knockbackForce: 2.0,
     category: 'warrior',
+    // Stunned airborne target cannot dodge the finisher.
+    comboPrimes: ['Execution Strike'],
   );
 
   /// Execution Strike — Heavy windup combo finisher
@@ -167,6 +183,7 @@ class WarriorAbilities {
     windupTime: 0.8,
     windupMovementSpeed: 0.3,
     category: 'warrior',
+    // Finisher — no further primes.
   );
 
   /// Sunder Armor — Crushing strike that permanently exposes physical weakness
@@ -182,6 +199,8 @@ class WarriorAbilities {
     impactSize: 0.6,
     category: 'warrior',
     appliesPermanentVulnerability: true,
+    // Exposed armor invites the highest-damage finisher.
+    comboPrimes: ['Execution Strike'],
   );
 
   // ==================== CHAIN COMBO PRIMER ====================
@@ -203,12 +222,33 @@ class WarriorAbilities {
     manaCost: 20.0,
     category: 'warrior',
     enablesComboChain: true,
+    // Momentum build-up drops GCD on both chain starters.
+    comboPrimes: ['Gauntlet Jab', 'Whirlwind'],
+  );
+
+  /// Pummel — Shield punch that interrupts spellcasting
+  static final pummel = AbilityData(
+    name: 'Pummel',
+    description: 'Drive your shield into the caster\'s jaw, interrupting their spellcasting for 3 seconds',
+    type: AbilityType.melee,
+    damage: 12.0,
+    cooldown: 12.0,
+    range: 2.0,
+    color: Vector3(0.6, 0.6, 0.7),
+    impactColor: Vector3(0.9, 0.85, 0.6),
+    impactSize: 0.5,
+    statusEffect: StatusEffect.interrupt,
+    statusDuration: 3.0,
+    category: 'warrior',
+    damageSchool: DamageSchool.physical,
+    // Interrupting a cast puts the enemy off-balance for a bash.
+    comboPrimes: ['Shield Bash'],
   );
 
   /// All warrior abilities as a list
   static List<AbilityData> get all => [
     shieldBash, whirlwind, charge, taunt, fortify,
     gauntletJab, ironSweep, rendingChains, warcryUppercut, executionStrike,
-    sunderArmor, ironMomentum,
+    sunderArmor, ironMomentum, pummel,
   ];
 }

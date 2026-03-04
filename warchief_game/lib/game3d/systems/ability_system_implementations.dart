@@ -9,7 +9,7 @@ void _executeSword(int slotIndex, GameState gameState) {
   gameState.ability1ActiveTime = 0.0;
   _setCooldownForSlot(slotIndex, _effective(AbilitiesConfig.playerSword).cooldown, gameState);
   gameState.ability1HitRegistered = false;
-  print('Sword attack activated!');
+  debugPrint('Sword attack activated!');
 }
 
 /// Fireball ranged projectile — homing if target selected.
@@ -37,7 +37,7 @@ void _executeFireball(int slotIndex, GameState gameState) {
     impactSize: fireball.impactSize,
   ));
   _setCooldownForSlot(slotIndex, fireball.cooldown, gameState);
-  print('${fireball.name} launched${targetId != null ? " at $targetId" : ""}!');
+  debugPrint('${fireball.name} launched${targetId != null ? " at $targetId" : ""}!');
 }
 
 /// Look up the world position of a target by its ID string.
@@ -67,7 +67,7 @@ void _executeHeal(int slotIndex, GameState gameState) {
   _setCooldownForSlot(slotIndex, healAbility.cooldown, gameState);
   _logHeal(gameState, 'Heal', healedAmount);
   _showHealIndicator(gameState, healedAmount, gameState.activeTransform?.position);
-  print('[HEAL] Player heal activated! Restored ${healedAmount.toStringAsFixed(1)} HP');
+  debugPrint('[HEAL] Player heal activated! Restored ${healedAmount.toStringAsFixed(1)} HP');
 }
 
 /// Dash Attack gap-closer — handled by _startDash and updateAbility4.
@@ -121,7 +121,7 @@ void _executeArcaneShield(int slotIndex, GameState gameState) {
   gameState.ability3Active = true;
   gameState.ability3ActiveTime = 0.0;
   _setCooldownForSlot(slotIndex, _effective(MageAbilities.arcaneShield).cooldown, gameState);
-  print('Arcane Shield activated!');
+  debugPrint('Arcane Shield activated!');
 }
 
 void _executeTeleport(int slotIndex, GameState gameState) {
@@ -130,7 +130,7 @@ void _executeTeleport(int slotIndex, GameState gameState) {
   final forward = Vector3(-math.sin(_radians(gameState.activeRotation)), 0, -math.cos(_radians(gameState.activeRotation)));
   gameState.activeTransform!.position += forward * ability.range;
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-  print('Teleport!');
+  debugPrint('Teleport!');
 }
 
 // ==================== ROGUE ABILITIES ====================
@@ -151,27 +151,27 @@ void _executeFanOfKnives(int slotIndex, GameState gameState) =>
 
 void _executeShadowStep(int slotIndex, GameState gameState) {
   _executeTeleport(slotIndex, gameState);
-  print('Shadow Step!');
+  debugPrint('Shadow Step!');
 }
 
-// ==================== HEALER ABILITIES ====================
+// ==================== LEYWEAVER ABILITIES ====================
 
 void _executeHolyLight(int slotIndex, GameState gameState) =>
-    _executeGenericHeal(slotIndex, gameState, _effective(HealerAbilities.holyLight), 'Holy Light!');
+    _executeGenericHeal(slotIndex, gameState, _effective(LeyweaverAbilities.holyLight), 'Holy Light!');
 
 void _executeRejuvenation(int slotIndex, GameState gameState) =>
-    _executeGenericHeal(slotIndex, gameState, _effective(HealerAbilities.rejuvenation), 'Rejuvenation!');
+    _executeGenericHeal(slotIndex, gameState, _effective(LeyweaverAbilities.rejuvenation), 'Rejuvenation!');
 
 void _executeCircleOfHealing(int slotIndex, GameState gameState) =>
-    _executeGenericHeal(slotIndex, gameState, _effective(HealerAbilities.circleOfHealing), 'Circle of Healing!');
+    _executeGenericHeal(slotIndex, gameState, _effective(LeyweaverAbilities.circleOfHealing), 'Circle of Healing!');
 
 void _executeBlessingOfStrength(int slotIndex, GameState gameState) {
-  _setCooldownForSlot(slotIndex, _effective(HealerAbilities.blessingOfStrength).cooldown, gameState);
-  print('Blessing of Strength! Damage increased.');
+  _setCooldownForSlot(slotIndex, _effective(LeyweaverAbilities.blessingOfStrength).cooldown, gameState);
+  debugPrint('Blessing of Strength! Damage increased.');
 }
 
 void _executePurify(int slotIndex, GameState gameState) {
-  _setCooldownForSlot(slotIndex, _effective(HealerAbilities.purify).cooldown, gameState);
+  _setCooldownForSlot(slotIndex, _effective(LeyweaverAbilities.purify).cooldown, gameState);
 
   // Determine whose debuffs to remove: targeted ally or self
   List<ActiveEffect> targetEffects;
@@ -194,19 +194,19 @@ void _executePurify(int slotIndex, GameState gameState) {
 
   final removedCount = targetEffects.where((e) => e.isDebuff).length;
   targetEffects.removeWhere((e) => e.isDebuff);
-  print('Purify! Removed $removedCount debuff(s) from $targetLabel.');
+  debugPrint('Purify! Removed $removedCount debuff(s) from $targetLabel.');
 }
 
 // ==================== NATURE ABILITIES ====================
 
 void _executeEntanglingRoots(int slotIndex, GameState gameState) {
   _setCooldownForSlot(slotIndex, _effective(NatureAbilities.entanglingRoots).cooldown, gameState);
-  print('Entangling Roots! Enemy immobilized.');
+  debugPrint('Entangling Roots! Enemy immobilized.');
 }
 
 void _executeThorns(int slotIndex, GameState gameState) {
   _setCooldownForSlot(slotIndex, _effective(NatureAbilities.thorns).cooldown, gameState);
-  print('Thorns activated! Attackers take damage.');
+  debugPrint('Thorns activated! Attackers take damage.');
 }
 
 void _executeNaturesWrath(int slotIndex, GameState gameState) =>
@@ -226,7 +226,7 @@ void _executeLifeDrain(int slotIndex, GameState gameState) {
 
 void _executeCurseOfWeakness(int slotIndex, GameState gameState) {
   _setCooldownForSlot(slotIndex, _effective(NecromancerAbilities.curseOfWeakness).cooldown, gameState);
-  print('Curse of Weakness! Enemy damage reduced.');
+  debugPrint('Curse of Weakness! Enemy damage reduced.');
 }
 
 void _executeFear(int slotIndex, GameState gameState) {
@@ -270,6 +270,20 @@ void _executeSummonSkeletonMage(int slotIndex, GameState gameState) {
   final casterTransform = gameState.activeTransform;
   if (casterTransform == null) return;
   gameState.spawnSummonedSkeletonMage(casterTransform);
+}
+
+// ==================== SPIRITKIN ABILITIES ====================
+
+/// Summon a spirit wolf bonded to the Spiritkin.
+///
+/// Unlike normal channeled abilities the Spiritkin can move and cast freely
+/// while the bond is held. Green mana is drained 5/sec; the wolf restores
+/// 3 green/sec to every other party member. Damage is split 50/50 with the wolf.
+void _executeAnimalSpirit(int slotIndex, GameState gameState) {
+  _setCooldownForSlot(slotIndex, _effective(SpiritkinAbilities.animalSpirit).cooldown, gameState);
+  final casterTransform = gameState.activeTransform;
+  if (casterTransform == null) return;
+  gameState.spawnSpiritAnimal(casterTransform);
 }
 
 // ==================== ELEMENTAL ABILITIES ====================

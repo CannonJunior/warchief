@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'dart:typed_data';
 import 'dart:math' as math;
 
@@ -41,7 +42,7 @@ class TextureManager {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    print('[TextureManager] Initializing terrain textures...');
+    debugPrint('[TextureManager] Initializing terrain textures...');
 
     // Generate diffuse textures for each terrain type
     for (final type in TerrainTextureType.values) {
@@ -53,7 +54,7 @@ class TextureManager {
     _detailTexture = _generateDetailTexture();
 
     _initialized = true;
-    print('[TextureManager] Initialized ${_diffuseTextures.length} terrain textures');
+    debugPrint('[TextureManager] Initialized ${_diffuseTextures.length} terrain textures');
   }
 
   /// Generate a procedural diffuse texture for terrain type
@@ -342,7 +343,7 @@ class TextureManager {
   /// - 8: Detail texture
   void bindTerrainTextures() {
     if (!_initialized) {
-      print('[TextureManager] Warning: Textures not initialized');
+      debugPrint('[TextureManager] Warning: Textures not initialized');
       return;
     }
 
@@ -452,7 +453,7 @@ class TextureManager {
     _detailTexture = null;
     _initialized = false;
 
-    print('[TextureManager] Disposed');
+    debugPrint('[TextureManager] Disposed');
   }
 }
 

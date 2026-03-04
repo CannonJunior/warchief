@@ -70,10 +70,10 @@ class AbilityOverrideManager extends ChangeNotifier {
         _overrides = decoded.map((key, value) =>
             MapEntry(key, Map<String, dynamic>.from(value as Map)));
         notifyListeners();
-        print('[AbilityOverrides] Loaded ${_overrides.length} ability overrides');
+        debugPrint('[AbilityOverrides] Loaded ${_overrides.length} ability overrides');
       }
     } catch (e) {
-      print('[AbilityOverrides] Failed to load: $e');
+      debugPrint('[AbilityOverrides] Failed to load: $e');
     }
   }
 
@@ -83,7 +83,7 @@ class AbilityOverrideManager extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_overrides));
     } catch (e) {
-      print('[AbilityOverrides] Failed to save: $e');
+      debugPrint('[AbilityOverrides] Failed to save: $e');
     }
   }
 }

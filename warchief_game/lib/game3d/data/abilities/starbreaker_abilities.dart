@@ -336,6 +336,28 @@ class StarbreakerAbilities {
     enablesComboChain: true,
   );
 
+  // ==================== INTERRUPT ====================
+
+  /// Void Fracture — Tears a rift through the target's spell-weaving
+  /// Cooldown tunable (default 16 s, range 8–16 s) via ability overrides.
+  static final voidFracture = AbilityData(
+    name: 'Void Fracture',
+    description: 'Tear a micro-rift through the target\'s magical focus, collapsing their spell-weaving and interrupting their casting for 3 seconds',
+    type: AbilityType.melee,
+    damage: 15.0,
+    cooldown: 16.0,
+    range: 2.5,
+    color: _mel,
+    impactColor: _imp,
+    impactSize: 0.6,
+    statusEffect: StatusEffect.interrupt,
+    statusDuration: 3.0,
+    manaColor: ManaColor.black,
+    manaCost: 15.0,
+    category: 'starbreaker',
+    damageSchool: DamageSchool.shadow,
+  );
+
   // ==================== REGISTRY ====================
 
   static List<AbilityData> get all => [
@@ -353,5 +375,6 @@ class StarbreakerAbilities {
         oblivion,
         stellarCollapse,
         voidCascade,
+        voidFracture,
       ];
 }

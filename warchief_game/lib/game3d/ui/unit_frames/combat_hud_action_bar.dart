@@ -22,18 +22,41 @@ extension _CombatHUDActionBar on CombatHUD {
     // Compute distance to current target once for range checking
     final distanceToTarget = gameState?.getDistanceToCurrentTarget();
 
+    // Reason: GCD locks all slots — display whichever is greater (GCD or per-slot cd)
+    // so the clock animation shows on every button for the full GCD duration.
+    final gcdRemaining = gameState?.activeGcdRemaining ?? 0.0;
+    final gcdMax = gameState?.activeGcdMax ?? 1.0;
+    final comboGcdBonuses = gameState?.activeAbilityComboGcdBonuses;
+
+    ({String label, double cooldown, double maxCooldown, bool isComboReady, VoidCallback? onPressed}) makeSlot(
+      String label, int i, VoidCallback? onPressed,
+    ) {
+      final slotCd = abilityCooldowns[i];
+      final slotMax = abilityCooldownMaxes[i];
+      // Reason: combo bonus reduces the displayed GCD for primed slots only.
+      final comboBonus = comboGcdBonuses?[i] ?? 0.0;
+      final effectiveGcd = (gcdRemaining - comboBonus).clamp(0.0, double.infinity);
+      // When GCD > slot cooldown, show GCD sweep so all buttons animate together.
+      // When the slot's own cooldown is longer, it takes precedence.
+      final cd = math.max(slotCd, effectiveGcd);
+      final max = slotCd >= effectiveGcd ? slotMax : gcdMax;
+      // Flag yellow tint when a combo bonus is active for this slot.
+      final isComboReady = comboBonus > 0.0 && gcdRemaining > 0.0;
+      return (label: label, cooldown: cd, maxCooldown: max, isComboReady: isComboReady, onPressed: onPressed);
+    }
+
     // Define slot data for all 10 slots
     final slots = [
-      (label: '1', cooldown: abilityCooldowns[0], maxCooldown: abilityCooldownMaxes[0], onPressed: onAbility1Pressed),
-      (label: '2', cooldown: abilityCooldowns[1], maxCooldown: abilityCooldownMaxes[1], onPressed: onAbility2Pressed),
-      (label: '3', cooldown: abilityCooldowns[2], maxCooldown: abilityCooldownMaxes[2], onPressed: onAbility3Pressed),
-      (label: '4', cooldown: abilityCooldowns[3], maxCooldown: abilityCooldownMaxes[3], onPressed: onAbility4Pressed),
-      (label: '5', cooldown: abilityCooldowns[4], maxCooldown: abilityCooldownMaxes[4], onPressed: onAbility5Pressed),
-      (label: '6', cooldown: abilityCooldowns[5], maxCooldown: abilityCooldownMaxes[5], onPressed: onAbility6Pressed),
-      (label: '7', cooldown: abilityCooldowns[6], maxCooldown: abilityCooldownMaxes[6], onPressed: onAbility7Pressed),
-      (label: '8', cooldown: abilityCooldowns[7], maxCooldown: abilityCooldownMaxes[7], onPressed: onAbility8Pressed),
-      (label: '9', cooldown: abilityCooldowns[8], maxCooldown: abilityCooldownMaxes[8], onPressed: onAbility9Pressed),
-      (label: '0', cooldown: abilityCooldowns[9], maxCooldown: abilityCooldownMaxes[9], onPressed: onAbility10Pressed),
+      makeSlot('1', 0, onAbility1Pressed),
+      makeSlot('2', 1, onAbility2Pressed),
+      makeSlot('3', 2, onAbility3Pressed),
+      makeSlot('4', 3, onAbility4Pressed),
+      makeSlot('5', 4, onAbility5Pressed),
+      makeSlot('6', 5, onAbility6Pressed),
+      makeSlot('7', 6, onAbility7Pressed),
+      makeSlot('8', 7, onAbility8Pressed),
+      makeSlot('9', 8, onAbility9Pressed),
+      makeSlot('0', 9, onAbility10Pressed),
     ];
 
     return Container(
@@ -71,6 +94,7 @@ extension _CombatHUDActionBar on CombatHUD {
                   maxCooldown: slot.maxCooldown,
                   onPressed: slot.onPressed ?? () {},
                   isOutOfRange: _isSlotOutOfRange(i, distanceToTarget),
+                  isComboReady: slot.isComboReady,
                 ),
               );
             }),
@@ -94,6 +118,7 @@ extension _CombatHUDActionBar on CombatHUD {
                     maxCooldown: slot.maxCooldown,
                     onPressed: slot.onPressed ?? () {},
                     isOutOfRange: _isSlotOutOfRange(slotIdx, distanceToTarget),
+                    isComboReady: slot.isComboReady,
                   ),
                 );
               }),
@@ -113,6 +138,7 @@ extension _CombatHUDActionBar on CombatHUD {
     required double maxCooldown,
     required VoidCallback onPressed,
     bool isOutOfRange = false,
+    bool isComboReady = false,
   }) {
     // Get the ability name for this slot's tooltip
     final abilityName = actionBarConfig?.getSlotAbility(slotIndex);
@@ -127,6 +153,7 @@ extension _CombatHUDActionBar on CombatHUD {
         onPressed: onPressed,
         isOutOfRange: isOutOfRange,
         tooltipText: abilityName,
+        isComboReady: isComboReady,
       );
     }
 
@@ -161,6 +188,7 @@ extension _CombatHUDActionBar on CombatHUD {
                 onPressed: onPressed,
                 isOutOfRange: isOutOfRange,
                 tooltipText: abilityName,
+                isComboReady: isComboReady && !isHovering,
               ),
               // Drop indicator overlay
               if (isHovering)

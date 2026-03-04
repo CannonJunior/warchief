@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 /// Gameplay Settings — global toggles for optional game mechanics.
 ///
 /// Persists to SharedPreferences so settings survive across sessions.
@@ -16,6 +17,8 @@ class GameplaySettings {
   static const String _keyShowHealNumbers = 'gameplay_show_heal_numbers';
   static const String _keyShowChannelBar = 'gameplay_show_channel_bar';
   static const String _keyDamageNumberScale = 'gameplay_damage_number_scale';
+  static const String _keyShowFpsCounter = 'gameplay_show_fps_counter';
+  static const String _keyShowDebugInfo = 'gameplay_show_debug_info';
 
   /// When true, characters must equip a Talisman that attunes them to a
   /// mana color before they can regenerate, spend, or see that mana pool.
@@ -40,6 +43,12 @@ class GameplaySettings {
   /// Scale factor for damage/heal number font size (1.0 = default).
   double damageNumberScale;
 
+  /// Show a live FPS counter in the top-right corner of the game viewport.
+  bool showFpsCounter;
+
+  /// Show an extended debug overlay with frame time, entity counts, etc.
+  bool showDebugInfo;
+
   GameplaySettings({
     this.attunementRequired = true,
     this.manaSourceVisibilityGated = false,
@@ -47,6 +56,8 @@ class GameplaySettings {
     this.showHealNumbers = true,
     this.showChannelBar = true,
     this.damageNumberScale = 1.0,
+    this.showFpsCounter = false,
+    this.showDebugInfo = false,
   });
 
   /// Load saved settings from persistent storage.
@@ -59,12 +70,15 @@ class GameplaySettings {
       showHealNumbers = prefs.getBool(_keyShowHealNumbers) ?? true;
       showChannelBar = prefs.getBool(_keyShowChannelBar) ?? true;
       damageNumberScale = prefs.getDouble(_keyDamageNumberScale) ?? 1.0;
-      print('[GameplaySettings] Loaded: attunementRequired=$attunementRequired, '
+      showFpsCounter = prefs.getBool(_keyShowFpsCounter) ?? false;
+      showDebugInfo = prefs.getBool(_keyShowDebugInfo) ?? false;
+      debugPrint('[GameplaySettings] Loaded: attunementRequired=$attunementRequired, '
           'manaSourceVisibilityGated=$manaSourceVisibilityGated, '
           'showDamageNumbers=$showDamageNumbers, showHealNumbers=$showHealNumbers, '
-          'showChannelBar=$showChannelBar, damageNumberScale=$damageNumberScale');
+          'showChannelBar=$showChannelBar, damageNumberScale=$damageNumberScale, '
+          'showFpsCounter=$showFpsCounter, showDebugInfo=$showDebugInfo');
     } catch (e) {
-      print('[GameplaySettings] Error loading: $e');
+      debugPrint('[GameplaySettings] Error loading: $e');
     }
   }
 
@@ -78,9 +92,11 @@ class GameplaySettings {
       await prefs.setBool(_keyShowHealNumbers, showHealNumbers);
       await prefs.setBool(_keyShowChannelBar, showChannelBar);
       await prefs.setDouble(_keyDamageNumberScale, damageNumberScale);
-      print('[GameplaySettings] Saved');
+      await prefs.setBool(_keyShowFpsCounter, showFpsCounter);
+      await prefs.setBool(_keyShowDebugInfo, showDebugInfo);
+      debugPrint('[GameplaySettings] Saved');
     } catch (e) {
-      print('[GameplaySettings] Error saving: $e');
+      debugPrint('[GameplaySettings] Error saving: $e');
     }
   }
 }

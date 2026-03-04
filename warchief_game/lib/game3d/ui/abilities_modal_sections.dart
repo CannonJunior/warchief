@@ -3,8 +3,19 @@ part of 'abilities_modal.dart';
 // ==================== ABILITY SECTIONS EXTENSION ====================
 
 extension _AbilitiesModalSections on _AbilitiesModalState {
-  /// Collect all available categories (built-in + custom).
+  /// Collect all available categories (built-in + custom), filtered by codex mode.
+  ///
+  /// In 'development' mode only warrior, rogue, and monster categories are shown,
+  /// matching the scenario config selection in Settings > Scenario.
   Set<String> _getAllCategories() {
+    final codexMode = globalScenarioConfig?.abilitiesCodexMode ?? 'expanded';
+
+    if (codexMode == 'development') {
+      // Reason: development mode limits the codex to the three categories
+      // that are actively tuned during early development: warrior, rogue, boss.
+      return const {'warrior', 'rogue', 'monster'};
+    }
+
     final categories = <String>{...AbilityRegistry.categories};
     final customAbilities = globalCustomAbilityManager?.getAll() ?? [];
     for (final ability in customAbilities) {
@@ -347,7 +358,7 @@ extension _AbilitiesModalSections on _AbilitiesModalState {
       }
     }
 
-    print('[CODEX] Loaded ${category} class abilities to action bar '
+    debugPrint('[CODEX] Loaded ${category} class abilities to action bar '
         '(${abilities.length > 10 ? 10 : abilities.length} abilities)');
 
     // Notify parent to update character mesh color

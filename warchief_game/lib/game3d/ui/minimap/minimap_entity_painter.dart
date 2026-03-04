@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../state/game_state.dart';
 import '../../state/minimap_config.dart';
-import '../../state/building_config.dart';
 
 /// CustomPainter that draws entity blips on the minimap.
 ///

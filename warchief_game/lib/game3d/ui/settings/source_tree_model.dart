@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'dart:convert';
 import 'package:flutter/services.dart';
 
@@ -34,7 +35,7 @@ class SourceTreeData {
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
       return SourceTreeData.fromJson(json);
     } catch (e) {
-      print('Failed to load source tree: $e');
+      debugPrint('Failed to load source tree: $e');
       return null;
     }
   }

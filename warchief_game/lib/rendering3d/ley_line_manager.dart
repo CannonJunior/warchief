@@ -97,7 +97,7 @@ class LeyLineManager {
       }
     }
 
-    print('[LeyLines] Generated ${_segments.length} Ley Line segments from $siteCount sites');
+    debugPrint('[LeyLines] Generated ${_segments.length} Ley Line segments from $siteCount sites');
   }
 
   /// Find intersections between Ley Line segments and create power nodes at ~1/3 of them
@@ -158,7 +158,7 @@ class LeyLineManager {
       ));
     }
 
-    print('[LeyLines] Generated ${_powerNodes.length} Ley Power nodes from ${intersections.length} intersections');
+    debugPrint('[LeyLines] Generated ${_powerNodes.length} Ley Power nodes from ${intersections.length} intersections');
   }
 
   /// Find intersection point between two line segments (if any)

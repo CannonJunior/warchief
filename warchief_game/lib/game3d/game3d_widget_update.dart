@@ -1,13 +1,13 @@
 part of 'game3d_widget.dart';
 
 mixin _WidgetUpdateMixin on _GameStateBase {
-  void _render() {
+  void _render(double dt) {
     if (renderer == null || camera == null) {
-      print('Render skipped - renderer: ${renderer != null}, camera: ${camera != null}');
+      debugPrint('Render skipped - renderer: ${renderer != null}, camera: ${camera != null}');
       return;
     }
 
-    RenderSystem.render(renderer!, camera!, gameState);
+    RenderSystem.render(renderer!, camera!, gameState, dt);
   }
 
   void _update(double dt, double gameTimeSec) {
@@ -15,6 +15,7 @@ mixin _WidgetUpdateMixin on _GameStateBase {
 
     // Refresh per-frame caches before any system reads them
     gameState.refreshAliveMinions();
+    gameState.gameTimeSec = gameTimeSec;
 
     // Process player and camera input
     InputSystem.update(dt, inputManager!, camera!, gameState);
@@ -100,7 +101,7 @@ mixin _WidgetUpdateMixin on _GameStateBase {
       if (!gameState.visitedPowerNodes.contains(nodeKey)) {
         gameState.visitedPowerNodes.add(nodeKey);
         GoalSystem.processEvent(gameState, 'visit_power_node');
-        print('[GOALS] Visited new power node: $nodeKey');
+        debugPrint('[GOALS] Visited new power node: $nodeKey');
       }
     }
 

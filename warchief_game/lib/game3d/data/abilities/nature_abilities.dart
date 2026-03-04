@@ -108,6 +108,30 @@ class NatureAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== INTERRUPT ====================
+
+  /// Silencing Vine — Whips a razor vine that tears through magical concentration
+  /// Cooldown tunable (default 18 s, range 15–30 s) via ability overrides.
+  static final silencingVine = AbilityData(
+    name: 'Silencing Vine',
+    description: 'Whip a razor-sharp vine that tears through the target\'s magical concentration, interrupting their spellcasting for 3 seconds',
+    type: AbilityType.ranged,
+    damage: 11.0,
+    cooldown: 18.0,
+    range: 18.0,
+    color: Vector3(0.38, 0.60, 0.20),
+    impactColor: Vector3(0.50, 0.72, 0.28),
+    impactSize: 0.5,
+    projectileSpeed: 22.0,
+    projectileSize: 0.18,
+    statusEffect: StatusEffect.interrupt,
+    statusDuration: 3.0,
+    manaColor: ManaColor.green,
+    manaCost: 18.0,
+    damageSchool: DamageSchool.nature,
+    category: 'nature',
+  );
+
   // ==================== CHAIN COMBO PRIMER ====================
 
   /// Ancient Surge — Activates chain-combo mode for nature.
@@ -133,6 +157,6 @@ class NatureAbilities {
   /// All nature abilities as a list
   static List<AbilityData> get all => [
     entanglingRoots, thorns, naturesWrath,
-    briarLash, ironwoodSmash, thornbindMark, ancientSurge,
+    briarLash, ironwoodSmash, thornbindMark, ancientSurge, silencingVine,
   ];
 }

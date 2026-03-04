@@ -123,9 +123,9 @@ class CometConfig extends ChangeNotifier {
       final jsonString = await rootBundle.loadString(_assetPath);
       _defaults = jsonDecode(jsonString) as Map<String, dynamic>;
       notifyListeners();
-      print('[CometConfig] Loaded defaults from $_assetPath');
+      debugPrint('[CometConfig] Loaded defaults from $_assetPath');
     } catch (e) {
-      print('[CometConfig] Failed to load: $e (using fallbacks)');
+      debugPrint('[CometConfig] Failed to load: $e (using fallbacks)');
       _defaults = {};
     }
   }

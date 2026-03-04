@@ -20,9 +20,6 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   bool _holdKeyWasPressed = false;
   bool _formationKeyWasPressed = false;
 
-  /// Track SHIFT+key state for formation panel toggling
-  bool _shiftFormationWasPressed = false;
-
   /// Drag state tracking for panels
   final Map<String, bool> _isDragging = {};
   final Map<String, Offset> _dragStartPos = {};
@@ -116,14 +113,14 @@ mixin _WidgetCommandsMixin on _GameStateBase {
       // T key - Attack command (toggle)
       if (attackPressed && !_attackKeyWasPressed) {
         _setAllyCommand(AllyCommand.attack);
-        print('[ALLY CMD] All allies: ATTACK');
+        debugPrint('[ALLY CMD] All allies: ATTACK');
       }
       _attackKeyWasPressed = attackPressed;
 
       // G key - Hold command (toggle)
       if (holdPressed && !_holdKeyWasPressed) {
         _setAllyCommand(AllyCommand.hold);
-        print('[ALLY CMD] All allies: HOLD');
+        debugPrint('[ALLY CMD] All allies: HOLD');
       }
       _holdKeyWasPressed = holdPressed;
 
@@ -142,7 +139,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
     final nextIndex = (currentIndex + 1) % formations.length;
     gameState.currentFormation = formations[nextIndex];
     gameState.invalidateTacticalPositions();
-    print('[FORMATION] Changed to: ${gameState.currentFormation.name}');
+    debugPrint('[FORMATION] Changed to: ${gameState.currentFormation.name}');
   }
 
   /// Set command for all allies
@@ -188,7 +185,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
       gameState.monsterAbility1ActiveTime = 0.0;
       gameState.monsterAbility1HitRegistered = false;
     });
-    print('Monster uses Dark Strike! (sword attack)');
+    debugPrint('Monster uses Dark Strike! (sword attack)');
   }
 
   /// Activate Monster Ability 2: Shadow Bolt (ranged projectile)
@@ -218,7 +215,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
       ));
       gameState.monsterAbility2Cooldown = gameState.monsterAbility2CooldownMax;
     });
-    print('Monster casts ${shadowBolt.name}!');
+    debugPrint('Monster casts ${shadowBolt.name}!');
   }
 
   /// Activate Monster Ability 3: Dark Healing (restore health)
@@ -242,7 +239,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
         isHeal: true,
       ));
     }
-    print('[HEAL] Monster uses ${darkHeal.name}! Restored ${healedAmount.toStringAsFixed(1)} HP (${gameState.monsterHealth.toStringAsFixed(0)}/${gameState.monsterMaxHealth})');
+    debugPrint('[HEAL] Monster uses ${darkHeal.name}! Restored ${healedAmount.toStringAsFixed(1)} HP (${gameState.monsterHealth.toStringAsFixed(0)}/${gameState.monsterMaxHealth})');
   }
 
   // ==================== AI CHAT LOGGING ====================
@@ -267,24 +264,14 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   /// Manually activate an ally's ability (called from UI button)
   void _activateAllyAbility(Ally ally) {
     if (ally.abilityCooldown > 0 || ally.health <= 0) {
-      print('Ally ability on cooldown or ally is dead');
+      debugPrint('Ally ability on cooldown or ally is dead');
       return;
     }
 
     setState(() {
       // Force the ally to use their ability
       AISystem.executeAllyDecision(ally, 'ATTACK', gameState);
-      print('Manually activated ally ability ${ally.abilityIndex}');
-    });
-  }
-
-  /// Change an ally's strategy
-  void _changeAllyStrategy(Ally ally, AllyStrategyType newStrategy) {
-    setState(() {
-      ally.strategyType = newStrategy;
-      // Update follow distance based on new strategy
-      ally.followBufferDistance = ally.strategy.followDistance;
-      print('Ally strategy changed to: ${ally.strategy.name}');
+      debugPrint('Manually activated ally ability ${ally.abilityIndex}');
     });
   }
 
@@ -293,7 +280,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
     setState(() {
       gameState.currentFormation = newFormation;
       gameState.invalidateTacticalPositions();
-      print('[FORMATION] Changed to: ${newFormation.name}');
+      debugPrint('[FORMATION] Changed to: ${newFormation.name}');
     });
   }
 
@@ -360,20 +347,20 @@ mixin _WidgetCommandsMixin on _GameStateBase {
       _updateAllyAuraColor(ally, allyIndex);
 
       final abilityNames = ['Sword', 'Fireball', 'Heal'];
-      print('Ally added! Ability: ${abilityNames[randomAbility]} (Total: ${gameState.allies.length})');
+      debugPrint('Ally added! Ability: ${abilityNames[randomAbility]} (Total: ${gameState.allies.length})');
     });
   }
 
   /// Remove the most recently added ally
   void _removeAlly() {
     if (gameState.allies.isEmpty) {
-      print('No allies to remove!');
+      debugPrint('No allies to remove!');
       return;
     }
 
     setState(() {
       gameState.allies.removeLast();
-      print('Ally removed! Remaining: ${gameState.allies.length}');
+      debugPrint('Ally removed! Remaining: ${gameState.allies.length}');
     });
   }
 
@@ -415,36 +402,46 @@ mixin _WidgetCommandsMixin on _GameStateBase {
     }
   }
 
+  // Reason: cache last positions so getTerrainHeight is skipped when the
+  // unit hasn't moved far enough to noticeably change the terrain height.
+  // Threshold is ~1 world unit — fine enough for aura disc accuracy.
+  static const double _auraHeightThreshold = 1.0;
+  double _playerAuraCachedX = double.nan;
+  double _playerAuraCachedZ = double.nan;
+
   /// Position all aura discs at their unit's base on terrain each frame.
   void _updateAuraPositions() {
-    // Player aura — update position in-place to avoid Vector3 allocation
+    final tm = gameState.infiniteTerrainManager;
+
+    // Player aura — only re-query terrain height when player has moved
     if (gameState.playerAuraTransform != null && gameState.playerTransform != null) {
-      double auraY = 0.02;
-      if (gameState.infiniteTerrainManager != null) {
-        auraY = gameState.infiniteTerrainManager!.getTerrainHeight(
-          gameState.playerTransform!.position.x,
-          gameState.playerTransform!.position.z,
-        ) + 0.02;
+      final px = gameState.playerTransform!.position.x;
+      final pz = gameState.playerTransform!.position.z;
+      final movedX = (px - _playerAuraCachedX).abs();
+      final movedZ = (pz - _playerAuraCachedZ).abs();
+      if (_playerAuraCachedX.isNaN || movedX + movedZ > _auraHeightThreshold) {
+        final terrH = tm != null ? tm.getTerrainHeight(px, pz) : 0.0;
+        gameState.playerAuraTransform!.position.y = terrH + 0.02;
+        _playerAuraCachedX = px;
+        _playerAuraCachedZ = pz;
       }
-      gameState.playerAuraTransform!.position.x = gameState.playerTransform!.position.x;
-      gameState.playerAuraTransform!.position.y = auraY;
-      gameState.playerAuraTransform!.position.z = gameState.playerTransform!.position.z;
+      gameState.playerAuraTransform!.position.x = px;
+      gameState.playerAuraTransform!.position.z = pz;
     }
 
-    // Ally auras — update position in-place
+    // Ally auras — skip terrain query when ally hasn't moved
     for (final ally in gameState.allies) {
-      if (ally.auraMesh != null) {
-        double auraY = 0.02;
-        if (gameState.infiniteTerrainManager != null) {
-          auraY = gameState.infiniteTerrainManager!.getTerrainHeight(
-            ally.transform.position.x,
-            ally.transform.position.z,
-          ) + 0.02;
-        }
-        ally.auraTransform.position.x = ally.transform.position.x;
-        ally.auraTransform.position.y = auraY;
-        ally.auraTransform.position.z = ally.transform.position.z;
+      if (ally.auraMesh == null) continue;
+      final ax = ally.transform.position.x;
+      final az = ally.transform.position.z;
+      final movedX = (ax - ally.auraTransform.position.x).abs();
+      final movedZ = (az - ally.auraTransform.position.z).abs();
+      if (movedX + movedZ > _auraHeightThreshold) {
+        final terrH = tm != null ? tm.getTerrainHeight(ax, az) : 0.0;
+        ally.auraTransform.position.y = terrH + 0.02;
       }
+      ally.auraTransform.position.x = ax;
+      ally.auraTransform.position.z = az;
     }
   }
 

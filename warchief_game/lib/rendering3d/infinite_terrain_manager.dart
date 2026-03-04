@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:vector_math/vector_math.dart';
 import 'terrain_lod.dart';
 import 'game_config_terrain.dart';
@@ -115,7 +116,7 @@ class InfiniteTerrainManager {
       _unloadDistantChunks(playerChunkX, playerChunkZ);
 
       if (TerrainConfig.debugLogging) {
-        print('[TERRAIN] Player at chunk [$playerChunkX, $playerChunkZ] | '
+        debugPrint('[TERRAIN] Player at chunk [$playerChunkX, $playerChunkZ] | '
             'Chunks loaded: ${_chunks.length} | Generated: $chunksGenerated | '
             'Unloaded: $chunksUnloaded | SplatMaps: $splatMapsGenerated');
       }
@@ -152,7 +153,7 @@ class InfiniteTerrainManager {
     final chunk = getChunkAtWorldPosition(worldX, worldZ);
     if (chunk == null) {
       if (TerrainConfig.debugLogging) {
-        print('[TERRAIN WARNING] Chunk not loaded at ($worldX, $worldZ), returning groundLevel ${GameConfig.groundLevel}');
+        debugPrint('[TERRAIN WARNING] Chunk not loaded at ($worldX, $worldZ), returning groundLevel ${GameConfig.groundLevel}');
       }
       return GameConfig.groundLevel;
     }
@@ -160,7 +161,7 @@ class InfiniteTerrainManager {
     final height = chunk.getHeightAt(worldX, worldZ);
     if (height == null) {
       if (TerrainConfig.debugLogging) {
-        print('[TERRAIN WARNING] Height null at ($worldX, $worldZ) in chunk, returning groundLevel ${GameConfig.groundLevel}');
+        debugPrint('[TERRAIN WARNING] Height null at ($worldX, $worldZ) in chunk, returning groundLevel ${GameConfig.groundLevel}');
       }
       return GameConfig.groundLevel;
     }

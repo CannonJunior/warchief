@@ -5,6 +5,8 @@ import '../../models/ally.dart';
 import '../../models/item.dart';
 import '../../models/inventory.dart';
 import 'character_panel_columns.dart';
+import 'paper_doll_painter.dart' show PaperDollEquipment;
+import '../rendering/equipment_renderer.dart' show globalEquipmentVisualConfig;
 
 /// Character Panel - 3-column draggable panel displaying player/ally info
 ///
@@ -114,6 +116,13 @@ class _CharacterPanelState extends State<CharacterPanel> {
       } else {
         _currentAlly?.invalidateAttunementCache();
       }
+
+      // Rebuild 3D equipment visuals after equip
+      final cfg = globalEquipmentVisualConfig;
+      if (cfg != null) {
+        if (_isViewingPlayer) gs.rebuildPlayerEquipmentVisuals(cfg);
+        else _currentAlly?.rebuildEquipmentVisuals(cfg);
+      }
     });
   }
 
@@ -138,6 +147,13 @@ class _CharacterPanelState extends State<CharacterPanel> {
       } else {
         _currentAlly?.invalidateAttunementCache();
       }
+
+      // Rebuild 3D equipment visuals after unequip
+      final cfg = globalEquipmentVisualConfig;
+      if (cfg != null) {
+        if (_isViewingPlayer) gs.rebuildPlayerEquipmentVisuals(cfg);
+        else _currentAlly?.rebuildEquipmentVisuals(cfg);
+      }
     });
   }
 
@@ -152,6 +168,33 @@ class _CharacterPanelState extends State<CharacterPanel> {
     setState(() {
       _currentIndex = (_currentIndex + 1) % _totalCharacters;
     });
+  }
+
+  /// Build paper doll equipment colors from the active inventory.
+  ///
+  /// Returns a [PaperDollEquipment] reflecting helm, armor, weapon, and
+  /// off-hand colors from item rarity (or explicit visualColor override).
+  PaperDollEquipment _buildPaperDollEquipment(Inventory inv) {
+    Color? _slotColor(EquipmentSlot slot) {
+      final item = inv.equipment[slot];
+      if (item == null) return null;
+      if (item.visualColor != null && item.visualColor!.length >= 3) {
+        final vc = item.visualColor!;
+        return Color.fromARGB(
+          255,
+          (vc[0] * 255).round(),
+          (vc[1] * 255).round(),
+          (vc[2] * 255).round(),
+        );
+      }
+      return item.rarity.color;
+    }
+    return PaperDollEquipment(
+      helmColor:    _slotColor(EquipmentSlot.helm),
+      armorColor:   _slotColor(EquipmentSlot.armor),
+      weaponColor:  _slotColor(EquipmentSlot.mainHand),
+      offHandColor: _slotColor(EquipmentSlot.offHand),
+    );
   }
 
   Color _getAllyColor(int index) {
@@ -248,6 +291,11 @@ class _CharacterPanelState extends State<CharacterPanel> {
                       inventory: _isViewingPlayer
                           ? widget.gameState.playerInventory
                           : (_currentAlly?.inventory ?? Inventory()),
+                      equipment: _buildPaperDollEquipment(
+                        _isViewingPlayer
+                            ? widget.gameState.playerInventory
+                            : (_currentAlly?.inventory ?? Inventory()),
+                      ),
                       onEquipItem: _handleEquipFromBag,
                       onUnequipItem: _handleUnequipToBag,
                       onRotationUpdate: (delta) {

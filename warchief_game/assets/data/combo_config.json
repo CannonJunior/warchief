@@ -35,11 +35,17 @@
       "radius": 4.0,
       "chain": { "damage": 80.0, "radius": 7.0 }
     },
-    "healer": {
+    "leyweaver": {
       "threshold": 3,
       "effect": "heal",
       "amount": 20.0,
       "chain": { "amount": 60.0, "healPerTick": 6.0, "tickInterval": 0.5 }
+    },
+    "aethermancer": {
+      "threshold": 3,
+      "effect": "heal",
+      "amount": 18.0,
+      "chain": { "amount": 55.0, "healPerTick": 8.0, "tickInterval": 0.5 }
     },
     "necromancer": {
       "threshold": 3,

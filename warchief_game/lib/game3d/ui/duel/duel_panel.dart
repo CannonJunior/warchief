@@ -3,9 +3,23 @@ import 'package:flutter/material.dart';
 import '../../state/duel_manager.dart';
 import '../../data/duel/duel_definitions.dart';
 import '../../../models/duel_result.dart';
+import 'duel_history_detail.dart';
+import 'duel_metrics.dart';
 
 part 'duel_panel_setup.dart';
 part 'duel_panel_recents.dart';
+part 'duel_panel_metrics.dart';
+
+// ── Colour palette shared across all panel part files ─────────────────────────
+// Reason: top-level library constants are accessible from all part files;
+// static class constants are not accessible from extension methods on the class.
+const _bg      = Color(0xFF1a1a2e);
+const _surface = Color(0xFF16213e);
+const _accent  = Color(0xFF533483);
+const _text    = Color(0xFFe0e0e0);
+const _subtext = Color(0xFF9e9e9e);
+const _red     = Color(0xFFef5350);
+const _green   = Color(0xFF4caf50);
 
 /// Draggable 3-tab panel for the Duel Arena balance testing tool.
 ///
@@ -56,14 +70,13 @@ class _DuelPanelState extends State<DuelPanel> {
   DuelEndCondition _endCondition = DuelEndCondition.totalAnnihilation;
   bool             _showRecents  = false;
 
-  // ── Colour palette ─────────────────────────────────────────────────────────
-  static const _bg      = Color(0xFF1a1a2e);
-  static const _surface = Color(0xFF16213e);
-  static const _accent  = Color(0xFF533483);
-  static const _text    = Color(0xFFe0e0e0);
-  static const _subtext = Color(0xFF9e9e9e);
-  static const _red     = Color(0xFFef5350);
-  static const _green   = Color(0xFF4caf50);
+  /// Non-null while the user is viewing a history entry's detail panel.
+  DuelResult? _selectedHistoryResult;
+
+  /// Filter for the Metrics tab ability table; null = show all classes.
+  String? _metricsAbilityFilter;
+
+  // ── Colour palette: see top-level constants above ─────────────────────────
 
   @override
   void didUpdateWidget(DuelPanel old) {
@@ -129,12 +142,12 @@ class _DuelPanelState extends State<DuelPanel> {
   }
 
   Widget _buildTabBar() {
-    const labels = ['Setup', 'Active', 'History'];
+    const labels = ['Setup', 'Active', 'History', 'Metrics'];
     return Container(
       height: 32,
       color: _surface,
       child: Row(
-        children: List.generate(3, (i) {
+        children: List.generate(4, (i) {
           final selected = _tabIndex == i;
           return Expanded(
             child: GestureDetector(
@@ -161,9 +174,10 @@ class _DuelPanelState extends State<DuelPanel> {
 
   Widget _buildTabContent() {
     switch (_tabIndex) {
-      case 0:  return _buildSetupTab();    // defined in part file
+      case 0:  return _buildSetupTab();     // defined in duel_panel_setup.dart
       case 1:  return _buildActiveTab();
       case 2:  return _buildHistoryTab();
+      case 3:  return _buildMetricsTab();   // defined in duel_panel_metrics.dart
       default: return const SizedBox.shrink();
     }
   }
@@ -268,6 +282,14 @@ class _DuelPanelState extends State<DuelPanel> {
   // ── History Tab ────────────────────────────────────────────────────────────
 
   Widget _buildHistoryTab() {
+    // Show detail panel when a history row has been tapped.
+    if (_selectedHistoryResult != null) {
+      return DuelHistoryDetail(
+        result: _selectedHistoryResult!,
+        onBack: () => setState(() => _selectedHistoryResult = null),
+      );
+    }
+
     final history = widget.manager.history;
     if (history.isEmpty) {
       return const Center(
@@ -279,7 +301,10 @@ class _DuelPanelState extends State<DuelPanel> {
         child: ListView.builder(
           padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
           itemCount: history.length,
-          itemBuilder: (_, i) => _historyRow(history[i]),
+          itemBuilder: (_, i) => GestureDetector(
+            onTap: () => setState(() => _selectedHistoryResult = history[i]),
+            child: _historyRow(history[i]),
+          ),
         ),
       ),
       Padding(
@@ -398,6 +423,8 @@ class _DuelPanelState extends State<DuelPanel> {
         const SizedBox(width: 4),
         Text('${result.durationSeconds.toStringAsFixed(0)}s',
             style: const TextStyle(color: _subtext, fontSize: 9)),
+        const SizedBox(width: 4),
+        const Icon(Icons.chevron_right, color: _subtext, size: 14),
       ]),
     );
   }

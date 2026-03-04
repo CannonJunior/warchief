@@ -2,6 +2,68 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-03-03
+
+#### Equipment Visual Representation
+- ✅ **`assets/data/equipment_visual_config.json`** (new): Per-slot attachment offsets, mesh sizes, default colors. 4 visible slots (helm/mainHand/offHand/back), 7 stat-only.
+- ✅ **`lib/models/item.dart`**: Added `visualColor: List<double>?` and `visualShape: String?` fields. Parsed in `fromJson`/`toJson`/`copyWithStackSize`.
+- ✅ **`lib/game3d/rendering/equipment_visual.dart`** (new, ~25 lines): `EquipmentVisual` data class with `mesh`, `worldTransform`, `localOffset`, `slot`. Mirrors aura pattern on `Ally`.
+- ✅ **`lib/game3d/rendering/equipment_renderer.dart`** (new, ~200 lines): `EquipmentVisualConfig` (loads JSON), `EquipmentRenderer` (static class). `buildEquipmentVisuals()`, `repositionVisuals()`, `renderVisuals()`. Global `globalEquipmentVisualConfig` singleton.
+- ✅ **`lib/models/ally.dart`**: Added `List<EquipmentVisual> equipVisuals` + `rebuildEquipmentVisuals(config)` method.
+- ✅ **`lib/game3d/state/game_state.dart`**: Added `List<EquipmentVisual> playerEquipVisuals` + `rebuildPlayerEquipmentVisuals(config)`.
+- ✅ **`lib/game3d/systems/render_system.dart`**: Added `_renderEquipment()` delegate. Called after player mesh, inside allies loop, inside duel combatants loop.
+- ✅ **`lib/game3d/ui/paper_doll_painter.dart`**: Added `PaperDollEquipment` data class. Extended `RotatableCubePainter` with `equipment` param — helm tints top face, armor tints side faces, weapon draws sword line on right, off-hand draws shield square on left.
+- ✅ **`lib/game3d/ui/character_panel_columns.dart`**: Added `PaperDollEquipment? equipment` param to `buildPaperDollColumn()`, forwarded to `RotatableCubePortrait`.
+- ✅ **`lib/game3d/ui/character_panel.dart`**: Added `_buildPaperDollEquipment()` helper, passes equipment to column. Calls `rebuildEquipmentVisuals/rebuildPlayerEquipmentVisuals` on equip/unequip.
+- ✅ **`lib/game3d/game3d_widget.dart`**: Imports `EquipmentVisualConfig`/`globalEquipmentVisualConfig`. Calls `_initializeEquipmentVisualConfig()` in `initState`.
+- ✅ **`lib/game3d/game3d_widget_init.dart`**: Added `_initializeEquipmentVisualConfig()` — async load → sets singleton → `setState`.
+- ✅ Build verified: `flutter analyze --no-pub` — 0 new errors.
+
+### ✅ Completed - 2026-03-02
+
+#### CC World-Space Indicator Overlay + Aethermancer Freeze
+- ✅ **`lib/game3d/ui/cc_indicator_overlay.dart`** (new, ~230 lines): `CcIndicatorOverlay` StatelessWidget. Projects unit positions to screen (+2.5 Y world-space head offset). Collects CC effects from player, boss, allies (excludes Spirit Wolf summon), and alive minions. Renders horizontal row of `_CcBadge` widgets centered above each unit. `_CcBadge`: 44×44px badge with colored BG/border/glow + icon + countdown text. `_CcProgressRingPainter`: draws remaining portion as colored stroke arc (action-bar cooldown style — NOT expired fill).
+- ✅ **`lib/game3d/game3d_widget.dart`**: Added `import 'ui/cc_indicator_overlay.dart'`.
+- ✅ **`lib/game3d/game3d_widget_ui.dart`**: Added `CcIndicatorOverlay(gameState, camera)` to Stack immediately after `DamageIndicatorOverlay`.
+- ✅ **`lib/game3d/data/abilities/aethermancer_abilities.dart`**: Added `aetherChill` (Aether Chill) — ranged freeze projectile, 22 dmg, 16s CD, 3s freeze, 0.8s cast, White 18 + Blue 12 dual mana, DamageSchool.frost. Added to `all` getter.
+- ✅ Build verified: `flutter analyze --no-pub` — 0 new errors.
+
+### ✅ Completed - 2026-03-01
+
+#### Healer → Leyweaver Rename + Aethermancer New Class
+- ✅ **`lib/game3d/data/abilities/leyweaver_abilities.dart`** (new): `LeyweaverAbilities` class, all 9 abilities with `category: 'leyweaver'`. Identical stat profile to old Healer; Blue mana / Holy damage school.
+- ✅ **`lib/game3d/data/abilities/aethermancer_abilities.dart`** (new): `AethermancerAbilities` class, 8 abilities. Primary mana: White; secondary: Blue. Abilities: Wind Mend, Ley Flow, Aether Circle, Zephyr Ward, Arcane Cleanse, Gale Fist, Ley Surge, Aether Surge (combo primer). Arcane + Holy damage schools.
+- ✅ **`lib/game3d/data/abilities/abilities.dart`**: Swapped `healer_abilities` import/export for `leyweaver_abilities` + `aethermancer_abilities`. Updated `AbilityRegistry.categories`, `getByCategory()`, `potentialAbilities`, and `categoryCounts`.
+- ✅ **`lib/game3d/data/duel/duel_definitions.dart`**: `'healer'` → `'leyweaver'` + added `'aethermancer'` in `challengerClasses`, `allCombatantTypes`, display names, ability factory, color factory, primary mana factory, secondary mana factory.
+- ✅ **`lib/game3d/systems/ability_system_implementations.dart`**: Updated section header + all `HealerAbilities.` → `LeyweaverAbilities.`.
+- ✅ **`lib/game3d/systems/melee_combo_system.dart`**: `case 'healer'` → `case 'leyweaver': case 'aethermancer':`.
+- ✅ **`lib/game3d/state/action_bar_config.dart`**: `HealerAbilities.all` → `LeyweaverAbilities.all` + `AethermancerAbilities.all`.
+- ✅ **`lib/game3d/state/abilities_config.dart`**: Updated legacy getters to `LeyweaverAbilities.*`.
+- ✅ **`lib/game3d/data/abilities/player_abilities.dart`**: Updated Heal ability `category: 'leyweaver'`.
+- ✅ **`lib/game3d/effects/aura_system.dart`**: `case 'healer'` → `case 'leyweaver': case 'aethermancer':`.
+- ✅ **`lib/game3d/ui/abilities_modal_cards.dart`**: Same case update.
+- ✅ **`lib/game3d/ui/ability_editor_panel_sections.dart`**: Added `'leyweaver'`, `'aethermancer'` to built-in categories list.
+- ✅ **`assets/data/combo_config.json`**: Renamed `"healer"` → `"leyweaver"`. Added `"aethermancer"` entry (heal combo, 18 HP / chain 55 HP + 8 HP/tick).
+- ✅ **`assets/data/source-tree.json`**: Updated file name reference.
+- ⚠️ **`lib/game3d/data/abilities/healer_abilities.dart`**: Old file left in place (no longer imported). Can be deleted once confirmed safe.
+- ✅ Build verified: `flutter analyze --no-pub` — 0 new errors.
+
+### ✅ Completed - 2026-02-28
+
+#### AI Settings Tab (Ollama)
+- ✅ **`lib/ai/ollama_client.dart`**: Changed `baseUrl` from `const` to mutable static. Added `loadSavedEndpoint()`, `saveEndpoint()` (both persist to SharedPreferences key `'ollama_endpoint'`), and `listModels()` (queries `/api/tags`, returns list of model name strings).
+- ✅ **`lib/game3d/ui/settings/ollama_tab.dart`** (new, 462 lines): Self-contained AI settings tab. Three sections: Connection (endpoint URL field + Test button + live status indicator), Model (text field + Fetch button + tap-to-select model list from server), Warrior Spirit (Temperature/Goal Interval/Max Goals sliders). Save Changes persists endpoint + all GoalsConfig overrides.
+- ✅ **`lib/game3d/ui/settings/settings_panel.dart`**: Imported `ollama_tab.dart`, added `_TabItem(id: 'ai', label: 'AI', icon: Icons.smart_toy_outlined)` between Interfaces and Source Code, added `case 'ai': return const OllamaTab()` in `_buildContent()`.
+- ✅ **`lib/game3d/game3d_widget_init.dart`**: `_initializeGoalsConfig()` now chains `OllamaClient.loadSavedEndpoint()` before `WarriorSpirit.init()` so the correct endpoint is active from first use.
+- ✅ Build verified: `flutter analyze --no-pub` — 0 errors, 0 warnings.
+
+#### Global Cooldown (GCD) — Action Bar Clock Animation
+- ✅ **`lib/game3d/state/game_state.dart`**: Added `activeGcdMax` getter alongside existing `activeGcdRemaining` — returns Warchief's or active ally's `gcdMax` for UI sweep math.
+- ✅ **`lib/game3d/ui/unit_frames/combat_hud.dart`**: Added `dart:math` import (shared with part files).
+- ✅ **`lib/game3d/ui/unit_frames/combat_hud_action_bar.dart`**: `_buildActionBar` now reads `gcdRemaining`/`gcdMax` from `gameState`. Each slot's displayed `cooldown = max(slotCd, gcdRemaining)` and `maxCooldown` picks GCD or slot max accordingly — so every ability button shows the clock sweep for the full 1 s GCD duration, then reverts to its own per-ability cooldown if longer.
+- ✅ Note: GCD triggering, blocking, and decrement were already implemented in `ability_system_dispatch.dart` and `ability_system_core.dart` — only the visual display was missing.
+- ✅ Build verified: `flutter analyze --no-pub` — 0 new errors.
+
 ### ✅ Completed - 2026-02-27
 
 #### Duel Arena — Banner Pole + Wind Flutter + Victory Flag

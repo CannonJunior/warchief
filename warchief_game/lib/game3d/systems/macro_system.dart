@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import '../state/game_state.dart';
 import '../state/macro_config.dart';
 import '../state/abilities_config.dart';
@@ -121,7 +122,7 @@ class MacroSystem {
       'Started rotation: ${macro.name}',
     );
 
-    print('[MacroSystem] Started macro "${macro.name}" on character $characterIndex');
+    debugPrint('[MacroSystem] Started macro "${macro.name}" on character $characterIndex');
   }
 
   /// Stop a macro for a specific character.
@@ -277,7 +278,7 @@ class MacroSystem {
     // Look up ability data
     final abilityData = AbilityRegistry.findByName(abilityName);
     if (abilityData == null) {
-      print('[MacroSystem] Unknown ability: $abilityName');
+      debugPrint('[MacroSystem] Unknown ability: $abilityName');
       return false;
     }
 
@@ -298,7 +299,7 @@ class MacroSystem {
         }
       }
       if (foundSlot == null) {
-        print('[MacroSystem] Ability "$abilityName" not on action bar');
+        debugPrint('[MacroSystem] Ability "$abilityName" not on action bar');
         return false;
       }
 
@@ -365,12 +366,12 @@ class MacroSystem {
       // Set cooldown
       ally.abilityCooldown = abilityData.cooldown;
 
-      print('[MacroSystem] Ally ${allyIndex + 1} casts ${abilityData.name}');
+      debugPrint('[MacroSystem] Ally ${allyIndex + 1} casts ${abilityData.name}');
       return true;
     }
 
     // Non-active Warchief: cannot execute full abilities
-    print('[MacroSystem] Cannot execute "$abilityName" — Warchief is not the active character');
+    debugPrint('[MacroSystem] Cannot execute "$abilityName" — Warchief is not the active character');
     return false;
   }
 
@@ -493,6 +494,6 @@ class MacroSystem {
       gs.raidChatMessages.removeAt(0);
     }
 
-    print('[RaidChat] [$sender] $text');
+    debugPrint('[RaidChat] [$sender] $text');
   }
 }

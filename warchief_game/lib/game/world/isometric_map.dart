@@ -1,7 +1,5 @@
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
-
 /// Simple isometric map renderer
 ///
 /// Creates a grid of isometric tiles for the game world.
@@ -126,7 +124,7 @@ class _IsometricTilePainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final strokePaint = Paint()
-      ..color = Colors.white.withOpacity(0.2)
+      ..color = Colors.white.withValues(alpha: 0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 

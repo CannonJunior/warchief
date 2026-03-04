@@ -77,9 +77,9 @@ class ItemConfig extends ChangeNotifier {
       final jsonString = await rootBundle.loadString(_assetPath);
       _defaults = jsonDecode(jsonString) as Map<String, dynamic>;
       notifyListeners();
-      print('[ItemConfig] Loaded defaults from $_assetPath');
+      debugPrint('[ItemConfig] Loaded defaults from $_assetPath');
     } catch (e) {
-      print('[ItemConfig] Failed to load defaults: $e (using hardcoded fallbacks)');
+      debugPrint('[ItemConfig] Failed to load defaults: $e (using hardcoded fallbacks)');
       _defaults = {};
     }
   }

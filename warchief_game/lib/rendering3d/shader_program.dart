@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:vector_math/vector_math.dart';
 
 /// ShaderProgram - Manages WebGL shader compilation and uniform setting
@@ -86,8 +87,8 @@ class ShaderProgram {
 
     if (gl.getShaderParameter(shader, 0x8B81) == 0) { // COMPILE_STATUS
       final error = gl.getShaderInfoLog(shader);
-      print('Shader compile error: $error');
-      print('Source:\n$source');
+      debugPrint('Shader compile error: $error');
+      debugPrint('Source:\n$source');
       gl.deleteShader(shader);
       return null;
     }

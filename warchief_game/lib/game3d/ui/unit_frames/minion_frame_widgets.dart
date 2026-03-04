@@ -258,7 +258,6 @@ extension _MinionFrameWidgets on MinionFrames {
         break;
       case MonsterAIState.idle:
       case MonsterAIState.patrol:
-      default:
         return const SizedBox(width: 14);
     }
 

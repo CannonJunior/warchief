@@ -12,7 +12,8 @@ import 'ui_config.dart';
 import '../data/abilities/ability_balance.dart';
 import '../state/ability_order_manager.dart';
 import '../state/game_state.dart';
-import '../data/stances/stances.dart' show StanceData, globalStanceOverrideManager;
+import '../state/scenario_config.dart';
+import '../data/stances/stances.dart' show StanceData;
 import 'stance_selector.dart';
 
 part 'abilities_modal_cards.dart';
@@ -69,11 +70,29 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
   late Set<AbilityType> _enabledTypes;
   bool _typeFilterExpanded = false;
 
+  /// Names that appear in any ability's comboPrimes — used to mark combo-target cards.
+  late Set<String> _comboTargetNames;
+
   @override
   void initState() {
     super.initState();
     _enabledCategories = _getAllCategories();
     _enabledTypes = Set<AbilityType>.from(AbilityType.values);
+    _comboTargetNames = _buildComboTargetNames();
+  }
+
+  /// Collect every ability name that appears in another ability's comboPrimes list.
+  Set<String> _buildComboTargetNames() {
+    final targets = <String>{};
+    for (final cat in AbilityRegistry.categories) {
+      for (final ability in AbilityRegistry.getByCategory(cat)) {
+        targets.addAll(ability.comboPrimes);
+      }
+    }
+    for (final ability in globalCustomAbilityManager?.getAll() ?? []) {
+      targets.addAll(ability.comboPrimes);
+    }
+    return targets;
   }
 
   /// Build all 8 resize handles (4 edges + 4 corners) for the panel.

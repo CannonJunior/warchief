@@ -4,7 +4,7 @@ import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'controllers/input_manager.dart';
-import 'controllers/camera_controller.dart';
+// TODO: camera_controller.dart was never created; this file is the old Flame prototype.
 import 'components/player_character.dart';
 import 'world/isometric_map.dart';
 import '../models/game_action.dart';
@@ -18,8 +18,8 @@ class WarchiefGame extends FlameGame
   /// Input manager for handling keyboard input
   late final InputManager inputManager;
 
-  /// Camera controller for managing camera movement and rotation
-  late final CameraController cameraController;
+  /// Camera controller (stub — Flame prototype, not in use)
+  late final dynamic cameraController;
 
   /// Player character
   late final PlayerCharacter player;
@@ -46,8 +46,8 @@ class WarchiefGame extends FlameGame
     // Initialize input manager
     inputManager = InputManager();
 
-    // Initialize camera controller with world reference for dual-axis rotation
-    cameraController = CameraController(camera: camera, world: world);
+    // TODO: CameraController stub — original file was never created (Flame prototype)
+    cameraController = null;
 
     // Create isometric map
     map = IsometricMap(

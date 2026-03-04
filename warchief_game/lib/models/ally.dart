@@ -8,6 +8,9 @@ import '../game3d/utils/bezier_path.dart';
 import '../game3d/ai/ally_strategy.dart';
 import '../game3d/data/abilities/ability_types.dart' show ManaColor;
 import '../game3d/data/stances/stance_types.dart' show StanceId;
+import '../game3d/rendering/equipment_visual.dart';
+import '../game3d/rendering/equipment_renderer.dart'
+    show EquipmentRenderer, EquipmentVisualConfig;
 
 /// Ally Movement Mode - Different ways an ally can move
 enum AllyMovementMode {
@@ -87,6 +90,9 @@ class Ally {
   Transform3d auraTransform = Transform3d();
   Vector3? lastAuraColor;
 
+  // Equipment visual meshes (helm, weapon, shield, cloak)
+  List<EquipmentVisual> equipVisuals = [];
+
   /// Whether this ally is a summoned unit (vs a permanent party member)
   bool isSummoned;
 
@@ -123,6 +129,11 @@ class Ally {
   /// Invalidate cached attunements (call on equip/unequip/buff change).
   void invalidateAttunementCache() {
     _cachedManaAttunements = null;
+  }
+
+  /// Rebuild 3D equipment visuals from current inventory.
+  void rebuildEquipmentVisuals(EquipmentVisualConfig config) {
+    equipVisuals = EquipmentRenderer.buildEquipmentVisuals(inventory, config);
   }
 
   /// Get the current strategy configuration

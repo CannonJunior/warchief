@@ -116,16 +116,6 @@ class TerrainChunk {
         break;
     }
 
-    // Create mesh from heightmap
-    final terrainData = TerrainGenerator.createHeightmapTerrain(
-      width: size,
-      height: size,
-      tileSize: tileSize,
-      maxHeight: maxHeight,
-      seed: seed,
-      terrainType: 'flat', // We already generated the heightmap above
-    );
-
     // Override the mesh's heightmap with our chunk-specific heightmap
     // (This ensures seamless edges between chunks)
     final mesh = _createMeshFromHeightmap(

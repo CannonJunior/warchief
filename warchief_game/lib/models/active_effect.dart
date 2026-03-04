@@ -105,6 +105,8 @@ class ActiveEffect {
       case StatusEffect.vulnerableArcane:
       case StatusEffect.vulnerableHoly:
         return Icons.shield_outlined;
+      case StatusEffect.interrupt:
+        return Icons.block;
       case StatusEffect.none:
         return Icons.circle;
     }
@@ -159,6 +161,8 @@ class ActiveEffect {
         return const Color(0xFFCC66FF);
       case StatusEffect.vulnerableHoly:
         return const Color(0xFFFFFF99);
+      case StatusEffect.interrupt:
+        return const Color(0xFFCC4444);
       case StatusEffect.none:
         return const Color(0xFF666666);
     }

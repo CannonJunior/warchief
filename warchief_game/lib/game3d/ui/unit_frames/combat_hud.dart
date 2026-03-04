@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../ability_button.dart';
 import '../mana_bar.dart';
@@ -7,7 +8,6 @@ import 'buff_debuff_icons.dart';
 import 'stance_icon_bar.dart';
 import '../../state/action_bar_config.dart';
 import '../../state/game_state.dart';
-import '../../data/abilities/ability_types.dart';
 import '../flight_buff_icon.dart';
 
 part 'combat_hud_action_bar.dart';
@@ -122,43 +122,53 @@ class CombatHUD extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Unit frames row (Player - VS - Target)
-        _buildUnitFramesRow(),
+        // Stances / buffs sit directly above the unit frames in their own row.
+        // Reason: separating "above-frame" items from the frames themselves
+        // ensures the unit frames always top-align with each other regardless
+        // of how many buffs or whether stances are shown on each side.
+        _buildAboveFrameRow(),
+        // Unit frames row — player frame tops always align with target frame tops
+        _buildFramesRow(),
         const SizedBox(height: 8),
-        // Action bar
         _buildActionBar(),
       ],
     );
   }
 
-  Widget _buildUnitFramesRow() {
+  /// Stances, flight icon, and buff/debuff rows that float above the unit frames.
+  ///
+  /// Items are bottom-aligned so they sit flush against the top of [_buildFramesRow].
+  /// A fixed-width gap (matching SizedBox+VSIndicator+SizedBox = 74px) keeps the
+  /// player side and target side horizontally aligned with their respective frames.
+  Widget _buildAboveFrameRow() {
+    if (gameState == null) return const SizedBox.shrink();
+
     return Row(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start, // Align at top
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // Player frame with buff/debuff icons ABOVE (prevents layout shift)
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Buff/debuff icons above the player frame so they don't shift the layout
-            if (gameState != null && gameState!.activeCharacterActiveEffects.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: BuffDebuffIcons(
-                  effects: gameState!.activeCharacterActiveEffects,
-                  maxWidth: 200,
+        // Player side: buffs → flight → stances (bottom-aligned against unit frame top)
+        SizedBox(
+          width: 200,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (gameState!.activeCharacterActiveEffects.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: BuffDebuffIcons(
+                    effects: gameState!.activeCharacterActiveEffects,
+                    maxWidth: 200,
+                  ),
                 ),
-              ),
-            // Flight buff icon (above player frame when flying)
-            if (gameState != null && gameState!.isFlying)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: FlightBuffIcon(gameState: gameState!),
-              ),
-            // Stance icon bar (above player health bar)
-            if (gameState != null)
+              if (gameState!.isFlying)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: FlightBuffIcon(gameState: gameState!),
+                ),
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: StanceIconBar(
@@ -166,7 +176,40 @@ class CombatHUD extends StatelessWidget {
                   onStateChanged: onStateChanged,
                 ),
               ),
-            // Player frame (portrait on left)
+            ],
+          ),
+        ),
+        // Gap matching the VS indicator + its flanking spacers (12 + 50 + 12 = 74)
+        if (hasTarget) const SizedBox(width: 74),
+        // Target side: buff/debuff icons only (bottom-aligned)
+        if (hasTarget)
+          SizedBox(
+            width: 200,
+            child: gameState!.currentTargetActiveEffects.isNotEmpty
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: BuffDebuffIcons(
+                      effects: gameState!.currentTargetActiveEffects,
+                      maxWidth: 200,
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+      ],
+    );
+  }
+
+  /// Player frame | VS | Target frame — unit frame tops always align.
+  Widget _buildFramesRow() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Player frame + mana bar
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             UnitFrame(
               name: playerName,
               health: playerHealth,
@@ -181,7 +224,6 @@ class CombatHUD extends StatelessWidget {
               powerColor: const Color(0xFF2196F3),
               width: 200,
             ),
-            // Mana bar below player frame (same width)
             if (gameState != null)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
@@ -193,64 +235,46 @@ class CombatHUD extends StatelessWidget {
               ),
           ],
         ),
-        const SizedBox(width: 12),
-        // VS indicator
+        if (hasTarget) const SizedBox(width: 12),
         if (hasTarget) const VSIndicator(inCombat: true),
         if (hasTarget) const SizedBox(width: 12),
-        // Target frame with buff/debuff icons ABOVE (prevents layout shift)
+        // Target frame + mana bar + target-of-target
         if (hasTarget)
           Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Buff/debuff icons above the target frame so they don't shift the layout
-              if (gameState != null && gameState!.currentTargetActiveEffects.isNotEmpty)
+              UnitFrame(
+                name: targetName ?? 'Unknown',
+                health: targetHealth,
+                maxHealth: targetMaxHealth,
+                isPlayer: false,
+                level: targetLevel,
+                portraitWidget: targetPortraitWidget,
+                borderColor: targetBorderColor,
+                healthColor: targetHealthColor,
+                width: 200,
+              ),
+              if (targetMaxMana > 0)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: BuffDebuffIcons(
-                    effects: gameState!.currentTargetActiveEffects,
-                    maxWidth: 200,
+                  padding: const EdgeInsets.only(top: 4),
+                  child: _buildTargetManaBar(),
+                ),
+              if (totName != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: UnitFrame(
+                    name: totName!,
+                    health: totHealth,
+                    maxHealth: totMaxHealth,
+                    isPlayer: false,
+                    level: totLevel,
+                    portraitWidget: totPortraitWidget,
+                    borderColor: totBorderColor,
+                    healthColor: totHealthColor,
+                    width: 133,
                   ),
                 ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  UnitFrame(
-                    name: targetName ?? 'Unknown',
-                    health: targetHealth,
-                    maxHealth: targetMaxHealth,
-                    isPlayer: false,
-                    level: targetLevel,
-                    portraitWidget: targetPortraitWidget,
-                    borderColor: targetBorderColor,
-                    healthColor: targetHealthColor,
-                    width: 200,
-                  ),
-                  // Target mana bar below target frame (same width as player's)
-                  if (targetMaxMana > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: _buildTargetManaBar(),
-                    ),
-                  // Target of Target (33% smaller unit frame)
-                  if (totName != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: UnitFrame(
-                        name: totName!,
-                        health: totHealth,
-                        maxHealth: totMaxHealth,
-                        isPlayer: false,
-                        level: totLevel,
-                        portraitWidget: totPortraitWidget,
-                        borderColor: totBorderColor,
-                        healthColor: totHealthColor,
-                        width: 133,
-                      ),
-                    ),
-                ],
-              ),
             ],
           ),
       ],

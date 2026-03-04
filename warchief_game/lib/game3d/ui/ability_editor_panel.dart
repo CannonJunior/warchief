@@ -3,6 +3,7 @@ import 'package:vector_math/vector_math.dart' hide Colors;
 
 import '../data/abilities/ability_types.dart';
 import '../data/abilities/ability_balance.dart';
+import '../data/abilities/abilities.dart' show AbilityRegistry;
 import '../state/ability_override_manager.dart';
 import '../state/custom_options_manager.dart';
 import '../state/custom_ability_manager.dart';
@@ -51,6 +52,7 @@ const Map<String, String> _tooltips = {
   'piercing': 'Whether the projectile passes through targets.',
   'stationary': 'Must stand still to cast. Movement cancels the cast.',
   'channelEffect': 'Visual effect displayed while channeling this ability.',
+  'comboPrimes': 'Abilities whose GCD is reduced by 0.5s when this ability fires.',
 };
 
 /// Side-panel editor for modifying ability stats
@@ -122,6 +124,10 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
   late bool _piercing;
   late bool _requiresStationary;
   late String _selectedChannelEffect;
+  late List<String> _comboPrimes;
+  /// Sorted list of all known ability names, excluding the ability being edited.
+  /// Computed once per ability load — abilities don't change while the editor is open.
+  late List<String> _allAbilityNames;
 
   // Reason: aliases to top-level constants for backward-compat within this file
   static const _bg = _editorBg;
@@ -189,6 +195,18 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
     _piercing = effective.piercing;
     _requiresStationary = effective.requiresStationary;
     _selectedChannelEffect = effective.channelEffect.name;
+    _comboPrimes = List<String>.from(effective.comboPrimes);
+    // Reason: only show abilities from the same class so combo primes stay coherent.
+    // Sorting done once here rather than on every build of the combo section.
+    final cat = effective.category;
+    final builtIn = AbilityRegistry.getByCategory(cat).map((a) => a.name);
+    final custom  = (globalCustomAbilityManager?.getAll() ?? [])
+        .where((a) => a.category == cat)
+        .map((a) => a.name);
+    _allAbilityNames = {...builtIn, ...custom}
+        .where((n) => n != effective.name)
+        .toList()
+      ..sort();
 
     // Attach listeners to balance-relevant fields for live preview updates
     for (final ctrl in _balanceRelevantControllers) {
@@ -348,7 +366,20 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
       overrides['channelEffect'] = chEnum.first.index;
     }
 
+    // Combo primes: store if different from the original's list
+    if (!_listsEqual(_comboPrimes, original.comboPrimes)) {
+      overrides['comboPrimes'] = List<String>.from(_comboPrimes);
+    }
+
     return overrides;
+  }
+
+  bool _listsEqual(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 
   void _onSave() {
@@ -357,7 +388,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
     } else {
       final overrides = _buildOverrideMap();
       globalAbilityOverrideManager?.setOverrides(widget.ability.name, overrides);
-      print('[Editor] Saved ${overrides.length} overrides for ${widget.ability.name}');
+      debugPrint('[Editor] Saved ${overrides.length} overrides for ${widget.ability.name}');
       widget.onSaved();
     }
   }
@@ -365,7 +396,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
   void _onSaveNewAbility() {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      print('[Editor] Cannot save: name is empty');
+      debugPrint('[Editor] Cannot save: name is empty');
       return;
     }
     // Build a full AbilityData from current field values
@@ -410,13 +441,14 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
       requiresStationary: _requiresStationary,
       piercing: _piercing,
       channelEffect: ChannelEffect.values.firstWhere((c) => c.name == _selectedChannelEffect, orElse: () => ChannelEffect.none),
+      comboPrimes: List<String>.from(_comboPrimes),
     );
     globalCustomAbilityManager?.saveAbility(ability);
     // Save effect description if provided
     if (_effectDescCtrl.text.isNotEmpty) {
       globalAbilityOverrideManager?.setOverrides(name, {'effectDescription': _effectDescCtrl.text});
     }
-    print('[Editor] Created new custom ability: $name');
+    debugPrint('[Editor] Created new custom ability: $name');
     widget.onSaved();
   }
 
@@ -428,7 +460,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
     }
     globalAbilityOverrideManager?.clearOverrides(widget.ability.name);
     setState(() => _populateFromAbility(widget.ability));
-    print('[Editor] Restored defaults for ${widget.ability.name}');
+    debugPrint('[Editor] Restored defaults for ${widget.ability.name}');
     widget.onSaved();
   }
 
@@ -464,6 +496,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
                   _buildStatusEffectSection(),
                   _buildAoeTargetingSection(),
                   _buildMechanicsSection(),
+                  _buildComboSection(),
                 ],
               ),
             ),

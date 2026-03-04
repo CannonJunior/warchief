@@ -91,7 +91,8 @@ class ActionBarConfig extends ChangeNotifier {
       ...SpiritkinAbilities.all,
       ...StormheartAbilities.all,
       ...GreenseerAbilities.all,
-      ...HealerAbilities.all,
+      ...LeyweaverAbilities.all,
+      ...AethermancerAbilities.all,
       ...NatureAbilities.all,
     ];
 
@@ -116,7 +117,7 @@ class ActionBarConfig extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_slotAssignments));
     } catch (e) {
-      print('[ActionBarConfig] Failed to save ($_storageKey): $e');
+      debugPrint('[ActionBarConfig] Failed to save ($_storageKey): $e');
     }
   }
 
@@ -136,7 +137,7 @@ class ActionBarConfig extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('[ActionBarConfig] Failed to load ($_storageKey): $e');
+      debugPrint('[ActionBarConfig] Failed to load ($_storageKey): $e');
     }
   }
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'dart:math' as math;
 import 'package:vector_math/vector_math.dart' hide Colors;
 import '../../rendering3d/mesh.dart';
@@ -68,7 +69,7 @@ class WindParticleSystem {
       ));
     }
     _initialized = true;
-    print('[WindParticles] Initialized with $_normalCount normal / '
+    debugPrint('[WindParticles] Initialized with $_normalCount normal / '
         '$_maxPoolSize max (derecho) particles');
   }
 

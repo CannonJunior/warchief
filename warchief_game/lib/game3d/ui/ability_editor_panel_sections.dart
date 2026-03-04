@@ -173,7 +173,7 @@ extension _AbilityEditorPanelSections on _AbilityEditorPanelState {
 
   Widget _buildIdentitySection() {
     final builtInCategories = [
-      'general', 'warrior', 'mage', 'rogue', 'healer',
+      'general', 'warrior', 'mage', 'rogue', 'leyweaver', 'aethermancer',
       'nature', 'necromancer', 'elemental', 'utility',
     ];
     final customCategories = globalCustomOptionsManager?.getCustomValues('category') ?? [];
@@ -294,6 +294,83 @@ extension _AbilityEditorPanelSections on _AbilityEditorPanelState {
         selectedValue: _selectedChannelEffect,
         onChanged: (v) => setState(() => _selectedChannelEffect = v),
       ),
+    ]);
+  }
+
+  // ==================== COMBO PRIMES ====================
+
+  /// Section for configuring which abilities receive a 0.5s GCD reduction
+  /// when this ability fires (the "combo window" primes).
+  Widget _buildComboSection() {
+    // _allAbilityNames is pre-computed once in _populateFromAbility; no sort here.
+    final available = _allAbilityNames.where((n) => !_comboPrimes.contains(n)).toList();
+
+    return _buildSection('COMBO PRIMES', const Color(0xFFFFAA00), [
+      // Description
+      const Padding(
+        padding: EdgeInsets.only(bottom: 6),
+        child: Text(
+          'When this ability fires, the listed abilities have their GCD '
+          'reduced by 0.5s and their clock turns yellow.',
+          style: TextStyle(color: Colors.white54, fontSize: 9),
+        ),
+      ),
+      // Currently primed abilities — chips with remove button
+      if (_comboPrimes.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: _comboPrimes.map((name) => GestureDetector(
+              onTap: () => setState(() => _comboPrimes.remove(name)),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0x33FFAA00),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFFAA00), width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(name, style: const TextStyle(color: Color(0xFFFFAA00), fontSize: 9)),
+                    const SizedBox(width: 3),
+                    const Icon(Icons.close, size: 10, color: Color(0xFFFFAA00)),
+                  ],
+                ),
+              ),
+            )).toList(),
+          ),
+        ),
+      // Dropdown to add a primed ability
+      if (available.isNotEmpty)
+        SizedBox(
+          height: 28,
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              value: null,
+              style: const TextStyle(color: Colors.white, fontSize: 10),
+              dropdownColor: const Color(0xFF1a1a2e),
+              hint: const Text('Add ability to combo…', style: TextStyle(color: Colors.white38, fontSize: 10)),
+              items: available.map((n) => DropdownMenuItem(
+                value: n,
+                child: Text(n, style: const TextStyle(fontSize: 10, color: Colors.white)),
+              )).toList(),
+              onChanged: (v) {
+                if (v != null && !_comboPrimes.contains(v)) {
+                  setState(() => _comboPrimes.add(v));
+                }
+              },
+            ),
+          ),
+        )
+      else
+        const Text(
+          'All known abilities already listed.',
+          style: TextStyle(color: Colors.white38, fontSize: 9),
+        ),
     ]);
   }
 }

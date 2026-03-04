@@ -1,8 +1,5 @@
 import 'package:vector_math/vector_math.dart';
 import 'dart:math' as math;
-import '../state/game_state.dart';
-import '../state/game_config.dart';
-import '../utils/movement_prediction.dart';
 import '../utils/bezier_path.dart';
 
 /// MCP Tool Response - Result from an MCP tool execution
@@ -201,7 +198,7 @@ class MCPTools {
   /// Analyze positioning opportunities
   static MCPToolResponse analyzepositioning(AIContext context) {
     // Check ally positioning for flanking opportunities
-    if (context.allies.length > 0) {
+    if (context.allies.isNotEmpty) {
       final closestAlly = context.allies.reduce((a, b) =>
         a.distanceToSelf < b.distanceToSelf ? a : b
       );

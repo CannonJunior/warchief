@@ -92,6 +92,10 @@ class InterfaceConfigManager {
   /// Callback when configuration changes
   final void Function()? onConfigChanged;
 
+  /// Whether panel positions are locked (prevents dragging).
+  /// Defaults to false — panels are freely draggable.
+  bool interfacesLocked = false;
+
   InterfaceConfigManager({this.onConfigChanged}) {
     _initializeDefaults();
   }
@@ -374,10 +378,10 @@ class InterfaceConfigManager {
       final configList = _interfaces.values.map((i) => i.toJson()).toList();
       final jsonString = jsonEncode(configList);
       await prefs.setString(_storageKey, jsonString);
-      print('[InterfaceConfig] Saved configuration');
+      debugPrint('[InterfaceConfig] Saved configuration');
       return true;
     } catch (e) {
-      print('[InterfaceConfig] Error saving: $e');
+      debugPrint('[InterfaceConfig] Error saving: $e');
       return false;
     }
   }
@@ -389,7 +393,7 @@ class InterfaceConfigManager {
       final jsonString = prefs.getString(_storageKey);
 
       if (jsonString == null || jsonString.isEmpty) {
-        print('[InterfaceConfig] No saved configuration found, using defaults');
+        debugPrint('[InterfaceConfig] No saved configuration found, using defaults');
         return false;
       }
 
@@ -403,11 +407,11 @@ class InterfaceConfigManager {
         }
       }
 
-      print('[InterfaceConfig] Loaded configuration');
+      debugPrint('[InterfaceConfig] Loaded configuration');
       onConfigChanged?.call();
       return true;
     } catch (e) {
-      print('[InterfaceConfig] Error loading: $e');
+      debugPrint('[InterfaceConfig] Error loading: $e');
       return false;
     }
   }

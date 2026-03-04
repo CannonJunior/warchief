@@ -32,7 +32,7 @@ class _AllyActions {
       );
 
       if (hit) {
-        print('[BT] Ally sword hit monster for ${ability.damage} damage!');
+        debugPrint('[BT] Ally sword hit monster for ${ability.damage} damage!');
       }
     }
     return NodeStatus.success;
@@ -83,7 +83,7 @@ class _AllyActions {
           velocity: direction * ability.projectileSpeed,
         ),
       );
-      print('[BT] Ally casts ${ability.name}!');
+      debugPrint('[BT] Ally casts ${ability.name}!');
     }
     return NodeStatus.success;
   }
@@ -97,7 +97,7 @@ class _AllyActions {
     ctx.ally.health = math.min(ctx.ally.maxHealth, ctx.ally.health + ability.healAmount);
     final healedAmount = ctx.ally.health - oldHealth;
 
-    print('[BT] Ally heals for ${healedAmount.toStringAsFixed(1)} HP '
+    debugPrint('[BT] Ally heals for ${healedAmount.toStringAsFixed(1)} HP '
         '(${ctx.ally.health.toStringAsFixed(0)}/${ctx.ally.maxHealth})');
     return NodeStatus.success;
   }
@@ -175,9 +175,34 @@ class _AllyActions {
     return NodeStatus.running;
   }
 
-  /// Check if ally should retreat based on strategy
-  static bool shouldRetreat(AllyBehaviorContext ctx) {
-    if (ctx.strategy.retreatThreshold == 0) return false;
-    return ctx.healthPercent <= ctx.strategy.retreatThreshold;
+  /// Move directly away from the monster until the ally reaches preferred range.
+  ///
+  /// Reason: ranged allies must escape melee range to fire; a straight retreat
+  /// (not a Bezier arc) gives the fastest separation against a charging enemy.
+  static NodeStatus executeKiteFromMonster(AllyBehaviorContext ctx) {
+    if (ctx.gameState.monsterTransform == null) return NodeStatus.failure;
+
+    final allyPos    = ctx.ally.transform.position;
+    final monsterPos = ctx.gameState.monsterTransform!.position;
+
+    // Direction directly away from monster.
+    final away = (allyPos - monsterPos);
+    if (away.length < 0.01) return NodeStatus.failure; // degenerate — identical positions
+    final awayNorm = away.normalized();
+
+    // Target: preferred range + 1 unit beyond it so the ally won't immediately re-kite.
+    final kiteTarget = allyPos + awayNorm * (ctx.strategy.preferredRange + 1.0);
+    final targetPos  = TacticalPositioning.applyTerrainHeight(ctx.gameState, kiteTarget);
+
+    ctx.ally.currentPath = BezierPath.interception(
+      start: allyPos,
+      target: targetPos,
+      velocity: null,
+    );
+    ctx.ally.movementMode = AllyMovementMode.tactical;
+    ctx.ally.isMoving     = true;
+
+    return NodeStatus.running;
   }
+
 }

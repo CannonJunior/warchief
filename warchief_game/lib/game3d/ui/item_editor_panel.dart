@@ -223,7 +223,7 @@ class _ItemEditorPanelState extends State<ItemEditorPanel> {
   void _onCreate() {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      print('[ItemEditor] Cannot create: name is empty');
+      debugPrint('[ItemEditor] Cannot create: name is empty');
       return;
     }
 
@@ -254,13 +254,13 @@ class _ItemEditorPanelState extends State<ItemEditorPanel> {
 
     globalCustomItemManager?.saveItem(item);
     widget.onItemCreated(item);
-    print('[ItemEditor] Created new item: $name ($id)');
+    debugPrint('[ItemEditor] Created new item: $name ($id)');
   }
 
   void _onSave() {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      print('[ItemEditor] Cannot save: name is empty');
+      debugPrint('[ItemEditor] Cannot save: name is empty');
       return;
     }
 
@@ -291,7 +291,7 @@ class _ItemEditorPanelState extends State<ItemEditorPanel> {
 
     globalCustomItemManager?.saveItem(item);
     widget.onItemSaved?.call(widget.existingItemIndex!, item);
-    print('[ItemEditor] Saved item: $name (${item.id})');
+    debugPrint('[ItemEditor] Saved item: $name (${item.id})');
   }
 
   void _onRevert() {

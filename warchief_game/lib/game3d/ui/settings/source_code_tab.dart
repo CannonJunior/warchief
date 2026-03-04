@@ -218,30 +218,3 @@ class _SourceCodeTabState extends State<SourceCodeTab> {
   }
 }
 
-/// Color for file extensions
-Color _getExtensionColor(String? extension) {
-  switch (extension) {
-    case '.dart':
-      return const Color(0xFF00B4AB);
-    case '.py':
-      return const Color(0xFF3776AB);
-    case '.js':
-    case '.ts':
-      return const Color(0xFFF7DF1E);
-    case '.html':
-      return const Color(0xFFE34F26);
-    case '.css':
-    case '.scss':
-      return const Color(0xFF1572B6);
-    case '.json':
-    case '.yaml':
-    case '.yml':
-      return const Color(0xFFA0A0B0);
-    case '.md':
-      return const Color(0xFF083FA1);
-    case '.sh':
-      return const Color(0xFF4EAA25);
-    default:
-      return Colors.white70;
-  }
-}

@@ -229,7 +229,7 @@ extension GameStateManaExt on GameState {
       if (sovereignBuffTimer <= 0) {
         sovereignBuffActive = false;
         sovereignBuffTimer = 0.0;
-        print('[FLIGHT] Sovereign of the Sky buff expired');
+        debugPrint('[FLIGHT] Sovereign of the Sky buff expired');
       }
     }
 
@@ -239,7 +239,7 @@ extension GameStateManaExt on GameState {
       if (windAffinityTimer <= 0) {
         windAffinityActive = false;
         windAffinityTimer = 0.0;
-        print('[WIND] Wind Affinity buff expired');
+        debugPrint('[WIND] Wind Affinity buff expired');
       }
     }
 
@@ -249,7 +249,7 @@ extension GameStateManaExt on GameState {
       if (windWarpSpeedTimer <= 0) {
         windWarpSpeedActive = false;
         windWarpSpeedTimer = 0.0;
-        print('[WIND] Wind Warp speed buff expired');
+        debugPrint('[WIND] Wind Warp speed buff expired');
       }
     }
   }

@@ -122,6 +122,7 @@ double _statusEffectValue(StatusEffect effect) => switch (effect) {
   StatusEffect.vulnerableShadow     => 0.05,
   StatusEffect.vulnerableArcane     => 0.05,
   StatusEffect.vulnerableHoly       => 0.05,
+  StatusEffect.interrupt             => 0.2,
 };
 
 /// Returns a color for the given balance score.

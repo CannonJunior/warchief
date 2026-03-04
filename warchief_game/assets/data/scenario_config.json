@@ -1,4 +1,5 @@
 {
+  "terrain_preset": "rolling_hills",
   "initial_ally_count": 0,
   "spawn_boss_monster": true,
   "spawn_warchief_home": true,

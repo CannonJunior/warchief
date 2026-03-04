@@ -93,23 +93,23 @@ void _spendManaByType(GameState gameState, _ManaType type, double cost, String a
   switch (type) {
     case _ManaType.blue:
       gameState.activeSpendBlueMana(cost);
-      print('[MANA] Spent $cost blue mana for $abilityName');
+      debugPrint('[MANA] Spent $cost blue mana for $abilityName');
       break;
     case _ManaType.red:
       gameState.activeSpendRedMana(cost);
-      print('[MANA] Spent $cost red mana for $abilityName');
+      debugPrint('[MANA] Spent $cost red mana for $abilityName');
       break;
     case _ManaType.white:
       gameState.activeSpendWhiteMana(cost);
-      print('[MANA] Spent $cost white mana for $abilityName');
+      debugPrint('[MANA] Spent $cost white mana for $abilityName');
       break;
     case _ManaType.green:
       gameState.activeSpendGreenMana(cost);
-      print('[MANA] Spent $cost green mana for $abilityName');
+      debugPrint('[MANA] Spent $cost green mana for $abilityName');
       break;
     case _ManaType.black:
       gameState.activeSpendBlackMana(cost);
-      print('[MANA] Spent $cost black mana for $abilityName');
+      debugPrint('[MANA] Spent $cost black mana for $abilityName');
       break;
     case _ManaType.none:
       break;
@@ -124,7 +124,7 @@ void _spendPendingMana(GameState gameState, String abilityName) {
     if (stance.usesHpForMana) {
       final hpCost = cost * stance.hpForManaRatio;
       gameState.activeHealth = (gameState.activeHealth - hpCost).clamp(1.0, gameState.activeMaxHealth);
-      print('[BLOOD WEAVE] $abilityName spent ${hpCost.toStringAsFixed(1)} HP instead of mana');
+      debugPrint('[BLOOD WEAVE] $abilityName spent ${hpCost.toStringAsFixed(1)} HP instead of mana');
       gameState.pendingManaCost = 0.0;
       _pendingSecondaryManaCost = 0.0;
       return;
@@ -133,23 +133,23 @@ void _spendPendingMana(GameState gameState, String abilityName) {
     switch (gameState.pendingManaType) {
       case 4:
         gameState.activeSpendBlackMana(cost);
-        print('[MANA] Spent $cost black mana for $abilityName');
+        debugPrint('[MANA] Spent $cost black mana for $abilityName');
         break;
       case 3:
         gameState.activeSpendGreenMana(cost);
-        print('[MANA] Spent $cost green mana for $abilityName');
+        debugPrint('[MANA] Spent $cost green mana for $abilityName');
         break;
       case 2:
         gameState.activeSpendWhiteMana(cost);
-        print('[MANA] Spent $cost white mana for $abilityName');
+        debugPrint('[MANA] Spent $cost white mana for $abilityName');
         break;
       case 1:
         gameState.activeSpendRedMana(cost);
-        print('[MANA] Spent $cost red mana for $abilityName');
+        debugPrint('[MANA] Spent $cost red mana for $abilityName');
         break;
       default:
         gameState.activeSpendBlueMana(cost);
-        print('[MANA] Spent $cost blue mana for $abilityName');
+        debugPrint('[MANA] Spent $cost blue mana for $abilityName');
         break;
     }
     gameState.pendingManaCost = 0.0;
@@ -160,23 +160,23 @@ void _spendPendingMana(GameState gameState, String abilityName) {
     switch (_pendingSecondaryManaType) {
       case 4:
         gameState.activeSpendBlackMana(secondaryCost);
-        print('[MANA] Spent $secondaryCost black mana (secondary) for $abilityName');
+        debugPrint('[MANA] Spent $secondaryCost black mana (secondary) for $abilityName');
         break;
       case 3:
         gameState.activeSpendGreenMana(secondaryCost);
-        print('[MANA] Spent $secondaryCost green mana (secondary) for $abilityName');
+        debugPrint('[MANA] Spent $secondaryCost green mana (secondary) for $abilityName');
         break;
       case 2:
         gameState.activeSpendWhiteMana(secondaryCost);
-        print('[MANA] Spent $secondaryCost white mana (secondary) for $abilityName');
+        debugPrint('[MANA] Spent $secondaryCost white mana (secondary) for $abilityName');
         break;
       case 1:
         gameState.activeSpendRedMana(secondaryCost);
-        print('[MANA] Spent $secondaryCost red mana (secondary) for $abilityName');
+        debugPrint('[MANA] Spent $secondaryCost red mana (secondary) for $abilityName');
         break;
       default:
         gameState.activeSpendBlueMana(secondaryCost);
-        print('[MANA] Spent $secondaryCost blue mana (secondary) for $abilityName');
+        debugPrint('[MANA] Spent $secondaryCost blue mana (secondary) for $abilityName');
         break;
     }
     _pendingSecondaryManaCost = 0.0;
@@ -257,14 +257,3 @@ double _getAbilityCooldown(String abilityName) {
   }
 }
 
-/// Legacy helper — returns blue mana cost only.
-double _getManaCost(String abilityName) {
-  final (cost, type) = _getManaCostAndType(abilityName);
-  return type == _ManaType.blue ? cost : 0.0;
-}
-
-/// Legacy helper — returns red mana cost only.
-double _getRedManaCost(String abilityName) {
-  final (cost, type) = _getManaCostAndType(abilityName);
-  return type == _ManaType.red ? cost : 0.0;
-}

@@ -7,7 +7,7 @@ extension GameStateStanceExt on GameState {
   /// Respects switch cooldown (cannot switch during cooldown).
   void switchStance(StanceId newStance) {
     if (stanceSwitchCooldown > 0) {
-      print('[STANCE] Cannot switch yet — ${stanceSwitchCooldown.toStringAsFixed(1)}s remaining');
+      debugPrint('[STANCE] Cannot switch yet — ${stanceSwitchCooldown.toStringAsFixed(1)}s remaining');
       return;
     }
 
@@ -49,7 +49,7 @@ extension GameStateStanceExt on GameState {
     // Console log
     addConsoleLog('Stance switched to ${activeStance.name}');
 
-    print('[STANCE] Switched to ${activeStance.name}');
+    debugPrint('[STANCE] Switched to ${activeStance.name}');
     saveStanceConfig();
   }
 
@@ -171,7 +171,7 @@ extension GameStateStanceExt on GameState {
         activeAlly!.whiteMana = (activeAlly!.whiteMana + manaAmount).clamp(0.0, activeAlly!.maxWhiteMana);
       }
     }
-    print('[TIDE] Converted damage to ${manaAmount.toStringAsFixed(1)} mana');
+    debugPrint('[TIDE] Converted damage to ${manaAmount.toStringAsFixed(1)} mana');
   }
 
   /// Save current stance selections to SharedPreferences.
@@ -183,7 +183,7 @@ extension GameStateStanceExt on GameState {
         await prefs.setString('stance_ally_$i', allies[i].currentStance.name);
       }
     } catch (e) {
-      print('[STANCE] Failed to save stance config: $e');
+      debugPrint('[STANCE] Failed to save stance config: $e');
     }
   }
 
@@ -212,7 +212,7 @@ extension GameStateStanceExt on GameState {
         }
       }
     } catch (e) {
-      print('[STANCE] Failed to load stance config: $e');
+      debugPrint('[STANCE] Failed to load stance config: $e');
       // Still apply default on failure
       playerStance = fallback;
       for (final ally in allies) {
@@ -355,7 +355,7 @@ extension GameStateStanceExt on GameState {
   /// Cancel any active cast (called when player moves during stationary cast)
   void cancelCast() {
     if (isCasting) {
-      print('[CAST] $castingAbilityName cast cancelled — mana and cooldown preserved');
+      debugPrint('[CAST] $castingAbilityName cast cancelled — mana and cooldown preserved');
       isCasting = false;
       castProgress = 0.0;
       currentCastTime = 0.0;
@@ -368,7 +368,7 @@ extension GameStateStanceExt on GameState {
   /// Cancel any active windup
   void cancelWindup() {
     if (isWindingUp) {
-      print('[WINDUP] $windupAbilityName windup cancelled — mana and cooldown preserved');
+      debugPrint('[WINDUP] $windupAbilityName windup cancelled — mana and cooldown preserved');
       isWindingUp = false;
       windupProgress = 0.0;
       currentWindupTime = 0.0;
@@ -382,7 +382,7 @@ extension GameStateStanceExt on GameState {
   /// Cancel any active channel
   void cancelChannel() {
     if (isChanneling) {
-      print('[CHANNEL] $channelingAbilityName channel cancelled');
+      debugPrint('[CHANNEL] $channelingAbilityName channel cancelled');
       isChanneling = false;
       channelProgress = 0.0;
       channelDuration = 0.0;
@@ -390,5 +390,19 @@ extension GameStateStanceExt on GameState {
       channelingAbilityName = '';
       channelAoeCenter = null;
     }
+  }
+
+  /// Dismiss the active spirit animal and clear the spirit bond.
+  ///
+  /// Safe to call even if no spirit is active. Used by the combat system
+  /// when the wolf dies and by the mana drain tick when green mana runs out.
+  void dismissSpiritAnimal() {
+    if (!isSpiritChanneling) return;
+    isSpiritChanneling = false;
+    // Reason: remove by sentinel name + isSummoned rather than storing an ID,
+    // keeping the Ally model free of spirit-specific fields.
+    allies.removeWhere((ally) => ally.isSummoned && ally.name == 'Spirit Wolf');
+    addConsoleLog('Spirit Wolf dismissed — spirit bond broken');
+    debugPrint('[SPIRIT] Spirit wolf dismissed');
   }
 }

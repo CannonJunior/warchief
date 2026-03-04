@@ -72,9 +72,9 @@ class BuildingConfig extends ChangeNotifier {
     try {
       final jsonString = await rootBundle.loadString(_assetPath);
       _defaults = jsonDecode(jsonString) as Map<String, dynamic>;
-      print('[BuildingConfig] Loaded defaults from $_assetPath');
+      debugPrint('[BuildingConfig] Loaded defaults from $_assetPath');
     } catch (e) {
-      print(
+      debugPrint(
           '[BuildingConfig] Failed to load defaults: $e (using hardcoded fallbacks)');
       _defaults = {};
     }
@@ -90,10 +90,10 @@ class BuildingConfig extends ChangeNotifier {
           jsonDecode(json) as Map<String, dynamic>,
         );
         notifyListeners();
-        print('[BuildingConfig] Loaded ${_overrides.length} overrides');
+        debugPrint('[BuildingConfig] Loaded ${_overrides.length} overrides');
       }
     } catch (e) {
-      print('[BuildingConfig] Failed to load overrides: $e');
+      debugPrint('[BuildingConfig] Failed to load overrides: $e');
     }
   }
 
@@ -103,7 +103,7 @@ class BuildingConfig extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_overrides));
     } catch (e) {
-      print('[BuildingConfig] Failed to save overrides: $e');
+      debugPrint('[BuildingConfig] Failed to save overrides: $e');
     }
   }
 

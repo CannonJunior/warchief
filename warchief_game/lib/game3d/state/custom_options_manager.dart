@@ -37,7 +37,7 @@ class CustomOptionsManager extends ChangeNotifier {
       _customOptions[dropdownKey] = list;
       notifyListeners();
       _saveOptions();
-      print('[CustomOptions] Added "$value" to $dropdownKey');
+      debugPrint('[CustomOptions] Added "$value" to $dropdownKey');
     }
   }
 
@@ -79,10 +79,10 @@ class CustomOptionsManager extends ChangeNotifier {
         _customOptions = decoded.map((key, value) =>
             MapEntry(key, List<String>.from(value as List)));
         notifyListeners();
-        print('[CustomOptions] Loaded custom options');
+        debugPrint('[CustomOptions] Loaded custom options');
       }
     } catch (e) {
-      print('[CustomOptions] Failed to load: $e');
+      debugPrint('[CustomOptions] Failed to load: $e');
     }
   }
 
@@ -92,9 +92,9 @@ class CustomOptionsManager extends ChangeNotifier {
       final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
       _effectDescriptions = decoded.map((key, value) =>
           MapEntry(key, value as String));
-      print('[CustomOptions] Loaded ${_effectDescriptions.length} effect descriptions');
+      debugPrint('[CustomOptions] Loaded ${_effectDescriptions.length} effect descriptions');
     } catch (e) {
-      print('[CustomOptions] Failed to load effect descriptions: $e');
+      debugPrint('[CustomOptions] Failed to load effect descriptions: $e');
     }
   }
 
@@ -103,7 +103,7 @@ class CustomOptionsManager extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_customOptions));
     } catch (e) {
-      print('[CustomOptions] Failed to save: $e');
+      debugPrint('[CustomOptions] Failed to save: $e');
     }
   }
 

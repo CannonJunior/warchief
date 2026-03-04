@@ -72,10 +72,10 @@ class StanceOverrideManager extends ChangeNotifier {
         _overrides = decoded.map((key, value) =>
             MapEntry(key, Map<String, dynamic>.from(value as Map)));
         notifyListeners();
-        print('[StanceOverrides] Loaded ${_overrides.length} stance overrides');
+        debugPrint('[StanceOverrides] Loaded ${_overrides.length} stance overrides');
       }
     } catch (e) {
-      print('[StanceOverrides] Failed to load: $e');
+      debugPrint('[StanceOverrides] Failed to load: $e');
     }
   }
 
@@ -85,7 +85,7 @@ class StanceOverrideManager extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_overrides));
     } catch (e) {
-      print('[StanceOverrides] Failed to save: $e');
+      debugPrint('[StanceOverrides] Failed to save: $e');
     }
   }
 }

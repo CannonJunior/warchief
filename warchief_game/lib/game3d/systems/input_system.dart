@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:vector_math/vector_math.dart';
 import 'dart:math' as math;
 
@@ -85,7 +86,7 @@ class InputSystem {
     final cameraTogglePressed = inputManager.isActionPressed(GameAction.cameraToggleMode);
     if (cameraTogglePressed && !_previousCameraToggleState) {
       camera.toggleMode();
-      print('Camera mode toggled to: ${camera.mode}');
+      debugPrint('Camera mode toggled to: ${camera.mode}');
     }
     _previousCameraToggleState = cameraTogglePressed;
 

@@ -1,5 +1,4 @@
 import 'package:vector_math/vector_math.dart';
-import 'dart:math' as math;
 
 /// Movement Prediction - Predicts future positions of moving entities
 ///
@@ -15,9 +14,6 @@ class MovementPredictor {
   /// Timestamps for position history
   final List<double> _timestamps = [];
 
-  /// Current game time
-  double _currentTime = 0.0;
-
   /// Add a new position to the history
   ///
   /// Parameters:
@@ -26,7 +22,6 @@ class MovementPredictor {
   void update(Vector3 position, double time) {
     _positionHistory.add(position.clone());
     _timestamps.add(time);
-    _currentTime = time;
 
     // Keep history size limited
     while (_positionHistory.length > maxHistorySize) {

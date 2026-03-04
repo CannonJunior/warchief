@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import '../state/game_state.dart';
 import '../state/game_config.dart';
-import '../state/wind_config.dart';
 
 /// Physics System - Handles gravity, jumping, and vertical movement
 ///

@@ -111,11 +111,11 @@ class GoalsConfig extends ChangeNotifier {
     try {
       final jsonString = await rootBundle.loadString(_assetPath);
       _defaults = jsonDecode(jsonString) as Map<String, dynamic>;
-      print('[GoalsConfig] Loaded defaults from $_assetPath');
+      debugPrint('[GoalsConfig] Loaded defaults from $_assetPath');
       final goalCount = allGoalIds.length;
-      print('[GoalsConfig] $goalCount goal definitions loaded');
+      debugPrint('[GoalsConfig] $goalCount goal definitions loaded');
     } catch (e) {
-      print('[GoalsConfig] Failed to load defaults: $e (using hardcoded fallbacks)');
+      debugPrint('[GoalsConfig] Failed to load defaults: $e (using hardcoded fallbacks)');
       _defaults = {};
     }
   }
@@ -129,10 +129,10 @@ class GoalsConfig extends ChangeNotifier {
           jsonDecode(json) as Map<String, dynamic>,
         );
         notifyListeners();
-        print('[GoalsConfig] Loaded ${_overrides.length} overrides');
+        debugPrint('[GoalsConfig] Loaded ${_overrides.length} overrides');
       }
     } catch (e) {
-      print('[GoalsConfig] Failed to load overrides: $e');
+      debugPrint('[GoalsConfig] Failed to load overrides: $e');
     }
   }
 
@@ -141,7 +141,7 @@ class GoalsConfig extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_overrides));
     } catch (e) {
-      print('[GoalsConfig] Failed to save overrides: $e');
+      debugPrint('[GoalsConfig] Failed to save overrides: $e');
     }
   }
 

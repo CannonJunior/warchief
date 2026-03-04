@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:vector_math/vector_math.dart' hide Colors;
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
@@ -13,10 +14,11 @@ import '../../models/ai_chat_message.dart';
 import '../../models/monster.dart';
 import '../../models/monster_ontology.dart';
 import '../../models/inventory.dart';
-import '../../models/item.dart';
+import '../rendering/equipment_visual.dart';
+import '../rendering/equipment_renderer.dart'
+    show EquipmentRenderer, EquipmentVisualConfig;
 import '../../models/damage_event.dart';
 import '../../models/target_dummy.dart';
-import '../../models/duel_result.dart' show DuelResult;
 import 'duel_manager.dart';
 import 'duel_banner_state.dart';
 import '../../models/building.dart';
@@ -337,7 +339,7 @@ class GameState {
     redMana = (redMana + manaGained).clamp(0.0, maxRedMana);
     if (manaGained > 0) {
       _timeSinceLastRedManaChange = 0.0; // Reset decay timer on gain
-      print('[MANA] Generated ${manaGained.toStringAsFixed(1)} red mana from melee damage');
+      debugPrint('[MANA] Generated ${manaGained.toStringAsFixed(1)} red mana from melee damage');
     }
   }
 
@@ -488,6 +490,9 @@ class GameState {
     return activeAlly?.abilityCooldowns ?? abilityCooldowns;
   }
 
+  /// Active character's per-slot combo GCD bonus list.
+  List<double> get activeAbilityComboGcdBonuses => abilityComboGcdBonuses;
+
   /// Active character's per-slot max cooldown list.
   List<double> get activeAbilityCooldownMaxes {
     if (isWarchiefActive) return abilityCooldownMaxes;
@@ -584,7 +589,6 @@ class GameState {
 
   /// Cached list of alive minions, rebuilt once per frame via [refreshAliveMinions].
   List<Monster> _cachedAliveMinions = [];
-  int _aliveMinionsFrame = -1;
 
   /// Get all alive minions (cached per frame).
   /// Call [refreshAliveMinions] once at the start of each game loop tick.
@@ -763,6 +767,9 @@ class GameState {
   /// Active duel combatants: [0]=challenger, [1]=enemy. Empty when no duel.
   List<Ally> duelCombatants = [];
 
+  /// In-flight projectiles fired by duel combatants.  Cleared on duel reset.
+  List<Projectile> duelProjectiles = [];
+
   /// Duel state manager — initialized in game3d_widget_init, never null after init.
   DuelManager? duelManager;
 
@@ -780,6 +787,14 @@ class GameState {
 
   /// Whether the inventory has been initialized with items
   bool inventoryInitialized = false;
+
+  /// 3D equipment visuals for the player (helm, weapon, shield, cloak).
+  List<EquipmentVisual> playerEquipVisuals = [];
+
+  /// Rebuild player equipment visuals after equip/unequip.
+  void rebuildPlayerEquipmentVisuals(EquipmentVisualConfig config) {
+    playerEquipVisuals = EquipmentRenderer.buildEquipmentVisuals(playerInventory, config);
+  }
 
 
   // ==================== FLIGHT STATE ====================
@@ -907,6 +922,12 @@ class GameState {
   /// Whether the player is currently channeling a spell
   bool isChanneling = false;
 
+  /// Whether the active Spiritkin has a spirit animal bond active.
+  ///
+  /// Unlike [isChanneling], this does NOT block movement or other abilities.
+  /// The spirit wolf persists until green mana runs out or the wolf is slain.
+  bool isSpiritChanneling = false;
+
   /// Current channel elapsed time in seconds (0 to channelDuration)
   double channelProgress = 0.0;
 
@@ -950,10 +971,23 @@ class GameState {
     return activeAlly?.gcdRemaining ?? 0.0;
   }
 
+  /// GCD max duration for the currently active character (for UI sweep animation)
+  double get activeGcdMax {
+    if (isWarchiefActive) return gcdMax;
+    return activeAlly?.gcdMax ?? 1.0;
+  }
+
   // ==================== ABILITY COOLDOWNS (slots 0-9) ====================
 
   /// Current cooldown remaining per slot (indexed 0-9).
   final List<double> abilityCooldowns = List<double>.filled(10, 0.0);
+
+  /// Per-slot combo GCD bonus (seconds shaved off GCD display for this slot).
+  ///
+  /// Set to 0.5 when a recently-fired ability primes this slot for a combo.
+  /// Cleared to 0.0 when the GCD expires. Slots with a non-zero bonus show
+  /// their cooldown clock in yellow to signal the combo window.
+  final List<double> abilityComboGcdBonuses = List<double>.filled(10, 0.0);
 
   /// Maximum cooldown per slot (indexed 0-9).
   final List<double> abilityCooldownMaxes = [
@@ -1026,6 +1060,10 @@ class GameState {
   /// preventing timing drift in cast bars and windups.
   double? lastTimestamp;
   int frameCount = 0;
+
+  /// Accumulated game time in seconds, updated each frame from the rAF timestamp.
+  /// Use this instead of DateTime.now() in hot paths to avoid syscall overhead.
+  double gameTimeSec = 0.0;
 
   // ==================== SUMMONED UNITS ====================
 

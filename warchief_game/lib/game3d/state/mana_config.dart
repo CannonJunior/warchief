@@ -98,9 +98,9 @@ class ManaConfig extends ChangeNotifier {
     try {
       final jsonString = await rootBundle.loadString(_assetPath);
       _defaults = jsonDecode(jsonString) as Map<String, dynamic>;
-      print('[ManaConfig] Loaded defaults from $_assetPath');
+      debugPrint('[ManaConfig] Loaded defaults from $_assetPath');
     } catch (e) {
-      print('[ManaConfig] Failed to load defaults: $e (using hardcoded fallbacks)');
+      debugPrint('[ManaConfig] Failed to load defaults: $e (using hardcoded fallbacks)');
       _defaults = {};
     }
   }
@@ -115,10 +115,10 @@ class ManaConfig extends ChangeNotifier {
           jsonDecode(json) as Map<String, dynamic>,
         );
         notifyListeners();
-        print('[ManaConfig] Loaded ${_overrides.length} overrides');
+        debugPrint('[ManaConfig] Loaded ${_overrides.length} overrides');
       }
     } catch (e) {
-      print('[ManaConfig] Failed to load overrides: $e');
+      debugPrint('[ManaConfig] Failed to load overrides: $e');
     }
   }
 
@@ -128,7 +128,7 @@ class ManaConfig extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_overrides));
     } catch (e) {
-      print('[ManaConfig] Failed to save overrides: $e');
+      debugPrint('[ManaConfig] Failed to save overrides: $e');
     }
   }
 

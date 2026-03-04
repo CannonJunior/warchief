@@ -32,7 +32,7 @@ class MacroManager extends ChangeNotifier {
 
     _persistMacros();
     notifyListeners();
-    print('[MacroManager] Saved macro "${macro.name}" for character $characterIndex');
+    debugPrint('[MacroManager] Saved macro "${macro.name}" for character $characterIndex');
   }
 
   /// Delete a macro by ID for a specific character.
@@ -43,7 +43,7 @@ class MacroManager extends ChangeNotifier {
     macros.removeWhere((m) => m.id == macroId);
     _persistMacros();
     notifyListeners();
-    print('[MacroManager] Deleted macro $macroId for character $characterIndex');
+    debugPrint('[MacroManager] Deleted macro $macroId for character $characterIndex');
   }
 
   /// Find a macro by ID across all characters.
@@ -79,14 +79,14 @@ class MacroManager extends ChangeNotifier {
               .toList();
           _macrosByCharacter[charIndex] = macros;
         } catch (e) {
-          print('[MacroManager] Error parsing macros for key $key: $e');
+          debugPrint('[MacroManager] Error parsing macros for key $key: $e');
         }
       }
 
-      print('[MacroManager] Loaded macros for ${_macrosByCharacter.length} characters');
+      debugPrint('[MacroManager] Loaded macros for ${_macrosByCharacter.length} characters');
       notifyListeners();
     } catch (e) {
-      print('[MacroManager] Error loading macros: $e');
+      debugPrint('[MacroManager] Error loading macros: $e');
     }
   }
 
@@ -101,7 +101,7 @@ class MacroManager extends ChangeNotifier {
         await prefs.setString(key, jsonEncode(jsonList));
       }
     } catch (e) {
-      print('[MacroManager] Error saving macros: $e');
+      debugPrint('[MacroManager] Error saving macros: $e');
     }
   }
 

@@ -3,41 +3,6 @@ part of 'abilities_modal.dart';
 // ==================== CUSTOM ABILITIES EXTENSION ====================
 
 extension _AbilitiesModalCustom on _AbilitiesModalState {
-  /// Build the CUSTOM ABILITIES section showing user-created abilities
-  List<Widget> _buildCustomAbilitiesSection() {
-    final customAbilities = globalCustomAbilityManager?.getAll() ?? [];
-    if (customAbilities.isEmpty) return [];
-
-    // Group by category
-    final byCategory = <String, List<AbilityData>>{};
-    for (final ability in customAbilities) {
-      byCategory.putIfAbsent(ability.category, () => []).add(ability);
-    }
-
-    return [
-      _buildSection(
-        'CUSTOM ABILITIES',
-        Colors.green,
-        [
-          ...byCategory.entries.map((entry) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildCategoryHeader(
-                  entry.key.toUpperCase(),
-                  _getCategoryColor(entry.key),
-                ),
-                ...entry.value.map((ability) =>
-                  _buildCustomAbilityCard(ability)),
-                SizedBox(height: 16),
-              ],
-            );
-          }).toList(),
-        ],
-      ),
-    ];
-  }
-
   /// Build a card for a custom ability (includes delete option)
   Widget _buildCustomAbilityCard(AbilityData ability) {
     final isEditing = _editingAbility?.name == ability.name;

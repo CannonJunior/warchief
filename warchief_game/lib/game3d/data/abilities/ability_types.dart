@@ -69,6 +69,7 @@ enum StatusEffect {
   vulnerableShadow,     // Increased shadow damage taken
   vulnerableArcane,     // Increased arcane damage taken
   vulnerableHoly,       // Increased holy damage taken
+  interrupt,            // Spell lockout — cannot cast spell-type abilities for duration
 }
 
 /// Maps a DamageSchool to its corresponding vulnerability StatusEffect.
@@ -186,6 +187,13 @@ class AbilityData {
   /// When true, the next 7 consecutive same-class melee hits fire the chain combo.
   final bool enablesComboChain;
 
+  /// Ability names that receive a 0.5s GCD reduction when this ability fires.
+  ///
+  /// When this ability is used, each named ability whose slot is currently on GCD
+  /// gets its effective GCD reduced by 0.5 seconds and its cooldown clock turns
+  /// yellow to signal the combo window.
+  final List<String> comboPrimes;
+
   const AbilityData({
     required this.name,
     required this.description,
@@ -221,6 +229,7 @@ class AbilityData {
     this.damageSchool = DamageSchool.physical,
     this.appliesPermanentVulnerability = false,
     this.enablesComboChain = false,
+    this.comboPrimes = const [],
     // Mana cost defaults
     this.manaColor = ManaColor.none,
     this.manaCost = 0.0,
@@ -321,6 +330,7 @@ class AbilityData {
     DamageSchool? damageSchool,
     bool? appliesPermanentVulnerability,
     bool? enablesComboChain,
+    List<String>? comboPrimes,
   }) {
     return AbilityData(
       name: name ?? this.name,
@@ -358,6 +368,7 @@ class AbilityData {
       damageSchool: damageSchool ?? this.damageSchool,
       appliesPermanentVulnerability: appliesPermanentVulnerability ?? this.appliesPermanentVulnerability,
       enablesComboChain: enablesComboChain ?? this.enablesComboChain,
+      comboPrimes: comboPrimes ?? this.comboPrimes,
     );
   }
 
@@ -398,6 +409,7 @@ class AbilityData {
       'channelEffect': channelEffect.index,
       'damageSchool': damageSchool.index,
       'appliesPermanentVulnerability': appliesPermanentVulnerability,
+      if (comboPrimes.isNotEmpty) 'comboPrimes': comboPrimes,
     };
   }
 
@@ -450,6 +462,7 @@ class AbilityData {
       channelEffect: ChannelEffect.values[(json['channelEffect'] as int? ?? 0).clamp(0, ChannelEffect.values.length - 1)],
       damageSchool: DamageSchool.values[(json['damageSchool'] as int? ?? 0).clamp(0, DamageSchool.values.length - 1)],
       appliesPermanentVulnerability: json['appliesPermanentVulnerability'] as bool? ?? false,
+      comboPrimes: (json['comboPrimes'] as List<dynamic>?)?.cast<String>() ?? const [],
     );
   }
 
@@ -502,6 +515,7 @@ class AbilityData {
       channelEffect: overrides['channelEffect'] != null ? ChannelEffect.values[overrides['channelEffect'] as int] : null,
       damageSchool: overrides['damageSchool'] != null ? DamageSchool.values[overrides['damageSchool'] as int] : null,
       appliesPermanentVulnerability: overrides['appliesPermanentVulnerability'] as bool?,
+      comboPrimes: (overrides['comboPrimes'] as List<dynamic>?)?.cast<String>(),
     );
   }
 }

@@ -9,7 +9,14 @@
     "manaRegenPerSecond": 5.0,
     "historyMaxEntries": 200,
     "gcdSeconds": 1.0,
-    "comboWindowSeconds": 3.0
+    "comboWindowSeconds": 3.0,
+    "peelTriggerRange": 5.0,
+    "kiteThresholdMultiplier": 0.7
+  },
+  "interrupts": {
+    "lockoutSeconds": 3.0,
+    "meleeCooldownNote": "Tune warrior/rogue/windwalker/stormheart/spiritkin/starbreaker interrupt CDs (8–16 s) via ability overrides",
+    "rangedCooldownNote": "Tune mage/necromancer/nature/elemental interrupt CDs (15–30 s) via ability overrides"
   },
   "challengers": {
     "health": 100.0,

@@ -55,6 +55,12 @@ mixin _WidgetUIMixin on _GameStateBase {
               canvasHeight: 900,
             ),
 
+            // World-space CC status indicators (persistent badges above affected units)
+            CcIndicatorOverlay(
+              gameState: gameState,
+              camera: camera,
+            ),
+
             // World-space ping indicators (from minimap pings)
             if (gameState.minimapState.pings.isNotEmpty && camera != null)
               MinimapPingWorldOverlay(
@@ -155,7 +161,7 @@ mixin _WidgetUIMixin on _GameStateBase {
                                 child: PartyFrames(
                                   allies: gameState.allies,
                                   onAllySelected: (index) {
-                                    print('Ally $index selected');
+                                    debugPrint('Ally $index selected');
                                   },
                                   onAllyAbilityActivate: _activateAllyAbility,
                                 ),
@@ -228,7 +234,7 @@ mixin _WidgetUIMixin on _GameStateBase {
                     setState(() {
                       gameState.monsterPaused = !gameState.monsterPaused;
                     });
-                    print('Monster AI ${gameState.monsterPaused ? 'paused' : 'resumed'}');
+                    debugPrint('Monster AI ${gameState.monsterPaused ? 'paused' : 'resumed'}');
                   },
                   abilities: [
                     AbilityButtonData(
@@ -320,7 +326,7 @@ mixin _WidgetUIMixin on _GameStateBase {
                 },
                 onItemClick: (index, item) {
                   if (item != null) {
-                    print('[Bag] Clicked item at slot $index: ${item.name}');
+                    debugPrint('[Bag] Clicked item at slot $index: ${item.name}');
                   }
                 },
                 onItemEquipped: () => setState(() {
@@ -409,11 +415,14 @@ mixin _WidgetUIMixin on _GameStateBase {
             if (gameState.chatPanelOpen)
               ChatPanel(
                 spiritMessages: gameState.warriorSpiritMessages,
-                onSendSpiritMessage: (msg) async {
+                onSendSpiritMessage: (msg) {
+                  // Add user message immediately; reply added via onSpiritReplyComplete.
                   gameState.warriorSpiritMessages.add(
                     AIChatMessage(text: msg, isInput: true));
-                  setState(() {});
-                  final reply = await WarriorSpirit.chat(gameState, msg);
+                  if (mounted) setState(() {});
+                  return WarriorSpirit.chatStream(gameState, msg);
+                },
+                onSpiritReplyComplete: (reply) {
                   gameState.warriorSpiritMessages.add(
                     AIChatMessage(text: reply, isInput: false));
                   if (mounted) setState(() {});
@@ -460,10 +469,95 @@ mixin _WidgetUIMixin on _GameStateBase {
                 width: 560, height: 640,
               ),
 
+            // FPS Counter (top-right corner, gated by gameplay setting)
+            if (globalGameplaySettings?.showFpsCounter == true ||
+                globalGameplaySettings?.showDebugInfo == true)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: _buildPerfOverlay(),
+              ),
+
             // Cast Bar (shows when casting or winding up)
             CastBar(gameState: gameState),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Builds the FPS counter or full debug overlay depending on settings.
+  Widget _buildPerfOverlay() {
+    final showDebug = globalGameplaySettings?.showDebugInfo == true;
+    final fps = _currentFps;
+    final ftMs = _frameTimeMs;
+
+    // Color code: green ≥55 fps, yellow ≥40, red <40
+    final fpsColor = fps >= 55
+        ? const Color(0xFF44FF44)
+        : fps >= 40
+            ? const Color(0xFFFFDD44)
+            : const Color(0xFFFF4444);
+
+    if (!showDebug) {
+      // Minimal FPS chip
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          '${fps.round()} FPS',
+          style: TextStyle(
+            color: fpsColor,
+            fontSize: 11,
+            fontFamily: 'monospace',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
+
+    // Extended debug overlay
+    final tm = gameState.infiniteTerrainManager;
+    final projCount = gameState.allies.fold<int>(
+        0, (sum, a) => sum + a.projectiles.length);
+    final duelProj = gameState.duelProjectiles.length;
+    final lines = [
+      '${fps.round()} FPS  ${ftMs.toStringAsFixed(1)} ms',
+      'Chunks: ${tm?.loadedChunkCount ?? 0}  '
+          'Proj: ${projCount + duelProj}',
+      'Allies: ${gameState.allies.length}  '
+          'Minions: ${gameState.aliveMinions.length}',
+      'HP: ${gameState.playerHealth.round()}  '
+          'Mana: ${gameState.blueMana.round()}',
+      'Pos: ${gameState.playerTransform?.position.x.toStringAsFixed(1) ?? '-'}, '
+          '${gameState.playerTransform?.position.z.toStringAsFixed(1) ?? '-'}',
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (int i = 0; i < lines.length; i++)
+            Text(
+              lines[i],
+              style: TextStyle(
+                color: i == 0 ? fpsColor : Colors.white70,
+                fontSize: 10,
+                fontFamily: 'monospace',
+                fontWeight: i == 0 ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+        ],
       ),
     );
   }

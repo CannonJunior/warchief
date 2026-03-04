@@ -40,7 +40,7 @@ class CustomItemManager extends ChangeNotifier {
     _customItems[item.id] = item.toJson();
     notifyListeners();
     _save();
-    print('[CustomItems] Saved custom item: ${item.name} (${item.id})');
+    debugPrint('[CustomItems] Saved custom item: ${item.name} (${item.id})');
   }
 
   /// Remove a custom item by ID
@@ -48,7 +48,7 @@ class CustomItemManager extends ChangeNotifier {
     _customItems.remove(id);
     notifyListeners();
     _save();
-    print('[CustomItems] Removed custom item: $id');
+    debugPrint('[CustomItems] Removed custom item: $id');
   }
 
   // ==================== PERSISTENCE ====================
@@ -63,10 +63,10 @@ class CustomItemManager extends ChangeNotifier {
         _customItems = decoded.map((key, value) =>
             MapEntry(key, Map<String, dynamic>.from(value as Map)));
         notifyListeners();
-        print('[CustomItems] Loaded ${_customItems.length} custom items');
+        debugPrint('[CustomItems] Loaded ${_customItems.length} custom items');
       }
     } catch (e) {
-      print('[CustomItems] Failed to load: $e');
+      debugPrint('[CustomItems] Failed to load: $e');
     }
   }
 
@@ -75,7 +75,7 @@ class CustomItemManager extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_customItems));
     } catch (e) {
-      print('[CustomItems] Failed to save: $e');
+      debugPrint('[CustomItems] Failed to save: $e');
     }
   }
 }

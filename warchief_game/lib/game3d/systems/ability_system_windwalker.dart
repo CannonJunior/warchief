@@ -14,7 +14,7 @@ void _executeZephyrRoll(int slotIndex, GameState gameState) {
   gameState.ability4ActiveTime = 0.0;
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
   gameState.ability4HitRegistered = false;
-  print('Zephyr Roll! Brief invulnerability.');
+  debugPrint('Zephyr Roll! Brief invulnerability.');
 }
 
 /// Tailwind Retreat — move backward and knockback nearby enemies.
@@ -39,7 +39,7 @@ void _executeTailwindRetreat(int slotIndex, GameState gameState) {
     );
   }
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-  print('Tailwind Retreat! Backflipped away.');
+  debugPrint('Tailwind Retreat! Backflipped away.');
 }
 
 /// Flying Serpent Strike — long dash with damage.
@@ -72,14 +72,14 @@ void _executeCycloneDive(int slotIndex, GameState gameState) {
     isMeleeDamage: true,
   );
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-  print('Cyclone Dive! AoE slam!');
+  debugPrint('Cyclone Dive! AoE slam!');
 }
 
 /// Wind Wall — blocks projectiles (visual + cooldown; blocking logic is deferred).
 void _executeWindWall(int slotIndex, GameState gameState) {
   final ability = _effective(WindWalkerAbilities.windWall);
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-  print('Wind Wall deployed! Blocking projectiles for ${ability.duration}s.');
+  debugPrint('Wind Wall deployed! Blocking projectiles for ${ability.duration}s.');
 }
 
 /// Tempest Charge — charge to target with knockback.
@@ -96,7 +96,7 @@ void _executeSovereignOfTheSky(int slotIndex, GameState gameState) {
   gameState.sovereignBuffActive = true;
   gameState.sovereignBuffTimer = ability.duration;
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-  print('Sovereign of the Sky! Enhanced flight for ${ability.duration}s.');
+  debugPrint('Sovereign of the Sky! Enhanced flight for ${ability.duration}s.');
 }
 
 /// Wind Affinity — double white mana regen rate for 15 seconds.
@@ -105,7 +105,7 @@ void _executeWindAffinity(int slotIndex, GameState gameState) {
   gameState.windAffinityActive = true;
   gameState.windAffinityTimer = ability.duration;
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-  print('Wind Affinity! White mana regen doubled for ${ability.duration}s.');
+  debugPrint('Wind Affinity! White mana regen doubled for ${ability.duration}s.');
 }
 
 /// Silent Mind — fully restore white mana; next white ability is free and instant.
@@ -114,7 +114,7 @@ void _executeSilentMind(int slotIndex, GameState gameState) {
   gameState.activeWhiteMana = gameState.activeMaxWhiteMana;
   gameState.silentMindActive = true;
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-  print('Silent Mind! White mana fully restored. Next white ability is free and instant.');
+  debugPrint('Silent Mind! White mana fully restored. Next white ability is free and instant.');
 }
 
 /// Windshear — 90-degree cone AoE: enemies take damage, allies are healed.
@@ -172,7 +172,7 @@ void _executeWindshear(int slotIndex, GameState gameState) {
     lifetime: 0.8,
   ));
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-  print('Windshear! Cone AoE — enemies damaged, allies healed.');
+  debugPrint('Windshear! Cone AoE — enemies damaged, allies healed.');
 }
 
 /// Wind Warp — ground dash or double flight speed for 5s when flying.
@@ -182,7 +182,7 @@ void _executeWindWarp(int slotIndex, GameState gameState) {
     gameState.windWarpSpeedActive = true;
     gameState.windWarpSpeedTimer = 5.0;
     _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
-    print('Wind Warp! Flight speed doubled for 5s.');
+    debugPrint('Wind Warp! Flight speed doubled for 5s.');
   } else {
     _startDash(slotIndex, gameState, ability, 'Wind Warp! Dashing forward.');
   }

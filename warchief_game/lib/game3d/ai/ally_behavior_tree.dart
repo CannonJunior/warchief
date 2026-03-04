@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:vector_math/vector_math.dart';
 import 'dart:math' as math;
 
@@ -182,6 +183,9 @@ class AllyBehaviorTreeFactory {
 
         // Priority 1: Self-preservation (unless in attack mode)
         _AllyBranches.createSelfPreservationBranch(),
+
+        // Priority 1.5: Kite away when ranged ally is too close to monster
+        _AllyBranches.createKiteBranch(),
 
         // Priority 2: Combat
         _AllyBranches.createCombatBranch(ally.abilityIndex),

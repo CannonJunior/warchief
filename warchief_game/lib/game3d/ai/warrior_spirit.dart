@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import '../../ai/ollama_client.dart';
 import '../../models/goal.dart';
 import '../../models/ai_chat_message.dart';
 import '../state/game_state.dart';
 import '../state/goals_config.dart';
 import '../systems/goal_system.dart';
+import 'spirit_knowledge_base.dart';
 
 /// Warrior Spirit — Ollama-powered narrative advisor for the goals system.
 ///
@@ -21,13 +23,22 @@ class WarriorSpirit {
   static bool _greetingSent = false;
   static double _greetingTimer = 0;
 
-  /// Initialize — check Ollama availability at startup.
+  /// Persistent conversation history for the /api/chat endpoint.
+  /// Capped at [_maxHistory] messages to prevent unbounded context growth.
+  static final List<Map<String, dynamic>> _chatHistory = [];
+  static const int _maxHistory = 20;
+
+  /// Initialize — check Ollama availability and start loading project docs.
   static Future<void> init() async {
     _isAvailable = await _client.isAvailable();
     _checkAccumulator = 0;
     _greetingSent = false;
     _greetingTimer = 0;
-    print('[WARRIOR SPIRIT] Ollama available: $_isAvailable');
+    _chatHistory.clear();
+    // Reason: load docs in the background so they're ready before the first
+    // player message without blocking the game startup sequence.
+    SpiritKnowledgeBase.initialize();
+    debugPrint('[WARRIOR SPIRIT] Ollama available: $_isAvailable');
   }
 
   /// Periodic update — send greeting and check if we should suggest a goal.
@@ -46,7 +57,7 @@ class WarriorSpirit {
           text: greeting,
           isInput: false,
         ));
-        print('[WARRIOR SPIRIT] Greeting sent');
+        debugPrint('[WARRIOR SPIRIT] Greeting sent');
       }
     }
 
@@ -77,7 +88,7 @@ class WarriorSpirit {
       isInput: false,
     ));
     gameState.pendingSpiritGoal = suggestion;
-    print('[WARRIOR SPIRIT] Suggested goal: ${suggestion.name}');
+    debugPrint('[WARRIOR SPIRIT] Suggested goal: ${suggestion.name}');
   }
 
   /// Deterministic goal selection based on current game state.
@@ -149,14 +160,16 @@ Speak as the Warrior Spirit. Be brief, evocative, not flowery.''';
       }
       return response;
     } catch (e) {
-      print('[WARRIOR SPIRIT] LLM error: $e');
+      debugPrint('[WARRIOR SPIRIT] LLM error: $e');
       return _fallbackSuggestion(goal);
     }
   }
 
   /// Player sends a message to the Warrior Spirit.
   ///
-  /// Returns the Spirit's response (LLM-generated or fallback).
+  /// Uses the Ollama /api/chat endpoint so the full project documentation
+  /// (loaded by [SpiritKnowledgeBase]) is in the system prompt every turn,
+  /// and the conversation history is maintained across messages.
   static Future<String> chat(
     GameState gameState,
     String playerMessage,
@@ -165,36 +178,115 @@ Speak as the Warrior Spirit. Be brief, evocative, not flowery.''';
       return 'The spirit is silent. (Ollama unavailable)';
     }
 
-    final personality = globalGoalsConfig?.warriorSpiritPersonality ??
-        'You are an ancient warrior spirit.';
-    final activeGoals = gameState.activeGoals
-        .map((g) =>
-            '- ${g.definition.name}: ${(g.progress * 100).toInt()}%')
-        .join('\n');
+    // Add the user's message to the rolling history.
+    _chatHistory.add({'role': 'user', 'content': playerMessage});
+    // Reason: keep the history bounded so it doesn't grow the context
+    // beyond the model's num_ctx budget over a long session.
+    if (_chatHistory.length > _maxHistory) {
+      _chatHistory.removeRange(0, _chatHistory.length - _maxHistory);
+    }
 
-    final goalsSection = activeGoals.isNotEmpty
-        ? 'Active goals:\n$activeGoals'
-        : 'No active goals.';
-
-    final prompt = '''$personality
-
-Current state: ${_describeState(gameState)}
-$goalsSection
-
-The warchief says: "$playerMessage"
-
-Respond as the Warrior Spirit in 1-3 sentences. Be wise, brief, and in character.''';
+    final messages = <Map<String, dynamic>>[
+      {'role': 'system', 'content': _buildChatSystemPrompt(gameState)},
+      ..._chatHistory,
+    ];
 
     try {
-      return await _client.generate(
-        model: globalGoalsConfig?.warriorSpiritModel ?? 'llama3.2',
-        prompt: prompt,
+      final reply = await _client.chat(
+        model: globalGoalsConfig?.warriorSpiritModel ?? 'qwen2.5:7b',
+        messages: messages,
         temperature: globalGoalsConfig?.warriorSpiritTemperature ?? 0.8,
       );
+      if (reply.isEmpty) {
+        _chatHistory.removeLast();
+        return 'The spirit flickers. Try again.';
+      }
+      _chatHistory.add({'role': 'assistant', 'content': reply});
+      return reply;
     } catch (e) {
-      print('[WARRIOR SPIRIT] Chat error: $e');
+      debugPrint('[WARRIOR SPIRIT] Chat error: $e');
+      _chatHistory.removeLast();
       return 'The spirit flickers. Try again.';
     }
+  }
+
+  /// Player sends a message — streaming version.
+  ///
+  /// Yields content tokens as they arrive so the chat panel can update
+  /// the UI incrementally rather than waiting for the full response.
+  /// History management mirrors [chat]: the user message is prepended
+  /// before the call and the completed reply is appended on stream end.
+  static Stream<String> chatStream(
+    GameState gameState,
+    String playerMessage,
+  ) async* {
+    if (!_isAvailable) {
+      yield 'The spirit is silent. (Ollama unavailable)';
+      return;
+    }
+
+    _chatHistory.add({'role': 'user', 'content': playerMessage});
+    if (_chatHistory.length > _maxHistory) {
+      _chatHistory.removeRange(0, _chatHistory.length - _maxHistory);
+    }
+
+    final messages = <Map<String, dynamic>>[
+      {'role': 'system', 'content': _buildChatSystemPrompt(gameState)},
+      ..._chatHistory,
+    ];
+
+    final buffer = StringBuffer();
+    bool hadContent = false;
+
+    try {
+      await for (final chunk in _client.chatStream(
+        model: globalGoalsConfig?.warriorSpiritModel ?? 'qwen2.5:7b',
+        messages: messages,
+        temperature: globalGoalsConfig?.warriorSpiritTemperature ?? 0.8,
+      )) {
+        buffer.write(chunk);
+        hadContent = true;
+        yield chunk;
+      }
+
+      if (hadContent) {
+        _chatHistory.add({'role': 'assistant', 'content': buffer.toString()});
+      } else {
+        // Ollama returned nothing — remove the user turn so history stays clean.
+        _chatHistory.removeLast();
+      }
+    } catch (e) {
+      debugPrint('[WARRIOR SPIRIT] chatStream error: $e');
+      _chatHistory.removeLast();
+      yield 'The spirit flickers. Try again.';
+    }
+  }
+
+  /// Build the system prompt: personality + live game state + all project docs.
+  ///
+  /// Docs are appended only after [SpiritKnowledgeBase] has finished loading;
+  /// early calls fall back to personality + state only.
+  static String _buildChatSystemPrompt(GameState gameState) {
+    final personality = globalGoalsConfig?.warriorSpiritPersonality ??
+        'You are an ancient warrior spirit.';
+
+    final activeGoals = gameState.activeGoals
+        .map((g) => '- ${g.definition.name}: ${(g.progress * 100).toInt()}%')
+        .join('\n');
+    final goalsSection =
+        activeGoals.isNotEmpty ? '\nActive goals:\n$activeGoals' : '';
+
+    final docsSection = SpiritKnowledgeBase.isLoaded
+        ? '\n\n=== PROJECT DOCUMENTATION ===\n\n${SpiritKnowledgeBase.content}'
+        : '';
+
+    return '$personality\n\nYou are also the keeper of knowledge about the '
+        'Warchief codebase. When the developer asks about the code, '
+        'architecture, or systems, answer accurately from the documentation. '
+        'Be concise.\n\n'
+        'Current game state: ${_describeState(gameState)}'
+        '$goalsSection'
+        '$docsSection';
   }
 
   /// Describe current game state for LLM context.

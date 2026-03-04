@@ -7,7 +7,6 @@ import '../../../rendering3d/heightmap.dart';
 import '../../state/game_config.dart';
 import '../../state/minimap_config.dart';
 import '../../state/minimap_state.dart';
-import '../../state/gameplay_settings.dart';
 
 /// CustomPainter that renders a top-down terrain color map on the minimap.
 ///
@@ -66,30 +65,42 @@ class MinimapTerrainPainter extends CustomPainter {
   static double _cacheRotation = double.nan;
   static double _cacheViewRadius = 0;
   static bool _cacheIsRotating = false;
+  static int _cacheChunkCount = -1;
+  static int _cacheSeed = -1;
 
   /// Lazy-initialized noise generator for terrain beyond loaded chunks.
-  /// Uses same seed and parameters as the infinite terrain manager.
+  /// Matches seed to the actual terrain manager to stay consistent.
   static SimplexNoise? _noiseCache;
-  static SimplexNoise get _noise {
-    _noiseCache ??= SimplexNoise(seed: TerrainConfig.seed);
+  static int _noiseSeed = -1;
+
+  static SimplexNoise _noise(int seed) {
+    if (_noiseCache == null || _noiseSeed != seed) {
+      _noiseCache = SimplexNoise(seed: seed);
+      _noiseSeed = seed;
+    }
     return _noiseCache!;
   }
 
   /// Generate terrain height directly from noise for unloaded chunks.
-  /// Matches the algorithm in TerrainChunkWithLOD._generateChunkPerlinNoise.
-  static double _noiseHeight(double worldX, double worldZ) {
-    final scale = TerrainConfig.noiseScale;
-    final octaves = TerrainConfig.noiseOctaves;
-    final persistence = TerrainConfig.noisePersistence;
-    final maxH = TerrainConfig.maxHeight;
-
+  /// Uses the terrain manager's actual noise parameters (not TerrainConfig statics)
+  /// so the fallback matches the currently-selected terrain preset.
+  static double _noiseHeight(
+    double worldX,
+    double worldZ,
+    int seed,
+    double scale,
+    int octaves,
+    double persistence,
+    double maxH,
+  ) {
+    final noise = _noise(seed);
     double amplitude = 1.0;
     double frequency = scale;
     double noiseValue = 0.0;
     double maxValue = 0.0;
 
     for (int i = 0; i < octaves; i++) {
-      noiseValue += _noise.noise2D(worldX * frequency, worldZ * frequency) * amplitude;
+      noiseValue += noise.noise2D(worldX * frequency, worldZ * frequency) * amplitude;
       maxValue += amplitude;
       amplitude *= persistence;
       frequency *= 2.0;
@@ -104,22 +115,36 @@ class MinimapTerrainPainter extends CustomPainter {
   void _paintTerrain(Canvas canvas, Size size, int resolution) {
     final isRotating = minimapState.isRotatingMode;
 
-    // Check if the cached color grid is still valid
+    final currentChunkCount = terrainManager?.loadedChunkCount ?? 0;
+    final currentSeed = terrainManager?.seed ?? TerrainConfig.seed;
+
+    // Distance from last cache-build center.
+    final movedFromCache = _cachePlayerX.isNaN
+        ? double.infinity
+        : math.sqrt(math.pow(playerX - _cachePlayerX, 2) +
+                    math.pow(playerZ - _cachePlayerZ, 2));
+    final refreshThreshold = viewRadius *
+        (globalMinimapConfig?.refreshThresholdFraction ?? 0.3);
+
+    // Check if the cached color grid is still valid.
+    // Reason: include player movement (vs cache center), chunk count, and seed
+    // so the cache refreshes as the player walks, chunks stream in, and when
+    // the terrain preset changes between sessions.
     final needsRebuild = _terrainColorCache == null ||
         _cacheResolution != resolution ||
         _cacheViewRadius != viewRadius ||
         _cacheIsRotating != isRotating ||
         playerRotation != _cacheRotation ||
-        _cachePlayerX.isNaN;
+        movedFromCache > refreshThreshold ||
+        _cacheChunkCount != currentChunkCount ||
+        _cacheSeed != currentSeed;
 
     if (needsRebuild) {
       _rebuildTerrainCache(size, resolution, isRotating);
     }
 
     // Draw cached colors
-    final half = size.width / 2;
     final pixelSize = size.width / resolution;
-    final halfRadius = half;
     final paint = Paint()..style = PaintingStyle.fill;
     final colors = _terrainColorCache!;
 
@@ -150,7 +175,14 @@ class MinimapTerrainPainter extends CustomPainter {
     final sandThresh = config?.sandThreshold ?? 0.15;
     final rockThresh = config?.rockThreshold ?? 0.70;
 
-    final maxHeight = TerrainConfig.maxHeight;
+    // Reason: use terrain manager's actual params so minimap matches the
+    // selected preset rather than TerrainConfig static defaults.
+    final tm = terrainManager;
+    final maxHeight = tm?.maxHeight ?? TerrainConfig.maxHeight;
+    final noiseSeed = tm?.seed ?? TerrainConfig.seed;
+    final noiseScale = tm?.noiseScale ?? TerrainConfig.noiseScale;
+    final noiseOctaves = tm?.noiseOctaves ?? TerrainConfig.noiseOctaves;
+    final noisePersistence = tm?.noisePersistence ?? TerrainConfig.noisePersistence;
     final half = size.width / 2;
     final pixelSize = size.width / resolution;
     final halfRadius = half;
@@ -194,13 +226,15 @@ class MinimapTerrainPainter extends CustomPainter {
         }
 
         double height;
-        if (terrainManager != null) {
-          height = terrainManager!.getTerrainHeight(worldX, worldZ);
+        if (tm != null) {
+          height = tm.getTerrainHeight(worldX, worldZ);
+          // Reason: getTerrainHeight returns groundLevel for unloaded chunks;
+          // fall back to noise using the terrain manager's actual parameters.
           if (height == groundLevel) {
-            height = _noiseHeight(worldX, worldZ);
+            height = _noiseHeight(worldX, worldZ, noiseSeed, noiseScale, noiseOctaves, noisePersistence, maxHeight);
           }
         } else {
-          height = _noiseHeight(worldX, worldZ);
+          height = _noiseHeight(worldX, worldZ, noiseSeed, noiseScale, noiseOctaves, noisePersistence, maxHeight);
         }
         final normalizedHeight = (height / maxHeight).clamp(0.0, 1.0);
 
@@ -229,6 +263,8 @@ class MinimapTerrainPainter extends CustomPainter {
     _cacheRotation = playerRotation;
     _cacheViewRadius = viewRadius;
     _cacheIsRotating = isRotating;
+    _cacheChunkCount = terrainManager?.loadedChunkCount ?? 0;
+    _cacheSeed = terrainManager?.seed ?? TerrainConfig.seed;
   }
 
   /// Draw ley line segments and power nodes within view.
@@ -373,7 +409,19 @@ class MinimapTerrainPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(MinimapTerrainPainter oldDelegate) {
-    // Repaint when player moves significantly, rotates, or zoom changes
+    // Repaint when player moves significantly, rotates, zoom changes, ley lines
+    // toggle, the terrain seed changes (new preset), or new chunks have loaded.
+    // Reason: chunk count check ensures terrain updates stream onto the minimap
+    // as the infinite terrain manager loads new chunks — same approach used for
+    // ley line mesh cache invalidation in render_system.dart.
+    final chunkCount = terrainManager?.loadedChunkCount ?? 0;
+    final oldChunkCount = oldDelegate.terrainManager?.loadedChunkCount ?? 0;
+    if (chunkCount != oldChunkCount) return true;
+
+    final seed = terrainManager?.seed ?? TerrainConfig.seed;
+    final oldSeed = oldDelegate.terrainManager?.seed ?? TerrainConfig.seed;
+    if (seed != oldSeed) return true;
+
     final dx = playerX - oldDelegate.playerX;
     final dz = playerZ - oldDelegate.playerZ;
     final moved = math.sqrt(dx * dx + dz * dz);

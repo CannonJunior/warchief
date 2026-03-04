@@ -162,9 +162,9 @@ class MinimapConfig extends ChangeNotifier {
       final jsonString = await rootBundle.loadString(_assetPath);
       _defaults = jsonDecode(jsonString) as Map<String, dynamic>;
       notifyListeners();
-      print('[MinimapConfig] Loaded defaults from $_assetPath');
+      debugPrint('[MinimapConfig] Loaded defaults from $_assetPath');
     } catch (e) {
-      print('[MinimapConfig] Failed to load defaults: $e (using fallbacks)');
+      debugPrint('[MinimapConfig] Failed to load defaults: $e (using fallbacks)');
       _defaults = {};
     }
   }
@@ -178,10 +178,10 @@ class MinimapConfig extends ChangeNotifier {
           jsonDecode(json) as Map<String, dynamic>,
         );
         notifyListeners();
-        print('[MinimapConfig] Loaded ${_overrides.length} overrides');
+        debugPrint('[MinimapConfig] Loaded ${_overrides.length} overrides');
       }
     } catch (e) {
-      print('[MinimapConfig] Failed to load overrides: $e');
+      debugPrint('[MinimapConfig] Failed to load overrides: $e');
     }
   }
 
@@ -190,7 +190,7 @@ class MinimapConfig extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_overrides));
     } catch (e) {
-      print('[MinimapConfig] Failed to save overrides: $e');
+      debugPrint('[MinimapConfig] Failed to save overrides: $e');
     }
   }
 

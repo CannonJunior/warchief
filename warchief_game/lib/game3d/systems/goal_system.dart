@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import '../../models/goal.dart';
 import '../../models/ai_chat_message.dart';
 import '../state/game_state.dart';
@@ -65,7 +66,7 @@ class GoalSystem {
       text: '${goal.definition.name} complete: $reflection',
       isInput: false,
     ));
-    print('[GOAL] Completed: ${goal.definition.name}');
+    debugPrint('[GOAL] Completed: ${goal.definition.name}');
   }
 
   /// Check which goals could be offered based on current game state.
@@ -109,6 +110,6 @@ class GoalSystem {
   /// Abandon a goal (player chose to drop it).
   static void abandonGoal(Goal goal) {
     goal.status = GoalStatus.abandoned;
-    print('[GOAL] Abandoned: ${goal.definition.name}');
+    debugPrint('[GOAL] Abandoned: ${goal.definition.name}');
   }
 }

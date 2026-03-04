@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -20,6 +21,7 @@ class ScenarioConfig {
 
   // ==================== STATE (defaults match JSON) ====================
 
+  String _terrainPreset = 'rolling_hills';
   int _initialAllyCount = 0;
   bool _spawnBossMonster = true;
   bool _spawnWarchiefHome = true;
@@ -33,11 +35,13 @@ class ScenarioConfig {
   int _leyLineSeed = 42;
   double _leyLineWorldSize = 300.0;
   int _leyLineSiteCount = 30;
+  String _abilitiesCodexMode = 'expanded';
 
   bool _loaded = false;
 
   // ==================== GETTERS ====================
 
+  String get terrainPreset => _terrainPreset;
   int get initialAllyCount => _initialAllyCount;
   bool get spawnBossMonster => _spawnBossMonster;
   bool get spawnWarchiefHome => _spawnWarchiefHome;
@@ -46,6 +50,7 @@ class ScenarioConfig {
   int get leyLineSeed => _leyLineSeed;
   double get leyLineWorldSize => _leyLineWorldSize;
   int get leyLineSiteCount => _leyLineSiteCount;
+  String get abilitiesCodexMode => _abilitiesCodexMode;
 
   // ==================== INITIALIZATION ====================
 
@@ -60,9 +65,9 @@ class ScenarioConfig {
     try {
       final str = await rootBundle.loadString(_assetPath);
       jsonData = jsonDecode(str) as Map<String, dynamic>;
-      print('[ScenarioConfig] Loaded from $_assetPath');
+      debugPrint('[ScenarioConfig] Loaded from $_assetPath');
     } catch (e) {
-      print('[ScenarioConfig] Failed to load JSON: $e (using hardcoded defaults)');
+      debugPrint('[ScenarioConfig] Failed to load JSON: $e (using hardcoded defaults)');
     }
     _applyMap(jsonData);
 
@@ -72,14 +77,15 @@ class ScenarioConfig {
       final saved = prefs.getString(_storageKey);
       if (saved != null) {
         _applyMap(jsonDecode(saved) as Map<String, dynamic>);
-        print('[ScenarioConfig] Applied saved overrides');
+        debugPrint('[ScenarioConfig] Applied saved overrides');
       }
     } catch (e) {
-      print('[ScenarioConfig] Failed to load overrides: $e');
+      debugPrint('[ScenarioConfig] Failed to load overrides: $e');
     }
   }
 
   void _applyMap(Map<String, dynamic> data) {
+    if (data['terrain_preset'] is String)     _terrainPreset     = data['terrain_preset'];
     if (data['initial_ally_count'] is int)    _initialAllyCount  = data['initial_ally_count'];
     if (data['spawn_boss_monster'] is bool)   _spawnBossMonster  = data['spawn_boss_monster'];
     if (data['spawn_warchief_home'] is bool)  _spawnWarchiefHome = data['spawn_warchief_home'];
@@ -87,6 +93,7 @@ class ScenarioConfig {
     if (data['ley_line_seed'] is int)         _leyLineSeed       = data['ley_line_seed'];
     if (data['ley_line_site_count'] is int)   _leyLineSiteCount  = data['ley_line_site_count'];
     if (data['ley_line_world_size'] is num)   _leyLineWorldSize  = (data['ley_line_world_size'] as num).toDouble();
+    if (data['abilities_codex_mode'] is String) _abilitiesCodexMode = data['abilities_codex_mode'];
 
     final rawSpawns = data['minion_spawns'];
     if (rawSpawns is List) {
@@ -115,6 +122,7 @@ class ScenarioConfig {
     try {
       final prefs = await SharedPreferences.getInstance();
       final data = {
+        'terrain_preset':       _terrainPreset,
         'initial_ally_count':   _initialAllyCount,
         'spawn_boss_monster':   _spawnBossMonster,
         'spawn_warchief_home':  _spawnWarchiefHome,
@@ -122,6 +130,7 @@ class ScenarioConfig {
         'ley_line_seed':        _leyLineSeed,
         'ley_line_world_size':  _leyLineWorldSize,
         'ley_line_site_count':  _leyLineSiteCount,
+        'abilities_codex_mode': _abilitiesCodexMode,
         'minion_spawns': [
           for (final s in _minionSpawns)
             {
@@ -133,12 +142,13 @@ class ScenarioConfig {
       };
       await prefs.setString(_storageKey, jsonEncode(data));
     } catch (e) {
-      print('[ScenarioConfig] Failed to save: $e');
+      debugPrint('[ScenarioConfig] Failed to save: $e');
     }
   }
 
   // ==================== SETTERS ====================
 
+  void setTerrainPreset(String v)    { _terrainPreset     = v;               save(); }
   void setInitialAllyCount(int v)    { _initialAllyCount  = v.clamp(0, 20);  save(); }
   void setSpawnBossMonster(bool v)   { _spawnBossMonster  = v;               save(); }
   void setSpawnWarchiefHome(bool v)  { _spawnWarchiefHome = v;               save(); }
@@ -146,6 +156,7 @@ class ScenarioConfig {
   void setLeyLineSeed(int v)         { _leyLineSeed       = v.clamp(1, 9999); save(); }
   void setLeyLineWorldSize(double v) { _leyLineWorldSize  = v.clamp(100.0, 2000.0); save(); }
   void setLeyLineSiteCount(int v)    { _leyLineSiteCount  = v.clamp(1, 200); save(); }
+  void setAbilitiesCodexMode(String v) { _abilitiesCodexMode = v; save(); }
 
   /// Update the spawn count for a specific minion definition.
   void setMinionCount(String definitionId, int count) {

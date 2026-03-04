@@ -51,7 +51,7 @@ class CustomAbilityManager extends ChangeNotifier {
     _customAbilities[ability.name] = ability.toJson();
     notifyListeners();
     _save();
-    print('[CustomAbilities] Saved custom ability: ${ability.name}');
+    debugPrint('[CustomAbilities] Saved custom ability: ${ability.name}');
   }
 
   /// Remove a custom ability by name
@@ -59,7 +59,7 @@ class CustomAbilityManager extends ChangeNotifier {
     _customAbilities.remove(name);
     notifyListeners();
     _save();
-    print('[CustomAbilities] Removed custom ability: $name');
+    debugPrint('[CustomAbilities] Removed custom ability: $name');
   }
 
   /// Get the raw JSON for a custom ability (for editor pre-population)
@@ -80,10 +80,10 @@ class CustomAbilityManager extends ChangeNotifier {
         _customAbilities = decoded.map((key, value) =>
             MapEntry(key, Map<String, dynamic>.from(value as Map)));
         notifyListeners();
-        print('[CustomAbilities] Loaded ${_customAbilities.length} custom abilities');
+        debugPrint('[CustomAbilities] Loaded ${_customAbilities.length} custom abilities');
       }
     } catch (e) {
-      print('[CustomAbilities] Failed to load: $e');
+      debugPrint('[CustomAbilities] Failed to load: $e');
     }
   }
 
@@ -92,7 +92,7 @@ class CustomAbilityManager extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_customAbilities));
     } catch (e) {
-      print('[CustomAbilities] Failed to save: $e');
+      debugPrint('[CustomAbilities] Failed to save: $e');
     }
   }
 }

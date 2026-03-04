@@ -1,5 +1,4 @@
 import 'package:vector_math/vector_math.dart';
-import 'dart:math' as math;
 
 /// Bezier Path - Smooth curve interpolation for entity movement
 ///

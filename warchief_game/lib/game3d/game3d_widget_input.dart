@@ -30,7 +30,7 @@ mixin _WidgetInputMixin on _GameStateBase {
     // Handle P key for abilities modal (only on key down, not repeat)
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyP) {
       if (!_isVisible('abilities_codex')) return;
-      print('P key detected! Toggling abilities modal.');
+      debugPrint('P key detected! Toggling abilities modal.');
       setState(() {
         gameState.abilitiesModalOpen = !gameState.abilitiesModalOpen;
       });
@@ -41,7 +41,7 @@ mixin _WidgetInputMixin on _GameStateBase {
     // Opens to the active party member's tab
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyC) {
       if (!_isVisible('character_panel')) return;
-      print('C key detected! Toggling character panel (active: ${gameState.activeCharacterIndex}).');
+      debugPrint('C key detected! Toggling character panel (active: ${gameState.activeCharacterIndex}).');
       setState(() {
         gameState.characterPanelOpen = !gameState.characterPanelOpen;
         if (!gameState.characterPanelOpen) {
@@ -54,7 +54,7 @@ mixin _WidgetInputMixin on _GameStateBase {
     // Handle B key for bag panel (only on key down, not repeat)
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyB) {
       if (!_isVisible('bag_panel')) return;
-      print('B key detected! Toggling bag panel.');
+      debugPrint('B key detected! Toggling bag panel.');
       setState(() {
         gameState.bagPanelOpen = !gameState.bagPanelOpen;
       });
@@ -74,7 +74,7 @@ mixin _WidgetInputMixin on _GameStateBase {
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyF) {
       if (!_isVisible('ally_commands')) return;
       if (gameState.allies.isNotEmpty) {
-        print('F key detected! Toggling ally commands panel.');
+        debugPrint('F key detected! Toggling ally commands panel.');
         setState(() {
           gameState.allyCommandPanelOpen = !gameState.allyCommandPanelOpen;
         });
@@ -126,7 +126,7 @@ mixin _WidgetInputMixin on _GameStateBase {
           if (nearest != null) {
             gameState.selectedBuilding = nearest;
             gameState.buildingPanelOpen = true;
-            print('[BUILDING] Opened panel for ${nearest.definition.name}');
+            debugPrint('[BUILDING] Opened panel for ${nearest.definition.name}');
           }
         }
       });
@@ -155,7 +155,7 @@ mixin _WidgetInputMixin on _GameStateBase {
       final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
       if (isShiftPressed) {
         if (!_isVisible('dps_panel')) return;
-        print('SHIFT+D detected! Toggling DPS panel.');
+        debugPrint('SHIFT+D detected! Toggling DPS panel.');
         setState(() {
           gameState.dpsPanelOpen = !gameState.dpsPanelOpen;
           if (gameState.dpsPanelOpen) {
@@ -434,7 +434,7 @@ mixin _WidgetInputMixin on _GameStateBase {
         color: color,
       ));
     });
-    print('[MINIMAP] Ping at world ($worldX, $worldZ)');
+    debugPrint('[MINIMAP] Ping at world ($worldX, $worldZ)');
   }
 
   // ==================== ABILITY ACTIVATION ====================
@@ -485,7 +485,7 @@ mixin _WidgetInputMixin on _GameStateBase {
     globalActionBarConfigManager?.setActiveIndex(gameState.activeCharacterIndex);
     final activeIdx = gameState.activeCharacterIndex;
     final name = activeIdx == 0 ? 'Warchief' : 'Ally $activeIdx';
-    print('[PARTY] Active character: $name');
+    debugPrint('[PARTY] Active character: $name');
   }
 
   /// Handle ability dropped from Abilities Codex onto action bar slot
@@ -493,7 +493,7 @@ mixin _WidgetInputMixin on _GameStateBase {
     final config = globalActionBarConfig;
     if (config != null) {
       config.setSlotAbility(slotIndex, abilityName);
-      print('[ActionBar] Assigned "$abilityName" to slot ${slotIndex + 1}');
+      debugPrint('[ActionBar] Assigned "$abilityName" to slot ${slotIndex + 1}');
       _refreshAllAuraColors(); // Update aura glow to reflect new ability loadout
       setState(() {}); // Refresh UI to show new ability
     }

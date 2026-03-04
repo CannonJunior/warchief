@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../state/game_state.dart';
-import '../data/stances/stances.dart';
 
 /// Full-screen overlay for stance visual effects.
 ///

@@ -189,7 +189,8 @@ class MeleeComboSystem {
       case 'stormheart':
         // Larger lightning AoE burst.
         _applyAoe(gs, chain);
-      case 'healer':
+      case 'leyweaver':
+      case 'aethermancer':
         // Massive instant heal + regeneration HoT.
         _applyHeal(gs, {'amount': chain['amount'] ?? 60.0});
         _applyRegen(gs, {

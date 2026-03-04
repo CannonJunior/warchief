@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
 
@@ -46,9 +47,9 @@ class ComboConfig {
       final jsonString = await rootBundle.loadString(_assetPath);
       _data = jsonDecode(jsonString) as Map<String, dynamic>;
       _loaded = true;
-      print('[ComboConfig] Loaded from $_assetPath');
+      debugPrint('[ComboConfig] Loaded from $_assetPath');
     } catch (e) {
-      print('[ComboConfig] Failed to load: $e (using built-in fallbacks)');
+      debugPrint('[ComboConfig] Failed to load: $e (using built-in fallbacks)');
       _data = {};
     }
   }

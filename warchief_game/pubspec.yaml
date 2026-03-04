@@ -32,26 +32,28 @@ dependencies:
     sdk: flutter
 
   # Game Engine
-  flame: ^1.19.0
-  flame_isometric: ^0.4.2
-  flame_tiled: ^1.21.0
+  flame: ^1.35.1
+  flame_tiled: ^3.0.11
 
   # 3D Math & Rendering
   vector_math: ^2.1.4
 
   # Graphics & UI
-  flutter_svg: ^2.0.10
+  flutter_svg: ^2.2.3
   vector_graphics: ^1.1.11
 
   # State Management
-  flutter_riverpod: ^2.5.1
-  riverpod_annotation: ^2.3.5
+  # Reason: riverpod 3.x conflicts with build_runner >=2.10.5 + flutter_test from SDK
+  # (riverpod 3.x pulls test ^1.0.0 which clashes with SDK-pinned test_api 0.7.6).
+  # Staying on 2.x is safe — only ProviderScope is used in this project.
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
 
   # Network (for Ollama integration)
-  http: ^1.2.0
+  http: ^1.6.0
 
   # Storage
-  shared_preferences: ^2.2.3
+  shared_preferences: ^2.5.4
 
   # Utilities
   freezed_annotation: ^2.4.4
@@ -65,13 +67,13 @@ dev_dependencies:
     sdk: flutter
 
   # Linting
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
   # Code Generation
   build_runner: ^2.4.12
   freezed: ^2.5.7
   json_serializable: ^6.8.0
-  riverpod_generator: ^2.4.3
+  riverpod_generator: ^2.6.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -101,6 +103,7 @@ flutter:
     - config/
     - personalities/
     - assets/data/
+    - assets/docs/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

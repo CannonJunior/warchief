@@ -5,6 +5,9 @@ part of 'ability_system.dart';
 /// Accumulated time for channel tick damage/heal (1 tick per second).
 double _channelTickAccum = 0.0;
 
+/// Accumulated time for spirit animal bond tick (1 tick per second).
+double _spiritChannelTickAccum = 0.0;
+
 // ==================== CORE HELPERS ====================
 
 /// Apply user overrides (from the Codex editor) to a raw ability definition.
@@ -19,7 +22,15 @@ void _updateCooldowns(double dt, GameState gameState) {
   for (int i = 0; i < wCds.length; i++) {
     if (wCds[i] > 0) wCds[i] -= dt;
   }
-  if (gameState.gcdRemaining > 0) gameState.gcdRemaining -= dt;
+  if (gameState.gcdRemaining > 0) {
+    gameState.gcdRemaining -= dt;
+    // Reason: clear per-slot combo bonuses the moment GCD expires so the yellow
+    // highlight disappears cleanly rather than lingering until the next ability.
+    if (gameState.gcdRemaining <= 0) {
+      final bonuses = gameState.abilityComboGcdBonuses;
+      for (int i = 0; i < bonuses.length; i++) bonuses[i] = 0.0;
+    }
+  }
   for (final ally in gameState.allies) {
     final aCds = ally.abilityCooldowns;
     for (int i = 0; i < aCds.length; i++) {
@@ -58,7 +69,7 @@ void _updateCastingState(double dt, GameState gameState) {
       gameState.combatLogMessages.removeRange(0, gameState.combatLogMessages.length - 200);
     }
 
-    print('[CAST] $abilityName cast complete! (${configuredTime.toStringAsFixed(2)}s)');
+    debugPrint('[CAST] $abilityName cast complete! (${configuredTime.toStringAsFixed(2)}s)');
     if (slotIndex != null) {
       _finishCastTimeAbility(slotIndex, gameState);
     }
@@ -95,7 +106,7 @@ void _updateWindupState(double dt, GameState gameState) {
       gameState.combatLogMessages.removeRange(0, gameState.combatLogMessages.length - 200);
     }
 
-    print('[WINDUP] $abilityName windup complete! (${configuredTime.toStringAsFixed(2)}s)');
+    debugPrint('[WINDUP] $abilityName windup complete! (${configuredTime.toStringAsFixed(2)}s)');
     if (slotIndex != null) {
       _finishWindupAbility(slotIndex, gameState);
     }
@@ -174,6 +185,70 @@ void _startChanneledAbility(AbilityData ability, int slotIndex, GameState gameSt
   gameState.addConsoleLog('Channeling ${ability.name} (${ability.duration.toStringAsFixed(0)}s)');
 }
 
+// ==================== SPIRIT ANIMAL BOND STATE ====================
+
+/// Green mana drained from the Spiritkin each second the spirit bond is active.
+const double _spiritManaPerSecond = 5.0;
+
+/// Green mana restored to each non-spirit non-channeling ally per second.
+const double _spiritManaRestorePerTick = 3.0;
+
+/// Advance the spirit bond tick; drain caster mana and restore allies' green mana.
+///
+/// Dismissed automatically if the caster runs out of green mana.
+void _updateSpiritChannelState(double dt, GameState gameState) {
+  if (!gameState.isSpiritChanneling) return;
+
+  _spiritChannelTickAccum += dt;
+
+  const tickInterval = 1.0;
+  while (_spiritChannelTickAccum >= tickInterval && gameState.isSpiritChanneling) {
+    _spiritChannelTickAccum -= tickInterval;
+    _applySpiritBondTick(gameState);
+  }
+}
+
+/// Apply one second of the spirit bond effect:
+///   1. Drain [_spiritManaPerSecond] green mana from the channeling character.
+///   2. If insufficient mana, dismiss the spirit wolf.
+///   3. Restore [_spiritManaRestorePerTick] green mana to all other allies.
+void _applySpiritBondTick(GameState gameState) {
+  const drain = _spiritManaPerSecond;
+
+  // Drain green mana from whichever character is channeling the spirit bond
+  bool drained = false;
+  if (gameState.isWarchiefActive) {
+    if (gameState.greenMana >= drain) {
+      gameState.greenMana -= drain;
+      drained = true;
+    }
+  } else {
+    final spiritkin = gameState.activeAlly;
+    if (spiritkin != null && spiritkin.greenMana >= drain) {
+      spiritkin.greenMana -= drain;
+      drained = true;
+    }
+  }
+
+  if (!drained) {
+    // Reason: no green mana left — dismiss the wolf and reset accumulator.
+    gameState.dismissSpiritAnimal();
+    _spiritChannelTickAccum = 0.0;
+    gameState.addConsoleLog('Spirit Wolf dismissed — green mana depleted');
+    return;
+  }
+
+  // Restore green mana to all permanent (non-spirit, non-channeling) allies
+  final channelingAlly = gameState.isWarchiefActive ? null : gameState.activeAlly;
+  for (final ally in gameState.allies) {
+    // Reason: skip the wolf itself and skip the ally who is doing the channeling.
+    if (ally.isSummoned && ally.name == 'Spirit Wolf') continue;
+    if (ally == channelingAlly) continue;
+    ally.greenMana = (ally.greenMana + _spiritManaRestorePerTick)
+        .clamp(0.0, ally.maxGreenMana);
+  }
+}
+
 // ==================== CAST / WINDUP FINISH ====================
 
 /// Execute the effect of a cast-time ability after the cast bar completes.
@@ -247,7 +322,7 @@ void _startCastTimeAbility(AbilityData abilityData, int slotIndex, GameState gam
   gameState.castingSlotIndex = slotIndex;
   gameState.castingAbilityName = abilityData.name;
 
-  print('[CAST] Starting ${abilityData.name} (${castTime.toStringAsFixed(2)}s cast time${haste > 0 ? ', $haste% haste' : ''})');
+  debugPrint('[CAST] Starting ${abilityData.name} (${castTime.toStringAsFixed(2)}s cast time${haste > 0 ? ', $haste% haste' : ''})');
 }
 
 /// Begin a windup melee ability (applies Haste and stance cast time multiplier).
@@ -265,5 +340,5 @@ void _startWindupAbility(AbilityData abilityData, int slotIndex, GameState gameS
   gameState.windupAbilityName = abilityData.name;
   gameState.windupMovementSpeedModifier = abilityData.windupMovementSpeed;
 
-  print('[WINDUP] Starting ${abilityData.name} (${windupTime.toStringAsFixed(2)}s windup${haste > 0 ? ', $haste% haste' : ''}, ${(abilityData.windupMovementSpeed * 100).toInt()}% movement)');
+  debugPrint('[WINDUP] Starting ${abilityData.name} (${windupTime.toStringAsFixed(2)}s windup${haste > 0 ? ', $haste% haste' : ''}, ${(abilityData.windupMovementSpeed * 100).toInt()}% movement)');
 }

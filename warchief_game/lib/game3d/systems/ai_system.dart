@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:vector_math/vector_math.dart';
 import 'dart:math' as math;
 
@@ -13,7 +14,6 @@ import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
 import 'combat_system.dart';
-import '../../models/active_effect.dart';
 import '../ai/mcp_tools.dart';
 import '../ai/ally_behavior_tree.dart';
 import '../utils/bezier_path.dart';
@@ -147,7 +147,7 @@ class AISystem {
       ally.transform.position.z += moveDirection.z * 0.3;
       // Apply terrain height (ally size is 0.8)
       _applyTerrainHeight(gameState, ally.transform, unitSize: 0.8);
-      print('Ally moving toward monster');
+      debugPrint('Ally moving toward monster');
     } else if (decision == 'ATTACK' && ally.abilityCooldown <= 0) {
       // Use ability based on ally's ability index
       final ability = AbilitiesConfig.getAllyAbility(ally.abilityIndex);
@@ -174,9 +174,9 @@ class AISystem {
           );
 
           if (hitRegistered) {
-            print('Ally ${ability.name} hit monster for ${ability.damage} damage!');
+            debugPrint('Ally ${ability.name} hit monster for ${ability.damage} damage!');
           } else {
-            print('Ally ${ability.name} missed (out of range)');
+            debugPrint('Ally ${ability.name} missed (out of range)');
           }
         }
       } else if (ally.abilityIndex == 1) {
@@ -220,7 +220,7 @@ class AISystem {
               velocity: direction * ability.projectileSpeed,
             ),
           );
-          print('Ally casts ${ability.name}! (leading target)');
+          debugPrint('Ally casts ${ability.name}! (leading target)');
         }
       } else if (ally.abilityIndex == 2) {
         // Heal (restore ally's own health)
@@ -229,7 +229,7 @@ class AISystem {
           ally.health = math.min(ally.maxHealth, ally.health + ability.healAmount);
         }
         final healedAmount = ally.health - oldHealth;
-        print('[HEAL] Ally uses ${ability.name}! Restored ${healedAmount.toStringAsFixed(1)} HP (${ally.health.toStringAsFixed(0)}/${ally.maxHealth})');
+        debugPrint('[HEAL] Ally uses ${ability.name}! Restored ${healedAmount.toStringAsFixed(1)} HP (${ally.health.toStringAsFixed(0)}/${ally.maxHealth})');
       }
     } else if (decision == 'HEAL' && ally.abilityCooldown <= 0) {
       // Execute heal
@@ -238,7 +238,7 @@ class AISystem {
       final oldHealth = ally.health;
       ally.health = math.min(ally.maxHealth, ally.health + healAbility.healAmount);
       final healedAmount = ally.health - oldHealth;
-      print('[HEAL] Ally uses ${healAbility.name}! Restored ${healedAmount.toStringAsFixed(1)} HP (${ally.health.toStringAsFixed(0)}/${ally.maxHealth})');
+      debugPrint('[HEAL] Ally uses ${healAbility.name}! Restored ${healedAmount.toStringAsFixed(1)} HP (${ally.health.toStringAsFixed(0)}/${ally.maxHealth})');
     }
   }
 

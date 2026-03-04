@@ -161,6 +161,30 @@ class NecromancerAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== INTERRUPT ====================
+
+  /// Null Bolt — Dark projectile that voids the target's magical focus
+  /// Cooldown tunable (default 24 s, range 15–30 s) via ability overrides.
+  static final nullBolt = AbilityData(
+    name: 'Null Bolt',
+    description: 'Fire a bolt of void-null energy that unravels the target\'s magical weaving, interrupting their spellcasting for 3 seconds',
+    type: AbilityType.ranged,
+    damage: 14.0,
+    cooldown: 24.0,
+    range: 20.0,
+    color: Vector3(0.35, 0.05, 0.28),
+    impactColor: Vector3(0.55, 0.12, 0.42),
+    impactSize: 0.5,
+    projectileSpeed: 26.0,
+    projectileSize: 0.22,
+    statusEffect: StatusEffect.interrupt,
+    statusDuration: 3.0,
+    manaColor: ManaColor.black,
+    manaCost: 22.0,
+    damageSchool: DamageSchool.shadow,
+    category: 'necromancer',
+  );
+
   // ==================== CHAIN COMBO PRIMER ====================
 
   /// Soul Chain — Activates chain-combo mode for necromancers.
@@ -186,6 +210,6 @@ class NecromancerAbilities {
   /// All necromancer abilities as a list
   static List<AbilityData> get all => [
     lifeDrain, curseOfWeakness, fear, soulRot, summonSkeleton, summonSkeletonMage,
-    graveTouch, soulScythe, soulFracture, soulChain,
+    graveTouch, soulScythe, soulFracture, soulChain, nullBolt,
   ];
 }

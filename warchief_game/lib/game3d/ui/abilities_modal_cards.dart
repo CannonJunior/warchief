@@ -24,6 +24,10 @@ extension _AbilitiesModalCards on _AbilitiesModalState {
     final hasOverrides = globalAbilityOverrideManager?.hasOverrides(ability.name) ?? false;
     final isEditing = _editingAbility?.name == ability.name;
 
+    // Combo role flags
+    final isComboStarter = effective.comboPrimes.isNotEmpty;
+    final isComboTarget  = _comboTargetNames.contains(effective.name);
+
     // Convert Vector3 color to Flutter Color
     final abilityColor = Color.fromRGBO(
       (effective.color.x * 255).round(),
@@ -87,21 +91,43 @@ extension _AbilitiesModalCards on _AbilitiesModalState {
                           ),
                         ),
 
-                        // Type badge
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _getTypeColor(effective.type),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            effective.type.toString().split('.').last.toUpperCase(),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
+                        // Type badge + combo stripes
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _getTypeColor(effective.type),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                effective.type.toString().split('.').last.toUpperCase(),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (isComboStarter || isComboTarget) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Gold stripe: this ability primes a follow-up combo
+                                  if (isComboStarter)
+                                    _buildComboStripe(const Color(0xFFFFAA00)),
+                                  if (isComboStarter && isComboTarget)
+                                    const SizedBox(width: 3),
+                                  // Powder-blue stripe: this ability can be combo-chained
+                                  if (isComboTarget)
+                                    _buildComboStripe(const Color(0xFFADD8E6)),
+                                ],
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),
@@ -348,6 +374,25 @@ extension _AbilitiesModalCards on _AbilitiesModalState {
     );
   }
 
+  /// A narrow vertical stripe used to indicate combo role beneath the Type badge.
+  Widget _buildComboStripe(Color color) {
+    return Container(
+      width: 4,
+      height: 16,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(2),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.5),
+            blurRadius: 4,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+    );
+  }
+
   Color _getTypeColor(AbilityType type) {
     switch (type) {
       case AbilityType.melee:
@@ -381,7 +426,8 @@ extension _AbilitiesModalCards on _AbilitiesModalState {
         return Colors.blue;
       case 'rogue':
         return Colors.grey;
-      case 'healer':
+      case 'leyweaver':
+      case 'aethermancer':
         return Colors.green;
       case 'nature':
         return Colors.lightGreen;

@@ -98,10 +98,10 @@ class AbilityOrderManager extends ChangeNotifier {
             key,
             (value as List<dynamic>).map((e) => e as String).toList()));
         notifyListeners();
-        print('[AbilityOrder] Loaded orders for ${_orders.length} categories');
+        debugPrint('[AbilityOrder] Loaded orders for ${_orders.length} categories');
       }
     } catch (e) {
-      print('[AbilityOrder] Failed to load: $e');
+      debugPrint('[AbilityOrder] Failed to load: $e');
     }
   }
 
@@ -111,7 +111,7 @@ class AbilityOrderManager extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_orders));
     } catch (e) {
-      print('[AbilityOrder] Failed to save: $e');
+      debugPrint('[AbilityOrder] Failed to save: $e');
     }
   }
 }

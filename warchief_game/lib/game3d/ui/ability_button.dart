@@ -11,6 +11,9 @@ class AbilityButton extends StatelessWidget {
   final double size;
   final bool isOutOfRange;
   final String? tooltipText;
+  /// When true, the cooldown clock and timer text render in yellow to signal
+  /// that this slot has a reduced GCD from an active combo window.
+  final bool isComboReady;
 
   const AbilityButton({
     Key? key,
@@ -22,6 +25,7 @@ class AbilityButton extends StatelessWidget {
     this.size = 48,
     this.isOutOfRange = false,
     this.tooltipText,
+    this.isComboReady = false,
   }) : super(key: key);
 
   @override
@@ -64,11 +68,16 @@ class AbilityButton extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
-            // Cooldown clock animation
+            // Cooldown clock animation — amber tint when combo window is active
             if (isOnCooldown)
               CustomPaint(
                 size: Size(size, size),
-                painter: CooldownClockPainter(progress: progress),
+                painter: CooldownClockPainter(
+                  progress: progress,
+                  overlayColor: isComboReady
+                      ? const Color(0x66FFAA00) // amber at ~40% opacity
+                      : const Color(0xB3000000), // black at 70% opacity
+                ),
               ),
             // Label
             Center(
@@ -85,7 +94,7 @@ class AbilityButton extends StatelessWidget {
                 ),
               ),
             ),
-            // Cooldown text
+            // Cooldown text — yellow when combo window active
             if (isOnCooldown)
               Positioned(
                 bottom: 2,
@@ -93,7 +102,7 @@ class AbilityButton extends StatelessWidget {
                 child: Text(
                   cooldown.toStringAsFixed(1),
                   style: TextStyle(
-                    color: Colors.white,
+                    color: isComboReady ? const Color(0xFFFFAA00) : Colors.white,
                     fontSize: cooldownFontSize,
                     fontWeight: FontWeight.bold,
                   ),

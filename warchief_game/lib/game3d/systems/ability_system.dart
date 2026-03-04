@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:vector_math/vector_math.dart';
 import 'dart:math' as math;
 import 'dart:ui' show Color;
@@ -48,6 +49,7 @@ class AbilitySystem {
     _updateCastingState(dt, gameState);
     _updateWindupState(dt, gameState);
     _updateChannelingState(dt, gameState);
+    _updateSpiritChannelState(dt, gameState);
     _updateAbility1(dt, gameState);
     _updateAbility2(dt, gameState);
     _updateAbility3(dt, gameState);

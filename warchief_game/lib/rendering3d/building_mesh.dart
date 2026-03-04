@@ -162,7 +162,6 @@ class BuildingMesh {
     final halfW = bWidth / 2;
     final halfD = bDepth / 2;
     final wallBase = foundH;
-    final wallTop = foundH + wallH;
     final halfDoorW = doorW / 2;
 
     // Back wall (full width)

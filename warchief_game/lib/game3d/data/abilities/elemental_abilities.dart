@@ -117,6 +117,30 @@ class ElementalAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== INTERRUPT ====================
+
+  /// Magnetic Disrupt — Focused electromagnetic pulse that disrupts spellcasting
+  /// Cooldown tunable (default 22 s, range 15–30 s) via ability overrides.
+  static final magneticDisrupt = AbilityData(
+    name: 'Magnetic Disrupt',
+    description: 'Fire a focused electromagnetic pulse that scrambles the target\'s magical pathways, interrupting their spellcasting for 3 seconds',
+    type: AbilityType.ranged,
+    damage: 16.0,
+    cooldown: 22.0,
+    range: 20.0,
+    color: Vector3(1.0, 0.75, 0.1),
+    impactColor: Vector3(1.0, 0.88, 0.3),
+    impactSize: 0.55,
+    projectileSpeed: 28.0,
+    projectileSize: 0.20,
+    statusEffect: StatusEffect.interrupt,
+    statusDuration: 3.0,
+    manaColor: ManaColor.red,
+    manaCost: 20.0,
+    damageSchool: DamageSchool.lightning,
+    category: 'elemental',
+  );
+
   // ==================== CHAIN COMBO PRIMER ====================
 
   /// Elemental Chain — Activates chain-combo mode for elementals.
@@ -142,6 +166,6 @@ class ElementalAbilities {
   /// All elemental abilities as a list
   static List<AbilityData> get all => [
     iceLance, flameWave, earthquake,
-    frostbiteSlash, magmaStrike, elementalRend, elementalChain,
+    frostbiteSlash, magmaStrike, elementalRend, elementalChain, magneticDisrupt,
   ];
 }

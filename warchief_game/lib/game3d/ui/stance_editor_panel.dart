@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:vector_math/vector_math.dart' hide Colors; // needed for Vector3 color in part file
 
 import '../data/stances/stances.dart';
 
@@ -272,14 +271,14 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
   void _onSave() {
     final overrides = _buildOverrideMap();
     globalStanceOverrideManager?.setOverrides(widget.stance.id.name, overrides);
-    print('[StanceEditor] Saved ${overrides.length} overrides for ${widget.stance.name}');
+    debugPrint('[StanceEditor] Saved ${overrides.length} overrides for ${widget.stance.name}');
     widget.onSaved();
   }
 
   void _onRestore() {
     globalStanceOverrideManager?.clearOverrides(widget.stance.id.name);
     setState(() => _populateFromStance(widget.stance));
-    print('[StanceEditor] Restored defaults for ${widget.stance.name}');
+    debugPrint('[StanceEditor] Restored defaults for ${widget.stance.name}');
     widget.onSaved();
   }
 

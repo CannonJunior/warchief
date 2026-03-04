@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'dart:math' as math;
 import 'package:vector_math/vector_math.dart';
 import '../game3d/state/mana_config.dart';

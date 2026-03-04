@@ -39,7 +39,7 @@ class StanceRegistry {
       for (final entry in stancesJson.entries) {
         final id = _parseStanceId(entry.key);
         if (id == null) {
-          print('[STANCE] Warning: unknown stance key "${entry.key}"');
+          debugPrint('[STANCE] Warning: unknown stance key "${entry.key}"');
           continue;
         }
         final data = entry.value as Map<String, dynamic>;
@@ -52,9 +52,9 @@ class StanceRegistry {
         defaultStance = _parseStanceId(defaultKey) ?? StanceId.none;
       }
 
-      print('[STANCE] Loaded ${_stances.length} stances (including none), default: ${defaultStance.name}');
+      debugPrint('[STANCE] Loaded ${_stances.length} stances (including none), default: ${defaultStance.name}');
     } catch (e) {
-      print('[STANCE] Error loading stance config: $e');
+      debugPrint('[STANCE] Error loading stance config: $e');
       // Ensure none is always available
       _stances[StanceId.none] = StanceData.none;
     }

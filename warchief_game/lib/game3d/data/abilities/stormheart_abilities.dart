@@ -374,6 +374,26 @@ class StormheartAbilities {
     enablesComboChain: true,
   );
 
+  /// Static Discharge — Lightning-charged strike that disrupts spellcasting
+  /// Cooldown tunable (default 12 s, range 8–16 s) via ability overrides.
+  static final staticDischarge = AbilityData(
+    name: 'Static Discharge',
+    description: 'Release a burst of focused static electricity into the target, interrupting their spellcasting for 3 seconds',
+    type: AbilityType.melee,
+    damage: 14.0,
+    cooldown: 12.0,
+    range: 2.5,
+    color: Vector3(0.7, 0.85, 1.0),
+    impactColor: Vector3(0.9, 0.95, 1.0),
+    impactSize: 0.5,
+    statusEffect: StatusEffect.interrupt,
+    statusDuration: 3.0,
+    manaColor: ManaColor.white,
+    manaCost: 12.0,
+    category: 'stormheart',
+    damageSchool: DamageSchool.lightning,
+  );
+
   /// All stormheart abilities as a list
   static List<AbilityData> get all => [
     thunderStrike,
@@ -394,5 +414,6 @@ class StormheartAbilities {
     arcPunch,
     lightningBrand,
     thunderstormStrike,
+    staticDischarge,
   ];
 }

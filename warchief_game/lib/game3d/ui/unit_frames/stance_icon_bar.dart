@@ -48,8 +48,10 @@ class StanceIconBar extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      // Reason: Wrap instead of Row so extra stances spill to a second row
+      // rather than overflowing the 200 px parent SizedBox.
+      child: Wrap(
+        runSpacing: 2,
         children: allStances.map((stance) {
           final isActive = stance.id == currentId;
           return _buildStanceIcon(stance, isActive, cooldownActive);
@@ -78,7 +80,7 @@ class StanceIconBar extends StatelessWidget {
         child: Container(
           width: size,
           height: size,
-          margin: const EdgeInsets.symmetric(horizontal: 2),
+          margin: const EdgeInsets.symmetric(horizontal: 1),
           decoration: BoxDecoration(
             color: isActive
                 ? (isNone

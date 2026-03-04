@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'dart:html' as html;
 import 'package:vector_math/vector_math.dart';
 import 'camera3d.dart';
@@ -86,7 +87,7 @@ class WebGLRenderer {
     // Create default shader
     shader = ShaderProgram.fromSource(gl, defaultVertexShader, defaultFragmentShader);
 
-    print('WebGLRenderer initialized');
+    debugPrint('WebGLRenderer initialized');
   }
 
   /// Initialize terrain texturing system
@@ -96,7 +97,7 @@ class WebGLRenderer {
   Future<void> initializeTerrainTexturing() async {
     if (_terrainTexturingEnabled) return;
 
-    print('[WebGLRenderer] Initializing terrain texturing...');
+    debugPrint('[WebGLRenderer] Initializing terrain texturing...');
 
     try {
       // Create texture manager and load terrain textures
@@ -111,9 +112,9 @@ class WebGLRenderer {
       );
 
       _terrainTexturingEnabled = true;
-      print('[WebGLRenderer] Terrain texturing initialized successfully');
+      debugPrint('[WebGLRenderer] Terrain texturing initialized successfully');
     } catch (e) {
-      print('[WebGLRenderer] Failed to initialize terrain texturing: $e');
+      debugPrint('[WebGLRenderer] Failed to initialize terrain texturing: $e');
       _terrainTexturingEnabled = false;
     }
   }
@@ -215,7 +216,7 @@ class WebGLRenderer {
 
     // Debug: Check if mesh has texCoords
     if (mesh.texCoords == null && !_loggedMissingTexCoords) {
-      print('[WebGLRenderer] Warning: Terrain mesh missing texCoords!');
+      debugPrint('[WebGLRenderer] Warning: Terrain mesh missing texCoords!');
       _loggedMissingTexCoords = true;
     }
 
@@ -328,8 +329,8 @@ class WebGLRenderer {
       gl.bindTexture(0x0DE1, null); // TEXTURE_2D
     }
     } catch (e, stackTrace) {
-      print('[WebGLRenderer] ERROR in renderTerrain: $e');
-      print('[WebGLRenderer] Stack: $stackTrace');
+      debugPrint('[WebGLRenderer] ERROR in renderTerrain: $e');
+      debugPrint('[WebGLRenderer] Stack: $stackTrace');
       // Fall back to regular rendering on error
       render(chunk.currentMesh, transform, camera);
     }
@@ -411,7 +412,7 @@ class WebGLRenderer {
     // Delete texture manager
     _textureManager?.dispose();
 
-    print('WebGLRenderer disposed');
+    debugPrint('WebGLRenderer disposed');
   }
 }
 

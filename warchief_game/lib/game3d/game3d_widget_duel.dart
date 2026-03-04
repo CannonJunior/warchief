@@ -67,6 +67,9 @@ mixin _WidgetDuelMixin on _GameStateBase {
       ));
     }
 
+    // Clear any leftover projectiles from the previous duel before starting.
+    DuelSystem.clearProjectiles(gameState);
+
     setState(() {
       gameState.duelCombatants = combatants;
       final mgr = gameState.duelManager!;
@@ -97,6 +100,10 @@ mixin _WidgetDuelMixin on _GameStateBase {
       final totalCombatants = chalSize + enemySize;
       mgr.combatantGcds         = List.filled(totalCombatants, 0.0, growable: true);
       mgr.combatantComboWindows = List.filled(totalCombatants, 0.0, growable: true);
+      mgr.combatantCcRemaining      = List.filled(totalCombatants, 0.0, growable: true);
+      mgr.combatantSlowRemaining    = List.filled(totalCombatants, 0.0, growable: true);
+      mgr.combatantSlowFactor       = List.filled(totalCombatants, 1.0, growable: true);
+      mgr.combatantInterruptLockout = List.filled(totalCombatants, 0.0, growable: true);
       mgr.phase = DuelPhase.active;
 
       // Drop the banner from the sky at the arena centre (on terrain surface).
@@ -121,6 +128,7 @@ mixin _WidgetDuelMixin on _GameStateBase {
 
   /// Cancel the current duel and remove arena combatants.
   void _cancelDuel() {
+    DuelSystem.clearProjectiles(gameState);
     setState(() {
       gameState.duelCombatants.clear();
       gameState.duelManager?.reset();

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../models/item.dart';
@@ -30,9 +31,9 @@ class ItemDatabase {
       }
 
       _isLoaded = true;
-      print('[ItemDatabase] Loaded ${_items.length} items');
+      debugPrint('[ItemDatabase] Loaded ${_items.length} items');
     } catch (e) {
-      print('[ItemDatabase] Failed to load items: $e');
+      debugPrint('[ItemDatabase] Failed to load items: $e');
       // Load fallback items if JSON fails
       _loadFallbackItems();
       _isLoaded = true;

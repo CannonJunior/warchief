@@ -55,9 +55,9 @@ class MacroConfig extends ChangeNotifier {
       final jsonString = await rootBundle.loadString(_assetPath);
       _defaults = jsonDecode(jsonString) as Map<String, dynamic>;
       notifyListeners();
-      print('[MacroConfig] Loaded defaults from $_assetPath');
+      debugPrint('[MacroConfig] Loaded defaults from $_assetPath');
     } catch (e) {
-      print('[MacroConfig] Failed to load defaults: $e (using fallbacks)');
+      debugPrint('[MacroConfig] Failed to load defaults: $e (using fallbacks)');
       _defaults = {};
     }
   }
@@ -71,10 +71,10 @@ class MacroConfig extends ChangeNotifier {
           jsonDecode(json) as Map<String, dynamic>,
         );
         notifyListeners();
-        print('[MacroConfig] Loaded ${_overrides.length} overrides');
+        debugPrint('[MacroConfig] Loaded ${_overrides.length} overrides');
       }
     } catch (e) {
-      print('[MacroConfig] Failed to load overrides: $e');
+      debugPrint('[MacroConfig] Failed to load overrides: $e');
     }
   }
 
@@ -83,7 +83,7 @@ class MacroConfig extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_storageKey, jsonEncode(_overrides));
     } catch (e) {
-      print('[MacroConfig] Failed to save overrides: $e');
+      debugPrint('[MacroConfig] Failed to save overrides: $e');
     }
   }
 

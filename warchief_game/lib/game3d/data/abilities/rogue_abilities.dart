@@ -18,6 +18,8 @@ class RogueAbilities {
     impactColor: Vector3(0.8, 0.2, 0.2),
     impactSize: 0.5,
     category: 'rogue',
+    // Repositioning immediately after a backstab is natural burst play.
+    comboPrimes: ['Shadow Step'],
   );
 
   /// Poison Blade - Attack that applies poison DoT
@@ -36,6 +38,8 @@ class RogueAbilities {
     statusDuration: 6.0,
     dotTicks: 6,
     category: 'rogue',
+    // Stack DoTs: a poisoned target is primed to receive the bleed rake.
+    comboPrimes: ['Shadowfang Rake'],
   );
 
   /// Smoke Bomb - AoE blind effect
@@ -53,6 +57,8 @@ class RogueAbilities {
     statusEffect: StatusEffect.blind,
     statusDuration: 3.0,
     category: 'rogue',
+    // Blinded enemies can't dodge the AoE fan or a repositioning shadow step.
+    comboPrimes: ['Fan of Knives', 'Shadow Step'],
   );
 
   /// Fan of Knives - Throws daggers in all directions
@@ -70,6 +76,8 @@ class RogueAbilities {
     aoeRadius: 6.0,
     maxTargets: 8,
     category: 'rogue',
+    // Scattering enemies with daggers opens a window for a quick dagger opener.
+    comboPrimes: ['Shiv'],
   );
 
   /// Shadow Step - Teleport behind target
@@ -83,10 +91,12 @@ class RogueAbilities {
     impactColor: Vector3(0.3, 0.2, 0.4),
     impactSize: 0.6,
     category: 'rogue',
+    // Appearing behind the target is the perfect setup for a backstab or shiv.
+    comboPrimes: ['Backstab', 'Shiv'],
   );
 
-  // ==================== MELEE COMBO ABILITIES ====================
-  // Combo: Shiv -> Shadowfang Rake -> Shadow Spike -> Umbral Lunge -> Death Mark
+  // ==================== MELEE COMBO CHAIN ====================
+  // Designed flow: Shiv → Shadowfang Rake → Shadow Spike → Umbral Lunge → Death Mark
 
   /// Shiv — Fastest attack, combo starter
   static final shiv = AbilityData(
@@ -100,6 +110,8 @@ class RogueAbilities {
     impactColor: Vector3(0.6, 0.6, 0.65),
     impactSize: 0.3,
     category: 'rogue',
+    // First link — quick jab opens the raking follow-up.
+    comboPrimes: ['Shadowfang Rake'],
   );
 
   /// Shadowfang Rake — Claw swipe with bleed DoT
@@ -117,6 +129,8 @@ class RogueAbilities {
     statusDuration: 4.0,
     dotTicks: 2,
     category: 'rogue',
+    // Bleeding wound left open for the piercing thrust.
+    comboPrimes: ['Shadow Spike'],
   );
 
   /// Shadow Spike — Shadow-infused piercing stab
@@ -132,6 +146,8 @@ class RogueAbilities {
     impactSize: 0.5,
     piercing: true,
     category: 'rogue',
+    // Piercing blow staggers the target, creating the gap for a lunge.
+    comboPrimes: ['Umbral Lunge'],
   );
 
   /// Umbral Lunge — Gap-closer dash with extended range
@@ -146,6 +162,8 @@ class RogueAbilities {
     impactColor: Vector3(0.3, 0.15, 0.4),
     impactSize: 0.5,
     category: 'rogue',
+    // Landing inside their guard primes both the finisher and a backstab.
+    comboPrimes: ['Death Mark', 'Backstab'],
   );
 
   /// Death Mark — Combo finisher with weakness debuff
@@ -163,6 +181,7 @@ class RogueAbilities {
     statusStrength: 0.85,
     statusDuration: 4.0,
     category: 'rogue',
+    // Finisher — no further primes.
   );
 
   /// Expose Weakness — Precise strike that permanently reveals physical vulnerability
@@ -178,6 +197,8 @@ class RogueAbilities {
     impactSize: 0.5,
     category: 'rogue',
     appliesPermanentVulnerability: true,
+    // Vulnerability revealed — feed the two heaviest single-target hits.
+    comboPrimes: ['Death Mark', 'Backstab'],
   );
 
   // ==================== CHAIN COMBO PRIMER ====================
@@ -199,12 +220,33 @@ class RogueAbilities {
     manaCost: 15.0,
     category: 'rogue',
     enablesComboChain: true,
+    // Momentum activation drops GCD on both chain starters.
+    comboPrimes: ['Shiv', 'Fan of Knives'],
+  );
+
+  /// Gouge — Precise thumb-strike to the throat that interrupts spellcasting
+  static final gouge = AbilityData(
+    name: 'Gouge',
+    description: 'A precise strike to the throat that interrupts the target\'s spellcasting for 3 seconds',
+    type: AbilityType.melee,
+    damage: 10.0,
+    cooldown: 10.0,
+    range: 1.5,
+    color: Vector3(0.3, 0.3, 0.35),
+    impactColor: Vector3(0.6, 0.5, 0.4),
+    impactSize: 0.4,
+    statusEffect: StatusEffect.interrupt,
+    statusDuration: 3.0,
+    category: 'rogue',
+    damageSchool: DamageSchool.physical,
+    // Interrupting a cast puts them off balance — prime for backstab or shiv.
+    comboPrimes: ['Backstab', 'Shiv'],
   );
 
   /// All rogue abilities as a list
   static List<AbilityData> get all => [
     backstab, poisonBlade, smokeBomb, fanOfKnives, shadowStep,
     shiv, shadowfangRake, shadowSpike, umbralLunge, deathMark,
-    exposeWeakness, shadowChain,
+    exposeWeakness, shadowChain, gouge,
   ];
 }

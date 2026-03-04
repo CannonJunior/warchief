@@ -182,6 +182,30 @@ class MageAbilities {
     appliesPermanentVulnerability: true,
   );
 
+  // ==================== INTERRUPT ====================
+
+  /// Counterspell — Ranged arcane bolt that shatters the target's spellcast
+  /// Cooldown tunable (default 20 s, range 15–30 s) via ability overrides.
+  static final counterspell = AbilityData(
+    name: 'Counterspell',
+    description: 'Launch a focused arcane bolt that shatters the target\'s concentration, interrupting their spellcasting for 3 seconds',
+    type: AbilityType.ranged,
+    damage: 12.0,
+    cooldown: 20.0,
+    range: 22.0,
+    color: Vector3(0.6, 0.3, 0.9),
+    impactColor: Vector3(0.7, 0.4, 1.0),
+    impactSize: 0.5,
+    projectileSpeed: 30.0,
+    projectileSize: 0.2,
+    statusEffect: StatusEffect.interrupt,
+    statusDuration: 3.0,
+    manaColor: ManaColor.blue,
+    manaCost: 25.0,
+    damageSchool: DamageSchool.arcane,
+    category: 'mage',
+  );
+
   // ==================== CHAIN COMBO PRIMER ====================
 
   /// Arcane Focus — Activates chain-combo mode for mages.
@@ -208,6 +232,6 @@ class MageAbilities {
   static List<AbilityData> get all => [
     frostBolt, blizzard, lightningBolt, chainLightning,
     meteor, arcaneShield, teleport,
-    arcanePulse, riftBlade, arcaneBreach, arcaneFocus,
+    arcanePulse, riftBlade, arcaneBreach, arcaneFocus, counterspell,
   ];
 }

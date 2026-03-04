@@ -115,8 +115,9 @@ mixin _WidgetInitMixin on _GameStateBase {
   void _initializeGoalsConfig() {
     globalGoalsConfig ??= GoalsConfig();
     globalGoalsConfig!.initialize().then((_) {
-      // Initialize Warrior Spirit after goals config is loaded
-      WarriorSpirit.init();
+      // Reason: load saved endpoint before Warrior Spirit initialises so it
+      // uses any user-configured Ollama URL from the AI settings tab.
+      OllamaClient.loadSavedEndpoint().then((_) => WarriorSpirit.init());
       if (mounted) setState(() {});
     });
   }
@@ -158,6 +159,14 @@ mixin _WidgetInitMixin on _GameStateBase {
     globalDuelConfig!.initialize();
   }
 
+  /// Initialize the global equipment visual config (slot attachment offsets, mesh sizes)
+  void _initializeEquipmentVisualConfig() {
+    EquipmentVisualConfig.load().then((cfg) {
+      globalEquipmentVisualConfig = cfg;
+      if (mounted) setState(() {});
+    });
+  }
+
   /// Initialize the duel manager and load persisted history
   Future<void> _initializeDuelManager() async {
     gameState.duelManager = DuelManager();
@@ -179,7 +188,7 @@ mixin _WidgetInitMixin on _GameStateBase {
   // before running spawn calls. Called fire-and-forget from initState.
   Future<void> _initializeGame() async {
     try {
-      print('=== Game3D Initialization Starting ===');
+      debugPrint('=== Game3D Initialization Starting ===');
 
       // Create canvas element
       canvas = html.CanvasElement()
@@ -195,12 +204,12 @@ mixin _WidgetInitMixin on _GameStateBase {
 
       // Append canvas to document body
       html.document.body?.append(canvas);
-      print('Canvas created and appended to DOM');
+      debugPrint('Canvas created and appended to DOM');
 
       // Set canvas size
       canvas.width = 1600;
       canvas.height = 900;
-      print('Canvas size: ${canvas.width}x${canvas.height}');
+      debugPrint('Canvas size: ${canvas.width}x${canvas.height}');
 
       // Initialize renderer
       renderer = WebGLRenderer(canvas);
@@ -219,14 +228,34 @@ mixin _WidgetInitMixin on _GameStateBase {
       camera!.setTarget(Vector3(0, 0, 0));
       camera!.setTargetDistance(15);
 
-      // Initialize terrain - use infinite terrain if enabled
+      // Load scenario config early — terrain parameters and spawn settings
+      // both depend on it, so we await it once here before any world creation.
+      await globalScenarioConfig!.initialize();
+      final scenario = globalScenarioConfig!;
+
+      // Initialize terrain using the selected scenario preset.
+      // The preset overrides TerrainConfig's static defaults for maxHeight,
+      // noiseScale, noiseOctaves, and noisePersistence.  The shared world seed
+      // from scenario config is used for both terrain and ley lines so that
+      // changing the seed alters both together.
       if (TerrainConfig.useInfiniteTerrain) {
-        gameState.infiniteTerrainManager = InfiniteTerrainManager.fromConfig();
-        // Set GL context for texture cleanup
+        final terrainPreset = getTerrainPreset(scenario.terrainPreset);
+        gameState.infiniteTerrainManager = InfiniteTerrainManager(
+          chunkSize:         TerrainConfig.chunkSize,
+          tileSize:          TerrainConfig.tileSize,
+          renderDistance:    TerrainConfig.renderDistance,
+          maxHeight:         terrainPreset.maxHeight,
+          seed:              scenario.leyLineSeed,
+          noiseScale:        terrainPreset.noiseScale,
+          noiseOctaves:      terrainPreset.noiseOctaves,
+          noisePersistence:  terrainPreset.noisePersistence,
+          generateSplatMaps: TerrainConfig.useTextureSplatting,
+          splatMapResolution: TerrainConfig.splatMapResolution,
+        );
         gameState.infiniteTerrainManager!.setGLContext(renderer!.gl);
-        print('[Game3D] Infinite terrain enabled with texture splatting: ${TerrainConfig.useTextureSplatting}');
+        debugPrint('[Game3D] Terrain preset: ${terrainPreset.name} '
+              '(maxH=${terrainPreset.maxHeight}, scale=${terrainPreset.noiseScale})');
       } else {
-        // Fallback to old terrain system
         gameState.terrainTiles = TerrainGenerator.createTileGrid(
           width: GameConfig.terrainGridSize,
           height: GameConfig.terrainGridSize,
@@ -323,11 +352,6 @@ mixin _WidgetInitMixin on _GameStateBase {
         scale: Vector3(1, 1, 1),
       );
 
-      // Ensure scenario config is fully loaded (JSON + SharedPreferences) before
-      // reading spawn settings.  No-ops if already loaded.
-      await globalScenarioConfig!.initialize();
-      final scenario = globalScenarioConfig!;
-
       // Adjust player and monster starting positions to terrain height
       _adjustStartingPositionsToTerrain();
 
@@ -346,13 +370,13 @@ mixin _WidgetInitMixin on _GameStateBase {
         siteCount: scenario.leyLineSiteCount,
       );
 
-      print('Game3D initialized successfully!');
+      debugPrint('Game3D initialized successfully!');
 
       // Start game loop
       _startGameLoop();
     } catch (e, stackTrace) {
-      print('Error initializing Game3D: $e');
-      print(stackTrace);
+      debugPrint('Error initializing Game3D: $e');
+      debugPrint(stackTrace.toString());
     }
   }
 
@@ -363,17 +387,17 @@ mixin _WidgetInitMixin on _GameStateBase {
   Future<void> _initializeTerrainTexturing() async {
     if (renderer == null) return;
     if (!TerrainConfig.useTextureSplatting) {
-      print('[Game3D] Texture splatting disabled in config');
+      debugPrint('[Game3D] Texture splatting disabled in config');
       return;
     }
 
     try {
       await renderer!.initializeTerrainTexturing();
-      print('[Game3D] Terrain texturing initialized successfully');
-      print(TerrainConfig.getSummary());
+      debugPrint('[Game3D] Terrain texturing initialized successfully');
+      debugPrint(TerrainConfig.getSummary());
     } catch (e) {
-      print('[Game3D] Failed to initialize terrain texturing: $e');
-      print('[Game3D] Falling back to vertex-colored terrain');
+      debugPrint('[Game3D] Failed to initialize terrain texturing: $e');
+      debugPrint('[Game3D] Falling back to vertex-colored terrain');
     }
   }
 
@@ -398,7 +422,7 @@ mixin _WidgetInitMixin on _GameStateBase {
         gameState.playerTransform!.position.z,
       );
       gameState.playerTransform!.position.y = terrainHeight + GameConfig.playerSize / 2 + _terrainBuffer;
-      print('[Game3D] Player starting height adjusted to terrain: $terrainHeight (mesh Y: ${gameState.playerTransform!.position.y})');
+      debugPrint('[Game3D] Player starting height adjusted to terrain: $terrainHeight (mesh Y: ${gameState.playerTransform!.position.y})');
     }
 
     // Adjust monster Y to terrain height (add half size + buffer so bottom sits above terrain)
@@ -414,7 +438,7 @@ mixin _WidgetInitMixin on _GameStateBase {
         gameState.monsterDirectionIndicatorTransform!.position.y =
             gameState.monsterTransform!.position.y + GameConfig.monsterSize / 2 + 0.1;
       }
-      print('[Game3D] Monster starting height adjusted to terrain: $terrainHeight (mesh Y: ${gameState.monsterTransform!.position.y})');
+      debugPrint('[Game3D] Monster starting height adjusted to terrain: $terrainHeight (mesh Y: ${gameState.monsterTransform!.position.y})');
     }
   }
 }

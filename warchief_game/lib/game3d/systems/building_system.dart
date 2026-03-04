@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:vector_math/vector_math.dart' hide Colors;
 import '../../models/building.dart';
 import '../../rendering3d/building_mesh.dart';
@@ -65,7 +66,7 @@ class BuildingSystem {
       building.definition.getTier(building.currentTier),
     );
 
-    print('[BUILDING] ${building.definition.name} upgraded to '
+    debugPrint('[BUILDING] ${building.definition.name} upgraded to '
         'Tier ${building.currentTier + 1}: ${building.tierDef.name}');
     return true;
   }

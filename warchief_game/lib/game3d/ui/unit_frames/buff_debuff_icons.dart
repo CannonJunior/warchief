@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../models/active_effect.dart';
-import '../../data/abilities/ability_types.dart';
 import '../../data/abilities/abilities.dart' show AbilityRegistry;
 
 /// Reusable widget that displays buff/debuff icons for an entity.

@@ -16,13 +16,11 @@ import '../rendering3d/player_mesh.dart';
 import '../game/controllers/input_manager.dart';
 import '../models/game_action.dart';
 import '../ai/ollama_client.dart';
-import '../models/item.dart';
 import '../models/projectile.dart';
 import '../models/ally.dart';
 import '../models/ai_chat_message.dart';
 import '../models/monster.dart';
 import '../models/monster_ontology.dart';
-import 'ai/ally_strategy.dart';
 import 'ai/tactical_positioning.dart';
 import 'state/game_config.dart';
 import 'state/game_state.dart';
@@ -33,22 +31,15 @@ import 'systems/ai_system.dart';
 import 'systems/input_system.dart';
 import 'systems/render_system.dart';
 import 'ui/instructions_overlay.dart';
-import 'ui/monster_hud.dart';
 import 'ui/ai_chat_panel.dart';
-import 'ui/player_hud.dart';
-import 'ui/allies_panel.dart';
-import 'ui/formation_panel.dart';
-import 'ui/draggable_panel.dart';
-import 'ui/ally_command_panels.dart';
 import 'ui/ally_commands_panel.dart';
-import 'ui/ui_config.dart';
 import 'ui/abilities_modal.dart';
 import 'ui/character_panel.dart';
 import 'ui/bag_panel.dart';
 import 'ui/dps_panel.dart';
 import 'ui/cast_bar.dart';
-import 'ui/mana_bar.dart';
 import 'ui/damage_indicators.dart';
+import 'ui/cc_indicator_overlay.dart';
 import 'ui/unit_frames/unit_frames.dart';
 import '../models/target_dummy.dart';
 import '../main.dart' show globalInterfaceConfig;
@@ -68,6 +59,7 @@ import 'state/minimap_config.dart';
 import 'state/minimap_state.dart';
 import 'state/building_config.dart';
 import 'state/scenario_config.dart';
+import 'state/terrain_presets.dart';
 import 'state/goals_config.dart';
 import 'state/macro_config.dart';
 import 'state/macro_manager.dart';
@@ -78,7 +70,6 @@ import 'systems/duel_system.dart';
 import 'state/duel_config.dart';
 import 'state/duel_manager.dart';
 import 'state/duel_banner_state.dart';
-import 'rendering/duel_banner_renderer.dart';
 import 'data/duel/duel_definitions.dart';
 import 'ui/duel/duel_panel.dart';
 import 'data/stances/stances.dart';
@@ -99,6 +90,8 @@ import 'systems/goal_system.dart';
 import 'systems/macro_system.dart';
 import 'ai/warrior_spirit.dart';
 import 'effects/aura_system.dart';
+import 'rendering/equipment_renderer.dart'
+    show EquipmentVisualConfig, globalEquipmentVisualConfig;
 // Note: WindIndicator replaced by minimap border wind arrow
 
 part 'game3d_widget_init.dart';
@@ -144,6 +137,12 @@ abstract class _GameStateBase extends State<Game3D> {
   // Reason: lives in base so _WidgetUpdateMixin (reads/writes each frame) and
   // _WidgetCommandsMixin (no longer owns it) share a single field.
   double _flightDurationAccum = 0;
+
+  // ── FPS counter (updated each frame, read by UI mixin) ────────────────────
+  // Reason: lives in base so _WidgetUpdateMixin (writes each frame) and
+  // _WidgetUIMixin (reads for display) share a single field without allocating.
+  double _currentFps = 0.0;
+  double _frameTimeMs = 0.0;
 
   // ── Right-click camera drag (WoW-style pointer-lock rotation) ─────────────
   // Reason: fields live in base so _WidgetInputMixin (implements the drag) and
@@ -313,6 +312,9 @@ class _Game3DState extends _GameStateBase
     _initializeDuelConfig();
     _initializeDuelManager();
 
+    // Initialize equipment visual config (slot offsets, mesh sizes)
+    _initializeEquipmentVisualConfig();
+
     // Create canvas element immediately
     _initializeGame();
   }
@@ -320,7 +322,7 @@ class _Game3DState extends _GameStateBase
   void _startGameLoop() {
     // lastTimestamp will be set on the first rAF callback
     gameState.lastTimestamp = null;
-    print('Starting game loop...');
+    debugPrint('Starting game loop...');
 
     void gameLoop(num timestamp) {
       if (!mounted) return;
@@ -338,15 +340,21 @@ class _Game3DState extends _GameStateBase
 
       gameState.frameCount++;
 
-      // Log every 60 frames (~1 second at 60fps)
+      // Update FPS tracking with EMA smoothing for stable display.
+      // Reason: EMA (α=0.1) damps single-frame spikes so the counter is readable.
+      _frameTimeMs = dt * 1000.0;
+      final rawFps = dt > 0 ? 1.0 / dt : 0.0;
+      _currentFps = _currentFps == 0.0 ? rawFps : _currentFps * 0.9 + rawFps * 0.1;
+
+      // Periodic aura refresh every 60 frames.
+      // Reason: catches all config-change paths (drag-drop, load-class, character switch)
+      // without needing explicit event hooks on every change site.
       if (gameState.frameCount % 60 == 0) {
-        print('Frame ${gameState.frameCount} - dt: ${dt.toStringAsFixed(4)}s - Terrain: ${gameState.terrainTiles?.length ?? 0} tiles');
-        // Reason: Periodic aura refresh catches all config change paths (drag-drop, load-class, character switch)
         _refreshAllAuraColors();
       }
 
       _update(dt, tsMs / 1000.0);
-      _render();
+      _render(dt);
 
       // Update UI — every frame during active casts/windups for smooth
       // progress bars, otherwise every 10 frames to reduce rebuild overhead
@@ -359,7 +367,7 @@ class _Game3DState extends _GameStateBase
     }
 
     gameState.animationFrameId = html.window.requestAnimationFrame(gameLoop);
-    print('Game loop started - animationFrameId: ${gameState.animationFrameId}');
+    debugPrint('Game loop started - animationFrameId: ${gameState.animationFrameId}');
   }
 
   @override

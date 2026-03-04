@@ -12,8 +12,7 @@ import '../../models/combat_log_entry.dart';
 import '../../models/monster.dart';
 import 'goal_system.dart';
 import 'melee_combo_system.dart';
-import '../data/stances/stances.dart';
-import '../data/abilities/ability_types.dart' show DamageSchool, StatusEffect, vulnerabilityForSchool;
+import '../data/abilities/ability_types.dart' show DamageSchool, vulnerabilityForSchool;
 
 part 'combat_system_enemies.dart';
 
@@ -173,13 +172,33 @@ class CombatSystem {
       switch (targetType) {
         case DamageTarget.player:
           final effectiveDamage = damage * stance!.damageTakenMultiplier;
-          gameState.playerHealth = (gameState.playerHealth - effectiveDamage)
+
+          // Spirit bond damage sharing: split incoming damage 50/50 with the spirit wolf.
+          double playerDamage = effectiveDamage;
+          if (gameState.isSpiritChanneling) {
+            final wolfIndex = gameState.allies.indexWhere(
+                (a) => a.isSummoned && a.name == 'Spirit Wolf');
+            if (wolfIndex >= 0) {
+              final spiritShare = effectiveDamage * 0.5;
+              playerDamage = effectiveDamage * 0.5;
+              final wolf = gameState.allies[wolfIndex];
+              wolf.health = (wolf.health - spiritShare).clamp(0.0, wolf.maxHealth);
+              if (wolf.health <= 0) {
+                // Reason: Wolf was killed by shared damage — dismiss the bond.
+                gameState.dismissSpiritAnimal();
+                gameState.addConsoleLog('Spirit Wolf was slain — spirit bond broken');
+              }
+            }
+          }
+
+          gameState.playerHealth = (gameState.playerHealth - playerDamage)
               .clamp(0.0, gameState.playerMaxHealth);
           // Tide stance: convert portion of damage taken into primary attuned mana
           if (stance.damageTakenToManaRatio > 0) {
-            gameState.generateManaFromDamageTaken(effectiveDamage * stance.damageTakenToManaRatio);
+            gameState.generateManaFromDamageTaken(playerDamage * stance.damageTakenToManaRatio);
           }
-          assert(() { print('$attackType hit player for ${effectiveDamage.toStringAsFixed(1)} damage! '
+          assert(() { debugPrint('$attackType hit player for ${playerDamage.toStringAsFixed(1)} damage! '
+                '(${gameState.isSpiritChanneling ? "spirit shared 50%" : "no spirit"}) '
                 'Player health: ${gameState.playerHealth.toStringAsFixed(1)}'); return true; }());
           // Reason: Auto-acquire nearest enemy when hit with no target (WoW behavior).
           if (gameState.currentTargetId == null && gameState.activeTransform != null) {
@@ -195,7 +214,7 @@ class CombatSystem {
               final pushbackAmount = gameState.currentCastTime * 0.25 * (1.0 - resistance);
               gameState.castProgress = (gameState.castProgress - pushbackAmount).clamp(0.0, gameState.currentCastTime);
               gameState.castPushbackCount++;
-              assert(() { print('[PUSHBACK] Cast pushed back by ${pushbackAmount.toStringAsFixed(2)}s '
+              assert(() { debugPrint('[PUSHBACK] Cast pushed back by ${pushbackAmount.toStringAsFixed(2)}s '
                     '(${gameState.castPushbackCount}/3, resistance=${(resistance * 100).round()}%)'); return true; }());
             }
           }
@@ -204,7 +223,7 @@ class CombatSystem {
         case DamageTarget.monster:
           gameState.monsterHealth = (gameState.monsterHealth - damage)
               .clamp(0.0, gameState.monsterMaxHealth);
-          assert(() { print('$attackType hit monster for $damage damage! '
+          assert(() { debugPrint('$attackType hit monster for $damage damage! '
                 'Monster health: ${gameState.monsterHealth.toStringAsFixed(1)}'); return true; }());
           break;
 
@@ -212,7 +231,7 @@ class CombatSystem {
           if (allyIndex != null && allyIndex < gameState.allies.length) {
             final ally = gameState.allies[allyIndex];
             ally.health = (ally.health - damage).clamp(0.0, ally.maxHealth);
-            assert(() { print('$attackType hit ally ${allyIndex + 1} for $damage damage! '
+            assert(() { debugPrint('$attackType hit ally ${allyIndex + 1} for $damage damage! '
                   'Ally health: ${ally.health.toStringAsFixed(1)}'); return true; }());
           }
           break;
@@ -222,7 +241,7 @@ class CombatSystem {
             for (final minion in gameState.minions) {
               if (minion.instanceId == minionInstanceId && minion.isAlive) {
                 minion.takeDamage(damage);
-                assert(() { print('$attackType hit ${minion.definition.name} for $damage damage! '
+                assert(() { debugPrint('$attackType hit ${minion.definition.name} for $damage damage! '
                       'Minion health: ${minion.health.toStringAsFixed(1)}/${minion.maxHealth}'); return true; }());
                 break;
               }
@@ -233,7 +252,7 @@ class CombatSystem {
         case DamageTarget.dummy:
           if (gameState.targetDummy != null && gameState.targetDummy!.isSpawned) {
             gameState.targetDummy!.takeDamage(damage);
-            assert(() { print('$attackType hit Target Dummy for $damage damage! '
+            assert(() { debugPrint('$attackType hit Target Dummy for $damage damage! '
                   'Total: ${gameState.targetDummy!.totalDamageTaken.toStringAsFixed(1)}'); return true; }());
           }
           break;

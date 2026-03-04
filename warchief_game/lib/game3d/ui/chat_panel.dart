@@ -16,7 +16,15 @@ import 'console_log_tab.dart';
 /// **Raid tab** (orange): System-generated combat alerts (read-only).
 class ChatPanel extends StatefulWidget {
   final List<AIChatMessage> spiritMessages;
-  final Future<void> Function(String) onSendSpiritMessage;
+
+  /// Returns a stream of content tokens for the Spirit reply.
+  /// The panel shows tokens live as they arrive.
+  final Stream<String> Function(String) onSendSpiritMessage;
+
+  /// Called once the reply stream completes with the full assembled text.
+  /// The parent should add an [AIChatMessage] to [spiritMessages] here.
+  final void Function(String)? onSpiritReplyComplete;
+
   final List<RaidChatMessage> raidMessages;
   final List<CombatLogEntry> combatLogMessages;
   final List<ConsoleLogEntry> consoleLogMessages;
@@ -28,6 +36,7 @@ class ChatPanel extends StatefulWidget {
     Key? key,
     required this.spiritMessages,
     required this.onSendSpiritMessage,
+    this.onSpiritReplyComplete,
     required this.raidMessages,
     required this.combatLogMessages,
     required this.consoleLogMessages,
@@ -47,6 +56,8 @@ class _ChatPanelState extends State<ChatPanel> {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _inputFocusNode = FocusNode();
   bool _isThinking = false;
+  /// Accumulates streaming reply tokens for live display.
+  String _streamingText = '';
 
   @override
   void initState() {
@@ -61,18 +72,32 @@ class _ChatPanelState extends State<ChatPanel> {
     super.dispose();
   }
 
-  void _handleSend() async {
+  void _handleSend() {
     final text = _textController.text.trim();
     if (text.isEmpty || _isThinking) return;
 
     _textController.clear();
-    setState(() { _isThinking = true; });
+    setState(() { _isThinking = true; _streamingText = ''; });
 
-    await widget.onSendSpiritMessage(text);
-
-    if (mounted) {
-      setState(() { _isThinking = false; });
-    }
+    // Reason: streaming lets the UI show tokens as they arrive instead of
+    // waiting for the full response (which can take minutes on CPU-only HW).
+    widget.onSendSpiritMessage(text).listen(
+      (chunk) {
+        if (mounted) setState(() { _streamingText += chunk; });
+      },
+      onDone: () {
+        final full = _streamingText.trim();
+        widget.onSpiritReplyComplete?.call(full.isEmpty
+            ? 'The spirit flickers. Try again.'
+            : full);
+        if (mounted) setState(() { _isThinking = false; _streamingText = ''; });
+      },
+      onError: (_) {
+        widget.onSpiritReplyComplete?.call('The spirit flickers. Try again.');
+        if (mounted) setState(() { _isThinking = false; _streamingText = ''; });
+      },
+      cancelOnError: true,
+    );
   }
 
   void _switchTab(int tab) {
@@ -82,19 +107,26 @@ class _ChatPanelState extends State<ChatPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    // Reason: clamp panel width to screen so it never clips off a narrow viewport.
+    final panelWidth = (screenSize.width - 20.0).clamp(280.0, 340.0);
+    const panelHeight = 400.0;
+    final maxX = (screenSize.width  - panelWidth ).clamp(0.0, double.infinity);
+    final maxY = (screenSize.height - panelHeight).clamp(0.0, double.infinity);
+
     return Positioned(
-      left: _xPos,
-      top: _yPos,
+      left: _xPos.clamp(0.0, maxX),
+      top:  _yPos.clamp(0.0, maxY),
       child: GestureDetector(
         onPanUpdate: (details) {
           setState(() {
-            _xPos += details.delta.dx;
-            _yPos += details.delta.dy;
+            _xPos = (_xPos + details.delta.dx).clamp(0.0, maxX);
+            _yPos = (_yPos + details.delta.dy).clamp(0.0, maxY);
           });
         },
         child: Container(
-          width: 340,
-          height: 400,
+          width: panelWidth,
+          height: panelHeight,
           decoration: BoxDecoration(
             color: const Color(0xFF1a1a2e).withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(8),
@@ -132,8 +164,10 @@ class _ChatPanelState extends State<ChatPanel> {
                             : ConsoleLogTab(messages: widget.consoleLogMessages),
               ),
 
-              // Thinking indicator (Spirit tab only)
-              if (_activeTab == 0 && _isThinking)
+              // Streaming reply or thinking indicator (Spirit tab only)
+              if (_activeTab == 0 && _streamingText.isNotEmpty)
+                _buildStreamingBubble()
+              else if (_activeTab == 0 && _isThinking)
                 _buildThinkingIndicator(),
 
               // Input area (Spirit tab only)
@@ -146,7 +180,11 @@ class _ChatPanelState extends State<ChatPanel> {
     );
   }
 
-  /// Header bar with title, tab buttons, and close button.
+  /// Header bar with tab buttons and close button.
+  ///
+  /// Tabs are wrapped in Flexible + FittedBox so that if the combined tab
+  /// width exceeds available space (e.g. on a narrow viewport) they scale
+  /// down proportionally instead of triggering a RenderFlex overflow.
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -156,39 +194,48 @@ class _ChatPanelState extends State<ChatPanel> {
       ),
       child: Row(
         children: [
-          // Tab: Spirit
-          _buildTabButton(
-            index: 0,
-            icon: Icons.auto_awesome,
-            label: 'Spirit',
-            activeColor: const Color(0xFF9C7CCC),
+          // Flexible absorbs the row width minus the close button so that
+          // FittedBox has a concrete maxWidth constraint to scale against.
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildTabButton(
+                    index: 0,
+                    icon: Icons.auto_awesome,
+                    label: 'Spirit',
+                    activeColor: const Color(0xFF9C7CCC),
+                  ),
+                  const SizedBox(width: 6),
+                  _buildTabButton(
+                    index: 1,
+                    icon: Icons.campaign,
+                    label: 'Raid',
+                    activeColor: const Color(0xFFCC7722),
+                  ),
+                  const SizedBox(width: 6),
+                  _buildTabButton(
+                    index: 2,
+                    icon: Icons.menu_book,
+                    label: 'Combat',
+                    activeColor: const Color(0xFFCC3333),
+                  ),
+                  const SizedBox(width: 6),
+                  _buildTabButton(
+                    index: 3,
+                    icon: Icons.terminal,
+                    label: 'Console',
+                    activeColor: const Color(0xFF33AA33),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(width: 6),
-          // Tab: Raid
-          _buildTabButton(
-            index: 1,
-            icon: Icons.campaign,
-            label: 'Raid',
-            activeColor: const Color(0xFFCC7722),
-          ),
-          const SizedBox(width: 6),
-          // Tab: Combat
-          _buildTabButton(
-            index: 2,
-            icon: Icons.menu_book,
-            label: 'Combat',
-            activeColor: const Color(0xFFCC3333),
-          ),
-          const SizedBox(width: 6),
-          // Tab: Console
-          _buildTabButton(
-            index: 3,
-            icon: Icons.terminal,
-            label: 'Console',
-            activeColor: const Color(0xFF33AA33),
-          ),
-          const Spacer(),
-          // Close button
+          const SizedBox(width: 8),
+          // Close button: outside the Flexible so it is always fully visible.
           GestureDetector(
             onTap: widget.onClose,
             child: Container(
@@ -225,7 +272,7 @@ class _ChatPanelState extends State<ChatPanel> {
     return GestureDetector(
       onTap: () => _switchTab(index),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(4),
@@ -312,6 +359,44 @@ class _ChatPanelState extends State<ChatPanel> {
               message.text,
               style: TextStyle(
                 color: color.withValues(alpha: 0.9),
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Live streaming reply bubble — shows tokens as they arrive.
+  Widget _buildStreamingBubble() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(8, 0, 8, 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF6A4C9C).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: const Color(0xFF9C7CCC).withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '\u2190 ',
+            style: TextStyle(
+              color: Color(0xFF9C7CCC),
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              _streamingText,
+              style: const TextStyle(
+                color: Color(0xFF9C7CCC),
                 fontSize: 11,
               ),
             ),

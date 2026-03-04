@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../models/ally.dart';
-import 'unit_frame.dart';
 import 'buff_debuff_icons.dart';
 
 /// Vertical stack of party/ally frames (left side of screen)

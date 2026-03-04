@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../ai/ally_strategy.dart';
 import '../../models/ally.dart';
 import '../../models/item.dart';
 import '../../models/inventory.dart';
@@ -163,6 +162,7 @@ Widget buildPaperDollColumn({
   required double cubeRotation,
   required Color portraitColor,
   required Inventory inventory,
+  PaperDollEquipment? equipment,
   void Function(EquipmentSlot slot, Item item)? onEquipItem,
   void Function(EquipmentSlot slot, Item item)? onUnequipItem,
   void Function(double delta)? onRotationUpdate,
@@ -183,6 +183,7 @@ Widget buildPaperDollColumn({
             color: portraitColor,
             size: isPlayer ? 120 : 100,
             rotation: cubeRotation,
+            equipment: equipment,
           ),
         ),
         const SizedBox(height: 8),
@@ -428,15 +429,6 @@ String _commandName(AllyCommand command) {
     case AllyCommand.attack: return 'Attacking';
     case AllyCommand.hold: return 'Holding';
     case AllyCommand.defensive: return 'Defensive';
-  }
-}
-
-String _movementModeName(AllyMovementMode mode) {
-  switch (mode) {
-    case AllyMovementMode.stationary: return 'Stationary';
-    case AllyMovementMode.followPlayer: return 'Following';
-    case AllyMovementMode.commanded: return 'Commanded';
-    case AllyMovementMode.tactical: return 'Tactical';
   }
 }
 
