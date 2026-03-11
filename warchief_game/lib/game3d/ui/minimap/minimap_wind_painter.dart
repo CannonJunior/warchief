@@ -324,7 +324,7 @@ class MinimapWindPainter extends CustomPainter {
       // calm conditions, thicker strokes in strong wind.
       final strokeWidth = 1.0 + effectiveStr.clamp(0.0, 3.0) * 0.5;
       paint
-        ..color = color.withOpacity(alpha * (0.4 + effectiveStr.clamp(0.0, 1.0) * 0.4))
+        ..color = color.withValues(alpha: alpha * (0.4 + effectiveStr.clamp(0.0, 1.0) * 0.4))
         ..strokeWidth = strokeWidth;
 
       // Head = current particle position.

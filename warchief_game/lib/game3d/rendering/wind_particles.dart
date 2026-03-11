@@ -10,17 +10,9 @@ import '../state/wind_config.dart';
 
 /// Individual wind particle data.
 class _WindParticle {
-  double x, y, z;
-  double life;
-  double maxLife;
-
-  _WindParticle({
-    this.x = 0,
-    this.y = 0,
-    this.z = 0,
-    this.life = 0,
-    this.maxLife = 3.0,
-  });
+  double x = 0, y = 0, z = 0;
+  double life = 0;
+  double maxLife = 3.0;
 }
 
 /// Visual particle system for wind effects with trail rendering.
@@ -63,10 +55,7 @@ class WindParticleSystem {
 
     _particles.clear();
     for (int i = 0; i < _maxPoolSize; i++) {
-      _particles.add(_WindParticle(
-        life: 0,
-        maxLife: 0,
-      ));
+      _particles.add(_WindParticle()); // life=0, maxLife=0 set later at spawn
     }
     _initialized = true;
     debugPrint('[WindParticles] Initialized with $_normalCount normal / '

@@ -9,7 +9,7 @@ import '../../state/goals_config.dart';
 /// (with a picker populated from Ollama's /api/tags), and Warrior Spirit
 /// tuning values (temperature, goal interval, max active goals).
 class OllamaTab extends StatefulWidget {
-  const OllamaTab({Key? key}) : super(key: key);
+  const OllamaTab({super.key});
 
   @override
   State<OllamaTab> createState() => _OllamaTabState();
@@ -36,7 +36,7 @@ class _OllamaTabState extends State<OllamaTab> {
     super.initState();
     final cfg = globalGoalsConfig;
     _endpointCtrl = TextEditingController(text: OllamaClient.baseUrl);
-    _modelCtrl = TextEditingController(text: cfg?.warriorSpiritModel ?? 'qwen2.5:7b');
+    _modelCtrl = TextEditingController(text: cfg?.warriorSpiritModel ?? 'qwwen3.5:2b');
     _temperature = cfg?.warriorSpiritTemperature ?? 0.8;
     _goalInterval = cfg?.goalCheckInterval ?? 120.0;
     _maxGoals = cfg?.maxActiveGoals ?? 5;

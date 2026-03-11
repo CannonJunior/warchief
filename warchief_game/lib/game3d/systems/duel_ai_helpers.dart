@@ -377,7 +377,7 @@ Future<void> _duelQueryStrategy(DuelManager mgr,
       'Time: ${mgr.elapsedSeconds.round()}s\nBest strategy for blue side?';
   try {
     final raw  = await DuelSystem._ollamaClient.generate(
-        model: 'qwen2.5:3b', prompt: prompt, temperature: 0.1);
+        model: 'qwen3.5:0.8b', prompt: prompt, temperature: 0.1);
     final word = raw.trim().split(RegExp(r'\W+')).first.toLowerCase();
     if (word == 'aggressive' || word == 'defensive' || word == 'balanced') {
       mgr.ollamaStrategyHint = word;

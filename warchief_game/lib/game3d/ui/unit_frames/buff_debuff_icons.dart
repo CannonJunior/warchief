@@ -17,11 +17,11 @@ class BuffDebuffIcons extends StatelessWidget {
   final double? maxWidth;
 
   const BuffDebuffIcons({
-    Key? key,
+    super.key,
     required this.effects,
     this.iconSize = 14,
     this.maxWidth,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

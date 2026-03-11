@@ -9,11 +9,11 @@ class ManaBar extends StatelessWidget {
   final double height;
 
   const ManaBar({
-    Key? key,
+    super.key,
     required this.gameState,
     this.width = 200,
     this.height = 12,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -47,9 +47,9 @@ class ManaBar extends StatelessWidget {
 
     // Border color: purple for power node, blue for ley line, gray default
     final borderColor = isOnPowerNode
-        ? const Color(0xFFAA40FF).withOpacity(0.9)
+        ? const Color(0xFFAA40FF).withValues(alpha: 0.9)
         : isNearLeyLine
-            ? const Color(0xFF4080FF).withOpacity(0.8)
+            ? const Color(0xFF4080FF).withValues(alpha: 0.8)
             : const Color(0xFF1A1A3A);
 
     final children = <Widget>[];
@@ -123,7 +123,7 @@ class ManaBar extends StatelessWidget {
         child: Text(
           'No Mana Attunement',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.4),
+            color: Colors.white.withValues(alpha: 0.4),
             fontSize: 9,
             fontStyle: FontStyle.italic,
           ),
@@ -143,7 +143,7 @@ class ManaBar extends StatelessWidget {
         boxShadow: isOnPowerNode
             ? [
                 BoxShadow(
-                  color: const Color(0xFFAA40FF).withOpacity(0.4),
+                  color: const Color(0xFFAA40FF).withValues(alpha: 0.4),
                   blurRadius: 10,
                   spreadRadius: 2,
                 ),
@@ -151,7 +151,7 @@ class ManaBar extends StatelessWidget {
             : isNearLeyLine
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF4080FF).withOpacity(0.3),
+                      color: const Color(0xFF4080FF).withValues(alpha: 0.3),
                       blurRadius: 8,
                       spreadRadius: 1,
                     ),
@@ -173,7 +173,7 @@ class ManaBar extends StatelessWidget {
     required List<Color> colors,
     required bool isRegenerating,
   }) {
-    return Container(
+    return SizedBox(
       height: height,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(2),
@@ -233,7 +233,7 @@ class ManaBar extends StatelessWidget {
           gradient: LinearGradient(
             colors: [
               Colors.transparent,
-              Colors.white.withOpacity(0.4),
+              Colors.white.withValues(alpha: 0.4),
               Colors.transparent,
             ],
           ),
@@ -257,7 +257,7 @@ class ManaBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF40CC40).withOpacity(0.6),
+                  color: const Color(0xFF40CC40).withValues(alpha: 0.6),
                   blurRadius: 4,
                 ),
               ],
@@ -276,7 +276,7 @@ class ManaBar extends StatelessWidget {
           Text(
             'Nature',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               fontSize: 8,
             ),
           ),
@@ -300,7 +300,7 @@ class ManaBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF8020C0).withOpacity(0.7),
+                  color: const Color(0xFF8020C0).withValues(alpha: 0.7),
                   blurRadius: 6,
                 ),
               ],
@@ -319,7 +319,7 @@ class ManaBar extends StatelessWidget {
           Text(
             'Comet',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               fontSize: 8,
             ),
           ),
@@ -344,7 +344,7 @@ class ManaBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFE0E0E0).withOpacity(0.6),
+                  color: const Color(0xFFE0E0E0).withValues(alpha: 0.6),
                   blurRadius: 4,
                 ),
               ],
@@ -363,7 +363,7 @@ class ManaBar extends StatelessWidget {
           Text(
             'Wind (${windStrength.toStringAsFixed(0)}%)',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               fontSize: 8,
             ),
           ),
@@ -387,7 +387,7 @@ class ManaBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF4080FF).withOpacity(0.6),
+                  color: const Color(0xFF4080FF).withValues(alpha: 0.6),
                   blurRadius: 4,
                 ),
               ],
@@ -406,7 +406,7 @@ class ManaBar extends StatelessWidget {
           Text(
             'Ley Line (${leyLineInfo.distance.toStringAsFixed(1)}m)',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               fontSize: 8,
             ),
           ),
@@ -421,9 +421,9 @@ class ManaBar extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFFAA40FF).withOpacity(0.1),
-            const Color(0xFFAA40FF).withOpacity(0.2),
-            const Color(0xFFAA40FF).withOpacity(0.1),
+            const Color(0xFFAA40FF).withValues(alpha: 0.1),
+            const Color(0xFFAA40FF).withValues(alpha: 0.2),
+            const Color(0xFFAA40FF).withValues(alpha: 0.1),
           ],
         ),
       ),
@@ -431,7 +431,7 @@ class ManaBar extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Power Node icon (purple diamond shape)
-          Container(
+          SizedBox(
             width: 10,
             height: 10,
             child: Transform.rotate(
@@ -443,7 +443,7 @@ class ManaBar extends StatelessWidget {
                   color: const Color(0xFFAA40FF),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFAA40FF).withOpacity(0.8),
+                      color: const Color(0xFFAA40FF).withValues(alpha: 0.8),
                       blurRadius: 6,
                     ),
                   ],
@@ -512,14 +512,14 @@ class CompactManaBar extends StatelessWidget {
   final bool isRedMana; // If true, shows red color instead of blue
 
   const CompactManaBar({
-    Key? key,
+    super.key,
     required this.current,
     required this.max,
     this.width = 100,
     this.height = 6,
     this.showText = false,
     this.isRedMana = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -579,14 +579,14 @@ class DualCompactManaBar extends StatelessWidget {
   final double height;
 
   const DualCompactManaBar({
-    Key? key,
+    super.key,
     required this.blueCurrent,
     required this.blueMax,
     required this.redCurrent,
     required this.redMax,
     this.width = 100,
     this.height = 4,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

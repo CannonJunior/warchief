@@ -526,7 +526,7 @@ class TerrainChunkWithLOD {
 
   /// Get stats
   String getStats() {
-    final splatInfo = hasSplatMap ? ' | SplatMap: ${splatMapResolution}x${splatMapResolution}' : '';
+    final splatInfo = hasSplatMap ? ' | SplatMap: ${splatMapResolution}x$splatMapResolution' : '';
     return 'Chunk[$chunkX,$chunkZ] | Distance: ${distanceFromCamera.toStringAsFixed(1)} | ${TerrainLOD.getStats(size, size, currentLOD)}$splatInfo';
   }
 

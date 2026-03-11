@@ -102,7 +102,7 @@ class MinimapEntityPainter extends CustomPainter {
         canvas.drawCircle(
             pos,
             bossSize / 2 + 2,
-            Paint()..color = bossColor.withOpacity(0.3));
+            Paint()..color = bossColor.withValues(alpha: 0.3));
         canvas.drawCircle(pos, bossSize / 2, Paint()..color = bossColor);
       }
     }
@@ -158,7 +158,7 @@ class MinimapEntityPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = Colors.black.withOpacity(0.7)
+        ..color = Colors.black.withValues(alpha: 0.7)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3,
     );

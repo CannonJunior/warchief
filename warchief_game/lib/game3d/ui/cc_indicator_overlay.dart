@@ -38,10 +38,10 @@ class CcIndicatorOverlay extends StatelessWidget {
   final Camera3D? camera;
 
   const CcIndicatorOverlay({
-    Key? key,
+    super.key,
     required this.gameState,
     required this.camera,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -93,17 +93,17 @@ class CcIndicatorOverlay extends StatelessWidget {
     // adds up across every build.  .any() short-circuits on first match and
     // only triggers .toList() (and position.clone()) when CC is actually present.
 
-    bool _hasCc(Iterable<ActiveEffect> effects) =>
+    bool hasCc(Iterable<ActiveEffect> effects) =>
         effects.any((e) => _ccTypes.contains(e.type) && !e.isExpired);
-    List<ActiveEffect> _collectCc(Iterable<ActiveEffect> effects) =>
+    List<ActiveEffect> collectCc(Iterable<ActiveEffect> effects) =>
         effects.where((e) => _ccTypes.contains(e.type) && !e.isExpired).toList();
 
     // Player / currently-controlled character (Warchief or active ally)
     final playerPos = gameState.activeTransform?.position;
     if (playerPos != null) {
       final effects = gameState.activeCharacterActiveEffects;
-      if (_hasCc(effects)) {
-        result.add(_UnitCcData(playerPos.clone(), _collectCc(effects)));
+      if (hasCc(effects)) {
+        result.add(_UnitCcData(playerPos.clone(), collectCc(effects)));
       }
     }
 
@@ -111,8 +111,8 @@ class CcIndicatorOverlay extends StatelessWidget {
     final monsterPos = gameState.monsterTransform?.position;
     if (monsterPos != null && gameState.monsterHealth > 0) {
       final effects = gameState.monsterActiveEffects;
-      if (_hasCc(effects)) {
-        result.add(_UnitCcData(monsterPos.clone(), _collectCc(effects)));
+      if (hasCc(effects)) {
+        result.add(_UnitCcData(monsterPos.clone(), collectCc(effects)));
       }
     }
 
@@ -120,15 +120,15 @@ class CcIndicatorOverlay extends StatelessWidget {
     for (final ally in gameState.allies) {
       if (ally.isSummoned && ally.name == 'Spirit Wolf') continue;
       if (ally.health <= 0) continue;
-      if (_hasCc(ally.activeEffects)) {
-        result.add(_UnitCcData(ally.transform.position.clone(), _collectCc(ally.activeEffects)));
+      if (hasCc(ally.activeEffects)) {
+        result.add(_UnitCcData(ally.transform.position.clone(), collectCc(ally.activeEffects)));
       }
     }
 
     // Alive minions (enemy side)
     for (final minion in gameState.aliveMinions) {
-      if (_hasCc(minion.activeEffects)) {
-        result.add(_UnitCcData(minion.transform.position.clone(), _collectCc(minion.activeEffects)));
+      if (hasCc(minion.activeEffects)) {
+        result.add(_UnitCcData(minion.transform.position.clone(), collectCc(minion.activeEffects)));
       }
     }
 

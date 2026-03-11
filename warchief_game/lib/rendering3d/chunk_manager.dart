@@ -206,7 +206,7 @@ class ChunkManager {
 
   /// Get statistics string for debugging
   String getStats() {
-    return 'Chunks: ${loadedChunkCount} loaded, $chunksGenerated generated, $chunksUnloaded unloaded | '
+    return 'Chunks: $loadedChunkCount loaded, $chunksGenerated generated, $chunksUnloaded unloaded | '
         'Vertices: $totalVertices | Triangles: $totalTriangles';
   }
 

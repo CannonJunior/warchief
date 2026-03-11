@@ -16,8 +16,8 @@ import '../data/stances/stance_types.dart';
 class StanceOverrideManager extends ChangeNotifier {
   static const String _storageKey = 'stance_overrides';
 
-  /// Sparse override maps keyed by stance ID name (e.g. 'drunkenMaster')
-  /// Each value is a Map<String, dynamic> containing only changed fields.
+  /// Sparse override maps keyed by stance ID name (e.g. 'drunkenMaster').
+  /// Each value is a `Map<String, dynamic>` containing only changed fields.
   Map<String, Map<String, dynamic>> _overrides = {};
 
   /// Returns the effective stance with overrides applied.

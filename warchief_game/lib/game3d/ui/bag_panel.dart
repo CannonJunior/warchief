@@ -20,14 +20,14 @@ class BagPanel extends StatefulWidget {
   final Function(Item)? onItemCreated;
 
   const BagPanel({
-    Key? key,
+    super.key,
     required this.onClose,
     required this.inventory,
     this.onItemClick,
     this.onItemEquipped,
     this.onUnequipToBag,
     this.onItemCreated,
-  }) : super(key: key);
+  });
 
   @override
   State<BagPanel> createState() => _BagPanelState();

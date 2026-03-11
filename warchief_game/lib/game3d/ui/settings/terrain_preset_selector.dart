@@ -12,10 +12,10 @@ class TerrainPresetSelector extends StatelessWidget {
   final ValueChanged<String> onChanged;
 
   const TerrainPresetSelector({
-    Key? key,
+    super.key,
     required this.selectedId,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   static const _accent   = Color(0xFF4cc9f0);
   static const _cardBg   = Color(0xFF252542);

@@ -2,13 +2,18 @@ part of 'combat_hud.dart';
 
 extension _CombatHUDActionBar on CombatHUD {
 
-  /// Check if an ability in a slot is out of range of current target
+  /// Check if an ability in a slot is out of range of current target.
+  /// Accounts for the combo range multiplier when the slot is combo-primed.
   bool _isSlotOutOfRange(int slotIndex, double? distanceToTarget) {
     if (actionBarConfig == null || distanceToTarget == null) return false;
     final abilityData = actionBarConfig!.getSlotAbilityData(slotIndex);
     if (abilityData.isSelfCast) return false;
     if (abilityData.range <= 0) return false;
-    return distanceToTarget > abilityData.range;
+    final comboBonus = gameState?.activeAbilityComboGcdBonuses[slotIndex] ?? 0.0;
+    final rangeMultiplier = comboBonus > 0.0
+        ? (gameState?.comboRangeMultiplier ?? 1.0)
+        : 1.0;
+    return distanceToTarget > abilityData.range * rangeMultiplier;
   }
 
   Widget _buildActionBar() {
@@ -84,17 +89,21 @@ extension _CombatHUDActionBar on CombatHUD {
             mainAxisSize: MainAxisSize.min,
             children: List.generate(5, (i) {
               final slot = slots[i];
-              return Padding(
-                padding: EdgeInsets.only(left: i > 0 ? 4 : 0),
-                child: _buildDraggableSlot(
-                  slotIndex: i,
-                  label: slot.label,
-                  color: slotColors[i],
-                  cooldown: slot.cooldown,
-                  maxCooldown: slot.maxCooldown,
-                  onPressed: slot.onPressed ?? () {},
-                  isOutOfRange: _isSlotOutOfRange(i, distanceToTarget),
-                  isComboReady: slot.isComboReady,
+              return MouseRegion(
+                onEnter: (_) => onSlotHovered?.call(i),
+                onExit: (_) => onSlotHovered?.call(null),
+                child: Padding(
+                  padding: EdgeInsets.only(left: i > 0 ? 4 : 0),
+                  child: _buildDraggableSlot(
+                    slotIndex: i,
+                    label: slot.label,
+                    color: slotColors[i],
+                    cooldown: slot.cooldown,
+                    maxCooldown: slot.maxCooldown,
+                    onPressed: slot.onPressed ?? () {},
+                    isOutOfRange: _isSlotOutOfRange(i, distanceToTarget),
+                    isComboReady: slot.isComboReady,
+                  ),
                 ),
               );
             }),
@@ -108,17 +117,21 @@ extension _CombatHUDActionBar on CombatHUD {
               children: List.generate(5, (i) {
                 final slotIdx = i + 5;
                 final slot = slots[slotIdx];
-                return Padding(
-                  padding: EdgeInsets.only(left: i > 0 ? 4 : 0),
-                  child: _buildDraggableSlot(
-                    slotIndex: slotIdx,
-                    label: slot.label,
-                    color: slotColors[slotIdx],
-                    cooldown: slot.cooldown,
-                    maxCooldown: slot.maxCooldown,
-                    onPressed: slot.onPressed ?? () {},
-                    isOutOfRange: _isSlotOutOfRange(slotIdx, distanceToTarget),
-                    isComboReady: slot.isComboReady,
+                return MouseRegion(
+                  onEnter: (_) => onSlotHovered?.call(slotIdx),
+                  onExit: (_) => onSlotHovered?.call(null),
+                  child: Padding(
+                    padding: EdgeInsets.only(left: i > 0 ? 4 : 0),
+                    child: _buildDraggableSlot(
+                      slotIndex: slotIdx,
+                      label: slot.label,
+                      color: slotColors[slotIdx],
+                      cooldown: slot.cooldown,
+                      maxCooldown: slot.maxCooldown,
+                      onPressed: slot.onPressed ?? () {},
+                      isOutOfRange: _isSlotOutOfRange(slotIdx, distanceToTarget),
+                      isComboReady: slot.isComboReady,
+                    ),
                   ),
                 );
               }),

@@ -7,11 +7,11 @@ class VSIndicator extends StatelessWidget {
   final Color targetColor;
 
   const VSIndicator({
-    Key? key,
+    super.key,
     this.inCombat = true,
     this.playerColor = const Color(0xFF4cc9f0),
     this.targetColor = const Color(0xFFFF6B6B),
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -71,9 +71,9 @@ class CombatIndicator extends StatelessWidget {
   final bool inCombat;
 
   const CombatIndicator({
-    Key? key,
+    super.key,
     this.inCombat = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

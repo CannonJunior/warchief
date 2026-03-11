@@ -72,12 +72,12 @@ class AbilityEditorPanel extends StatefulWidget {
   final bool isNewAbility;
 
   const AbilityEditorPanel({
-    Key? key,
+    super.key,
     required this.ability,
     required this.onClose,
     required this.onSaved,
     this.isNewAbility = false,
-  }) : super(key: key);
+  });
 
   @override
   State<AbilityEditorPanel> createState() => _AbilityEditorPanelState();
@@ -476,7 +476,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: _accent, width: 2),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 12, spreadRadius: 2),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 12, spreadRadius: 2),
         ],
       ),
       child: Column(

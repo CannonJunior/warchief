@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 part of 'ability_editor_panel.dart';
 
 extension _AbilityEditorPanelSections on _AbilityEditorPanelState {
@@ -53,9 +54,9 @@ extension _AbilityEditorPanelSections on _AbilityEditorPanelState {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.5), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.5), width: 1),
       ),
       child: Text(
         'BAL: ${score.toStringAsFixed(2)} $label',
@@ -77,7 +78,7 @@ extension _AbilityEditorPanelSections on _AbilityEditorPanelState {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
+        color: Colors.black.withValues(alpha: 0.7),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(6), topRight: Radius.circular(6)),
       ),
@@ -118,7 +119,7 @@ extension _AbilityEditorPanelSections on _AbilityEditorPanelState {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+        color: Colors.black.withValues(alpha: 0.5),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(6), bottomRight: Radius.circular(6)),
       ),
@@ -138,7 +139,7 @@ extension _AbilityEditorPanelSections on _AbilityEditorPanelState {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(4),
           border: Border.all(color: color, width: 1),
         ),

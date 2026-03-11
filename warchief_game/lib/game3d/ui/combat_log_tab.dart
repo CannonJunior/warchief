@@ -15,7 +15,7 @@ import '../../models/combat_log_entry.dart';
 class CombatLogTab extends StatelessWidget {
   final List<CombatLogEntry> messages;
 
-  const CombatLogTab({Key? key, required this.messages}) : super(key: key);
+  const CombatLogTab({super.key, required this.messages});
 
   /// Get color for a [CombatLogType].
   static Color colorForType(CombatLogType type) {

@@ -17,6 +17,7 @@
 /// - necromancer_abilities.dart - Necromancer category (4 abilities, ~75 lines)
 /// - elemental_abilities.dart - Elemental category (3 abilities, ~65 lines)
 /// - utility_abilities.dart - Utility category (2 abilities, ~45 lines)
+library;
 // Export all ability files
 export 'ability_types.dart';
 export 'player_abilities.dart';

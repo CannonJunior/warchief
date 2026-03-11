@@ -13,10 +13,10 @@ class DpsPanel extends StatefulWidget {
   final DpsTracker dpsTracker;
 
   const DpsPanel({
-    Key? key,
+    super.key,
     required this.onClose,
     required this.dpsTracker,
-  }) : super(key: key);
+  });
 
   @override
   State<DpsPanel> createState() => _DpsPanelState();

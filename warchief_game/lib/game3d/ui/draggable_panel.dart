@@ -9,13 +9,13 @@ class DraggablePanel extends StatefulWidget {
   final bool showCloseButton;
 
   const DraggablePanel({
-    Key? key,
+    super.key,
     required this.child,
     required this.initialPosition,
     this.panelId,
     this.onClose,
     this.showCloseButton = true,
-  }) : super(key: key);
+  });
 
   @override
   State<DraggablePanel> createState() => _DraggablePanelState();
@@ -62,7 +62,7 @@ class _DraggablePanelState extends State<DraggablePanel> {
               boxShadow: _isDragging
                   ? [
                       BoxShadow(
-                        color: Colors.cyan.withOpacity(0.3),
+                        color: Colors.cyan.withValues(alpha: 0.3),
                         blurRadius: 8,
                         spreadRadius: 2,
                       ),
@@ -83,7 +83,7 @@ class _DraggablePanelState extends State<DraggablePanel> {
                         width: 16,
                         height: 16,
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.7),
+                          color: Colors.red.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(

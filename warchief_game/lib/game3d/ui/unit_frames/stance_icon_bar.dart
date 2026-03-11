@@ -13,10 +13,10 @@ class StanceIconBar extends StatelessWidget {
   final VoidCallback? onStateChanged;
 
   const StanceIconBar({
-    Key? key,
+    super.key,
     required this.gameState,
     this.onStateChanged,
-  }) : super(key: key);
+  });
 
   Color _v3ToColor(Vector3 v) {
     return Color.fromRGBO(

@@ -9,27 +9,15 @@ import '../state/comet_config.dart';
 
 /// Individual meteor streak data.
 class _MeteorParticle {
-  double x, y, z;
-  double vx, vy, vz;
-  double life;
-  double maxLife;
-  double brightness; // 0.6–1.0 random per particle
+  double x = 0, y = 0, z = 0;
+  double vx = 0, vy = -80.0, vz = 0;
+  double life = 0;
+  double maxLife = 3.0;
+  double brightness = 0.8; // 0.6–1.0 random per particle
 
   // Flash effect state (when meteor impacts terrain)
   double flashTimer = 0.0;
   double flashX = 0.0, flashZ = 0.0;
-
-  _MeteorParticle({
-    this.x = 0,
-    this.y = 0,
-    this.z = 0,
-    this.vx = 0,
-    this.vy = -80.0,
-    this.vz = 0,
-    this.life = 0,
-    this.maxLife = 3.0,
-    this.brightness = 0.8,
-  });
 }
 
 /// Meteor particle system for the comet shower.
@@ -58,7 +46,7 @@ class MeteorParticleSystem {
   void init() {
     if (_initialized) return;
     for (int i = 0; i < _maxPool; i++) {
-      _particles.add(_MeteorParticle(life: -1)); // -1 = inactive
+      _particles.add(_MeteorParticle()..life = -1); // -1 = inactive
     }
     _initialized = true;
   }

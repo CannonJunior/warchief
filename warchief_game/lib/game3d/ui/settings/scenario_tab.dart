@@ -15,7 +15,7 @@ const _dimText = Colors.white54;
 /// Scenario tab — configure terrain, entities, and world at game start.
 /// Changes persist via [ScenarioConfig] and apply on the next page reload.
 class ScenarioTab extends StatefulWidget {
-  const ScenarioTab({Key? key}) : super(key: key);
+  const ScenarioTab({super.key});
 
   @override
   State<ScenarioTab> createState() => _ScenarioTabState();

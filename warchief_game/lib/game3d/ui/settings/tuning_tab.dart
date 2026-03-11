@@ -13,7 +13,7 @@ import '../../state/goals_config.dart';
 /// Displays a sub-navigation for each config system (Game, Mana, Wind, etc.)
 /// and renders a [ConfigEditorPanel] for the selected config.
 class TuningTab extends StatefulWidget {
-  const TuningTab({Key? key}) : super(key: key);
+  const TuningTab({super.key});
 
   @override
   State<TuningTab> createState() => _TuningTabState();
@@ -48,7 +48,7 @@ class _TuningTabState extends State<TuningTab> {
       decoration: BoxDecoration(
         border: Border(
           right: BorderSide(
-            color: Colors.white.withOpacity(0.08),
+            color: Colors.white.withValues(alpha: 0.08),
             width: 1,
           ),
         ),
@@ -71,7 +71,7 @@ class _TuningTabState extends State<TuningTab> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? Colors.cyan.withOpacity(0.12)
+              ? Colors.cyan.withValues(alpha: 0.12)
               : Colors.transparent,
           border: Border(
             left: BorderSide(

@@ -10,12 +10,12 @@ class PartyFrames extends StatelessWidget {
   final void Function(Ally ally)? onAllyAbilityActivate;
 
   const PartyFrames({
-    Key? key,
+    super.key,
     required this.allies,
     this.selectedIndex,
     this.onAllySelected,
     this.onAllyAbilityActivate,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +211,7 @@ class PartyFrames extends StatelessWidget {
           ),
           Center(
             child: Text(
-              '${health.toStringAsFixed(0)}',
+              health.toStringAsFixed(0),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 7,

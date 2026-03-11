@@ -14,8 +14,8 @@ import '../data/abilities/ability_types.dart';
 class AbilityOverrideManager extends ChangeNotifier {
   static const String _storageKey = 'ability_overrides';
 
-  /// Sparse override maps keyed by ability name
-  /// Each value is a Map<String, dynamic> containing only changed fields
+  /// Sparse override maps keyed by ability name.
+  /// Each value is a `Map<String, dynamic>` containing only changed fields.
   Map<String, Map<String, dynamic>> _overrides = {};
 
   /// Returns the effective ability with overrides applied

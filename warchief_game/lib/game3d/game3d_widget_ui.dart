@@ -71,6 +71,12 @@ mixin _WidgetUIMixin on _GameStateBase {
                 screenSize: MediaQuery.of(context).size,
               ),
 
+            // Ability range circle — shown on hotkey hover when enabled in Settings
+            if (globalGameplaySettings?.showAbilityRanges == true &&
+                gameState.hoveredActionBarSlot != null &&
+                camera != null)
+              _buildRangeCircleOverlay(context),
+
             // Channeled ability visual effects (life drain, blizzard, etc.)
             ChannelEffectOverlay(
               gameState: gameState,

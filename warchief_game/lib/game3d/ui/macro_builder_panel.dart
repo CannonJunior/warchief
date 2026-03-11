@@ -21,11 +21,11 @@ class MacroBuilderPanel extends StatefulWidget {
   final VoidCallback onMacroStarted;
 
   const MacroBuilderPanel({
-    Key? key,
+    super.key,
     required this.gameState,
     required this.onClose,
     required this.onMacroStarted,
-  }) : super(key: key);
+  });
 
   @override
   State<MacroBuilderPanel> createState() => _MacroBuilderPanelState();
@@ -210,14 +210,14 @@ class _MacroBuilderPanelState extends State<MacroBuilderPanel> {
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: _isRunning
-                  ? Colors.green.withOpacity(0.6)
-                  : Colors.amber.withOpacity(0.4),
+                  ? Colors.green.withValues(alpha: 0.6)
+                  : Colors.amber.withValues(alpha: 0.4),
               width: _isRunning ? 2 : 1,
             ),
             boxShadow: [
               BoxShadow(
                 color: (_isRunning ? Colors.green : Colors.black)
-                    .withOpacity(0.4),
+                    .withValues(alpha: 0.4),
                 blurRadius: 12,
                 spreadRadius: 2,
               ),
@@ -242,7 +242,7 @@ class _MacroBuilderPanelState extends State<MacroBuilderPanel> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.black.withValues(alpha: 0.3),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
       ),
       child: Row(
@@ -282,7 +282,7 @@ class _MacroBuilderPanelState extends State<MacroBuilderPanel> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.cyan.withOpacity(0.15),
+                color: Colors.cyan.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -302,7 +302,7 @@ class _MacroBuilderPanelState extends State<MacroBuilderPanel> {
               width: 20,
               height: 20,
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.5),
+                color: Colors.red.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.close,

@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 part of 'abilities_modal.dart';
 
 // ==================== CUSTOM ABILITIES EXTENSION ====================
@@ -39,10 +40,10 @@ extension _AbilitiesModalCustom on _AbilitiesModalState {
               child: Container(
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _getCategoryColor(ability.category).withOpacity(0.15),
+                  color: _getCategoryColor(ability.category).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: isEditing ? Colors.cyan : _getCategoryColor(ability.category).withOpacity(0.5),
+                    color: isEditing ? Colors.cyan : _getCategoryColor(ability.category).withValues(alpha: 0.5),
                     width: isEditing ? 2 : 1,
                   ),
                 ),
@@ -224,7 +225,7 @@ extension _AbilitiesModalCustom on _AbilitiesModalState {
             ...matchingBuiltIn
               .where((a) => _enabledTypes.contains(a.type))
               .map((ability) =>
-                _buildAbilityCard(ability, _getCategoryColor(category).withOpacity(0.3),
+                _buildAbilityCard(ability, _getCategoryColor(category).withValues(alpha: 0.3),
                   draggable: !(widget.gameState?.isActiveSummoned ?? false))),
             ...matchingCustom
               .where((a) => _enabledTypes.contains(a.type))

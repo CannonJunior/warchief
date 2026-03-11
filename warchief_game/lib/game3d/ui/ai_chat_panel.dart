@@ -6,9 +6,9 @@ class AIChatPanel extends StatelessWidget {
   final List<AIChatMessage> messages;
 
   const AIChatPanel({
-    Key? key,
+    super.key,
     required this.messages,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

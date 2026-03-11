@@ -16,7 +16,7 @@ class AbilityButton extends StatelessWidget {
   final bool isComboReady;
 
   const AbilityButton({
-    Key? key,
+    super.key,
     required this.label,
     required this.color,
     required this.cooldown,
@@ -26,7 +26,7 @@ class AbilityButton extends StatelessWidget {
     this.isOutOfRange = false,
     this.tooltipText,
     this.isComboReady = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +44,13 @@ class AbilityButton extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           color: Colors.black87,
-          border: Border.all(color: Colors.white30, width: 2),
+          // Reason: yellow border persists for the full combo window, including
+          // the phase where effectiveGcd=0 and isOnCooldown=false, so the player
+          // always sees a signal that the slot is combo-primed.
+          border: Border.all(
+            color: isComboReady ? const Color(0xFFFFAA00) : Colors.white30,
+            width: isComboReady ? 2.5 : 2,
+          ),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Stack(

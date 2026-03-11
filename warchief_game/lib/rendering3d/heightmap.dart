@@ -48,8 +48,8 @@ class Heightmap {
   double getTerrainHeight(double worldX, double worldZ) {
     // Convert world position to grid coordinates
     // Account for terrain being centered around origin
-    final gridX = (worldX / tileSize) + (this.width - 1) / 2.0;
-    final gridZ = (worldZ / tileSize) + (this.height - 1) / 2.0;
+    final gridX = (worldX / tileSize) + (width - 1) / 2.0;
+    final gridZ = (worldZ / tileSize) + (height - 1) / 2.0;
 
     // Get integer grid indices
     final x0 = gridX.floor();

@@ -2,6 +2,25 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-03-04
+
+#### Code Quality & Performance Optimization (Multi-Session)
+- ✅ Removed unused `healer_abilities.dart` + source-tree entry (replaced by `leyweaver_abilities.dart`)
+- ✅ **Item 8**: `attackType.split(' ').first` → zero-allocation substring in `combat_system.dart:147`
+- ✅ **Item 7**: 172 `.withOpacity(x)` → `.withValues(alpha: x)` across all Dart files (Flutter deprecation)
+- ✅ **Item 10**: 6 `unnecessary_brace_in_string_interps` fixed across 5 files
+- ✅ **Item 11**: 72 `use_super_parameters` fixed via `dart fix --apply` across 60 files
+- ✅ **Item 12**: `prefer_conditional_assignment` in `bezier_path.dart:142`
+- ✅ Build verified: `flutter analyze --no-pub` — 191 issues (down from 441), 0 errors
+- ✅ 133 more fixes via `dart fix --apply` (annotate_overrides, curly_braces, unnecessary_this, dangling_library_doc, etc.)
+- ✅ 62 `invalid_use_of_protected_member` in 11 extension-on-State part files → `ignore_for_file` directives
+- ✅ Particle structs (`_GreenSparkle`, `_MeteorParticle`, `_WindParticle`): converted constructor params → inline field initializers (pool pattern)
+- ✅ `use_build_context_synchronously` in `interfaces_tab.dart` — capture `ScaffoldMessenger` before `await`
+- ✅ `_initializeScenarioConfig` false-positive unused warning suppressed
+- ✅ `defForSlot` → `_defForSlot` to fix `library_private_types_in_public_api`
+- ✅ `<String, dynamic>` angle brackets in two doc comments → backtick-escaped
+- ✅ Final: `flutter analyze --no-pub` — **12 issues** (down from 441), all `info`-level architectural/intentional
+
 ### ✅ Completed - 2026-03-03
 
 #### Equipment Visual Representation

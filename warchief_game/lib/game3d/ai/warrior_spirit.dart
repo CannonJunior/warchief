@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show debugPrint;
 import '../../ai/ollama_client.dart';
+import '../../models/console_log_entry.dart';
 import '../../models/goal.dart';
 import '../../models/ai_chat_message.dart';
 import '../state/game_state.dart';
@@ -149,7 +150,7 @@ Speak as the Warrior Spirit. Be brief, evocative, not flowery.''';
 
     try {
       final response = await _client.generate(
-        model: globalGoalsConfig?.warriorSpiritModel ?? 'llama3.2',
+        model: globalGoalsConfig?.warriorSpiritModel ?? 'qwwen3.5:2b',
         prompt: prompt,
         temperature: globalGoalsConfig?.warriorSpiritTemperature ?? 0.8,
       );
@@ -191,22 +192,28 @@ Speak as the Warrior Spirit. Be brief, evocative, not flowery.''';
       ..._chatHistory,
     ];
 
+    final model = globalGoalsConfig?.warriorSpiritModel ?? 'qwwen3.5:2b';
     try {
       final reply = await _client.chat(
-        model: globalGoalsConfig?.warriorSpiritModel ?? 'qwen2.5:7b',
+        model: model,
         messages: messages,
         temperature: globalGoalsConfig?.warriorSpiritTemperature ?? 0.8,
       );
-      if (reply.isEmpty) {
+      // Reason: OllamaClient returns 'HTTP <code>: <body>' on non-200 responses
+      // so we can surface the actual Ollama error to the player.
+      if (reply.isEmpty || reply.startsWith('HTTP ')) {
         _chatHistory.removeLast();
-        return 'The spirit flickers. Try again.';
+        final detail = reply.isNotEmpty ? reply : 'empty response';
+        gameState.addConsoleLog('[Spirit] Ollama error ($model): $detail', level: ConsoleLogLevel.error);
+        return 'The spirit flickers. ($detail — verify model name in Settings > AI)';
       }
       _chatHistory.add({'role': 'assistant', 'content': reply});
       return reply;
     } catch (e) {
       debugPrint('[WARRIOR SPIRIT] Chat error: $e');
       _chatHistory.removeLast();
-      return 'The spirit flickers. Try again.';
+      gameState.addConsoleLog('[Spirit] Chat error: $e', level: ConsoleLogLevel.error);
+      return 'The spirit flickers. ($e)';
     }
   }
 
@@ -238,9 +245,10 @@ Speak as the Warrior Spirit. Be brief, evocative, not flowery.''';
     final buffer = StringBuffer();
     bool hadContent = false;
 
+    final model = globalGoalsConfig?.warriorSpiritModel ?? 'qwwen3.5:2b';
     try {
       await for (final chunk in _client.chatStream(
-        model: globalGoalsConfig?.warriorSpiritModel ?? 'qwen2.5:7b',
+        model: model,
         messages: messages,
         temperature: globalGoalsConfig?.warriorSpiritTemperature ?? 0.8,
       )) {
@@ -258,7 +266,8 @@ Speak as the Warrior Spirit. Be brief, evocative, not flowery.''';
     } catch (e) {
       debugPrint('[WARRIOR SPIRIT] chatStream error: $e');
       _chatHistory.removeLast();
-      yield 'The spirit flickers. Try again.';
+      gameState.addConsoleLog('[Spirit] chatStream error: $e', level: ConsoleLogLevel.error);
+      yield 'The spirit flickers. ($e)';
     }
   }
 

@@ -41,12 +41,12 @@ class DuelPanel extends StatefulWidget {
   final VoidCallback onResetCooldowns;
 
   const DuelPanel({
-    Key? key,
+    super.key,
     required this.manager,
     required this.onStartDuel,
     required this.onCancelDuel,
     required this.onResetCooldowns,
-  }) : super(key: key);
+  });
 
   @override
   State<DuelPanel> createState() => _DuelPanelState();
@@ -59,10 +59,10 @@ class _DuelPanelState extends State<DuelPanel> {
   int _chalPartySize  = 1;
   int _enemyPartySize = 1;
 
-  List<String?> _chalClasses  = [null];
-  List<String?> _enemyTypes   = [null];
-  List<int>     _chalGearTiers  = [0];
-  List<int>     _enemyGearTiers = [0];
+  final List<String?> _chalClasses  = [null];
+  final List<String?> _enemyTypes   = [null];
+  final List<int>     _chalGearTiers  = [0];
+  final List<int>     _enemyGearTiers = [0];
 
   DuelStrategy     _chalStrategy  = DuelStrategy.balanced;
   DuelStrategy     _enemyStrategy = DuelStrategy.balanced;
@@ -92,12 +92,20 @@ class _DuelPanelState extends State<DuelPanel> {
     setState(() {
       if (isChallenger) {
         _chalPartySize = n;
-        while (_chalClasses.length < n)   _chalClasses.add(null);
-        while (_chalGearTiers.length < n) _chalGearTiers.add(0);
+        while (_chalClasses.length < n) {
+          _chalClasses.add(null);
+        }
+        while (_chalGearTiers.length < n) {
+          _chalGearTiers.add(0);
+        }
       } else {
         _enemyPartySize = n;
-        while (_enemyTypes.length < n)     _enemyTypes.add(null);
-        while (_enemyGearTiers.length < n) _enemyGearTiers.add(0);
+        while (_enemyTypes.length < n) {
+          _enemyTypes.add(null);
+        }
+        while (_enemyGearTiers.length < n) {
+          _enemyGearTiers.add(0);
+        }
       }
     });
   }

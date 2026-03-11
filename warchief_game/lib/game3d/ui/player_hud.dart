@@ -12,20 +12,20 @@ class PlayerHud extends StatelessWidget {
   final VoidCallback? onAbility4Pressed;
 
   const PlayerHud({
-    Key? key,
+    super.key,
     required this.gameState,
     required this.onAbility1Pressed,
     required this.onAbility2Pressed,
     required this.onAbility3Pressed,
     this.onAbility4Pressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.8),
+        color: Colors.black.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.blue, width: 2),
       ),

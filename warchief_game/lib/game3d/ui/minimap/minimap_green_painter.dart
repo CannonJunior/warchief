@@ -250,7 +250,7 @@ class MinimapGreenPainter extends CustomPainter {
       Offset(center.dx, center.dy - size * 0.3),
       Offset(center.dx, center.dy + size * 0.5),
       Paint()
-        ..color = color.withOpacity(0.6)
+        ..color = color.withValues(alpha: 0.6)
         ..strokeWidth = 0.8
         ..style = PaintingStyle.stroke,
     );

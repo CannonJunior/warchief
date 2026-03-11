@@ -88,7 +88,7 @@ class EquipmentVisualConfig {
   }
 
   /// Returns the def for a slot name, or null if not found / not visible.
-  _SlotVisualDef? defForSlot(String slotName) {
+  _SlotVisualDef? _defForSlot(String slotName) {
     final def = _slots[slotName];
     if (def == null || !def.visible3d) return null;
     return def;
@@ -131,7 +131,7 @@ class EquipmentRenderer {
       final item = inventory.equipment[slot];
       if (item == null) continue;
 
-      final def = config.defForSlot(slot.name);
+      final def = config._defForSlot(slot.name);
       if (def == null) continue;
 
       final color = _resolveColor(item, def);

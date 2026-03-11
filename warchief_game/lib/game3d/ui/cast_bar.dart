@@ -12,9 +12,9 @@ class CastBar extends StatelessWidget {
   final GameState gameState;
 
   const CastBar({
-    Key? key,
+    super.key,
     required this.gameState,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -82,12 +82,12 @@ class CastBar extends StatelessWidget {
             color: Colors.black87,
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
-              color: barColor.withOpacity(0.5),
+              color: barColor.withValues(alpha: 0.5),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: barColor.withOpacity(0.3),
+                color: barColor.withValues(alpha: 0.3),
                 blurRadius: 8,
                 spreadRadius: 1,
               ),
@@ -108,9 +108,9 @@ class CastBar extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          barColor.withOpacity(0.8),
+                          barColor.withValues(alpha: 0.8),
                           barColor,
-                          barColor.withOpacity(0.9),
+                          barColor.withValues(alpha: 0.9),
                         ],
                         stops: const [0.0, 0.5, 1.0],
                       ),
@@ -128,7 +128,7 @@ class CastBar extends StatelessWidget {
                       gradient: LinearGradient(
                         colors: [
                           Colors.transparent,
-                          Colors.white.withOpacity(0.3),
+                          Colors.white.withValues(alpha: 0.3),
                           Colors.transparent,
                         ],
                       ),
@@ -160,7 +160,7 @@ class CastBar extends StatelessWidget {
                       Text(
                         '${(totalTime - currentTime).toStringAsFixed(1)}s',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                           fontSize: 11,
                           shadows: const [
                             Shadow(
@@ -180,7 +180,7 @@ class CastBar extends StatelessWidget {
                   child: Text(
                     label,
                     style: TextStyle(
-                      color: barColor.withOpacity(0.8),
+                      color: barColor.withValues(alpha: 0.8),
                       fontSize: 8,
                       fontWeight: FontWeight.w500,
                     ),
@@ -204,13 +204,13 @@ class CompactCastBar extends StatelessWidget {
   final double height;
 
   const CompactCastBar({
-    Key? key,
+    super.key,
     required this.progress,
     required this.abilityName,
     this.isCast = true,
     this.width = 120,
     this.height = 12,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +225,7 @@ class CompactCastBar extends StatelessWidget {
         color: Colors.black54,
         borderRadius: BorderRadius.circular(2),
         border: Border.all(
-          color: barColor.withOpacity(0.3),
+          color: barColor.withValues(alpha: 0.3),
           width: 1,
         ),
       ),

@@ -74,8 +74,12 @@ class CombatHUD extends StatelessWidget {
   // Callback when stance or other state changes (triggers parent rebuild)
   final VoidCallback? onStateChanged;
 
+  /// Called with the slot index when the mouse enters a hotkey slot, and with
+  /// null when it exits. Used to drive the ability-range circle overlay.
+  final void Function(int?)? onSlotHovered;
+
   const CombatHUD({
-    Key? key,
+    super.key,
     required this.playerName,
     required this.playerHealth,
     required this.playerMaxHealth,
@@ -116,7 +120,8 @@ class CombatHUD extends StatelessWidget {
     this.actionBarConfig,
     this.onAbilityDropped,
     this.onStateChanged,
-  }) : super(key: key);
+    this.onSlotHovered,
+  });
 
   @override
   Widget build(BuildContext context) {

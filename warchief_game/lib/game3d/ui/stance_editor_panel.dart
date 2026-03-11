@@ -16,11 +16,11 @@ class StanceEditorPanel extends StatefulWidget {
   final VoidCallback onSaved;
 
   const StanceEditorPanel({
-    Key? key,
+    super.key,
     required this.stance,
     required this.onClose,
     required this.onSaved,
-  }) : super(key: key);
+  });
 
   @override
   State<StanceEditorPanel> createState() => _StanceEditorPanelState();
@@ -294,7 +294,7 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: _accent, width: 2),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 12, spreadRadius: 2),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 12, spreadRadius: 2),
         ],
       ),
       child: Column(
@@ -328,7 +328,7 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
+        color: Colors.black.withValues(alpha: 0.7),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(6), topRight: Radius.circular(6)),
       ),
@@ -358,7 +358,7 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+        color: Colors.black.withValues(alpha: 0.5),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(6), bottomRight: Radius.circular(6)),
       ),
@@ -378,7 +378,7 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(4),
           border: Border.all(color: color, width: 1),
         ),

@@ -144,7 +144,7 @@ class CombatSystem {
         final dodgeChance = stance!.dodgeChance;
         if (dodgeChance > 0 && _csRng.nextDouble() < dodgeChance) {
           gameState.combatLogMessages.add(CombatLogEntry(
-            source: attackType.split(' ').first,
+            source: attackType.contains(' ') ? attackType.substring(0, attackType.indexOf(' ')) : attackType,
             action: '$attackType DODGED',
             type: CombatLogType.damage,
             amount: 0,

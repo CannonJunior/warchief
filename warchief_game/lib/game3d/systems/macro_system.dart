@@ -157,11 +157,12 @@ class MacroSystem {
       final execution = _activeExecutions[i];
       if (execution.isCancelled || execution.isPaused) continue;
 
-      // Decrement alert cooldowns
-      for (final key in execution.alertCooldowns.keys.toList()) {
-        execution.alertCooldowns[key] =
-            (execution.alertCooldowns[key]! - dt).clamp(0.0, double.infinity);
-      }
+      // Decrement alert cooldowns.
+      // Reason: updateAll mutates values in-place — avoids the List allocation
+      // that keys.toList() creates on every macro frame.
+      execution.alertCooldowns.updateAll(
+        (_, value) => (value - dt).clamp(0.0, double.infinity),
+      );
 
       // 1. GCD timer
       if (execution.gcdTimer > 0) {

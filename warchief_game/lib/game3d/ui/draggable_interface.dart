@@ -2,6 +2,7 @@
 ///
 /// A reusable widget that wraps any interface panel and makes it draggable.
 /// Uses InterfaceConfigManager to persist positions and respect lock state.
+library;
 
 import 'package:flutter/material.dart';
 import 'settings/interface_config.dart';
@@ -30,7 +31,7 @@ class DraggableInterface extends StatefulWidget {
   final bool showDragHandle;
 
   const DraggableInterface({
-    Key? key,
+    super.key,
     required this.interfaceId,
     required this.configManager,
     required this.child,
@@ -38,7 +39,7 @@ class DraggableInterface extends StatefulWidget {
     this.useRightPosition = false,
     this.onPositionChanged,
     this.showDragHandle = true,
-  }) : super(key: key);
+  });
 
   @override
   State<DraggableInterface> createState() => _DraggableInterfaceState();
@@ -153,7 +154,7 @@ class PositionedDraggableInterface extends StatelessWidget {
   final bool showDragHandle;
 
   const PositionedDraggableInterface({
-    Key? key,
+    super.key,
     required this.interfaceId,
     required this.configManager,
     required this.child,
@@ -161,7 +162,7 @@ class PositionedDraggableInterface extends StatelessWidget {
     this.useRightPosition = false,
     this.onPositionChanged,
     this.showDragHandle = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

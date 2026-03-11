@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 part of 'abilities_modal.dart';
 
 // ==================== ABILITY FILTERS EXTENSION ====================
@@ -12,8 +13,8 @@ extension _AbilitiesModalFilters on _AbilitiesModalState {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-        border: Border(bottom: BorderSide(color: Colors.cyan.withOpacity(0.3), width: 1)),
+        color: Colors.black.withValues(alpha: 0.5),
+        border: Border(bottom: BorderSide(color: Colors.cyan.withValues(alpha: 0.3), width: 1)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -32,8 +33,8 @@ extension _AbilitiesModalFilters on _AbilitiesModalState {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: enabledCount == totalCount
-                      ? Colors.cyan.withOpacity(0.15)
-                      : Colors.orange.withOpacity(0.15),
+                      ? Colors.cyan.withValues(alpha: 0.15)
+                      : Colors.orange.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(3),
                 ),
                 child: Text(
@@ -52,9 +53,9 @@ extension _AbilitiesModalFilters on _AbilitiesModalState {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.15),
+                    color: Colors.green.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(3),
-                    border: Border.all(color: Colors.green.withOpacity(0.4), width: 1),
+                    border: Border.all(color: Colors.green.withValues(alpha: 0.4), width: 1),
                   ),
                   child: Text('All', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
@@ -66,9 +67,9 @@ extension _AbilitiesModalFilters on _AbilitiesModalState {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.15),
+                    color: Colors.red.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(3),
-                    border: Border.all(color: Colors.red.withOpacity(0.4), width: 1),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.4), width: 1),
                   ),
                   child: Text('None', style: TextStyle(color: Colors.red.shade300, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
@@ -118,10 +119,10 @@ extension _AbilitiesModalFilters on _AbilitiesModalState {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isEnabled ? color.withOpacity(0.2) : Colors.transparent,
+          color: isEnabled ? color.withValues(alpha: 0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
-            color: isEnabled ? color.withOpacity(0.6) : Colors.white24,
+            color: isEnabled ? color.withValues(alpha: 0.6) : Colors.white24,
             width: 1,
           ),
         ),
@@ -156,8 +157,8 @@ extension _AbilitiesModalFilters on _AbilitiesModalState {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-        border: Border(bottom: BorderSide(color: Colors.orange.withOpacity(0.3), width: 1)),
+        color: Colors.black.withValues(alpha: 0.5),
+        border: Border(bottom: BorderSide(color: Colors.orange.withValues(alpha: 0.3), width: 1)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -176,8 +177,8 @@ extension _AbilitiesModalFilters on _AbilitiesModalState {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: enabledCount == totalCount
-                      ? Colors.orange.withOpacity(0.15)
-                      : Colors.red.withOpacity(0.15),
+                      ? Colors.orange.withValues(alpha: 0.15)
+                      : Colors.red.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(3),
                 ),
                 child: Text(
@@ -196,9 +197,9 @@ extension _AbilitiesModalFilters on _AbilitiesModalState {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.15),
+                    color: Colors.green.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(3),
-                    border: Border.all(color: Colors.green.withOpacity(0.4), width: 1),
+                    border: Border.all(color: Colors.green.withValues(alpha: 0.4), width: 1),
                   ),
                   child: Text('All', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
@@ -210,9 +211,9 @@ extension _AbilitiesModalFilters on _AbilitiesModalState {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.15),
+                    color: Colors.red.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(3),
-                    border: Border.all(color: Colors.red.withOpacity(0.4), width: 1),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.4), width: 1),
                   ),
                   child: Text('None', style: TextStyle(color: Colors.red.shade300, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
@@ -263,10 +264,10 @@ extension _AbilitiesModalFilters on _AbilitiesModalState {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isEnabled ? color.withOpacity(0.3) : Colors.transparent,
+          color: isEnabled ? color.withValues(alpha: 0.3) : Colors.transparent,
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
-            color: isEnabled ? color.withOpacity(0.7) : Colors.white24,
+            color: isEnabled ? color.withValues(alpha: 0.7) : Colors.white24,
             width: 1,
           ),
         ),

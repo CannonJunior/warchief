@@ -620,7 +620,12 @@ class GameState {
   double _targetListCacheTime = 0.0;
 
   /// Index of minions by instanceId for O(1) lookup.
+  /// Rebuilt each frame by [refreshAliveMinions] → [rebuildMinionIndex].
   final Map<String, Monster> _minionIndex = {};
+
+  /// Public O(1) minion lookup by instanceId.
+  /// Only contains alive minions; returns null for dead or unknown IDs.
+  Monster? minionById(String id) => _minionIndex[id];
 
   /// Maximum range for tab targeting (WoW uses ~40 yards; our units are smaller)
   static const double _tabTargetMaxRange = 50.0;
@@ -988,6 +993,21 @@ class GameState {
   /// Cleared to 0.0 when the GCD expires. Slots with a non-zero bonus show
   /// their cooldown clock in yellow to signal the combo window.
   final List<double> abilityComboGcdBonuses = List<double>.filled(10, 0.0);
+
+  /// Number of combo-primed abilities fired in the current chain (0, 1, or 2).
+  ///
+  /// Drives [comboRangeMultiplier]: depth 1 → +20%, depth 2 → +40%.
+  /// Reset to 0 when the GCD expires with no active combo bonus.
+  int comboDepth = 0;
+
+  /// Temporary range multiplier for the next ability, derived from [comboDepth].
+  double get comboRangeMultiplier =>
+      comboDepth >= 2 ? 1.4 : comboDepth == 1 ? 1.2 : 1.0;
+
+  /// Action bar slot index currently hovered by the mouse (null = none).
+  /// Set by MouseRegion callbacks in the action bar; consumed by the range
+  /// circle overlay when [GameplaySettings.showAbilityRanges] is enabled.
+  int? hoveredActionBarSlot;
 
   /// Maximum cooldown per slot (indexed 0-9).
   final List<double> abilityCooldownMaxes = [

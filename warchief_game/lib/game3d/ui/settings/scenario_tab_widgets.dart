@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 part of 'scenario_tab.dart';
 
 extension _ScenarioTabWidgets on _ScenarioTabState {
@@ -106,7 +107,7 @@ extension _ScenarioTabWidgets on _ScenarioTabState {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: _accent,
+            activeThumbColor: _accent,
             activeTrackColor: _accent.withValues(alpha: 0.3),
           ),
         ],

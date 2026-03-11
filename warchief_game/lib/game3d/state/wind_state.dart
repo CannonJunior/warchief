@@ -100,8 +100,12 @@ class WindState {
     windAngle += (layer1 + layer2 + layer3) * dt;
 
     // Keep angle in [0, 2*pi]
-    while (windAngle < 0) windAngle += 2 * math.pi;
-    while (windAngle >= 2 * math.pi) windAngle -= 2 * math.pi;
+    while (windAngle < 0) {
+      windAngle += 2 * math.pi;
+    }
+    while (windAngle >= 2 * math.pi) {
+      windAngle -= 2 * math.pi;
+    }
 
     // Track angular velocity as EMA of angle delta / dt.
     // Reason: shortest-arc delta handles the 0/2π wraparound so a wind

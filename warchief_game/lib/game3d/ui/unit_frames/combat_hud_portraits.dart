@@ -15,7 +15,7 @@ class TargetFrame extends StatelessWidget {
   final Widget? portraitWidget; // Custom portrait widget (e.g., 3D cube)
 
   const TargetFrame({
-    Key? key,
+    super.key,
     required this.name,
     required this.health,
     required this.maxHealth,
@@ -27,7 +27,7 @@ class TargetFrame extends StatelessWidget {
     this.isPaused = false,
     this.isTargeted = false,
     this.portraitWidget,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -260,12 +260,12 @@ class CubePortrait extends StatelessWidget {
   final Color? indicatorColor;
 
   const CubePortrait({
-    Key? key,
+    super.key,
     required this.color,
     this.size = 36,
     this.hasDirectionIndicator = true,
     this.indicatorColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

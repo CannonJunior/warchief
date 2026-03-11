@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 part of 'duel_panel.dart';
 
 // ── Aggregated stats for one unique matchup pulled from history ───────────────
@@ -164,15 +165,23 @@ extension _DuelPanelRecents on _DuelPanelState {
     setState(() {
       _showRecents   = false;
       _chalPartySize = rec.chalClasses.length;
-      while (_chalClasses.length   < _chalPartySize) _chalClasses.add(null);
-      while (_chalGearTiers.length < _chalPartySize) _chalGearTiers.add(0);
+      while (_chalClasses.length   < _chalPartySize) {
+        _chalClasses.add(null);
+      }
+      while (_chalGearTiers.length < _chalPartySize) {
+        _chalGearTiers.add(0);
+      }
       for (int i = 0; i < _chalPartySize; i++) {
         _chalClasses[i]  = rec.chalClasses[i];
         if (i < rec.chalGearTiers.length) _chalGearTiers[i] = rec.chalGearTiers[i];
       }
       _enemyPartySize = rec.enemyTypes.length;
-      while (_enemyTypes.length    < _enemyPartySize) _enemyTypes.add(null);
-      while (_enemyGearTiers.length < _enemyPartySize) _enemyGearTiers.add(0);
+      while (_enemyTypes.length    < _enemyPartySize) {
+        _enemyTypes.add(null);
+      }
+      while (_enemyGearTiers.length < _enemyPartySize) {
+        _enemyGearTiers.add(0);
+      }
       for (int i = 0; i < _enemyPartySize; i++) {
         _enemyTypes[i]   = rec.enemyTypes[i];
         if (i < rec.enemyGearTiers.length) _enemyGearTiers[i] = rec.enemyGearTiers[i];

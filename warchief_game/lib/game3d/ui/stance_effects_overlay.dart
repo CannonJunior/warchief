@@ -9,8 +9,7 @@ import '../state/game_state.dart';
 class StanceEffectsOverlay extends StatelessWidget {
   final GameState gameState;
 
-  const StanceEffectsOverlay({Key? key, required this.gameState})
-      : super(key: key);
+  const StanceEffectsOverlay({super.key, required this.gameState});
 
   @override
   Widget build(BuildContext context) {

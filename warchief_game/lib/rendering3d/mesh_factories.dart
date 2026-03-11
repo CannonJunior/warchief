@@ -5,8 +5,12 @@ part of 'mesh.dart';
 /// Simple sine approximation using Taylor series
 double _meshSin(double x) {
   // Normalize to [-pi, pi]
-  while (x > 3.14159265) x -= 6.28318530;
-  while (x < -3.14159265) x += 6.28318530;
+  while (x > 3.14159265) {
+    x -= 6.28318530;
+  }
+  while (x < -3.14159265) {
+    x += 6.28318530;
+  }
   final x2 = x * x;
   final x3 = x2 * x;
   final x5 = x3 * x2;

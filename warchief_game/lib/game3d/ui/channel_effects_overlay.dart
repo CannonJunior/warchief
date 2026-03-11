@@ -20,10 +20,10 @@ class ChannelEffectOverlay extends StatelessWidget {
   final Camera3D? camera;
 
   const ChannelEffectOverlay({
-    Key? key,
+    super.key,
     required this.gameState,
     required this.camera,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

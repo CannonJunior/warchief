@@ -5,6 +5,7 @@ mixin _WidgetInputMixin on _GameStateBase {
 
   /// Check if a text input field currently has focus.
   /// EditableText is the inner widget that TextField/TextFormField use for input.
+  @override
   bool _isTextFieldFocused() {
     final focus = FocusManager.instance.primaryFocus;
     if (focus == null) return false;
@@ -26,6 +27,7 @@ mixin _WidgetInputMixin on _GameStateBase {
 
   // ==================== KEYBOARD INPUT ====================
 
+  @override
   void _onKeyEvent(KeyEvent event) {
     // Handle P key for abilities modal (only on key down, not repeat)
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyP) {
@@ -381,6 +383,7 @@ mixin _WidgetInputMixin on _GameStateBase {
   /// Projects all entity positions to screen space and selects the closest
   /// entity to the click point within [GameConfig.clickSelectionRadius].
   /// Clicking empty space clears the current target.
+  @override
   void _handleWorldClick(PointerDownEvent event) {
     // Only process primary (left) mouse button
     if (event.buttons != 1) return;
@@ -416,6 +419,7 @@ mixin _WidgetInputMixin on _GameStateBase {
   /// Creates a [MinimapPing] at the given world XZ position and adds it
   /// to the minimap state. The ping is visible on both the minimap
   /// (expanding rings) and in the 3D world view (diamond icon).
+  @override
   void _handleMinimapPing(double worldX, double worldZ) {
     final config = globalMinimapConfig;
     final colorList = config?.pingDefaultColor ?? [1.0, 0.9, 0.3, 1.0];
@@ -439,45 +443,60 @@ mixin _WidgetInputMixin on _GameStateBase {
 
   // ==================== ABILITY ACTIVATION ====================
 
-  // Ability activation methods (for clickable buttons)
+  // Ability activation methods (for clickable buttons).
+  // Reason: no setState here — these only mutate gameState. The game loop
+  // calls setState every frame when isCasting/isWindingUp is true (cast-bar
+  // abilities), and every 10 frames otherwise. That covers the UI refresh
+  // within ≤1 animation frame for cast abilities and ≤160ms for instants,
+  // avoiding a redundant full widget rebuild per button click.
+  @override
   void _activateAbility1() {
-    setState(() { AbilitySystem.handleAbility1Input(true, gameState); });
+    AbilitySystem.handleAbility1Input(true, gameState);
   }
 
+  @override
   void _activateAbility2() {
-    setState(() { AbilitySystem.handleAbility2Input(true, gameState); });
+    AbilitySystem.handleAbility2Input(true, gameState);
   }
 
+  @override
   void _activateAbility3() {
-    setState(() { AbilitySystem.handleAbility3Input(true, gameState); });
+    AbilitySystem.handleAbility3Input(true, gameState);
   }
 
+  @override
   void _activateAbility4() {
-    setState(() { AbilitySystem.handleAbility4Input(true, gameState); });
+    AbilitySystem.handleAbility4Input(true, gameState);
   }
 
+  @override
   void _activateAbility5() {
-    setState(() { AbilitySystem.handleAbility5Input(true, gameState); });
+    AbilitySystem.handleAbility5Input(true, gameState);
   }
 
+  @override
   void _activateAbility6() {
-    setState(() { AbilitySystem.handleAbility6Input(true, gameState); });
+    AbilitySystem.handleAbility6Input(true, gameState);
   }
 
+  @override
   void _activateAbility7() {
-    setState(() { AbilitySystem.handleAbility7Input(true, gameState); });
+    AbilitySystem.handleAbility7Input(true, gameState);
   }
 
+  @override
   void _activateAbility8() {
-    setState(() { AbilitySystem.handleAbility8Input(true, gameState); });
+    AbilitySystem.handleAbility8Input(true, gameState);
   }
 
+  @override
   void _activateAbility9() {
-    setState(() { AbilitySystem.handleAbility9Input(true, gameState); });
+    AbilitySystem.handleAbility9Input(true, gameState);
   }
 
+  @override
   void _activateAbility10() {
-    setState(() { AbilitySystem.handleAbility10Input(true, gameState); });
+    AbilitySystem.handleAbility10Input(true, gameState);
   }
 
   /// Update the action bar config manager to match the active character
@@ -489,6 +508,7 @@ mixin _WidgetInputMixin on _GameStateBase {
   }
 
   /// Handle ability dropped from Abilities Codex onto action bar slot
+  @override
   void _handleAbilityDropped(int slotIndex, String abilityName) {
     final config = globalActionBarConfig;
     if (config != null) {
@@ -500,6 +520,7 @@ mixin _WidgetInputMixin on _GameStateBase {
   }
 
   /// Handle class loaded to action bar — update active character mesh color
+  @override
   void _handleClassLoaded(String category) {
     final color = AuraSystem.getCategoryColorVec3(category);
     if (gameState.isWarchiefActive) {

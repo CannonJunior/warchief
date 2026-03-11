@@ -55,12 +55,12 @@ class DamageIndicatorOverlay extends StatelessWidget {
   final double canvasHeight;
 
   const DamageIndicatorOverlay({
-    Key? key,
+    super.key,
     required this.indicators,
     required this.camera,
     required this.canvasWidth,
     required this.canvasHeight,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -172,31 +172,31 @@ class DamageIndicatorOverlay extends StatelessWidget {
                     : indicator.damage.round().toString(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: textColor.withOpacity(opacity),
+                  color: textColor.withValues(alpha: opacity),
                   fontSize: fontSize,
                   fontWeight: FontWeight.w900,
                   shadows: indicator.isKillingBlow
                       ? [
                           // Reason: Killing blow gets black + yellow shadows for emphasis
                           Shadow(
-                            color: Colors.black.withOpacity(opacity * 0.9),
+                            color: Colors.black.withValues(alpha: opacity * 0.9),
                             blurRadius: 4,
                             offset: const Offset(1, 1),
                           ),
                           Shadow(
-                            color: const Color(0xFFFFDD00).withOpacity(opacity * 0.6),
+                            color: const Color(0xFFFFDD00).withValues(alpha: opacity * 0.6),
                             blurRadius: 8,
                             offset: const Offset(0, 0),
                           ),
                         ]
                       : [
                           Shadow(
-                            color: Colors.black.withOpacity(opacity * 0.9),
+                            color: Colors.black.withValues(alpha: opacity * 0.9),
                             blurRadius: 3,
                             offset: const Offset(1, 1),
                           ),
                           Shadow(
-                            color: Colors.black.withOpacity(opacity * 0.7),
+                            color: Colors.black.withValues(alpha: opacity * 0.7),
                             blurRadius: 6,
                             offset: const Offset(0, 0),
                           ),
@@ -281,12 +281,12 @@ class _SparkleTrailPainter extends CustomPainter {
         seedPhase,
       )!;
 
-      paint.color = red.withOpacity(sparkleOpacity);
+      paint.color = red.withValues(alpha: sparkleOpacity);
       canvas.drawCircle(Offset(x, y), sparkleSize, paint);
 
       // Add a glow around larger sparkles
       if (sparkleSize > 2.0) {
-        paint.color = red.withOpacity(sparkleOpacity * 0.3);
+        paint.color = red.withValues(alpha: sparkleOpacity * 0.3);
         canvas.drawCircle(Offset(x, y), sparkleSize * 2.0, paint);
       }
     }

@@ -19,12 +19,12 @@ class BuildingPanel extends StatefulWidget {
   final VoidCallback onUpgrade;
 
   const BuildingPanel({
-    Key? key,
+    super.key,
     required this.building,
     required this.leyLineManager,
     required this.onClose,
     required this.onUpgrade,
-  }) : super(key: key);
+  });
 
   @override
   State<BuildingPanel> createState() => _BuildingPanelState();
@@ -119,7 +119,7 @@ class _BuildingPanelState extends State<BuildingPanel> {
                     ),
                     _buildStatRow(
                       'Aura Radius',
-                      '${_fmt(tierDef.auraRadius)}',
+                      _fmt(tierDef.auraRadius),
                       const Color(0xFFCCCCCC),
                     ),
 

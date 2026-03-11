@@ -228,12 +228,12 @@ class RotatableCubePortrait extends StatelessWidget {
   final PaperDollEquipment? equipment;
 
   const RotatableCubePortrait({
-    Key? key,
+    super.key,
     required this.color,
     this.size = 120,
     this.rotation = 0,
     this.equipment,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

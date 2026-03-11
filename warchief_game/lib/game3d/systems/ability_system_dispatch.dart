@@ -75,18 +75,35 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
     return;
   }
 
-  // GCD gate
-  if (gameState.activeGcdRemaining > 0) {
-    gameState.addConsoleLog('$abilityName: GCD active (${gameState.activeGcdRemaining.toStringAsFixed(1)}s)', level: ConsoleLogLevel.warn);
-    return;
+  // Capture combo state — whether this slot is inside an active combo window.
+  // Must be read before the GCD gate so it's available for the range check too.
+  final _comboBonus = (gameState.isWarchiefActive &&
+          slotIndex >= 0 &&
+          slotIndex < gameState.abilityComboGcdBonuses.length)
+      ? gameState.abilityComboGcdBonuses[slotIndex]
+      : 0.0;
+  final _wasComboFired = _comboBonus > 0.0;
+
+  // GCD gate — subtract per-slot combo bonus so primed abilities fire early
+  {
+    final effectiveGcd = gameState.activeGcdRemaining - _comboBonus;
+    if (effectiveGcd > 0) {
+      gameState.addConsoleLog(
+        '$abilityName: GCD active (${effectiveGcd.toStringAsFixed(1)}s)',
+        level: ConsoleLogLevel.warn,
+      );
+      return;
+    }
   }
 
-  // Range check
+  // Range check — combo window extends reach by comboRangeMultiplier
   final abilityData = globalActionBarConfig?.getSlotAbilityData(slotIndex);
   if (abilityData != null && !abilityData.isSelfCast && abilityData.range > 0 && gameState.currentTargetId != null) {
     final distance = gameState.getDistanceToCurrentTarget();
-    if (distance != null && distance > abilityData.range) {
-      gameState.addConsoleLog('$abilityName out of range (${distance.toStringAsFixed(1)} > ${abilityData.range})', level: ConsoleLogLevel.warn);
+    final effectiveRange = abilityData.range *
+        (_wasComboFired ? gameState.comboRangeMultiplier : 1.0);
+    if (distance != null && distance > effectiveRange) {
+      gameState.addConsoleLog('$abilityName out of range (${distance.toStringAsFixed(1)} > ${effectiveRange.toStringAsFixed(1)})', level: ConsoleLogLevel.warn);
       return;
     }
   }
@@ -113,14 +130,14 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
   if (manaCost > 0 && manaType != _ManaType.none) {
     final requiredColor = _manaTypeToColor(manaType);
     if (!gameState.activeManaAttunements.contains(requiredColor)) {
-      gameState.addConsoleLog('$abilityName: not attuned to ${requiredColor} mana', level: ConsoleLogLevel.warn);
+      gameState.addConsoleLog('$abilityName: not attuned to $requiredColor mana', level: ConsoleLogLevel.warn);
       return;
     }
   }
   if (secondaryManaCost > 0 && secondaryManaType != _ManaType.none) {
     final requiredColor = _manaTypeToColor(secondaryManaType);
     if (!gameState.activeManaAttunements.contains(requiredColor)) {
-      gameState.addConsoleLog('$abilityName: not attuned to ${requiredColor} mana (secondary)', level: ConsoleLogLevel.warn);
+      gameState.addConsoleLog('$abilityName: not attuned to $requiredColor mana (secondary)', level: ConsoleLogLevel.warn);
       return;
     }
   }
@@ -149,7 +166,9 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
     if (manaCost > 0 && !_activeHasMana(gameState, manaType, manaCost, abilityName)) return;
   }
   if (secondaryManaCost > 0 && !stance.usesHpForMana &&
-      !_activeHasMana(gameState, secondaryManaType, secondaryManaCost, abilityName)) return;
+      !_activeHasMana(gameState, secondaryManaType, secondaryManaCost, abilityName)) {
+    return;
+  }
 
   // Cast-time abilities: defer mana until cast completes
   if (abilityData != null && abilityData.hasCastTime) {
@@ -224,7 +243,23 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
     }
   }
 
-  // Apply combo GCD bonuses: primed slots get 0.5s shaved off their GCD display.
+  // Consume this slot's combo bonus now that the ability has fired.
+  if (gameState.isWarchiefActive &&
+      slotIndex >= 0 &&
+      slotIndex < gameState.abilityComboGcdBonuses.length) {
+    gameState.abilityComboGcdBonuses[slotIndex] = 0.0;
+  }
+
+  // Update combo depth for the next ability's range multiplier.
+  // Reason: depth 1 → +20%, depth 2 → +40% range on the next primed ability.
+  // Any non-combo fire resets the chain; combo fires deepen it (max 2).
+  if (gameState.isWarchiefActive) {
+    gameState.comboDepth = _wasComboFired
+        ? (gameState.comboDepth + 1).clamp(0, 2)
+        : 0;
+  }
+
+  // Apply combo GCD bonuses to primed follow-up slots.
   if (abilityData != null && abilityData.comboPrimes.isNotEmpty) {
     _applyComboGcdBonuses(abilityData.comboPrimes, gameState);
   }

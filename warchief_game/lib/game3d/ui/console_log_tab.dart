@@ -12,7 +12,7 @@ import '../../models/console_log_entry.dart';
 class ConsoleLogTab extends StatelessWidget {
   final List<ConsoleLogEntry> messages;
 
-  const ConsoleLogTab({Key? key, required this.messages}) : super(key: key);
+  const ConsoleLogTab({super.key, required this.messages});
 
   /// Get color for a [ConsoleLogLevel].
   static Color colorForLevel(ConsoleLogLevel level) {

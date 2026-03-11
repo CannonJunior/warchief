@@ -11,10 +11,10 @@ class MacroStepList extends StatefulWidget {
   final void Function(List<MacroStep>) onStepsChanged;
 
   const MacroStepList({
-    Key? key,
+    super.key,
     required this.steps,
     required this.onStepsChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<MacroStepList> createState() => _MacroStepListState();
@@ -157,7 +157,7 @@ class _MacroStepListState extends State<MacroStepList> {
       margin: const EdgeInsets.only(bottom: 3),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -168,7 +168,7 @@ class _MacroStepListState extends State<MacroStepList> {
             height: 20,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.3),
+              color: Colors.amber.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
@@ -193,7 +193,7 @@ class _MacroStepListState extends State<MacroStepList> {
             child: Text(
               label,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 11,
               ),
               overflow: TextOverflow.ellipsis,
@@ -204,7 +204,7 @@ class _MacroStepListState extends State<MacroStepList> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.3),
+                color: Colors.purple.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(3),
               ),
               child: Text(
@@ -250,7 +250,7 @@ class _MacroStepListState extends State<MacroStepList> {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: Colors.white12),
       ),
@@ -398,7 +398,7 @@ class _MacroStepListState extends State<MacroStepList> {
               label:
                   const Text('Add', style: TextStyle(fontSize: 11)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.cyan.withOpacity(0.3),
+                backgroundColor: Colors.cyan.withValues(alpha: 0.3),
                 foregroundColor: Colors.cyanAccent,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 shape: RoundedRectangleBorder(
@@ -423,7 +423,7 @@ class _MacroStepListState extends State<MacroStepList> {
       height: 24,
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: Colors.white24),
       ),
@@ -468,7 +468,7 @@ class _MacroStepListState extends State<MacroStepList> {
       height: 24,
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: Colors.white24),
       ),

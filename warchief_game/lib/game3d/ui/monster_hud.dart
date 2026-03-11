@@ -12,13 +12,13 @@ class MonsterHud extends StatelessWidget {
   final VoidCallback onPauseToggle;
 
   const MonsterHud({
-    Key? key,
+    super.key,
     required this.gameState,
     required this.onAbility1Pressed,
     required this.onAbility2Pressed,
     required this.onAbility3Pressed,
     required this.onPauseToggle,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +28,7 @@ class MonsterHud extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.7),
+          color: Colors.black.withValues(alpha: 0.7),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.purple, width: 2),
         ),

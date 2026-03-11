@@ -19,6 +19,7 @@ class GameplaySettings {
   static const String _keyDamageNumberScale = 'gameplay_damage_number_scale';
   static const String _keyShowFpsCounter = 'gameplay_show_fps_counter';
   static const String _keyShowDebugInfo = 'gameplay_show_debug_info';
+  static const String _keyShowAbilityRanges = 'gameplay_show_ability_ranges';
 
   /// When true, characters must equip a Talisman that attunes them to a
   /// mana color before they can regenerate, spend, or see that mana pool.
@@ -49,6 +50,9 @@ class GameplaySettings {
   /// Show an extended debug overlay with frame time, entity counts, etc.
   bool showDebugInfo;
 
+  /// When true, hovering a hotkey shows a range circle around the active unit.
+  bool showAbilityRanges;
+
   GameplaySettings({
     this.attunementRequired = true,
     this.manaSourceVisibilityGated = false,
@@ -58,6 +62,7 @@ class GameplaySettings {
     this.damageNumberScale = 1.0,
     this.showFpsCounter = false,
     this.showDebugInfo = false,
+    this.showAbilityRanges = false,
   });
 
   /// Load saved settings from persistent storage.
@@ -72,6 +77,7 @@ class GameplaySettings {
       damageNumberScale = prefs.getDouble(_keyDamageNumberScale) ?? 1.0;
       showFpsCounter = prefs.getBool(_keyShowFpsCounter) ?? false;
       showDebugInfo = prefs.getBool(_keyShowDebugInfo) ?? false;
+      showAbilityRanges = prefs.getBool(_keyShowAbilityRanges) ?? false;
       debugPrint('[GameplaySettings] Loaded: attunementRequired=$attunementRequired, '
           'manaSourceVisibilityGated=$manaSourceVisibilityGated, '
           'showDamageNumbers=$showDamageNumbers, showHealNumbers=$showHealNumbers, '
@@ -94,6 +100,7 @@ class GameplaySettings {
       await prefs.setDouble(_keyDamageNumberScale, damageNumberScale);
       await prefs.setBool(_keyShowFpsCounter, showFpsCounter);
       await prefs.setBool(_keyShowDebugInfo, showDebugInfo);
+      await prefs.setBool(_keyShowAbilityRanges, showAbilityRanges);
       debugPrint('[GameplaySettings] Saved');
     } catch (e) {
       debugPrint('[GameplaySettings] Error saving: $e');

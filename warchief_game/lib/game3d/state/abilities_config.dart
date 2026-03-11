@@ -13,7 +13,7 @@
 /// - Edit leyweaver abilities: data/abilities/leyweaver_abilities.dart (~170 lines)
 /// - Edit aethermancer abilities: data/abilities/aethermancer_abilities.dart (~160 lines)
 /// - Add types/enums: data/abilities/ability_types.dart (~90 lines)
-library abilities_config;
+library;
 
 // Re-export all types for backward compatibility
 export '../data/abilities/abilities.dart';

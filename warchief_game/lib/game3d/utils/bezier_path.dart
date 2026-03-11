@@ -139,9 +139,7 @@ class BezierPath {
   /// Returns:
   /// - New position after advancing, or null if reached end
   Vector3? advance(double distance) {
-    if (_approximateLength == null) {
-      _approximateLength = _calculateApproximateLength();
-    }
+    _approximateLength ??= _calculateApproximateLength();
 
     // Convert distance to t parameter increment
     final deltaT = distance / _approximateLength!;

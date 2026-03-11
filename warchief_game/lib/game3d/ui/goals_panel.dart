@@ -19,13 +19,13 @@ class GoalsPanel extends StatefulWidget {
   final VoidCallback onClose;
 
   const GoalsPanel({
-    Key? key,
+    super.key,
     required this.goals,
     required this.pendingGoal,
     required this.onAcceptGoal,
     required this.onDeclineGoal,
     required this.onClose,
-  }) : super(key: key);
+  });
 
   @override
   State<GoalsPanel> createState() => _GoalsPanelState();

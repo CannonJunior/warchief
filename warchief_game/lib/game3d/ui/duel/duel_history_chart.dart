@@ -146,7 +146,11 @@ class _IndividualChartPainter extends CustomPainter {
       final pt = s.points[i];
       final x = (pt.t / duration) * size.width;
       final y = (1.0 - pt.hpPct) * size.height;
-      if (i == 0) path.moveTo(x, y); else path.lineTo(x, y);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
     }
     canvas.drawPath(
       path,

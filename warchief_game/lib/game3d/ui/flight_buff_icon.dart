@@ -8,7 +8,7 @@ import '../state/game_state.dart';
 class FlightBuffIcon extends StatefulWidget {
   final GameState gameState;
 
-  const FlightBuffIcon({Key? key, required this.gameState}) : super(key: key);
+  const FlightBuffIcon({super.key, required this.gameState});
 
   @override
   State<FlightBuffIcon> createState() => _FlightBuffIconState();
@@ -53,13 +53,13 @@ class _FlightBuffIconState extends State<FlightBuffIcon>
     return Row(
       children: [
         Text('B:', style: TextStyle(fontSize: 7, color: labelColor)),
-        Text('${bank.toStringAsFixed(0)}', style: TextStyle(fontSize: 7, color: valueColor)),
+        Text(bank.toStringAsFixed(0), style: TextStyle(fontSize: 7, color: valueColor)),
         const SizedBox(width: 4),
         Text('Y:', style: TextStyle(fontSize: 7, color: labelColor)),
-        Text('${yaw.toStringAsFixed(0)}', style: TextStyle(fontSize: 7, color: valueColor)),
+        Text(yaw.toStringAsFixed(0), style: TextStyle(fontSize: 7, color: valueColor)),
         const SizedBox(width: 4),
         Text('P:', style: TextStyle(fontSize: 7, color: labelColor)),
-        Text('${pitch.toStringAsFixed(0)}', style: TextStyle(fontSize: 7, color: valueColor)),
+        Text(pitch.toStringAsFixed(0), style: TextStyle(fontSize: 7, color: valueColor)),
       ],
     );
   }

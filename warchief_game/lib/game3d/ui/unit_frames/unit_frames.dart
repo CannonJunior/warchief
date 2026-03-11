@@ -1,5 +1,5 @@
 /// Unit frames module - WoW-style unit frame widgets
-library unit_frames;
+library;
 
 export 'unit_frame.dart';
 export 'vs_indicator.dart';

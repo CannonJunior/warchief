@@ -22,11 +22,11 @@ class CharacterPanel extends StatefulWidget {
   final int initialIndex;
 
   const CharacterPanel({
-    Key? key,
+    super.key,
     required this.onClose,
     required this.gameState,
     this.initialIndex = 0,
-  }) : super(key: key);
+  });
 
   @override
   State<CharacterPanel> createState() => _CharacterPanelState();
@@ -120,8 +120,11 @@ class _CharacterPanelState extends State<CharacterPanel> {
       // Rebuild 3D equipment visuals after equip
       final cfg = globalEquipmentVisualConfig;
       if (cfg != null) {
-        if (_isViewingPlayer) gs.rebuildPlayerEquipmentVisuals(cfg);
-        else _currentAlly?.rebuildEquipmentVisuals(cfg);
+        if (_isViewingPlayer) {
+          gs.rebuildPlayerEquipmentVisuals(cfg);
+        } else {
+          _currentAlly?.rebuildEquipmentVisuals(cfg);
+        }
       }
     });
   }
@@ -151,8 +154,11 @@ class _CharacterPanelState extends State<CharacterPanel> {
       // Rebuild 3D equipment visuals after unequip
       final cfg = globalEquipmentVisualConfig;
       if (cfg != null) {
-        if (_isViewingPlayer) gs.rebuildPlayerEquipmentVisuals(cfg);
-        else _currentAlly?.rebuildEquipmentVisuals(cfg);
+        if (_isViewingPlayer) {
+          gs.rebuildPlayerEquipmentVisuals(cfg);
+        } else {
+          _currentAlly?.rebuildEquipmentVisuals(cfg);
+        }
       }
     });
   }
@@ -175,7 +181,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
   /// Returns a [PaperDollEquipment] reflecting helm, armor, weapon, and
   /// off-hand colors from item rarity (or explicit visualColor override).
   PaperDollEquipment _buildPaperDollEquipment(Inventory inv) {
-    Color? _slotColor(EquipmentSlot slot) {
+    Color? slotColor(EquipmentSlot slot) {
       final item = inv.equipment[slot];
       if (item == null) return null;
       if (item.visualColor != null && item.visualColor!.length >= 3) {
@@ -190,10 +196,10 @@ class _CharacterPanelState extends State<CharacterPanel> {
       return item.rarity.color;
     }
     return PaperDollEquipment(
-      helmColor:    _slotColor(EquipmentSlot.helm),
-      armorColor:   _slotColor(EquipmentSlot.armor),
-      weaponColor:  _slotColor(EquipmentSlot.mainHand),
-      offHandColor: _slotColor(EquipmentSlot.offHand),
+      helmColor:    slotColor(EquipmentSlot.helm),
+      armorColor:   slotColor(EquipmentSlot.armor),
+      weaponColor:  slotColor(EquipmentSlot.mainHand),
+      offHandColor: slotColor(EquipmentSlot.offHand),
     );
   }
 

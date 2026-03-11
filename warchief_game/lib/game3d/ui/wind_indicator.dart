@@ -12,10 +12,10 @@ class WindIndicator extends StatelessWidget {
   final double size;
 
   const WindIndicator({
-    Key? key,
+    super.key,
     required this.windState,
     this.size = 40,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +49,7 @@ class WindIndicator extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 4),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.red.shade900.withOpacity(0.85 * derechoInt),
+              color: Colors.red.shade900.withValues(alpha: 0.85 * derechoInt),
               borderRadius: BorderRadius.circular(4),
               border: Border.all(
                 color: borderColor,
@@ -71,7 +71,7 @@ class WindIndicator extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: const Color(0xFF0A0A1A).withOpacity(0.7),
+            color: const Color(0xFF0A0A1A).withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(size / 2),
             border: Border.all(
               color: borderColor,
@@ -103,8 +103,8 @@ class WindIndicator extends StatelessWidget {
                   '${(windState.windStrengthPercent).toInt()}',
                   style: TextStyle(
                     color: isDerecho
-                        ? Colors.orange.shade200.withOpacity(0.9)
-                        : Colors.white.withOpacity(opacity * 0.8),
+                        ? Colors.orange.shade200.withValues(alpha: 0.9)
+                        : Colors.white.withValues(alpha: opacity * 0.8),
                     fontSize: 7,
                     fontWeight: FontWeight.bold,
                   ),

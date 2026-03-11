@@ -1,6 +1,7 @@
 /// Data models for duel arena results and event logging.
 ///
 /// All types support JSON round-trip for SharedPreferences persistence.
+library;
 
 // ==================== END CONDITION ====================
 

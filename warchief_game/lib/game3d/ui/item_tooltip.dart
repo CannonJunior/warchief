@@ -11,11 +11,11 @@ class EquipSlotHover extends StatefulWidget {
   final Widget child;
 
   const EquipSlotHover({
-    Key? key,
+    super.key,
     required this.item,
     required this.slotName,
     required this.child,
-  }) : super(key: key);
+  });
 
   @override
   State<EquipSlotHover> createState() => _EquipSlotHoverState();

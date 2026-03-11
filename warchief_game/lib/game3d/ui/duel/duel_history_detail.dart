@@ -29,10 +29,10 @@ class DuelHistoryDetail extends StatefulWidget {
   final VoidCallback onBack;
 
   const DuelHistoryDetail({
-    Key? key,
+    super.key,
     required this.result,
     required this.onBack,
-  }) : super(key: key);
+  });
 
   @override
   State<DuelHistoryDetail> createState() => _DuelHistoryDetailState();
@@ -124,8 +124,12 @@ class _DuelHistoryDetailState extends State<DuelHistoryDetail> {
     }
 
     final dur = result.durationSeconds;
-    for (int i = 0; i < chalSize;  i++) chalPts[i].add(_ChartPoint(dur, chalHps[i]  / chalHpPer));
-    for (int i = 0; i < enemySize; i++) enemyPts[i].add(_ChartPoint(dur, enemyHps[i] / enemyHpPer));
+    for (int i = 0; i < chalSize;  i++) {
+      chalPts[i].add(_ChartPoint(dur, chalHps[i]  / chalHpPer));
+    }
+    for (int i = 0; i < enemySize; i++) {
+      enemyPts[i].add(_ChartPoint(dur, enemyHps[i] / enemyHpPer));
+    }
 
     final chalColors  = <Color>[Colors.blue, Colors.lightBlue, Colors.cyan, Colors.indigo, Colors.teal];
     final enemyColors = <Color>[_red, Colors.orange, Colors.deepOrange, Colors.amber, Colors.pink];

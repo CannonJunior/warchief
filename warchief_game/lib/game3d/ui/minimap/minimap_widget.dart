@@ -37,12 +37,12 @@ class MinimapWidget extends StatelessWidget {
   final void Function(double worldX, double worldZ) onPingCreated;
 
   const MinimapWidget({
-    Key? key,
+    super.key,
     required this.gameState,
     required this.windState,
     required this.camera,
     required this.onPingCreated,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -267,7 +267,7 @@ class MinimapWidget extends StatelessWidget {
         margin: const EdgeInsets.only(top: 2),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color: const Color(0xFF0A0A1A).withOpacity(0.7),
+          color: const Color(0xFF0A0A1A).withValues(alpha: 0.7),
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
             color: const Color(0xFF252542),

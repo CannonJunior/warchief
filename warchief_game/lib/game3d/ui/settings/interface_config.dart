@@ -5,6 +5,7 @@
 /// - Storing panel positions
 /// - Persisting configuration to local storage
 /// - Loading configuration on startup
+library;
 
 import 'dart:convert';
 import 'package:flutter/material.dart';

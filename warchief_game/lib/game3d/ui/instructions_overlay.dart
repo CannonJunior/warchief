@@ -8,10 +8,10 @@ class InstructionsOverlay extends StatelessWidget {
   final GameState gameState;
 
   const InstructionsOverlay({
-    Key? key,
+    super.key,
     required this.camera,
     required this.gameState,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

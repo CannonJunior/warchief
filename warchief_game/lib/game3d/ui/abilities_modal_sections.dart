@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 part of 'abilities_modal.dart';
 
 // ==================== ABILITY SECTIONS EXTENSION ====================
@@ -33,7 +34,7 @@ extension _AbilitiesModalSections on _AbilitiesModalState {
         Container(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(4),
             border: Border.all(color: color, width: 2),
           ),
@@ -156,7 +157,7 @@ extension _AbilitiesModalSections on _AbilitiesModalState {
                         height: 20,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: categoryColor.withOpacity(0.6),
+                          color: categoryColor.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -177,7 +178,7 @@ extension _AbilitiesModalSections on _AbilitiesModalState {
                         ? _buildCustomAbilityCard(ability)
                         : _buildAbilityCard(
                             ability,
-                            categoryColor.withOpacity(0.3),
+                            categoryColor.withValues(alpha: 0.3),
                             draggable: !(widget.gameState?.isActiveSummoned ?? false),
                           ),
                   ),
@@ -204,7 +205,7 @@ extension _AbilitiesModalSections on _AbilitiesModalState {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.green.withOpacity(0.15),
+          color: Colors.green.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.green, width: 2),
         ),
@@ -250,9 +251,9 @@ extension _AbilitiesModalSections on _AbilitiesModalState {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.cyan.withOpacity(0.1),
+        color: Colors.cyan.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.cyan.withOpacity(0.4), width: 1),
+        border: Border.all(color: Colors.cyan.withValues(alpha: 0.4), width: 1),
       ),
       child: Row(
         children: [
@@ -269,9 +270,9 @@ extension _AbilitiesModalSections on _AbilitiesModalState {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.cyan.withOpacity(0.5), width: 1),
+              border: Border.all(color: Colors.cyan.withValues(alpha: 0.5), width: 1),
             ),
             child: DropdownButton<String>(
               value: _selectedLoadClass,
@@ -310,7 +311,7 @@ extension _AbilitiesModalSections on _AbilitiesModalState {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: _getCategoryColor(_selectedLoadClass).withOpacity(0.3),
+                color: _getCategoryColor(_selectedLoadClass).withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
                   color: _getCategoryColor(_selectedLoadClass),
@@ -358,7 +359,7 @@ extension _AbilitiesModalSections on _AbilitiesModalState {
       }
     }
 
-    debugPrint('[CODEX] Loaded ${category} class abilities to action bar '
+    debugPrint('[CODEX] Loaded $category class abilities to action bar '
         '(${abilities.length > 10 ? 10 : abilities.length} abilities)');
 
     // Notify parent to update character mesh color

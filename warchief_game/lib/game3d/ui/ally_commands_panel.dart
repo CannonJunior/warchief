@@ -16,14 +16,14 @@ class AllyCommandsPanel extends StatefulWidget {
   final int allyCount;
 
   const AllyCommandsPanel({
-    Key? key,
+    super.key,
     required this.onClose,
     required this.currentFormation,
     required this.onFormationChanged,
     required this.currentCommand,
     required this.onCommandChanged,
     required this.allyCount,
-  }) : super(key: key);
+  });
 
   @override
   State<AllyCommandsPanel> createState() => _AllyCommandsPanelState();

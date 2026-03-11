@@ -461,13 +461,11 @@ class RenderSystem {
         }
       }
     } else {
-      // Find minion by instance ID
-      for (final minion in gameState.aliveMinions) {
-        if (minion.instanceId == gameState.currentTargetId) {
-          targetPosition = minion.transform.position;
-          targetSize = minion.definition.effectiveScale * 1.5;
-          break;
-        }
+      // O(1) minion lookup via pre-built instance ID index
+      final minion = gameState.minionById(gameState.currentTargetId!);
+      if (minion != null) {
+        targetPosition = minion.transform.position;
+        targetSize = minion.definition.effectiveScale * 1.5;
       }
     }
 
@@ -571,9 +569,9 @@ class RenderSystem {
     List<LeyLineSegment> segments,
     GameState gameState,
   ) {
-    const double _hoverOffset = 0.15;  // Float above terrain surface
-    const double _subdivStep  = 6.0;   // World units per sub-quad
-    const int    _maxSteps    = 40;    // Safety cap on sub-division count
+    const double hoverOffset = 0.15;  // Float above terrain surface
+    const double subdivStep  = 6.0;   // World units per sub-quad
+    const int    maxSteps    = 40;    // Safety cap on sub-division count
 
     final tm       = gameState.infiniteTerrainManager;
     final vertices = <double>[];
@@ -588,7 +586,7 @@ class RenderSystem {
 
       // Subdivide the segment so height samples follow the terrain contour.
       // More subdivisions = smoother draping at the cost of more triangles.
-      final steps = (seg.length / _subdivStep).ceil().clamp(1, _maxSteps);
+      final steps = (seg.length / subdivStep).ceil().clamp(1, maxSteps);
 
       for (int step = 0; step < steps; step++) {
         final t0 = step       / steps;
@@ -601,11 +599,11 @@ class RenderSystem {
 
         // Sample terrain height at each sub-segment endpoint
         final sy1 = tm != null
-            ? tm.getTerrainHeight(sx1, sz1) + _hoverOffset
-            : _hoverOffset;
+            ? tm.getTerrainHeight(sx1, sz1) + hoverOffset
+            : hoverOffset;
         final sy2 = tm != null
-            ? tm.getTerrainHeight(sx2, sz2) + _hoverOffset
-            : _hoverOffset;
+            ? tm.getTerrainHeight(sx2, sz2) + hoverOffset
+            : hoverOffset;
 
         // Perpendicular in XZ plane for quad width
         final subDx  = sx2 - sx1;

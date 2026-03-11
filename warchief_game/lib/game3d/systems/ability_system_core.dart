@@ -28,7 +28,11 @@ void _updateCooldowns(double dt, GameState gameState) {
     // highlight disappears cleanly rather than lingering until the next ability.
     if (gameState.gcdRemaining <= 0) {
       final bonuses = gameState.abilityComboGcdBonuses;
-      for (int i = 0; i < bonuses.length; i++) bonuses[i] = 0.0;
+      for (int i = 0; i < bonuses.length; i++) {
+        bonuses[i] = 0.0;
+      }
+      // Reason: combo chain breaks when GCD window closes with no remaining bonus.
+      gameState.comboDepth = 0;
     }
   }
   for (final ally in gameState.allies) {

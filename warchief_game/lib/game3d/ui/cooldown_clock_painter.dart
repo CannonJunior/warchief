@@ -15,7 +15,7 @@ class CooldownClockPainter extends CustomPainter {
 
   CooldownClockPainter({
     required this.progress,
-    this.overlayColor = const Color(0xB3000000), // Colors.black.withOpacity(0.7)
+    this.overlayColor = const Color(0xB3000000), // Colors.black.withValues(alpha: 0.7)
   });
 
   @override

@@ -15,12 +15,12 @@ class MinionFrames extends StatelessWidget {
   final void Function(int index)? onMinionSelected;
 
   const MinionFrames({
-    Key? key,
+    super.key,
     required this.minions,
     this.selectedIndex,
     this.targetedMinionId,
     this.onMinionSelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

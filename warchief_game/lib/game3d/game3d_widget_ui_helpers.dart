@@ -189,6 +189,7 @@ mixin _WidgetUIHelpersMixin on _GameStateBase {
   // ==================== WIDGET BUILDERS ====================
 
   /// Build Combat HUD with current target data
+  @override
   Widget _buildCombatHUD() {
     final targetData = _getTargetData();
     final totData = _getTargetOfTargetData();
@@ -289,12 +290,56 @@ mixin _WidgetUIHelpersMixin on _GameStateBase {
               : const Color(0xFF4CAF50),
           onAbilityDropped: _handleAbilityDropped,
           onStateChanged: () => setState(() {}),
+          onSlotHovered: (slotIdx) => setState(() {
+            gameState.hoveredActionBarSlot = slotIdx;
+          }),
         ),
       ],
     );
   }
 
+  /// Build the range circle overlay for the hovered action bar slot.
+  ///
+  /// Projects [kRangeCircleSegments] world-space points around the player
+  /// using the camera VP matrices and passes pre-projected screen offsets
+  /// to [RangeCircleOverlay], avoiding the vector_math_64 import conflict.
+  @override
+  Widget _buildRangeCircleOverlay(BuildContext context) {
+    final slotIdx = gameState.hoveredActionBarSlot;
+    if (slotIdx == null) return const SizedBox.shrink();
+
+    final config = globalActionBarConfigManager?.activeConfig;
+    final abilityData = config?.getSlotAbilityData(slotIdx);
+    if (abilityData == null || abilityData.range <= 0) return const SizedBox.shrink();
+
+    final playerPos = gameState.activeTransform?.position;
+    final cam = camera;
+    if (playerPos == null || cam == null) return const SizedBox.shrink();
+
+    final comboBonus = gameState.activeAbilityComboGcdBonuses[slotIdx];
+    final range = abilityData.range *
+        (comboBonus > 0 ? gameState.comboRangeMultiplier : 1.0);
+
+    final viewMatrix = cam.getViewMatrix();
+    final projMatrix = cam.getProjectionMatrix();
+    final screenSize = MediaQuery.of(context).size;
+
+    // Project each point on the ground-level ring to screen space.
+    final angles = buildRangeCircleAngles();
+    final points = angles.map((angle) {
+      final world = Vector3(
+        playerPos.x + math.cos(angle) * range,
+        playerPos.y,
+        playerPos.z + math.sin(angle) * range,
+      );
+      return worldToScreen(world, viewMatrix, projMatrix, screenSize);
+    }).toList(growable: false);
+
+    return RangeCircleOverlay(projectedPoints: points);
+  }
+
   /// Build ally control button (+/- ally)
+  @override
   Widget _buildAllyControlButton({
     required IconData icon,
     required String label,

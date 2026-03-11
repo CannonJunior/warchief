@@ -114,12 +114,13 @@ class DuelSystem {
     final maxDur    = globalDuelConfig?.maxDurationSeconds ?? 120.0;
     final timedOut  = manager.elapsedSeconds >= maxDur;
     final firstKill = manager.endCondition == DuelEndCondition.firstKill;
-    final chalDead  = firstKill
-        ? challengers.any((c) => c.health <= 0)
-        : challengers.every((c) => c.health <= 0);
-    final enemyDead = firstKill
-        ? enemies.any((e) => e.health <= 0)
-        : enemies.every((e) => e.health <= 0);
+    // Reason: replace any()/every() closures with a single integer count pass
+    // per side — avoids 4 closure allocations per frame during active duels.
+    int chalAlive = 0, enemyAlive = 0;
+    for (int i = 0; i < chalSize; i++) { if (challengers[i].health > 0) chalAlive++; }
+    for (int i = 0; i < enemySize; i++) { if (enemies[i].health > 0) enemyAlive++; }
+    final chalDead  = firstKill ? chalAlive  < chalSize  : chalAlive  == 0;
+    final enemyDead = firstKill ? enemyAlive < enemySize : enemyAlive == 0;
 
     if (chalDead || enemyDead || timedOut) {
       String winnerId;

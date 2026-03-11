@@ -4,6 +4,7 @@
 /// - Reference to its MonsterDefinition (type/stats)
 /// - Current state (health, position, cooldowns)
 /// - AI state (target, current action)
+library;
 
 import 'package:vector_math/vector_math.dart' hide Colors;
 import '../rendering3d/mesh.dart';
@@ -332,8 +333,12 @@ class MonsterFactory {
 
   static double _cosApprox(double x) {
     // Normalize to [-pi, pi]
-    while (x > 3.14159) x -= 2 * 3.14159;
-    while (x < -3.14159) x += 2 * 3.14159;
+    while (x > 3.14159) {
+      x -= 2 * 3.14159;
+    }
+    while (x < -3.14159) {
+      x += 2 * 3.14159;
+    }
     // Taylor series approximation
     final x2 = x * x;
     return 1 - x2/2 + x2*x2/24 - x2*x2*x2/720;
@@ -341,8 +346,12 @@ class MonsterFactory {
 
   static double _sinApprox(double x) {
     // Normalize to [-pi, pi]
-    while (x > 3.14159) x -= 2 * 3.14159;
-    while (x < -3.14159) x += 2 * 3.14159;
+    while (x > 3.14159) {
+      x -= 2 * 3.14159;
+    }
+    while (x < -3.14159) {
+      x += 2 * 3.14159;
+    }
     // Taylor series approximation
     final x2 = x * x;
     return x - x*x2/6 + x*x2*x2/120 - x*x2*x2*x2/5040;

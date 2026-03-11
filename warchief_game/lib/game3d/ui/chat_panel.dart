@@ -33,7 +33,7 @@ class ChatPanel extends StatefulWidget {
   final void Function(int)? onTabChanged;
 
   const ChatPanel({
-    Key? key,
+    super.key,
     required this.spiritMessages,
     required this.onSendSpiritMessage,
     this.onSpiritReplyComplete,
@@ -43,7 +43,7 @@ class ChatPanel extends StatefulWidget {
     this.initialTab = 0,
     required this.onClose,
     this.onTabChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<ChatPanel> createState() => _ChatPanelState();

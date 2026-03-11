@@ -390,12 +390,17 @@ class _MinionAI {
   static void updateMinionProjectiles(double dt, GameState gameState) {
     // Cache wind force once per frame
     final hasWind = globalWindState != null;
-    final windForceX = hasWind ? globalWindState!.getProjectileForce()[0] : 0.0;
-    final windForceZ = hasWind ? globalWindState!.getProjectileForce()[1] : 0.0;
+    // Reason: call once and unpack — same fix as player fireball wind force.
+    final windForce = hasWind ? globalWindState!.getProjectileForce() : const [0.0, 0.0];
+    final windForceX = windForce[0];
+    final windForceZ = windForce[1];
     final playerPos = gameState.playerTransform?.position;
 
     for (final minion in gameState.aliveMinions) {
-      minion.projectiles.removeWhere((projectile) {
+      // Reason: backward-index loop avoids closure allocation from removeWhere.
+      for (int i = minion.projectiles.length - 1; i >= 0; i--) {
+        final projectile = minion.projectiles[i];
+
         // Apply cached wind force to minion projectile velocity
         if (hasWind) {
           projectile.velocity.x += windForceX * dt;
@@ -405,34 +410,36 @@ class _MinionAI {
         projectile.lifetime -= dt;
 
         final projPos = projectile.transform.position;
+        bool remove = projectile.lifetime <= 0;
 
         // Check collision with player (squared distance, threshold 1.0^2 = 1.0)
-        if (playerPos != null) {
+        if (!remove && playerPos != null) {
           final pdx = projPos.x - playerPos.x;
           final pdy = projPos.y - playerPos.y;
           final pdz = projPos.z - playerPos.z;
           if (pdx * pdx + pdy * pdy + pdz * pdz < 1.0) {
-            final damage = minion.definition.effectiveDamage;
-            gameState.playerHealth = math.max(0, gameState.playerHealth - damage);
-            return true;
+            gameState.playerHealth = math.max(0, gameState.playerHealth - minion.definition.effectiveDamage);
+            remove = true;
           }
         }
 
         // Check collision with allies (squared distance, threshold 0.8^2 = 0.64)
-        for (final ally in gameState.allies) {
-          if (ally.health <= 0) continue;
-          final adx = projPos.x - ally.transform.position.x;
-          final ady = projPos.y - ally.transform.position.y;
-          final adz = projPos.z - ally.transform.position.z;
-          if (adx * adx + ady * ady + adz * adz < 0.64) {
-            final damage = minion.definition.effectiveDamage;
-            ally.health = math.max(0, ally.health - damage);
-            return true;
+        if (!remove) {
+          for (final ally in gameState.allies) {
+            if (ally.health <= 0) continue;
+            final adx = projPos.x - ally.transform.position.x;
+            final ady = projPos.y - ally.transform.position.y;
+            final adz = projPos.z - ally.transform.position.z;
+            if (adx * adx + ady * ady + adz * adz < 0.64) {
+              ally.health = math.max(0, ally.health - minion.definition.effectiveDamage);
+              remove = true;
+              break;
+            }
           }
         }
 
-        return projectile.lifetime <= 0;
-      });
+        if (remove) minion.projectiles.removeAt(i);
+      }
     }
   }
 }

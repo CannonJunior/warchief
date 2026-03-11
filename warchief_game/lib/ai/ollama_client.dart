@@ -127,8 +127,11 @@ class OllamaClient {
         debugPrint('Ollama chat ($model): ${content.substring(0, content.length.clamp(0, 80))}…');
         return content;
       } else {
-        debugPrint('Ollama chat error: HTTP ${response.statusCode}');
-        return '';
+        final errBody = response.body.length > 200 ? response.body.substring(0, 200) : response.body;
+        debugPrint('Ollama chat error: HTTP ${response.statusCode} — $errBody');
+        // Reason: return the error text so callers can surface it in the game UI
+        // rather than silently collapsing to a generic fallback.
+        return 'HTTP ${response.statusCode}: $errBody';
       }
     } catch (e) {
       debugPrint('Ollama chat connection error: $e');
@@ -163,7 +166,8 @@ class OllamaClient {
 
       final streamed = await client.send(request);
       if (streamed.statusCode != 200) {
-        debugPrint('Ollama chatStream error: HTTP ${streamed.statusCode}');
+        final body = await streamed.stream.bytesToString();
+        debugPrint('Ollama chatStream error: HTTP ${streamed.statusCode} — $body');
         return;
       }
 

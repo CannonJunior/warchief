@@ -27,6 +27,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   // ==================== PANEL DRAGGING ====================
 
   /// Check if an interface is visible (defaults to true if config not available)
+  @override
   bool _isVisible(String id) {
     return globalInterfaceConfig?.isVisible(id) ?? true;
   }
@@ -45,6 +46,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   }
 
   /// Build a draggable panel (like AbilitiesModal pattern)
+  @override
   Widget _draggable(String id, Widget child, {double width = 200, double height = 100}) {
     final pos = _getPos(id);
     return Positioned(
@@ -100,6 +102,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   /// Handle ally command input (T=Attack, G=Hold, R=Formation)
   ///
   /// F key now toggles the unified AllyCommandsPanel (handled in _onKeyEvent).
+  @override
   void _handleAllyCommands() {
     if (inputManager == null) return;
 
@@ -143,6 +146,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   }
 
   /// Set command for all allies
+  @override
   void _setAllyCommand(AllyCommand command) {
     setState(() {
       for (final ally in gameState.allies) {
@@ -161,6 +165,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   }
 
   /// Get the current command active across allies (for UI display)
+  @override
   AllyCommand _getCurrentAllyCommand() {
     if (gameState.allies.isEmpty) return AllyCommand.none;
     // Return the first non-none command, or none if all allies have none
@@ -175,6 +180,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   // ==================== MONSTER ABILITY METHODS ====================
 
   /// Activate Monster Ability 1: Dark Strike (melee sword attack)
+  @override
   void _activateMonsterAbility1() {
     if (gameState.monsterAbility1Cooldown > 0 || gameState.monsterHealth <= 0) return;
     if (gameState.monsterAbility1Active) return; // Already swinging
@@ -189,6 +195,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   }
 
   /// Activate Monster Ability 2: Shadow Bolt (ranged projectile)
+  @override
   void _activateMonsterAbility2() {
     if (gameState.monsterAbility2Cooldown > 0 || gameState.monsterHealth <= 0) return;
     if (gameState.monsterTransform == null || gameState.playerTransform == null) return;
@@ -219,6 +226,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   }
 
   /// Activate Monster Ability 3: Dark Healing (restore health)
+  @override
   void _activateMonsterAbility3() {
     if (gameState.monsterAbility3Cooldown > 0 || gameState.monsterHealth <= 0) return;
 
@@ -245,6 +253,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   // ==================== AI CHAT LOGGING ====================
 
   /// Add a message to the Monster AI chat log
+  @override
   void _logMonsterAI(String text, {required bool isInput}) {
     setState(() {
       gameState.monsterAIChat.add(AIChatMessage(
@@ -262,6 +271,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   // ==================== ALLY MANAGEMENT ====================
 
   /// Manually activate an ally's ability (called from UI button)
+  @override
   void _activateAllyAbility(Ally ally) {
     if (ally.abilityCooldown > 0 || ally.health <= 0) {
       debugPrint('Ally ability on cooldown or ally is dead');
@@ -276,6 +286,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   }
 
   /// Change the formation type for all allies
+  @override
   void _changeFormation(FormationType newFormation) {
     setState(() {
       gameState.currentFormation = newFormation;
@@ -285,6 +296,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   }
 
   /// Add a new ally with a random ability
+  @override
   void _addAlly() {
     debugPrint('_addAlly called! Current allies: ${gameState.allies.length}');
     setState(() {
@@ -352,6 +364,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   }
 
   /// Remove the most recently added ally
+  @override
   void _removeAlly() {
     if (gameState.allies.isEmpty) {
       debugPrint('No allies to remove!');
@@ -367,6 +380,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   // ==================== AURA MANAGEMENT ====================
 
   /// Update the player's aura mesh color from the active action bar config.
+  @override
   void _updatePlayerAuraColor() {
     final config = globalActionBarConfigManager?.getConfig(0);
     if (config == null) return;
@@ -410,6 +424,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   double _playerAuraCachedZ = double.nan;
 
   /// Position all aura discs at their unit's base on terrain each frame.
+  @override
   void _updateAuraPositions() {
     final tm = gameState.infiniteTerrainManager;
 
@@ -446,6 +461,7 @@ mixin _WidgetCommandsMixin on _GameStateBase {
   }
 
   /// Refresh all aura colors (call when action bar config changes).
+  @override
   void _refreshAllAuraColors() {
     _updatePlayerAuraColor();
     for (int i = 0; i < gameState.allies.length; i++) {

@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 part of 'macro_builder_panel.dart';
 
 extension _MacroBuilderViews on _MacroBuilderPanelState {
@@ -15,7 +16,7 @@ extension _MacroBuilderViews on _MacroBuilderPanelState {
             width: double.infinity,
             padding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            color: Colors.green.withOpacity(0.15),
+            color: Colors.green.withValues(alpha: 0.15),
             child: Row(
               children: [
                 Icon(Icons.play_circle_fill,
@@ -39,7 +40,7 @@ extension _MacroBuilderViews on _MacroBuilderPanelState {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.3),
+                      color: Colors.red.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Text('STOP',
@@ -102,11 +103,11 @@ extension _MacroBuilderViews on _MacroBuilderPanelState {
               label: const Text('+ Create New Macro',
                   style: TextStyle(fontSize: 12)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber.withOpacity(0.2),
+                backgroundColor: Colors.amber.withValues(alpha: 0.2),
                 foregroundColor: Colors.amber,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
-                  side: BorderSide(color: Colors.amber.withOpacity(0.4)),
+                  side: BorderSide(color: Colors.amber.withValues(alpha: 0.4)),
                 ),
               ),
             ),
@@ -127,7 +128,7 @@ extension _MacroBuilderViews on _MacroBuilderPanelState {
       margin: const EdgeInsets.only(bottom: 4),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: Colors.white12),
       ),
@@ -154,7 +155,7 @@ extension _MacroBuilderViews on _MacroBuilderPanelState {
                     if (macro.loop) ...[
                       const SizedBox(width: 6),
                       Icon(Icons.loop,
-                          size: 12, color: Colors.cyan.withOpacity(0.7)),
+                          size: 12, color: Colors.cyan.withValues(alpha: 0.7)),
                     ],
                   ],
                 ),
@@ -162,7 +163,7 @@ extension _MacroBuilderViews on _MacroBuilderPanelState {
                 Text(
                   '${macro.steps.length} steps  ·  ${macro.abilityStepCount} abilities  ·  ~$durationStr',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.45),
+                    color: Colors.white.withValues(alpha: 0.45),
                     fontSize: 10,
                   ),
                 ),
@@ -212,7 +213,7 @@ extension _MacroBuilderViews on _MacroBuilderPanelState {
           height: 28,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
+            color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(4),
           ),
           child: Icon(icon, size: 16, color: color),
@@ -251,7 +252,7 @@ extension _MacroBuilderViews on _MacroBuilderPanelState {
                       hintText: 'Macro name...',
                       hintStyle: const TextStyle(color: Colors.white24),
                       filled: true,
-                      fillColor: Colors.white.withOpacity(0.08),
+                      fillColor: Colors.white.withValues(alpha: 0.08),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6),
                         borderSide:
@@ -286,7 +287,7 @@ extension _MacroBuilderViews on _MacroBuilderPanelState {
                       child: Switch(
                         value: _loop,
                         onChanged: (v) => setState(() => _loop = v),
-                        activeColor: Colors.amber,
+                        activeThumbColor: Colors.amber,
                         materialTapTargetSize:
                             MaterialTapTargetSize.shrinkWrap,
                       ),
@@ -352,7 +353,7 @@ extension _MacroBuilderViews on _MacroBuilderPanelState {
                     Text(
                       '${_steps.length} step${_steps.length != 1 ? "s" : ""}',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.4),
+                        color: Colors.white.withValues(alpha: 0.4),
                         fontSize: 10,
                       ),
                     ),
@@ -376,7 +377,7 @@ extension _MacroBuilderViews on _MacroBuilderPanelState {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             borderRadius:
                 const BorderRadius.vertical(bottom: Radius.circular(9)),
           ),
@@ -388,7 +389,7 @@ extension _MacroBuilderViews on _MacroBuilderPanelState {
                   child: ElevatedButton(
                     onPressed: _closeEditor,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.1),
+                      backgroundColor: Colors.white.withValues(alpha: 0.1),
                       foregroundColor: Colors.white54,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
@@ -409,7 +410,7 @@ extension _MacroBuilderViews on _MacroBuilderPanelState {
                     label: const Text('Save',
                         style: TextStyle(fontSize: 12)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber.withOpacity(0.3),
+                      backgroundColor: Colors.amber.withValues(alpha: 0.3),
                       foregroundColor: Colors.amber,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),

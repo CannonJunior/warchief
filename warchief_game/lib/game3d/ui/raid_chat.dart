@@ -13,7 +13,7 @@ import '../../models/raid_chat_message.dart';
 class RaidChatTab extends StatelessWidget {
   final List<RaidChatMessage> messages;
 
-  const RaidChatTab({Key? key, required this.messages}) : super(key: key);
+  const RaidChatTab({super.key, required this.messages});
 
   /// Get color for a [RaidAlertType].
   static Color colorForType(RaidAlertType type) {

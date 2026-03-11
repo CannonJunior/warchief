@@ -13,13 +13,13 @@ class AlliesPanel extends StatelessWidget {
   final VoidCallback onRemoveAlly;
 
   const AlliesPanel({
-    Key? key,
+    super.key,
     required this.allies,
     required this.onActivateAllyAbility,
     required this.onStrategyChanged,
     required this.onAddAlly,
     required this.onRemoveAlly,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +40,7 @@ class AlliesPanel extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.7),
+              color: Colors.black.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.cyan, width: 2),
             ),
@@ -109,7 +109,7 @@ class AlliesPanel extends StatelessWidget {
               margin: EdgeInsets.only(top: 12),
               padding: EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
+                color: Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.cyan, width: 2),
               ),
@@ -232,7 +232,7 @@ class AlliesPanel extends StatelessWidget {
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -261,7 +261,7 @@ class AlliesPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? Color(strategy.color)
-                      : Color(strategy.color).withOpacity(0.3),
+                      : Color(strategy.color).withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
                     color: isSelected ? Colors.white : Colors.white30,

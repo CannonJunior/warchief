@@ -9,19 +9,12 @@ import '../data/abilities/ability_types.dart' show ManaColor;
 
 /// Individual green mana sparkle particle.
 class _GreenSparkle {
-  double startX, startY, startZ;
-  double endX, endY, endZ;
-  double life;
-  double maxLife;
-  double arcOffset; // Perpendicular offset for curved arc
-  double progress;  // 0.0 to 1.0 along the arc
-
-  _GreenSparkle({
-    this.startX = 0, this.startY = 0, this.startZ = 0,
-    this.endX = 0, this.endY = 0, this.endZ = 0,
-    this.life = 0, this.maxLife = 0.5,
-    this.arcOffset = 0, this.progress = 0,
-  });
+  double startX = 0, startY = 0, startZ = 0;
+  double endX = 0, endY = 0, endZ = 0;
+  double life = 0;
+  double maxLife = 0.5;
+  double arcOffset = 0; // Perpendicular offset for curved arc
+  double progress = 0;  // 0.0 to 1.0 along the arc
 }
 
 /// Arc-sparkle particle system for green mana.

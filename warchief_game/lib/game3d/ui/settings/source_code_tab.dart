@@ -6,9 +6,9 @@ class SourceCodeTab extends StatefulWidget {
   final SourceTreeData sourceTree;
 
   const SourceCodeTab({
-    Key? key,
+    super.key,
     required this.sourceTree,
-  }) : super(key: key);
+  });
 
   @override
   State<SourceCodeTab> createState() => _SourceCodeTabState();

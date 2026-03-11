@@ -12,10 +12,10 @@ class StanceSelector extends StatelessWidget {
   final VoidCallback onStateChanged;
 
   const StanceSelector({
-    Key? key,
+    super.key,
     required this.gameState,
     required this.onStateChanged,
-  }) : super(key: key);
+  });
 
   Color _v3ToColor(Vector3 v, [double opacity = 1.0]) {
     return Color.fromRGBO(
@@ -237,11 +237,11 @@ class StanceCardsSection extends StatelessWidget {
   final void Function(StanceData stance)? onDoubleTap;
 
   const StanceCardsSection({
-    Key? key,
+    super.key,
     required this.gameState,
     required this.onStateChanged,
     this.onDoubleTap,
-  }) : super(key: key);
+  });
 
   Color _v3ToColor(Vector3 v, [double opacity = 1.0]) {
     return Color.fromRGBO(

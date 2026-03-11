@@ -17,8 +17,6 @@ void _updateAbility1(double dt, GameState gameState) {
     gameState.ability1Active = false;
     gameState.activeGenericMeleeAbility = null;
   } else if (gameState.swordTransform != null && gameState.activeTransform != null) {
-    if (gameState.currentTargetId != null) _faceCurrentTarget(gameState);
-
     final forward = Vector3(
       -math.sin(_radians(gameState.activeRotation)),
       0,
@@ -46,7 +44,10 @@ void _updateAbility1(double dt, GameState gameState) {
           isMelee: true,
         );
       } else {
-        final swordTipPosition = gameState.activeTransform!.position + forward * melee.range;
+        // Reason: combo range bonus extends the physical swing reach, matching
+        // the extended gate check used at dispatch time.
+        final effectiveMeleeRange = melee.range * gameState.comboRangeMultiplier;
+        final swordTipPosition = gameState.activeTransform!.position + forward * effectiveMeleeRange;
         hitRegistered = CombatSystem.checkAndDamageEnemies(
           gameState,
           attackerPosition: swordTipPosition,
@@ -74,10 +75,17 @@ void _updateAbility1(double dt, GameState gameState) {
 /// Per-frame update for all in-flight projectiles — homing, wind, collision.
 void _updateAbility2(double dt, GameState gameState) {
   final hasWind = globalWindState != null;
-  final windForceX = hasWind ? globalWindState!.getProjectileForce()[0] : 0.0;
-  final windForceZ = hasWind ? globalWindState!.getProjectileForce()[1] : 0.0;
+  // Reason: call once and unpack — avoids computing windVector twice and
+  // allocating two separate List<double> objects per frame.
+  final windForce = hasWind ? globalWindState!.getProjectileForce() : const [0.0, 0.0];
+  final windForceX = windForce[0];
+  final windForceZ = windForce[1];
 
-  gameState.fireballs.removeWhere((projectile) {
+  // Reason: backward-index loop avoids the closure allocation and indirect call
+  // overhead of removeWhere, and removeAt(i) on a List is O(n) but avoids the
+  // extra full-list scan that removeWhere does after the predicate returns true.
+  for (int i = gameState.fireballs.length - 1; i >= 0; i--) {
+    final projectile = gameState.fireballs[i];
     Vector3? targetPos;
     if (projectile.targetId != null) {
       targetPos = _getTargetPosition(gameState, projectile.targetId!);
@@ -101,6 +109,8 @@ void _updateAbility2(double dt, GameState gameState) {
     projectile.transform.position += projectile.velocity * dt;
     projectile.lifetime -= dt;
 
+    bool remove = false;
+
     // Homing projectiles auto-hit at 2.5-unit threshold
     if (projectile.isHoming && targetPos != null) {
       final dx = projectile.transform.position.x - targetPos.x;
@@ -108,31 +118,34 @@ void _updateAbility2(double dt, GameState gameState) {
       final dz = projectile.transform.position.z - targetPos.z;
       if (dx * dx + dy * dy + dz * dz < 6.25) {
         _damageTargetWithProjectile(gameState, projectile.targetId!, projectile);
-        return true;
+        remove = true;
+      } else {
+        remove = projectile.lifetime <= 0;
       }
-      return projectile.lifetime <= 0;
+    } else {
+      // Non-homing: collision-based hit detection
+      final hitRegistered = CombatSystem.checkAndDamageEnemies(
+        gameState,
+        attackerPosition: projectile.transform.position,
+        damage: projectile.damage * gameState.activeStance.damageMultiplier,
+        attackType: projectile.abilityName,
+        impactColor: projectile.impactColor,
+        impactSize: projectile.impactSize,
+      );
+
+      if (hitRegistered) {
+        _applyLifesteal(gameState, projectile.damage * gameState.activeStance.damageMultiplier);
+        if (projectile.dotTicks > 0 && projectile.statusDuration > 0) {
+          _applyDoTFromProjectile(gameState, 'boss', projectile);
+        }
+        remove = true;
+      } else {
+        remove = projectile.lifetime <= 0;
+      }
     }
 
-    // Non-homing: collision-based hit detection
-    final hitRegistered = CombatSystem.checkAndDamageEnemies(
-      gameState,
-      attackerPosition: projectile.transform.position,
-      damage: projectile.damage * gameState.activeStance.damageMultiplier,
-      attackType: projectile.abilityName,
-      impactColor: projectile.impactColor,
-      impactSize: projectile.impactSize,
-    );
-
-    if (hitRegistered) {
-      _applyLifesteal(gameState, projectile.damage * gameState.activeStance.damageMultiplier);
-      if (projectile.dotTicks > 0 && projectile.statusDuration > 0) {
-        _applyDoTFromProjectile(gameState, 'boss', projectile);
-      }
-      return true;
-    }
-
-    return projectile.lifetime <= 0;
-  });
+    if (remove) gameState.fireballs.removeAt(i);
+  }
 }
 
 // ==================== ABILITY 3: HEAL PULSE ====================
@@ -250,10 +263,11 @@ void _updateAbility4(double dt, GameState gameState) {
 
 /// Per-frame update for impact effect lifetime and scale growth.
 void _updateImpactEffects(double dt, GameState gameState) {
-  gameState.impactEffects.removeWhere((impact) {
+  for (int i = gameState.impactEffects.length - 1; i >= 0; i--) {
+    final impact = gameState.impactEffects[i];
     impact.lifetime -= dt;
     final scale = 1.0 + (impact.progress * GameConfig.impactEffectGrowthScale);
     impact.transform.scale = Vector3(scale, scale, scale);
-    return impact.lifetime <= 0;
-  });
+    if (impact.lifetime <= 0) gameState.impactEffects.removeAt(i);
+  }
 }

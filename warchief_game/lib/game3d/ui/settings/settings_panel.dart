@@ -15,11 +15,11 @@ class SettingsPanel extends StatefulWidget {
   final void Function(String id, bool visible)? onInterfaceVisibilityChanged;
 
   const SettingsPanel({
-    Key? key,
+    super.key,
     required this.onClose,
     this.interfaceConfig,
     this.onInterfaceVisibilityChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<SettingsPanel> createState() => _SettingsPanelState();
@@ -330,6 +330,21 @@ class _SettingsPanelState extends State<SettingsPanel> {
             },
           ),
           const SizedBox(height: 20),
+          _buildSectionHeader('Abilities', Icons.track_changes_outlined),
+          const SizedBox(height: 12),
+          _buildSettingToggle(
+            'Show Ability Ranges',
+            'On hotkey mouse-over, draw a range circle around your character '
+            'showing how far that ability reaches.',
+            settings?.showAbilityRanges ?? false,
+            (value) {
+              setState(() {
+                settings?.showAbilityRanges = value;
+                settings?.save();
+              });
+            },
+          ),
+          const SizedBox(height: 20),
           _buildSectionHeader('Combat Numbers', Icons.format_bold),
           const SizedBox(height: 12),
           _buildSettingToggle(
@@ -462,7 +477,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: const Color(0xFF4cc9f0),
+            activeThumbColor: const Color(0xFF4cc9f0),
             activeTrackColor: const Color(0xFF4cc9f0).withValues(alpha: 0.3),
           ),
         ],

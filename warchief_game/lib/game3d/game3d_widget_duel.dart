@@ -4,6 +4,7 @@ mixin _WidgetDuelMixin on _GameStateBase {
   // ==================== DUEL ARENA COMMANDS ====================
 
   /// Start a multi-party duel from a [DuelSetupConfig] built by the Setup tab.
+  @override
   void _startDuel(DuelSetupConfig setup) {
     final cfg         = globalDuelConfig;
     final sep         = cfg?.separationDistance ?? 20.0;
@@ -112,6 +113,7 @@ mixin _WidgetDuelMixin on _GameStateBase {
   }
 
   /// Reset all ability cooldowns and GCDs for every active combatant without stopping the duel.
+  @override
   void _duelResetCooldowns() {
     DuelSystem.resetCooldowns(gameState.duelCombatants);
     // Reason: also clear GCDs and combo windows so the reset feels immediate —
@@ -127,6 +129,7 @@ mixin _WidgetDuelMixin on _GameStateBase {
   }
 
   /// Cancel the current duel and remove arena combatants.
+  @override
   void _cancelDuel() {
     DuelSystem.clearProjectiles(gameState);
     setState(() {

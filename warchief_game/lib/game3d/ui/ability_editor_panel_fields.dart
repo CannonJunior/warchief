@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 part of 'ability_editor_panel.dart';
 
 extension _AbilityEditorPanelFields on _AbilityEditorPanelState {
@@ -14,7 +15,7 @@ extension _AbilityEditorPanelFields on _AbilityEditorPanelState {
       decoration: BoxDecoration(
         color: const Color(0xDD1a1a2e),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.cyan.withOpacity(0.5)),
+        border: Border.all(color: Colors.cyan.withValues(alpha: 0.5)),
       ),
       waitDuration: const Duration(milliseconds: 400),
       child: child,
@@ -208,9 +209,9 @@ extension _AbilityEditorPanelFields on _AbilityEditorPanelState {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
+                  color: Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: Colors.orange.withOpacity(0.4)),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,7 +260,7 @@ extension _AbilityEditorPanelFields on _AbilityEditorPanelState {
             height: 24,
             child: Switch(
               value: value, onChanged: onChanged,
-              activeColor: _editorAccent,
+              activeThumbColor: _editorAccent,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
           ),
         ],

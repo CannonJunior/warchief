@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 part of 'duel_panel.dart';
 
 // ── Metrics tab ───────────────────────────────────────────────────────────────

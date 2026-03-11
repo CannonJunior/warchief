@@ -14,6 +14,7 @@
 /// - Debuffs: Gnoll (Rending Bite bleed), Satyr (Discordant Pipes, Cursed Blade)
 /// - Auras: Satyr (Discordant Pipes), Dryad (Rejuvenation Aura), Minotaur (Intimidating Presence)
 /// - Specialized: Dryad (Entangling Roots CC, Bark Shield)
+library;
 
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math.dart' hide Colors;

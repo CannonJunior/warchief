@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 part of 'abilities_modal.dart';
 
 // ==================== ABILITY CARDS EXTENSION ====================
@@ -63,7 +64,7 @@ extension _AbilitiesModalCards on _AbilitiesModalState {
                   color: backgroundColor,
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: isEditing ? Colors.cyan : (hasOverrides ? Colors.yellow.withOpacity(0.6) : Colors.white24),
+                    color: isEditing ? Colors.cyan : (hasOverrides ? Colors.yellow.withValues(alpha: 0.6) : Colors.white24),
                     width: isEditing ? 2 : 1,
                   ),
                 ),
@@ -194,7 +195,7 @@ extension _AbilitiesModalCards on _AbilitiesModalState {
         border: Border.all(color: Colors.white30, width: 2),
         boxShadow: [
           BoxShadow(
-            color: abilityColor.withOpacity(0.5),
+            color: abilityColor.withValues(alpha: 0.5),
             blurRadius: 6,
             spreadRadius: 1,
           ),
@@ -206,7 +207,7 @@ extension _AbilitiesModalCards on _AbilitiesModalState {
           Center(
             child: Icon(
               ability.type.icon,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               size: 22,
             ),
           ),
@@ -233,7 +234,7 @@ extension _AbilitiesModalCards on _AbilitiesModalState {
             right: 2,
             child: Icon(
               Icons.drag_indicator,
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               size: 12,
             ),
           ),
@@ -258,7 +259,7 @@ extension _AbilitiesModalCards on _AbilitiesModalState {
                 border: Border.all(color: Colors.yellow, width: 3),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.yellow.withOpacity(0.6),
+                    color: Colors.yellow.withValues(alpha: 0.6),
                     blurRadius: 12,
                     spreadRadius: 2,
                   ),
@@ -365,7 +366,7 @@ extension _AbilitiesModalCards on _AbilitiesModalState {
         Text(
           '${score.toStringAsFixed(2)} $label',
           style: TextStyle(
-            color: color.withOpacity(0.8),
+            color: color.withValues(alpha: 0.8),
             fontSize: 9,
             fontWeight: FontWeight.bold,
           ),

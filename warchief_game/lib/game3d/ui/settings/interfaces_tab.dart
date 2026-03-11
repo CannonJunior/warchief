@@ -11,10 +11,10 @@ class InterfacesTab extends StatefulWidget {
   final void Function(String id, bool visible)? onVisibilityChanged;
 
   const InterfacesTab({
-    Key? key,
+    super.key,
     required this.interfaceConfig,
     this.onVisibilityChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<InterfacesTab> createState() => _InterfacesTabState();
@@ -49,9 +49,10 @@ class _InterfacesTabState extends State<InterfacesTab> {
                 label: 'Save Layout',
                 color: const Color(0xFF4CAF50),
                 onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
                   final success = await config.saveConfig();
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       SnackBar(
                         content: Text(success
                             ? 'Layout saved!'
@@ -216,7 +217,7 @@ class _InterfacesTabState extends State<InterfacesTab> {
                       setState(() {});
                       widget.onVisibilityChanged?.call(iface.id, value);
                     },
-                    activeColor: const Color(0xFF4cc9f0),
+                    activeThumbColor: const Color(0xFF4cc9f0),
                     activeTrackColor:
                         const Color(0xFF4cc9f0).withValues(alpha: 0.3),
                   ),

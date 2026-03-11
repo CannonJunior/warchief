@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_protected_member
 part of 'duel_panel.dart';
 
 // ── Top-level constants used only by the setup tab ────────────────────────────
@@ -221,8 +222,11 @@ extension _DuelPanelSetup on _DuelPanelState {
             onChanged: (v) {
               if (v == null) return;
               setState(() {
-                if (isChallenger) _chalStrategy = v;
-                else              _enemyStrategy = v;
+                if (isChallenger) {
+                  _chalStrategy = v;
+                } else {
+                  _enemyStrategy = v;
+                }
               });
             },
           ),
@@ -257,8 +261,11 @@ extension _DuelPanelSetup on _DuelPanelState {
           items: DuelDefinitions.allCombatantTypes,
           displayNames: DuelDefinitions.allDisplayNames,
           onChanged: (v) => setState(() {
-            if (isChallenger) _chalClasses[index] = v;
-            else              _enemyTypes[index]  = v;
+            if (isChallenger) {
+              _chalClasses[index] = v;
+            } else {
+              _enemyTypes[index]  = v;
+            }
           }),
         ),
         const SizedBox(height: 5),
@@ -274,8 +281,11 @@ extension _DuelPanelSetup on _DuelPanelState {
               waitDuration: const Duration(milliseconds: 300),
               child: GestureDetector(
                 onTap: () => setState(() {
-                  if (isChallenger) _chalGearTiers[index] = t;
-                  else              _enemyGearTiers[index] = t;
+                  if (isChallenger) {
+                    _chalGearTiers[index] = t;
+                  } else {
+                    _enemyGearTiers[index] = t;
+                  }
                 }),
                 child: Container(
                   width: 18, height: 18,

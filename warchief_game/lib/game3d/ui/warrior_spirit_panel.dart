@@ -16,11 +16,11 @@ class WarriorSpiritPanel extends StatefulWidget {
   final VoidCallback onClose;
 
   const WarriorSpiritPanel({
-    Key? key,
+    super.key,
     required this.messages,
     required this.onSendMessage,
     required this.onClose,
-  }) : super(key: key);
+  });
 
   @override
   State<WarriorSpiritPanel> createState() => _WarriorSpiritPanelState();

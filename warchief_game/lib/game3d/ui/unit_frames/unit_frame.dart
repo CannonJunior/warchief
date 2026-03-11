@@ -17,7 +17,7 @@ class UnitFrame extends StatelessWidget {
   final double width;
 
   const UnitFrame({
-    Key? key,
+    super.key,
     required this.name,
     required this.health,
     required this.maxHealth,
@@ -31,7 +31,7 @@ class UnitFrame extends StatelessWidget {
     this.portraitWidget,
     this.level,
     this.width = 220,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -237,7 +237,7 @@ class CompactUnitFrame extends StatelessWidget {
   final double width;
 
   const CompactUnitFrame({
-    Key? key,
+    super.key,
     required this.name,
     required this.health,
     required this.maxHealth,
@@ -245,7 +245,7 @@ class CompactUnitFrame extends StatelessWidget {
     this.isSelected = false,
     this.onTap,
     this.width = 150,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

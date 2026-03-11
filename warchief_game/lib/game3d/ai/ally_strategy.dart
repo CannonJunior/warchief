@@ -3,6 +3,7 @@
 /// Defines configurable strategies that control ally behavior weights
 /// and decision-making preferences. Players can assign different strategies
 /// to each ally to customize their playstyle.
+library;
 
 /// Strategy types available for allies
 enum AllyStrategyType {

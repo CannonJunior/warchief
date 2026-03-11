@@ -350,8 +350,8 @@ void _applyMeleeStatusEffect(GameState gameState, AbilityData ability) {
     if (targetId == 'boss' && gameState.monsterTransform != null) {
       gameState.monsterTransform!.position += forward * ability.knockbackForce;
     } else {
-      final minion = gameState.minions.where((m) => m.instanceId == targetId && m.isAlive).firstOrNull;
-      if (minion != null) minion.transform.position += forward * ability.knockbackForce;
+      final minion = gameState.minionById(targetId);
+      if (minion != null && minion.isAlive) minion.transform.position += forward * ability.knockbackForce;
     }
   }
 
@@ -376,8 +376,8 @@ void _applyMeleeStatusEffect(GameState gameState, AbilityData ability) {
     if (targetId == 'boss') {
       gameState.monsterActiveEffects.add(effect);
     } else {
-      final minion = gameState.minions.where((m) => m.instanceId == targetId && m.isAlive).firstOrNull;
-      if (minion != null) minion.activeEffects.add(effect);
+      final minion = gameState.minionById(targetId);
+      if (minion != null && minion.isAlive) minion.activeEffects.add(effect);
     }
     gameState.combatLogMessages.add(CombatLogEntry(
       source: ability.name,
@@ -402,8 +402,8 @@ void _applyVulnerability(
   if (targetId == 'boss') {
     effects = gameState.monsterActiveEffects;
   } else {
-    final minion = gameState.minions.where((m) => m.instanceId == targetId && m.isAlive).firstOrNull;
-    effects = minion?.activeEffects;
+    final minion = gameState.minionById(targetId);
+    effects = (minion != null && minion.isAlive) ? minion.activeEffects : null;
   }
   if (effects == null) return;
 
@@ -485,7 +485,7 @@ void _applyDoTFromProjectile(GameState gameState, String targetId, Projectile pr
   if (targetId == 'boss') {
     gameState.monsterActiveEffects.add(effect);
   } else {
-    final minion = gameState.minions.where((m) => m.instanceId == targetId).firstOrNull;
+    final minion = gameState.minionById(targetId);
     if (minion != null) minion.activeEffects.add(effect);
   }
 }

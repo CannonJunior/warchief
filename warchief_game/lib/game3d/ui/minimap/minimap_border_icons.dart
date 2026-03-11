@@ -67,7 +67,7 @@ class MinimapBorderIcons extends StatelessWidget {
   final VoidCallback onToggleBlueOverlay;
 
   const MinimapBorderIcons({
-    Key? key,
+    super.key,
     required this.size,
     required this.elapsedTime,
     required this.windState,
@@ -87,7 +87,7 @@ class MinimapBorderIcons extends StatelessWidget {
     required this.showBlueOverlay,
     required this.isBlueAttuned,
     required this.onToggleBlueOverlay,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -189,14 +189,14 @@ class MinimapBorderIcons extends StatelessWidget {
             gradient: RadialGradient(
               colors: [
                 color,
-                color.withOpacity(0.6),
-                color.withOpacity(0.0),
+                color.withValues(alpha: 0.6),
+                color.withValues(alpha: 0.0),
               ],
               stops: const [0.0, 0.5, 1.0],
             ),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.5),
+                color: color.withValues(alpha: 0.5),
                 blurRadius: iconSize * 0.4,
                 spreadRadius: 1,
               ),
@@ -287,7 +287,7 @@ class MinimapBorderIcons extends StatelessWidget {
         height: indicatorSize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color(0xFF0A0A1A).withOpacity(0.7),
+          color: const Color(0xFF0A0A1A).withValues(alpha: 0.7),
           border: Border.all(
             color: const Color(0xFFCCA040),
             width: 1,
@@ -318,7 +318,7 @@ class MinimapBorderIcons extends StatelessWidget {
           width: 18,
           height: 18,
           decoration: BoxDecoration(
-            color: const Color(0xFF0A0A1A).withOpacity(0.8),
+            color: const Color(0xFF0A0A1A).withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(3),
             border: Border.all(
               color: isRotatingMode
@@ -366,7 +366,7 @@ class MinimapBorderIcons extends StatelessWidget {
           width: 18,
           height: 18,
           decoration: BoxDecoration(
-            color: const Color(0xFF0A0A1A).withOpacity(0.8),
+            color: const Color(0xFF0A0A1A).withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(3),
             border: Border.all(color: borderColor, width: 1),
           ),
@@ -400,7 +400,7 @@ class MinimapBorderIcons extends StatelessWidget {
           width: 18,
           height: 18,
           decoration: BoxDecoration(
-            color: const Color(0xFF0A0A1A).withOpacity(0.8),
+            color: const Color(0xFF0A0A1A).withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(3),
             border: Border.all(color: borderColor, width: 1),
           ),
@@ -434,7 +434,7 @@ class MinimapBorderIcons extends StatelessWidget {
           width: 18,
           height: 18,
           decoration: BoxDecoration(
-            color: const Color(0xFF0A0A1A).withOpacity(0.8),
+            color: const Color(0xFF0A0A1A).withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(3),
             border: Border.all(color: borderColor, width: 1),
           ),
@@ -473,7 +473,7 @@ class MinimapBorderIcons extends StatelessWidget {
         width: 18,
         height: 18,
         decoration: BoxDecoration(
-          color: const Color(0xFF0A0A1A).withOpacity(0.8),
+          color: const Color(0xFF0A0A1A).withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(3),
           border: Border.all(
             color: enabled

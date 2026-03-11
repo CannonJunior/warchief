@@ -9,19 +9,19 @@ class FormationPanel extends StatelessWidget {
   final VoidCallback? onPrevFormation;
 
   const FormationPanel({
-    Key? key,
+    super.key,
     required this.currentFormation,
     required this.onCycleFormation,
     this.onNextFormation,
     this.onPrevFormation,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
+        color: Colors.black.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Color(currentFormation.color), width: 2),
       ),
@@ -33,7 +33,7 @@ class FormationPanel extends StatelessWidget {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: Color(currentFormation.color).withOpacity(0.3),
+              color: Color(currentFormation.color).withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: Color(currentFormation.color), width: 1),
             ),
@@ -83,7 +83,7 @@ class FormationPanel extends StatelessWidget {
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: Colors.white30, width: 1),
                 ),
@@ -121,17 +121,17 @@ class FormationSelector extends StatelessWidget {
   final void Function(FormationType) onFormationChanged;
 
   const FormationSelector({
-    Key? key,
+    super.key,
     required this.currentFormation,
     required this.onFormationChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
+        color: Colors.black.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.cyan, width: 2),
       ),
@@ -166,7 +166,7 @@ class FormationSelector extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: isSelected
                             ? Color(formation.color)
-                            : Color(formation.color).withOpacity(0.3),
+                            : Color(formation.color).withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(
                           color: isSelected ? Colors.white : Colors.white30,

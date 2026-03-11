@@ -58,7 +58,7 @@ class MinimapPingPainter extends CustomPainter {
         if (ringAlpha <= 0.01) continue;
 
         final paint = Paint()
-          ..color = ping.color.withOpacity(ringAlpha)
+          ..color = ping.color.withValues(alpha: ringAlpha)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5;
 
@@ -67,7 +67,7 @@ class MinimapPingPainter extends CustomPainter {
 
       // Draw central dot that fades
       final dotPaint = Paint()
-        ..color = ping.color.withOpacity(alpha * 0.9)
+        ..color = ping.color.withValues(alpha: alpha * 0.9)
         ..style = PaintingStyle.fill;
       canvas.drawCircle(pos, 3.0 * (1.0 - age * 0.5), dotPaint);
     }
@@ -119,13 +119,13 @@ class MinimapPingWorldOverlay extends StatelessWidget {
   final Size screenSize;
 
   const MinimapPingWorldOverlay({
-    Key? key,
+    super.key,
     required this.pings,
     required this.elapsedTime,
     required this.viewMatrix,
     required this.projMatrix,
     required this.screenSize,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -265,7 +265,7 @@ class _PingDiamondPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = color.withOpacity(0.3)
+        ..color = color.withValues(alpha: 0.3)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3,
     );

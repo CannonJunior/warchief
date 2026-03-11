@@ -6,6 +6,7 @@
 /// - Monster Power rating system for difficulty estimation
 /// - Asset/model references
 /// - Ability definitions
+library;
 
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math.dart' hide Colors;

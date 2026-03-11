@@ -18,13 +18,13 @@ class ItemEditorPanel extends StatefulWidget {
   final Function(int index, Item item)? onItemSaved;
 
   const ItemEditorPanel({
-    Key? key,
+    super.key,
     required this.onClose,
     required this.onItemCreated,
     this.existingItem,
     this.existingItemIndex,
     this.onItemSaved,
-  }) : super(key: key);
+  });
 
   @override
   State<ItemEditorPanel> createState() => _ItemEditorPanelState();

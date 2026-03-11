@@ -5,11 +5,9 @@ import '../state/ability_override_manager.dart';
 import '../state/custom_options_manager.dart';
 import '../state/custom_ability_manager.dart';
 import '../state/action_bar_config.dart';
-import '../data/abilities/abilities.dart' show AbilityRegistry;
 import 'ability_editor_panel.dart';
 import 'stance_editor_panel.dart';
 import 'ui_config.dart';
-import '../data/abilities/ability_balance.dart';
 import '../state/ability_order_manager.dart';
 import '../state/game_state.dart';
 import '../state/scenario_config.dart';
@@ -33,11 +31,11 @@ class AbilitiesModal extends StatefulWidget {
   final GameState? gameState;
 
   const AbilitiesModal({
-    Key? key,
+    super.key,
     required this.onClose,
     this.onClassLoaded,
     this.gameState,
-  }) : super(key: key);
+  });
 
   @override
   State<AbilitiesModal> createState() => _AbilitiesModalState();
@@ -232,7 +230,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                 border: Border.all(color: Colors.cyan, width: 3),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     blurRadius: 10,
                     spreadRadius: 2,
                   ),
@@ -253,7 +251,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                     child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
+                      color: Colors.black.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(10),
                         topRight: Radius.circular(10),
@@ -283,7 +281,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.cyan.withOpacity(0.2),
+                                color: Colors.cyan.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(4),
                                 border: Border.all(color: Colors.cyan, width: 1),
                               ),
@@ -308,7 +306,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.2),
+                                color: Colors.orange.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(4),
                                 border: Border.all(color: Colors.orange, width: 1),
                               ),
@@ -443,7 +441,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
                               ...AbilitiesConfig.categories.map((category) {
                                 if (!_enabledCategories.contains(category)) return SizedBox.shrink();
                                 return _buildReorderableCategorySection(category);
-                              }).toList(),
+                              }),
                               // Custom categories added via "+ Add New" in editor
                               ..._buildCustomCategorySections(),
                             ],
@@ -463,7 +461,7 @@ class _AbilitiesModalState extends State<AbilitiesModal> {
           if (_editingAbility != null) ...[
             SizedBox(width: 8),
             AbilityEditorPanel(
-              key: ValueKey('${_editingAbility!.name}_${_isCreatingNew}'),
+              key: ValueKey('${_editingAbility!.name}_$_isCreatingNew'),
               ability: _editingAbility!,
               isNewAbility: _isCreatingNew,
               onClose: () {

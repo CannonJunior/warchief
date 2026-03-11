@@ -294,7 +294,7 @@ class MinimapTerrainPainter extends CustomPainter {
 
     // Soft glow layer underneath the lines
     final glowLinePaint = Paint()
-      ..color = lineColor.withOpacity(0.15 + pulse * 0.1)
+      ..color = lineColor.withValues(alpha: 0.15 + pulse * 0.1)
       ..strokeWidth = lineWidth * 3.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -332,7 +332,7 @@ class MinimapTerrainPainter extends CustomPainter {
           pos,
           outerGlowRadius,
           Paint()
-            ..color = nodeColor.withOpacity(0.12 + pulse * 0.08)
+            ..color = nodeColor.withValues(alpha: 0.12 + pulse * 0.08)
             ..style = PaintingStyle.fill,
         );
 
@@ -341,7 +341,7 @@ class MinimapTerrainPainter extends CustomPainter {
           pos,
           nodeRadius * 2.0 + pulse * 1.5,
           Paint()
-            ..color = nodeColor.withOpacity(0.3 + pulse * 0.2)
+            ..color = nodeColor.withValues(alpha: 0.3 + pulse * 0.2)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.5,
         );

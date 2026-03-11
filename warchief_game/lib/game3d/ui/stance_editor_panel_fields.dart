@@ -53,7 +53,7 @@ extension _StanceEditorFields on _StanceEditorPanelState {
       decoration: BoxDecoration(
         color: const Color(0xDD1a1a2e),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.cyan.withOpacity(0.5)),
+        border: Border.all(color: Colors.cyan.withValues(alpha: 0.5)),
       ),
       waitDuration: const Duration(milliseconds: 400),
       child: child,
@@ -156,7 +156,7 @@ extension _StanceEditorFields on _StanceEditorPanelState {
               value: value,
               onChanged: onChanged,
               // Reason: _accent is static const Colors.cyan on the state class
-              activeColor: Colors.cyan,
+              activeThumbColor: Colors.cyan,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),

@@ -83,6 +83,8 @@ import 'ui/chat_panel.dart';
 import 'ui/stance_selector.dart';
 import 'ui/stance_effects_overlay.dart';
 import 'ui/channel_effects_overlay.dart';
+import 'ui/range_circle_overlay.dart';
+import 'utils/screen_projection.dart';
 import 'ui/macro_builder_panel.dart';
 import 'systems/entity_picking_system.dart';
 import 'systems/building_system.dart';
@@ -158,7 +160,7 @@ abstract class _GameStateBase extends State<Game3D> {
 
   // --- from _Game3DState ---
   void _startGameLoop();
-  void _initializeScenarioConfig();
+  void _initializeScenarioConfig(); // ignore: unused_element
 
   // --- from _WidgetCommandsMixin ---
   bool _isVisible(String id);
@@ -203,6 +205,7 @@ abstract class _GameStateBase extends State<Game3D> {
 
   // --- from _WidgetUIHelpersMixin ---
   Widget _buildCombatHUD();
+  Widget _buildRangeCircleOverlay(BuildContext context);
   Widget _buildAllyControlButton({
     required IconData icon,
     required String label,
@@ -225,7 +228,7 @@ abstract class _GameStateBase extends State<Game3D> {
 /// )
 /// ```
 class Game3D extends StatefulWidget {
-  const Game3D({Key? key}) : super(key: key);
+  const Game3D({super.key});
 
   @override
   State<Game3D> createState() => _Game3DState();
@@ -319,6 +322,7 @@ class _Game3DState extends _GameStateBase
     _initializeGame();
   }
 
+  @override
   void _startGameLoop() {
     // lastTimestamp will be set on the first rAF callback
     gameState.lastTimestamp = null;

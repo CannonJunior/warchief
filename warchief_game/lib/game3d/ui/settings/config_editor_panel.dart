@@ -68,12 +68,12 @@ class ConfigEditorPanel extends StatefulWidget {
   final VoidCallback? onClose;
 
   const ConfigEditorPanel({
-    Key? key,
+    super.key,
     required this.title,
     required this.sections,
     required this.callbacks,
     this.onClose,
-  }) : super(key: key);
+  });
 
   @override
   State<ConfigEditorPanel> createState() => _ConfigEditorPanelState();
@@ -226,7 +226,7 @@ class _ConfigEditorPanelState extends State<ConfigEditorPanel> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: _sectionBg,
-        border: Border(bottom: BorderSide(color: _accent.withOpacity(0.3))),
+        border: Border(bottom: BorderSide(color: _accent.withValues(alpha: 0.3))),
       ),
       child: Row(
         children: [
@@ -343,7 +343,7 @@ class _ConfigEditorPanelState extends State<ConfigEditorPanel> {
             child: Switch(
               value: value,
               onChanged: (v) => setState(() => _boolValues[field.dotKey] = v),
-              activeColor: _accent,
+              activeThumbColor: _accent,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),
@@ -361,7 +361,7 @@ class _ConfigEditorPanelState extends State<ConfigEditorPanel> {
       decoration: BoxDecoration(
         color: const Color(0xDD1a1a2e),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.cyan.withOpacity(0.5)),
+        border: Border.all(color: Colors.cyan.withValues(alpha: 0.5)),
       ),
       waitDuration: const Duration(milliseconds: 400),
       child: child,
@@ -391,7 +391,7 @@ class _ConfigEditorPanelState extends State<ConfigEditorPanel> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(4),
           border: Border.all(color: color, width: 1),
         ),

@@ -8,11 +8,11 @@ class AttackCommandPanel extends StatelessWidget {
   final int allyCount;
 
   const AttackCommandPanel({
-    Key? key,
+    super.key,
     required this.currentCommand,
     required this.onActivate,
     required this.allyCount,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,10 +21,10 @@ class AttackCommandPanel extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.8),
+        color: Colors.black.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isActive ? Colors.red : Colors.red.withOpacity(0.5),
+          color: isActive ? Colors.red : Colors.red.withValues(alpha: 0.5),
           width: isActive ? 2 : 1,
         ),
       ),
@@ -37,7 +37,7 @@ class AttackCommandPanel extends StatelessWidget {
             children: [
               Icon(
                 Icons.sports_martial_arts,
-                color: isActive ? Colors.red : Colors.red.withOpacity(0.7),
+                color: isActive ? Colors.red : Colors.red.withValues(alpha: 0.7),
                 size: 18,
               ),
               SizedBox(width: 6),
@@ -67,7 +67,7 @@ class AttackCommandPanel extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: isActive ? Colors.red : Colors.red.withOpacity(0.3),
+                color: isActive ? Colors.red : Colors.red.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
                   color: isActive ? Colors.white : Colors.red,
@@ -116,11 +116,11 @@ class FollowCommandPanel extends StatelessWidget {
   final int allyCount;
 
   const FollowCommandPanel({
-    Key? key,
+    super.key,
     required this.currentCommand,
     required this.onActivate,
     required this.allyCount,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -129,10 +129,10 @@ class FollowCommandPanel extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.8),
+        color: Colors.black.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isActive ? Colors.green : Colors.green.withOpacity(0.5),
+          color: isActive ? Colors.green : Colors.green.withValues(alpha: 0.5),
           width: isActive ? 2 : 1,
         ),
       ),
@@ -145,7 +145,7 @@ class FollowCommandPanel extends StatelessWidget {
             children: [
               Icon(
                 Icons.directions_walk,
-                color: isActive ? Colors.green : Colors.green.withOpacity(0.7),
+                color: isActive ? Colors.green : Colors.green.withValues(alpha: 0.7),
                 size: 18,
               ),
               SizedBox(width: 6),
@@ -175,7 +175,7 @@ class FollowCommandPanel extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: isActive ? Colors.green : Colors.green.withOpacity(0.3),
+                color: isActive ? Colors.green : Colors.green.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
                   color: isActive ? Colors.white : Colors.green,
@@ -224,11 +224,11 @@ class HoldCommandPanel extends StatelessWidget {
   final int allyCount;
 
   const HoldCommandPanel({
-    Key? key,
+    super.key,
     required this.currentCommand,
     required this.onActivate,
     required this.allyCount,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -237,10 +237,10 @@ class HoldCommandPanel extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.8),
+        color: Colors.black.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isActive ? Colors.orange : Colors.orange.withOpacity(0.5),
+          color: isActive ? Colors.orange : Colors.orange.withValues(alpha: 0.5),
           width: isActive ? 2 : 1,
         ),
       ),
@@ -253,7 +253,7 @@ class HoldCommandPanel extends StatelessWidget {
             children: [
               Icon(
                 Icons.front_hand,
-                color: isActive ? Colors.orange : Colors.orange.withOpacity(0.7),
+                color: isActive ? Colors.orange : Colors.orange.withValues(alpha: 0.7),
                 size: 18,
               ),
               SizedBox(width: 6),
@@ -283,7 +283,7 @@ class HoldCommandPanel extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: isActive ? Colors.orange : Colors.orange.withOpacity(0.3),
+                color: isActive ? Colors.orange : Colors.orange.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
                   color: isActive ? Colors.white : Colors.orange,
@@ -332,18 +332,18 @@ class AllyCommandBar extends StatelessWidget {
   final int allyCount;
 
   const AllyCommandBar({
-    Key? key,
+    super.key,
     required this.currentCommand,
     required this.onCommandChanged,
     required this.allyCount,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.8),
+        color: Colors.black.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.cyan, width: 2),
       ),
@@ -416,7 +416,7 @@ class AllyCommandBar extends StatelessWidget {
           width: 36,
           height: 32,
           decoration: BoxDecoration(
-            color: isActive ? color : color.withOpacity(0.3),
+            color: isActive ? color : color.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
               color: isActive ? Colors.white : color,
