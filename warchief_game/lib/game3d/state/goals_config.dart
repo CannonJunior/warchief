@@ -26,7 +26,7 @@ class GoalsConfig extends ChangeNotifier {
 
   /// Ollama model name for the Warrior Spirit.
   String get warriorSpiritModel =>
-      _resolveString('warrior_spirit.model', 'qwwen3.5:2b');
+      _resolveString('warrior_spirit.model', 'qwen3.5:2b');
 
   /// Temperature (creativity level) for LLM generation.
   double get warriorSpiritTemperature =>

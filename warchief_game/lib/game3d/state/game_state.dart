@@ -1066,6 +1066,9 @@ class GameState {
   List<ImpactEffect> impactEffects = []; // List of active impact effects
   List<DamageIndicator> damageIndicators = []; // Floating damage numbers
 
+  /// Dissolving yellow label shown below the unit when an ability executes.
+  QueuedAbilityLabel? executingAbilityLabel;
+
   // ==================== MOVEMENT TRACKING ====================
 
   /// Player movement tracker for AI prediction

@@ -17,6 +17,10 @@ class MinimapEntityPainter extends CustomPainter {
   final double mapRotation;
   final bool isRotatingMode;
   final bool showLeyNodes;
+  // Reason: caching Paint objects avoids per-draw allocations; with 10+ enemies
+  // + 5+ allies drawn every frame at 60 fps, that's 900+ Paint allocations/s.
+  late final Paint _entityPaint = Paint();
+  late final Paint _strokePaint = Paint()..style = PaintingStyle.stroke;
 
   MinimapEntityPainter({
     required this.gameState,
@@ -78,13 +82,14 @@ class MinimapEntityPainter extends CustomPainter {
     final enemyColor = _colorFromList(
         config?.enemyColor ?? [1.0, 0.27, 0.27, 1.0]);
     final enemySize = (config?.enemySize ?? 4).toDouble();
+    _entityPaint.color = enemyColor;
     for (final minion in gameState.aliveMinions) {
       final pos = _worldToMinimap(
           minion.transform.position.x,
           minion.transform.position.z,
           playerX, playerZ, half);
       if (pos != null) {
-        canvas.drawCircle(pos, enemySize / 2, Paint()..color = enemyColor);
+        canvas.drawCircle(pos, enemySize / 2, _entityPaint);
       }
     }
 
@@ -99,11 +104,10 @@ class MinimapEntityPainter extends CustomPainter {
           playerX, playerZ, half);
       if (pos != null) {
         // Glow behind boss dot
-        canvas.drawCircle(
-            pos,
-            bossSize / 2 + 2,
-            Paint()..color = bossColor.withValues(alpha: 0.3));
-        canvas.drawCircle(pos, bossSize / 2, Paint()..color = bossColor);
+        _entityPaint.color = bossColor.withValues(alpha: 0.3);
+        canvas.drawCircle(pos, bossSize / 2 + 2, _entityPaint);
+        _entityPaint.color = bossColor;
+        canvas.drawCircle(pos, bossSize / 2, _entityPaint);
       }
     }
 
@@ -111,6 +115,7 @@ class MinimapEntityPainter extends CustomPainter {
     final allyColor = _colorFromList(
         config?.allyColor ?? [0.40, 0.80, 0.40, 1.0]);
     final allySize = (config?.allySize ?? 5).toDouble();
+    _entityPaint.color = allyColor;
     for (final ally in gameState.allies) {
       if (ally.health <= 0) continue;
       final pos = _worldToMinimap(
@@ -118,7 +123,7 @@ class MinimapEntityPainter extends CustomPainter {
           ally.transform.position.z,
           playerX, playerZ, half);
       if (pos != null) {
-        canvas.drawCircle(pos, allySize / 2, Paint()..color = allyColor);
+        canvas.drawCircle(pos, allySize / 2, _entityPaint);
       }
     }
 
@@ -155,35 +160,32 @@ class MinimapEntityPainter extends CustomPainter {
       ..close();
 
     // Black shadow outline for contrast
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.7)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
-    );
+    _strokePaint
+      ..color = Colors.black.withValues(alpha: 0.7)
+      ..strokeWidth = 3;
+    canvas.drawPath(path, _strokePaint);
     // Bright white filled arrow
-    canvas.drawPath(path, Paint()..color = Colors.white);
+    _entityPaint.color = Colors.white;
+    canvas.drawPath(path, _entityPaint);
 
     canvas.restore();
   }
 
   /// Draw an X shape at position.
   void _drawX(Canvas canvas, Offset pos, double size, Color color) {
-    final paint = Paint()
+    _strokePaint
       ..color = color
       ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     canvas.drawLine(
       Offset(pos.dx - size / 2, pos.dy - size / 2),
       Offset(pos.dx + size / 2, pos.dy + size / 2),
-      paint,
+      _strokePaint,
     );
     canvas.drawLine(
       Offset(pos.dx + size / 2, pos.dy - size / 2),
       Offset(pos.dx - size / 2, pos.dy + size / 2),
-      paint,
+      _strokePaint,
     );
   }
 
@@ -195,7 +197,8 @@ class MinimapEntityPainter extends CustomPainter {
       ..lineTo(pos.dx, pos.dy + size)
       ..lineTo(pos.dx - size, pos.dy)
       ..close();
-    canvas.drawPath(path, Paint()..color = color);
+    _entityPaint.color = color;
+    canvas.drawPath(path, _entityPaint);
   }
 
   /// Convert world coordinates to minimap pixel position.
@@ -241,5 +244,20 @@ class MinimapEntityPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(MinimapEntityPainter oldDelegate) => true;
+  bool shouldRepaint(MinimapEntityPainter oldDelegate) {
+    // Reason: skip repaint only when the cheap sentinel values are identical —
+    // this catches the common no-op case (no movement, no kills) without
+    // deep-diffing every entity position.
+    return oldDelegate.viewRadius != viewRadius ||
+        oldDelegate.mapRotation != mapRotation ||
+        oldDelegate.isRotatingMode != isRotatingMode ||
+        oldDelegate.gameState.playerTransform?.position.x !=
+            gameState.playerTransform?.position.x ||
+        oldDelegate.gameState.playerTransform?.position.z !=
+            gameState.playerTransform?.position.z ||
+        oldDelegate.gameState.aliveMinions.length !=
+            gameState.aliveMinions.length ||
+        oldDelegate.gameState.allies.length != gameState.allies.length ||
+        oldDelegate.gameState.monsterHealth != gameState.monsterHealth;
+  }
 }

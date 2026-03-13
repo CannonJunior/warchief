@@ -29,17 +29,40 @@ class WarriorSpirit {
   static final List<Map<String, dynamic>> _chatHistory = [];
   static const int _maxHistory = 20;
 
-  /// Initialize — check Ollama availability and start loading project docs.
+  /// Initialize — check Ollama availability and validate the model is installed.
   static Future<void> init() async {
-    _isAvailable = await _client.isAvailable();
+    _isAvailable = false;
     _checkAccumulator = 0;
     _greetingSent = false;
     _greetingTimer = 0;
     _chatHistory.clear();
+
+    final serverUp = await _client.isAvailable();
+    if (!serverUp) {
+      debugPrint('[WARRIOR SPIRIT] Ollama server not reachable');
+      SpiritKnowledgeBase.initialize();
+      return;
+    }
+
+    // Validate the configured model is actually installed before enabling chat.
+    final model = globalGoalsConfig?.warriorSpiritModel ?? 'qwen3.5:2b';
+    final installedModels = await _client.listModels();
+    final modelFound = installedModels.any((m) => m == model || m.startsWith('$model:'));
+    if (!modelFound) {
+      debugPrint(
+        '[WARRIOR SPIRIT] Model "$model" not found in Ollama. '
+        'Installed: $installedModels. '
+        'Run: ollama pull $model',
+      );
+      SpiritKnowledgeBase.initialize();
+      return;
+    }
+
+    _isAvailable = true;
     // Reason: load docs in the background so they're ready before the first
     // player message without blocking the game startup sequence.
     SpiritKnowledgeBase.initialize();
-    debugPrint('[WARRIOR SPIRIT] Ollama available: $_isAvailable');
+    debugPrint('[WARRIOR SPIRIT] Ready — model: $model');
   }
 
   /// Periodic update — send greeting and check if we should suggest a goal.
@@ -150,7 +173,7 @@ Speak as the Warrior Spirit. Be brief, evocative, not flowery.''';
 
     try {
       final response = await _client.generate(
-        model: globalGoalsConfig?.warriorSpiritModel ?? 'qwwen3.5:2b',
+        model: globalGoalsConfig?.warriorSpiritModel ?? 'qwen3.5:2b',
         prompt: prompt,
         temperature: globalGoalsConfig?.warriorSpiritTemperature ?? 0.8,
       );
@@ -192,7 +215,7 @@ Speak as the Warrior Spirit. Be brief, evocative, not flowery.''';
       ..._chatHistory,
     ];
 
-    final model = globalGoalsConfig?.warriorSpiritModel ?? 'qwwen3.5:2b';
+    final model = globalGoalsConfig?.warriorSpiritModel ?? 'qwen3.5:2b';
     try {
       final reply = await _client.chat(
         model: model,
@@ -245,7 +268,7 @@ Speak as the Warrior Spirit. Be brief, evocative, not flowery.''';
     final buffer = StringBuffer();
     bool hadContent = false;
 
-    final model = globalGoalsConfig?.warriorSpiritModel ?? 'qwwen3.5:2b';
+    final model = globalGoalsConfig?.warriorSpiritModel ?? 'qwen3.5:2b';
     try {
       await for (final chunk in _client.chatStream(
         model: model,

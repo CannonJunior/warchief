@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/ai_chat_message.dart';
 import '../../models/raid_chat_message.dart';
@@ -58,6 +59,7 @@ class _ChatPanelState extends State<ChatPanel> {
   bool _isThinking = false;
   /// Accumulates streaming reply tokens for live display.
   String _streamingText = '';
+  StreamSubscription<String>? _streamSubscription;
 
   @override
   void initState() {
@@ -67,6 +69,7 @@ class _ChatPanelState extends State<ChatPanel> {
 
   @override
   void dispose() {
+    _streamSubscription?.cancel();
     _textController.dispose();
     _inputFocusNode.dispose();
     super.dispose();
@@ -81,19 +84,23 @@ class _ChatPanelState extends State<ChatPanel> {
 
     // Reason: streaming lets the UI show tokens as they arrive instead of
     // waiting for the full response (which can take minutes on CPU-only HW).
-    widget.onSendSpiritMessage(text).listen(
+    // Cancel any in-flight subscription before starting a new one.
+    _streamSubscription?.cancel();
+    _streamSubscription = widget.onSendSpiritMessage(text).listen(
       (chunk) {
         if (mounted) setState(() { _streamingText += chunk; });
       },
       onDone: () {
         final full = _streamingText.trim();
+        // Reason: empty stream means the model returned no content — surface
+        // a hint rather than a silent failure so the player knows to check Settings > AI.
         widget.onSpiritReplyComplete?.call(full.isEmpty
-            ? 'The spirit flickers. Try again.'
+            ? 'The spirit flickers. (No response — check model name in Settings > AI)'
             : full);
         if (mounted) setState(() { _isThinking = false; _streamingText = ''; });
       },
-      onError: (_) {
-        widget.onSpiritReplyComplete?.call('The spirit flickers. Try again.');
+      onError: (e) {
+        widget.onSpiritReplyComplete?.call('The spirit flickers. ($e)');
         if (mounted) setState(() { _isThinking = false; _streamingText = ''; });
       },
       cancelOnError: true,

@@ -25,8 +25,11 @@ void _applyComboGcdBonuses(List<String> primes, GameState gameState) {
   // Reason: only the Warchief action bar drives comboPrimes today;
   // ally combo primes would need per-ally bonus lists which don't exist yet.
   if (!gameState.isWarchiefActive) return;
+  // Reason: convert to Set for O(1) lookup — slots.length × primes.length
+  // linear scans (up to 10×5 = 50 comparisons) on every ability fire.
+  final primesSet = primes.length <= 3 ? primes : Set<String>.from(primes);
   for (int i = 0; i < slots.length; i++) {
-    if (primes.contains(slots[i])) {
+    if (primesSet.contains(slots[i])) {
       gameState.abilityComboGcdBonuses[i] = 0.5;
     }
   }
@@ -228,6 +231,7 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
   }
 
   gameState.addConsoleLog('$abilityName executed (slot $slotIndex)');
+  gameState.executingAbilityLabel = QueuedAbilityLabel(abilityName);
 
   // Trigger GCD — 1.0s base, reduced by haste and stance
   {

@@ -271,3 +271,10 @@ void _updateImpactEffects(double dt, GameState gameState) {
     if (impact.lifetime <= 0) gameState.impactEffects.removeAt(i);
   }
 }
+
+void _updateExecutingLabel(double dt, GameState gameState) {
+  final label = gameState.executingAbilityLabel;
+  if (label == null) return;
+  label.age += dt;
+  if (label.isExpired) gameState.executingAbilityLabel = null;
+}

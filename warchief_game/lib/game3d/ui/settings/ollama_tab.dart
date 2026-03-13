@@ -36,7 +36,7 @@ class _OllamaTabState extends State<OllamaTab> {
     super.initState();
     final cfg = globalGoalsConfig;
     _endpointCtrl = TextEditingController(text: OllamaClient.baseUrl);
-    _modelCtrl = TextEditingController(text: cfg?.warriorSpiritModel ?? 'qwwen3.5:2b');
+    _modelCtrl = TextEditingController(text: cfg?.warriorSpiritModel ?? 'qwen3.5:2b');
     _temperature = cfg?.warriorSpiritTemperature ?? 0.8;
     _goalInterval = cfg?.goalCheckInterval ?? 120.0;
     _maxGoals = cfg?.maxActiveGoals ?? 5;
@@ -75,6 +75,31 @@ class _OllamaTabState extends State<OllamaTab> {
   Future<void> _saveAll() async {
     final endpoint = _endpointCtrl.text.trim();
     final model = _modelCtrl.text.trim();
+
+    // Validate the model is installed before saving.
+    if (model.isNotEmpty) {
+      final saved = OllamaClient.baseUrl;
+      OllamaClient.baseUrl = endpoint;
+      final installed = await OllamaClient().listModels();
+      OllamaClient.baseUrl = saved;
+      final found = installed.any((m) => m == model || m.startsWith('$model:'));
+      if (!found) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Model "$model" not found in Ollama.\n'
+                'Run: ollama pull $model\n'
+                'Available: ${installed.isEmpty ? "(none)" : installed.join(", ")}',
+              ),
+              duration: const Duration(seconds: 6),
+              backgroundColor: const Color(0xFF5a1a1a),
+            ),
+          );
+        }
+        return;
+      }
+    }
 
     // Persist endpoint
     await OllamaClient.saveEndpoint(endpoint);

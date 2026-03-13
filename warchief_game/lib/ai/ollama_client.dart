@@ -167,8 +167,11 @@ class OllamaClient {
       final streamed = await client.send(request);
       if (streamed.statusCode != 200) {
         final body = await streamed.stream.bytesToString();
-        debugPrint('Ollama chatStream error: HTTP ${streamed.statusCode} — $body');
-        return;
+        final snippet = body.length > 200 ? body.substring(0, 200) : body;
+        debugPrint('Ollama chatStream error: HTTP ${streamed.statusCode} — $snippet');
+        // Reason: throwing propagates the HTTP error to the caller's catch block
+        // so it can surface the actual failure instead of an empty stream.
+        throw Exception('HTTP ${streamed.statusCode}: $snippet');
       }
 
       // Ollama streams NDJSON: one JSON object per line.

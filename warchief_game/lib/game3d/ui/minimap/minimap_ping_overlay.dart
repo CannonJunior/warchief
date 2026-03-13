@@ -103,7 +103,13 @@ class MinimapPingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(MinimapPingPainter oldDelegate) => true;
+  bool shouldRepaint(MinimapPingPainter oldDelegate) {
+    // Reason: no pings → no animation → no need to repaint.
+    if (pings.isEmpty && oldDelegate.pings.isEmpty) return false;
+    // Active pings advance every frame via elapsedTime.
+    return pings.length != oldDelegate.pings.length ||
+        elapsedTime != oldDelegate.elapsedTime;
+  }
 }
 
 /// World-space ping overlay rendered in the 3D game view.

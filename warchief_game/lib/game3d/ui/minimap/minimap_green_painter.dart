@@ -23,6 +23,11 @@ class MinimapGreenPainter extends CustomPainter {
   final bool isRotatingMode;
   final double elapsedTime;
 
+  // Reason: Paint objects cached to avoid per-drawCircle allocations inside
+  // the grass grid loop (which iterates 100s of pixels per frame).
+  late final Paint _fillPaint = Paint()..style = PaintingStyle.fill;
+  late final Paint _strokePaint = Paint()..style = PaintingStyle.stroke;
+
   MinimapGreenPainter({
     required this.gameState,
     required this.viewRadius,
@@ -61,7 +66,14 @@ class MinimapGreenPainter extends CustomPainter {
     // Reason: coarse grid (every 4 pixels) keeps paint fast while giving a
     // readable heat-map feel; finer grids cause frame drops.
     const step = 4.0;
-    final paint = Paint()..style = PaintingStyle.fill;
+
+    // Precompute rotation values outside the double-loop (rotating mode only).
+    double cosR = 1.0, sinR = 0.0;
+    if (isRotatingMode) {
+      final rotRad = playerRotation * math.pi / 180.0;
+      cosR = math.cos(rotRad);
+      sinR = math.sin(rotRad);
+    }
 
     for (double py = 0; py < size.height; py += step) {
       for (double px = 0; px < size.width; px += step) {
@@ -77,9 +89,6 @@ class MinimapGreenPainter extends CustomPainter {
           final ndy = -(py - half) / half;
           final rightComp = ndx * viewRadius;
           final fwdComp = ndy * viewRadius;
-          final rotRad = playerRotation * math.pi / 180.0;
-          final cosR = math.cos(rotRad);
-          final sinR = math.sin(rotRad);
           worldX = playerX + rightComp * cosR - fwdComp * sinR;
           worldZ = playerZ - rightComp * sinR - fwdComp * cosR;
         } else {
@@ -98,9 +107,8 @@ class MinimapGreenPainter extends CustomPainter {
         }
 
         if (grassWeight > 0.05) {
-          paint.color = Color.fromRGBO(60, 200, 60, grassWeight * 0.18);
-          canvas.drawRect(
-              Rect.fromLTWH(px, py, step, step), paint);
+          _fillPaint.color = Color.fromRGBO(60, 200, 60, grassWeight * 0.18);
+          canvas.drawRect(Rect.fromLTWH(px, py, step, step), _fillPaint);
         }
       }
     }
@@ -140,23 +148,14 @@ class MinimapGreenPainter extends CustomPainter {
     final alpha = 0.12 + pulse * 0.1;
 
     // Soft filled circle
-    canvas.drawCircle(
-      center,
-      pixelRadius,
-      Paint()
-        ..color = Color.fromRGBO(80, 255, 80, alpha)
-        ..style = PaintingStyle.fill,
-    );
+    _fillPaint.color = Color.fromRGBO(80, 255, 80, alpha);
+    canvas.drawCircle(center, pixelRadius, _fillPaint);
 
     // Pulsing ring border
-    canvas.drawCircle(
-      center,
-      pixelRadius * (0.9 + pulse * 0.1),
-      Paint()
-        ..color = Color.fromRGBO(100, 255, 100, 0.3 + pulse * 0.2)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
-    );
+    _strokePaint
+      ..color = Color.fromRGBO(100, 255, 100, 0.3 + pulse * 0.2)
+      ..strokeWidth = 1.5;
+    canvas.drawCircle(center, pixelRadius * (0.9 + pulse * 0.1), _strokePaint);
 
     // Small spirit icon at center (diamond shape)
     _drawLeafIcon(canvas, center, 4.0, Color.fromRGBO(120, 255, 120, 0.8));
@@ -187,13 +186,8 @@ class MinimapGreenPainter extends CustomPainter {
         final config = globalManaConfig;
         final proxRadius = config?.proximityRadius ?? 2.0;
         final pixelRadius = (proxRadius / viewRadius) * half;
-        canvas.drawCircle(
-          pos,
-          pixelRadius,
-          Paint()
-            ..color = Color.fromRGBO(60, 200, 60, 0.15)
-            ..style = PaintingStyle.fill,
-        );
+        _fillPaint.color = const Color.fromRGBO(60, 200, 60, 0.15);
+        canvas.drawCircle(pos, pixelRadius, _fillPaint);
       }
     }
 
@@ -211,21 +205,12 @@ class MinimapGreenPainter extends CustomPainter {
 
       // Prominent glow ring
       final glowRadius = 8.0 + pulse * 3.0;
-      canvas.drawCircle(
-        pos,
-        glowRadius,
-        Paint()
-          ..color = Color.fromRGBO(40, 220, 40, 0.15 + pulse * 0.1)
-          ..style = PaintingStyle.fill,
-      );
-      canvas.drawCircle(
-        pos,
-        glowRadius,
-        Paint()
-          ..color = Color.fromRGBO(80, 255, 80, 0.4 + pulse * 0.3)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5,
-      );
+      _fillPaint.color = Color.fromRGBO(40, 220, 40, 0.15 + pulse * 0.1);
+      canvas.drawCircle(pos, glowRadius, _fillPaint);
+      _strokePaint
+        ..color = Color.fromRGBO(80, 255, 80, 0.4 + pulse * 0.3)
+        ..strokeWidth = 1.5;
+      canvas.drawCircle(pos, glowRadius, _strokePaint);
 
       // Leaf icon
       _drawLeafIcon(
@@ -243,16 +228,17 @@ class MinimapGreenPainter extends CustomPainter {
           center.dx - size, center.dy, center.dx, center.dy - size) // Left curve
       ..close();
 
-    canvas.drawPath(path, Paint()..color = color);
+    _fillPaint.color = color;
+    canvas.drawPath(path, _fillPaint);
 
     // Stem line
+    _strokePaint
+      ..color = color.withValues(alpha: 0.6)
+      ..strokeWidth = 0.8;
     canvas.drawLine(
       Offset(center.dx, center.dy - size * 0.3),
       Offset(center.dx, center.dy + size * 0.5),
-      Paint()
-        ..color = color.withValues(alpha: 0.6)
-        ..strokeWidth = 0.8
-        ..style = PaintingStyle.stroke,
+      _strokePaint,
     );
   }
 
@@ -284,5 +270,16 @@ class MinimapGreenPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(MinimapGreenPainter oldDelegate) => true;
+  bool shouldRepaint(MinimapGreenPainter oldDelegate) {
+    // Reason: spirit auras and nature creature glows pulse via elapsedTime;
+    // grass zones are static per player position. Skip when nothing changed.
+    return elapsedTime != oldDelegate.elapsedTime ||
+        oldDelegate.viewRadius != viewRadius ||
+        oldDelegate.playerRotation != playerRotation ||
+        oldDelegate.gameState.playerTransform?.position.x !=
+            gameState.playerTransform?.position.x ||
+        oldDelegate.gameState.playerTransform?.position.z !=
+            gameState.playerTransform?.position.z ||
+        oldDelegate.gameState.playerInSpiritForm != gameState.playerInSpiritForm;
+  }
 }

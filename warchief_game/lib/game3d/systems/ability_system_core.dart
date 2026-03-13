@@ -74,6 +74,7 @@ void _updateCastingState(double dt, GameState gameState) {
     }
 
     debugPrint('[CAST] $abilityName cast complete! (${configuredTime.toStringAsFixed(2)}s)');
+    gameState.executingAbilityLabel = QueuedAbilityLabel(abilityName);
     if (slotIndex != null) {
       _finishCastTimeAbility(slotIndex, gameState);
     }
@@ -111,6 +112,7 @@ void _updateWindupState(double dt, GameState gameState) {
     }
 
     debugPrint('[WINDUP] $abilityName windup complete! (${configuredTime.toStringAsFixed(2)}s)');
+    gameState.executingAbilityLabel = QueuedAbilityLabel(abilityName);
     if (slotIndex != null) {
       _finishWindupAbility(slotIndex, gameState);
     }

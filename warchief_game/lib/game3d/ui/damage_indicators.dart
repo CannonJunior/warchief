@@ -303,3 +303,151 @@ void updateDamageIndicators(List<DamageIndicator> indicators, double dt) {
   }
   indicators.removeWhere((i) => i.isExpired);
 }
+
+// ==================== QUEUED ABILITY LABEL ====================
+
+/// Tracks the dissolving label shown when a queued ability executes.
+class QueuedAbilityLabel {
+  final String name;
+  double age = 0.0;
+  static const double maxAge = 1.0;
+
+  QueuedAbilityLabel(this.name);
+
+  bool get isExpired => age >= maxAge;
+  double get progress => (age / maxAge).clamp(0.0, 1.0);
+}
+
+/// World-space overlay that shows the queued/executing ability name below
+/// the active unit.
+///
+/// - **Queued** (casting or winding up): white text, no fade.
+/// - **Executing** (just fired): yellow text with black shadow, dissolves.
+class QueuedAbilityLabelOverlay extends StatelessWidget {
+  /// Label currently dissolving after execution (null = none).
+  final QueuedAbilityLabel? executingLabel;
+
+  /// Ability name in the cast/windup queue (empty = none).
+  final String queuedName;
+
+  final Camera3D? camera;
+
+  /// World-space position of the active unit's feet.
+  final Vector3? unitPosition;
+
+  const QueuedAbilityLabelOverlay({
+    super.key,
+    required this.executingLabel,
+    required this.queuedName,
+    required this.camera,
+    required this.unitPosition,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (camera == null || unitPosition == null) return const SizedBox.shrink();
+    if (queuedName.isEmpty && executingLabel == null) return const SizedBox.shrink();
+
+    final screenSize = MediaQuery.of(context).size;
+    final screenPos  = worldToScreen(
+      unitPosition!,
+      camera!.getViewMatrix(),
+      camera!.getProjectionMatrix(),
+      screenSize,
+    );
+    if (screenPos == null) return const SizedBox.shrink();
+
+    // Render below the unit: +30px below the projected foot position
+    const double yOffset = 30.0;
+    final x = screenPos.dx;
+    final y = screenPos.dy + yOffset;
+
+    if (x < -100 || x > screenSize.width + 100 ||
+        y < -20  || y > screenSize.height + 20) {
+      return const SizedBox.shrink();
+    }
+
+    final children = <Widget>[];
+
+    // Queued label — white, always opaque while cast/windup is active
+    if (queuedName.isNotEmpty) {
+      children.add(_buildLabel(
+        text:    queuedName,
+        color:   Colors.white,
+        opacity: 1.0,
+        x: x,
+        y: y,
+      ));
+    }
+
+    // Executing label — yellow, dissolves upward
+    if (executingLabel != null) {
+      final p       = executingLabel!.progress;
+      final opacity = (1.0 - p).clamp(0.0, 1.0);
+      // Slight upward drift during dissolve
+      final drift   = -p * 18.0;
+      children.add(_buildLabel(
+        text:    executingLabel!.name,
+        color:   const Color(0xFFFFDD00),
+        opacity: opacity,
+        x: x,
+        y: y + drift,
+        shadow: true,
+      ));
+    }
+
+    return SizedBox.expand(
+      child: Stack(clipBehavior: Clip.none, children: children),
+    );
+  }
+
+  Widget _buildLabel({
+    required String text,
+    required Color  color,
+    required double opacity,
+    required double x,
+    required double y,
+    bool shadow = false,
+  }) {
+    const double width = 160.0;
+    return Positioned(
+      left: x - width / 2,
+      top:  y,
+      child: IgnorePointer(
+        child: SizedBox(
+          width: width,
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color:      color.withValues(alpha: opacity),
+              fontSize:   13.0,
+              fontWeight: FontWeight.w700,
+              shadows: shadow
+                  ? [
+                      Shadow(
+                        color:      Colors.black.withValues(alpha: opacity * 0.9),
+                        blurRadius: 3,
+                        offset:     const Offset(1, 1),
+                      ),
+                      Shadow(
+                        color:      Colors.black.withValues(alpha: opacity * 0.6),
+                        blurRadius: 6,
+                        offset:     const Offset(0, 0),
+                      ),
+                    ]
+                  : [
+                      // Subtle shadow so white text is readable on any terrain
+                      Shadow(
+                        color:      Colors.black.withValues(alpha: 0.7),
+                        blurRadius: 2,
+                        offset:     const Offset(1, 1),
+                      ),
+                    ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

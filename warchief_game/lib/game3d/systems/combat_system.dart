@@ -28,20 +28,24 @@ enum DamageTarget { player, monster, ally, minion, dummy }
 class CombatSystem {
   CombatSystem._(); // Private constructor to prevent instantiation
 
-  /// Cache of impact meshes keyed by "size,r,g,b".
-  /// Reason: Mesh.cube() allocates Float32List/Uint16List buffers on every call.
-  /// Impact geometry is immutable and identical for the same (size, color), so
-  /// sharing the mesh across concurrent ImpactEffect instances is safe.
-  static final Map<String, Mesh> _impactMeshCache = {};
+  /// Cache of impact meshes keyed by a packed int derived from quantised
+  /// (size, r, g, b). Reason: Mesh.cube() allocates Float32List/Uint16List
+  /// buffers on every call. Impact geometry is immutable for the same
+  /// (size, color) tuple, so sharing is safe. The int key avoids the per-call
+  /// string formatting cost of the previous "size,r,g,b" string key.
+  static final Map<int, Mesh> _impactMeshCache = {};
 
   /// Returns a cached Mesh.cube for the given size and color, creating it on
-  /// first use. Keys are rounded to 3 decimal places to collapse near-identical
-  /// float values from different call sites into the same cache entry.
+  /// first use. Components are quantised to 3 decimal places and packed into
+  /// an int so near-identical floats from different call sites share an entry
+  /// without any string allocation.
   static Mesh _getImpactMesh(double size, Vector3 color) {
-    final key = '${size.toStringAsFixed(3)},'
-        '${color.x.toStringAsFixed(3)},'
-        '${color.y.toStringAsFixed(3)},'
-        '${color.z.toStringAsFixed(3)}';
+    // Reason: multiply then truncate to int rather than formatting to string —
+    // avoids per-call StringBuffer/StringBuilder allocation on every damage hit.
+    final key = (size * 1000).round() ^
+        ((color.x * 1000).round() * 0x100000) ^
+        ((color.y * 1000).round() * 0x200) ^
+        (color.z * 1000).round();
     return _impactMeshCache.putIfAbsent(key, () => Mesh.cube(size: size, color: color));
   }
 

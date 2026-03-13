@@ -55,6 +55,18 @@ mixin _WidgetUIMixin on _GameStateBase {
               canvasHeight: 900,
             ),
 
+            // Queued/executing ability name below the active unit
+            QueuedAbilityLabelOverlay(
+              executingLabel: gameState.executingAbilityLabel,
+              queuedName: gameState.isCasting
+                  ? gameState.castingAbilityName
+                  : gameState.isWindingUp
+                      ? gameState.windupAbilityName
+                      : '',
+              camera: camera,
+              unitPosition: gameState.activeTransform?.position,
+            ),
+
             // World-space CC status indicators (persistent badges above affected units)
             CcIndicatorOverlay(
               gameState: gameState,

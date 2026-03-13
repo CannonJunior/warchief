@@ -55,6 +55,7 @@ class AbilitySystem {
     _updateAbility3(dt, gameState);
     _updateAbility4(dt, gameState);
     _updateImpactEffects(dt, gameState);
+    _updateExecutingLabel(dt, gameState);
   }
 
   /// Execute the ability in a given action bar slot.
