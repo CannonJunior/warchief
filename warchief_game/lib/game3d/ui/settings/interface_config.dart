@@ -131,6 +131,19 @@ class InterfaceConfigManager {
       defaultPosition: const Offset(0, 0),
     );
 
+    // Combo Side Panel (hard-pinned standalone, default position right of character panel)
+    _interfaces['combo_side_panel'] = InterfaceConfig(
+      id: 'combo_side_panel',
+      name: 'Combos Panel',
+      description: 'Ability combo sequences for the active character',
+      icon: Icons.link,
+      category: 'game_abilities',
+      shortcutKey: null,
+      isVisible: true,
+      position: const Offset(860, 80),
+      defaultPosition: const Offset(860, 80),
+    );
+
     // Bag Panel (Press B to toggle)
     _interfaces['bag_panel'] = InterfaceConfig(
       id: 'bag_panel',

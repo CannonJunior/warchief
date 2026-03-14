@@ -1,5 +1,31 @@
 part of 'ability_system.dart';
 
+// ==================== ABILITY QUEUE ====================
+
+/// True while the queue drain is executing so queued abilities don't
+/// re-enqueue themselves on a soft failure, which would be an infinite loop.
+bool _isDrainingQueue = false;
+
+/// Attempt to add [slotIndex] to the execution queue.
+/// Rejects silently if draining, queue is full, or a hard requirement is unmet.
+void _tryEnqueue(int slotIndex, GameState gameState) {
+  if (_isDrainingQueue) return;
+  if (gameState.abilityQueue.length >= 5) return;
+  final config = globalActionBarConfig;
+  final abilityName = config?.getSlotAbility(slotIndex) ?? '';
+  if (abilityName.isEmpty) return;
+  // Reason: targeted abilities with no current target can never resolve —
+  // reject immediately rather than queuing something that will never fire.
+  final data = config?.getSlotAbilityData(slotIndex);
+  if (data != null && !data.isSelfCast && data.range > 0) {
+    if (gameState.currentTargetId == null) {
+      gameState.addConsoleLog('$abilityName requires a target', level: ConsoleLogLevel.warn);
+      return;
+    }
+  }
+  gameState.abilityQueue.add(AbilityQueueEntry(slotIndex, abilityName));
+}
+
 // ==================== COOLDOWN MANAGEMENT ====================
 
 /// Set cooldown for a slot, applying Melt reduction and stance cooldown multiplier.
@@ -65,16 +91,16 @@ void _executeDefaultSlotAbility(int slotIndex, GameState gameState) {
 /// Data-driven abilities (those backed only by AbilityData with no special-cased handler)
 /// fall through to the `default` branch which calls [_executeGenericAbility].
 void _executeAbilityByName(String abilityName, int slotIndex, GameState gameState) {
-  // Cooldown check
+  // Cooldown check — soft failure, queue and wait
   final cooldown = AbilitySystem.getCooldownForSlot(slotIndex, gameState);
   if (cooldown > 0) {
-    gameState.addConsoleLog('$abilityName on cooldown (${cooldown.toStringAsFixed(1)}s)', level: ConsoleLogLevel.warn);
+    _tryEnqueue(slotIndex, gameState);
     return;
   }
 
-  // Casting / windup gate
+  // Casting / windup gate — soft failure, queue and wait
   if (gameState.isCasting || gameState.isWindingUp) {
-    gameState.addConsoleLog('Cannot use $abilityName: already ${gameState.isCasting ? "casting" : "winding up"}', level: ConsoleLogLevel.warn);
+    _tryEnqueue(slotIndex, gameState);
     return;
   }
 
@@ -87,26 +113,23 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
       : 0.0;
   final _wasComboFired = _comboBonus > 0.0;
 
-  // GCD gate — subtract per-slot combo bonus so primed abilities fire early
+  // GCD gate — soft failure, queue and wait
   {
     final effectiveGcd = gameState.activeGcdRemaining - _comboBonus;
     if (effectiveGcd > 0) {
-      gameState.addConsoleLog(
-        '$abilityName: GCD active (${effectiveGcd.toStringAsFixed(1)}s)',
-        level: ConsoleLogLevel.warn,
-      );
+      _tryEnqueue(slotIndex, gameState);
       return;
     }
   }
 
-  // Range check — combo window extends reach by comboRangeMultiplier
+  // Range check — soft failure, queue and wait for player to close gap
   final abilityData = globalActionBarConfig?.getSlotAbilityData(slotIndex);
   if (abilityData != null && !abilityData.isSelfCast && abilityData.range > 0 && gameState.currentTargetId != null) {
     final distance = gameState.getDistanceToCurrentTarget();
     final effectiveRange = abilityData.range *
         (_wasComboFired ? gameState.comboRangeMultiplier : 1.0);
     if (distance != null && distance > effectiveRange) {
-      gameState.addConsoleLog('$abilityName out of range (${distance.toStringAsFixed(1)} > ${effectiveRange.toStringAsFixed(1)})', level: ConsoleLogLevel.warn);
+      _tryEnqueue(slotIndex, gameState);
       return;
     }
   }

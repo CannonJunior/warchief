@@ -304,6 +304,11 @@ mixin _WidgetInputMixin on _GameStateBase {
         setState(() { gameState.warriorSpiritPanelOpen = false; });
         return;
       }
+      // Pop last queued ability (each ESC press removes one entry)
+      if (gameState.abilityQueue.isNotEmpty) {
+        setState(() { gameState.abilityQueue.removeLast(); });
+        return;
+      }
       // Clear target if no modal is open
       if (gameState.currentTargetId != null) {
         setState(() {

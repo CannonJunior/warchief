@@ -21,11 +21,32 @@ class CharacterPanel extends StatefulWidget {
   final GameState gameState;
   final int initialIndex;
 
+  /// When true the panel omits its own [Positioned] wrapper and delegates
+  /// drag handling to the parent host via [onDragDelta].
+  final bool embedded;
+
+  /// Called each frame the user drags the header while [embedded] is true.
+  final ValueChanged<Offset>? onDragDelta;
+
+  /// Called whenever the carousel index changes (for side-panel category sync).
+  final ValueChanged<int>? onCurrentIndexChanged;
+
+  /// Called when the user taps the combo-panel toggle button in the header.
+  final VoidCallback? onToggleComboPanel;
+
+  /// Whether the combo side panel is currently open (controls toggle icon state).
+  final bool comboPanelOpen;
+
   const CharacterPanel({
     super.key,
     required this.onClose,
     required this.gameState,
     this.initialIndex = 0,
+    this.embedded = false,
+    this.onDragDelta,
+    this.onCurrentIndexChanged,
+    this.onToggleComboPanel,
+    this.comboPanelOpen = false,
   });
 
   @override
@@ -168,12 +189,14 @@ class _CharacterPanelState extends State<CharacterPanel> {
       _currentIndex =
           (_currentIndex - 1 + _totalCharacters) % _totalCharacters;
     });
+    widget.onCurrentIndexChanged?.call(_currentIndex);
   }
 
   void _nextCharacter() {
     setState(() {
       _currentIndex = (_currentIndex + 1) % _totalCharacters;
     });
+    widget.onCurrentIndexChanged?.call(_currentIndex);
   }
 
   /// Build paper doll equipment colors from the active inventory.
@@ -237,11 +260,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-
-    return Positioned(
-      left: _xPos,
-      top: _yPos,
-      child: Container(
+    final panel = Container(
         width: 750,
         height: 560,
         decoration: BoxDecoration(
@@ -280,10 +299,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
                     ),
                   ),
                   // Vertical divider
-                  Container(
-                    width: 1,
-                    color: const Color(0xFF252542),
-                  ),
+                  Container(width: 1, color: const Color(0xFF252542)),
                   // Center column: Paper doll with rotation gesture
                   Expanded(
                     child: buildPaperDollColumn(
@@ -313,10 +329,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
                     ),
                   ),
                   // Vertical divider
-                  Container(
-                    width: 1,
-                    color: const Color(0xFF252542),
-                  ),
+                  Container(width: 1, color: const Color(0xFF252542)),
                   // Right column: Resources, combat stats, gear bonus
                   SizedBox(
                     width: 190,
@@ -335,20 +348,29 @@ class _CharacterPanelState extends State<CharacterPanel> {
             ),
           ],
         ),
-      ),
     );
+
+    // Embedded mode: skip Positioned — the host widget provides it.
+    if (widget.embedded) return panel;
+
+    return Positioned(left: _xPos, top: _yPos, child: panel);
   }
 
-  /// Header bar - draggable to move panel
+  /// Header bar - draggable to move panel.
+  /// When [embedded], drag deltas are forwarded to [widget.onDragDelta].
   Widget _buildHeader(Size screenSize) {
     return GestureDetector(
       onPanUpdate: (details) {
-        setState(() {
-          _xPos += details.delta.dx;
-          _yPos += details.delta.dy;
-          _xPos = _xPos.clamp(0.0, screenSize.width - 750);
-          _yPos = _yPos.clamp(0.0, screenSize.height - 560);
-        });
+        if (widget.embedded) {
+          widget.onDragDelta?.call(details.delta);
+        } else {
+          setState(() {
+            _xPos = (_xPos + details.delta.dx)
+                .clamp(0.0, screenSize.width - 750);
+            _yPos = (_yPos + details.delta.dy)
+                .clamp(0.0, screenSize.height - 560);
+          });
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -374,17 +396,47 @@ class _CharacterPanelState extends State<CharacterPanel> {
               ),
             ),
             const SizedBox(width: 12),
-            // Compact character summary in header
-            Expanded(
-              child: _buildHeaderSummary(),
-            ),
+            Expanded(child: _buildHeaderSummary()),
             Text(
               '[C]',
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 11,
-              ),
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
             ),
+            // Combo side-panel toggle button
+            if (widget.onToggleComboPanel != null) ...[
+              const SizedBox(width: 8),
+              Tooltip(
+                message: widget.comboPanelOpen
+                    ? 'Close Combos panel'
+                    : 'Open Combos panel',
+                preferBelow: false,
+                child: InkWell(
+                  onTap: widget.onToggleComboPanel,
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: widget.comboPanelOpen
+                          ? const Color(0xFF4cc9f0).withValues(alpha: 0.2)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: widget.comboPanelOpen
+                            ? const Color(0xFF4cc9f0)
+                            : Colors.white24,
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.link,
+                      size: 14,
+                      color: widget.comboPanelOpen
+                          ? const Color(0xFF4cc9f0)
+                          : Colors.white54,
+                    ),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(width: 8),
             InkWell(
               onTap: widget.onClose,
@@ -394,8 +446,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
                   color: Colors.red.shade900,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child:
-                    const Icon(Icons.close, color: Colors.white, size: 14),
+                child: const Icon(Icons.close, color: Colors.white, size: 14),
               ),
             ),
           ],
@@ -466,7 +517,10 @@ class _CharacterPanelState extends State<CharacterPanel> {
                     final isActive = index == _currentIndex;
                     final isPlayer = index == 0;
                     return GestureDetector(
-                      onTap: () => setState(() => _currentIndex = index),
+                      onTap: () {
+                        setState(() => _currentIndex = index);
+                        widget.onCurrentIndexChanged?.call(index);
+                      },
                       child: Container(
                         width: isActive ? 20 : 8,
                         height: 8,

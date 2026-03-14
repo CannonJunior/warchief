@@ -53,6 +53,13 @@ part 'game_state_mana.dart';
 part 'game_state_targeting.dart';
 part 'game_state_world.dart';
 
+/// An ability waiting in the execution queue.
+class AbilityQueueEntry {
+  final int slotIndex;
+  final String abilityName;
+  AbilityQueueEntry(this.slotIndex, this.abilityName);
+}
+
 /// Game State - Centralized state management for the 3D game
 ///
 /// This class holds all mutable game state including:
@@ -606,11 +613,32 @@ class GameState {
   /// Current player target ID ('boss' for main monster, or minion instanceId)
   String? currentTargetId;
 
-  /// Target indicator mesh (yellow dashed rectangle)
+  /// Target indicator mesh (dashed rectangle)
   Mesh? targetIndicatorMesh;
   Transform3d? targetIndicatorTransform;
   double lastTargetIndicatorSize = 0.0; // Track size for recreation
   String? lastTargetIndicatorId; // Track target for color change detection
+
+  /// World position the indicator occupied when the last target-switch began.
+  /// Null means no slide animation is in progress.
+  Vector3? targetIndicatorAnimFrom;
+
+  /// [gameTimeSec] when the current slide animation started.
+  /// Negative = no active animation (indicator snaps directly to target).
+  double targetIndicatorAnimStartTime = -1.0;
+
+  /// Duration of the target-switch slide animation in seconds.
+  static const double targetIndicatorAnimDuration = 0.30;
+
+  /// Yellow "target acquired" flash — larger rectangle shown for 2 s on selection.
+  Mesh? targetAcquiredMesh;
+  Transform3d? targetAcquiredTransform;
+
+  /// [gameTimeSec] when the acquired flash was last triggered. Negative = inactive.
+  double targetAcquiredStartTime = -1.0;
+
+  /// How long the acquired flash remains visible.
+  static const double targetAcquiredDuration = 2.0;
 
   /// Index for tab targeting cycle
   int _tabTargetIndex = -1;
@@ -741,6 +769,12 @@ class GameState {
 
   /// Whether the character panel is currently open
   bool characterPanelOpen = false;
+
+  /// Soft-pin: combo side panel opens automatically when character panel opens.
+  bool comboSidePanelSoftPinned = false;
+
+  /// Hard-pin: combo side panel stays open even when character panel is closed.
+  bool comboSidePanelHardPinned = false;
 
   /// Whether the bag/inventory panel is currently open
   bool bagPanelOpen = false;
@@ -1068,6 +1102,9 @@ class GameState {
 
   /// Dissolving yellow label shown below the unit when an ability executes.
   QueuedAbilityLabel? executingAbilityLabel;
+
+  /// Abilities waiting to execute once conditions are met.
+  List<AbilityQueueEntry> abilityQueue = [];
 
   // ==================== MOVEMENT TRACKING ====================
 

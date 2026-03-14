@@ -3,6 +3,19 @@ part of 'game3d_widget.dart';
 mixin _WidgetUIMixin on _GameStateBase {
   @override
   Widget build(BuildContext context) {
+    // Apply UI font family from typography settings across the entire widget tree.
+    final uiFont = globalGameplaySettings?.uiFontFamily ?? 'Default';
+    final gameWidget = _buildGame(context);
+    if (uiFont == 'Default') return gameWidget;
+    return Theme(
+      data: Theme.of(context).copyWith(
+        textTheme: Theme.of(context).textTheme.apply(fontFamily: uiFont),
+      ),
+      child: gameWidget,
+    );
+  }
+
+  Widget _buildGame(BuildContext context) {
     return Focus(
       focusNode: _gameFocusNode,
       autofocus: true,
@@ -55,14 +68,13 @@ mixin _WidgetUIMixin on _GameStateBase {
               canvasHeight: 900,
             ),
 
-            // Queued/executing ability name below the active unit
+            // Queued/executing ability names below the active unit
             QueuedAbilityLabelOverlay(
               executingLabel: gameState.executingAbilityLabel,
-              queuedName: gameState.isCasting
-                  ? gameState.castingAbilityName
-                  : gameState.isWindingUp
-                      ? gameState.windupAbilityName
-                      : '',
+              queuedEntries: gameState.abilityQueue.map((e) => QueuedDisplayEntry(
+                e.abilityName,
+                isOnCooldown: AbilitySystem.getCooldownForSlot(e.slotIndex, gameState) > 0,
+              )).toList(growable: false),
               camera: camera,
               unitPosition: gameState.activeTransform?.position,
             ),
@@ -290,10 +302,10 @@ mixin _WidgetUIMixin on _GameStateBase {
                 width: 300, height: 200,
               ),
 
-            // Character Panel (Press C to toggle)
-            // Reason: Rendered before command panels so they appear on top of the 750px-wide panel
+            // Character Panel + side panels (Press C to toggle).
+            // Reason: Rendered before command panels so they appear on top of the 750px-wide panel.
             if (gameState.characterPanelOpen && _isVisible('character_panel'))
-              CharacterPanel(
+              CharacterPanelHost(
                 gameState: gameState,
                 initialIndex: gameState.characterPanelSelectedIndex ?? gameState.activeCharacterIndex,
                 onClose: () {
@@ -302,6 +314,35 @@ mixin _WidgetUIMixin on _GameStateBase {
                     gameState.characterPanelSelectedIndex = null;
                   });
                 },
+              ),
+
+            // Hard-pinned combo panel — shown independently when character sheet is closed.
+            if (!gameState.characterPanelOpen && gameState.comboSidePanelHardPinned)
+              _draggable(
+                'combo_side_panel',
+                SidePanelShell(
+                  title: 'COMBOS',
+                  icon: Icons.link,
+                  isOpen: true,
+                  softPinned: false,
+                  hardPinned: true,
+                  onToggleSoftPin: () {},
+                  onToggleHardPin: () {
+                    setState(() => gameState.comboSidePanelHardPinned = false);
+                  },
+                  onClose: () {
+                    setState(() {
+                      gameState.comboSidePanelHardPinned = false;
+                      gameState.comboSidePanelSoftPinned = false;
+                    });
+                  },
+                  child: CombosPanel(
+                    category: 'player',
+                    comboConfig: globalComboConfig,
+                  ),
+                ),
+                width: SidePanelShell.panelWidth,
+                height: SidePanelShell.panelHeight,
               ),
 
             // ========== ALLY COMMANDS PANEL (Press F to toggle) ==========

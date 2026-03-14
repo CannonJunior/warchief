@@ -104,6 +104,12 @@ flutter:
     - personalities/
     - assets/data/
     - assets/docs/
+    - assets/fonts/
+
+  fonts:
+    - family: Bangers
+      fonts:
+        - asset: assets/fonts/Bangers-Regular.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -278,3 +278,37 @@ void _updateExecutingLabel(double dt, GameState gameState) {
   label.age += dt;
   if (label.isExpired) gameState.executingAbilityLabel = null;
 }
+
+// ==================== ABILITY QUEUE DRAIN ====================
+
+/// Fire the next queued ability once all blocking conditions have cleared.
+/// Pre-checks every soft-failure condition before popping so entries survive
+/// until they can actually execute.
+void _drainAbilityQueue(GameState gameState) {
+  if (gameState.abilityQueue.isEmpty) return;
+  if (gameState.isCasting || gameState.isWindingUp) return;
+  if (gameState.activeGcdRemaining > 0) return;
+
+  final entry = gameState.abilityQueue.first;
+  if (AbilitySystem.getCooldownForSlot(entry.slotIndex, gameState) > 0) return;
+
+  // Targeted ability checks
+  final data = globalActionBarConfig?.getSlotAbilityData(entry.slotIndex);
+  if (data != null && !data.isSelfCast && data.range > 0) {
+    // Reason: target was cleared after queuing — drop rather than fire blind.
+    if (gameState.currentTargetId == null) {
+      gameState.abilityQueue.removeAt(0);
+      return;
+    }
+    // Still out of range — keep waiting.
+    final dist = gameState.getDistanceToCurrentTarget();
+    final effectiveRange = data.range * gameState.comboRangeMultiplier;
+    if (dist != null && dist > effectiveRange) return;
+  }
+
+  // All conditions met — execute.
+  _isDrainingQueue = true;
+  gameState.abilityQueue.removeAt(0);
+  _executeSlotAbility(entry.slotIndex, gameState);
+  _isDrainingQueue = false;
+}

@@ -56,6 +56,7 @@ class AbilitySystem {
     _updateAbility4(dt, gameState);
     _updateImpactEffects(dt, gameState);
     _updateExecutingLabel(dt, gameState);
+    _drainAbilityQueue(gameState);
   }
 
   /// Execute the ability in a given action bar slot.
@@ -71,51 +72,39 @@ class AbilitySystem {
 
   // ==================== INPUT HANDLERS ====================
 
-  static void handleAbility1Input(bool pressed, GameState gameState) {
-    if (pressed && gameState.activeAbilityCooldowns[0] <= 0 && !gameState.ability1Active) {
-      executeSlotAbility(0, gameState);
+  // Reason: tracks which slots have a key currently held so that the per-frame
+  // isActionPressed poll only triggers the ability once per physical key press,
+  // not every frame the key is held.
+  static final Set<int> _slotsCurrentlyHeld = {};
+
+  static void _handleAbilityInput(int slot, bool pressed, GameState gameState) {
+    if (!pressed) {
+      _slotsCurrentlyHeld.remove(slot);
+      return;
     }
+    if (_slotsCurrentlyHeld.contains(slot)) return; // already fired this press
+    _slotsCurrentlyHeld.add(slot);
+    executeSlotAbility(slot, gameState);
   }
 
-  static void handleAbility2Input(bool pressed, GameState gameState) {
-    if (pressed && gameState.activeAbilityCooldowns[1] <= 0 && gameState.activeTransform != null) {
-      executeSlotAbility(1, gameState);
-    }
-  }
-
-  static void handleAbility3Input(bool pressed, GameState gameState) {
-    if (pressed && gameState.activeAbilityCooldowns[2] <= 0 && !gameState.ability3Active) {
-      executeSlotAbility(2, gameState);
-    }
-  }
-
-  static void handleAbility4Input(bool pressed, GameState gameState) {
-    if (pressed && gameState.activeAbilityCooldowns[3] <= 0 && !gameState.ability4Active) {
-      executeSlotAbility(3, gameState);
-    }
-  }
-
-  static void handleAbility5Input(bool pressed, GameState gameState) {
-    if (pressed && gameState.activeAbilityCooldowns[4] <= 0) executeSlotAbility(4, gameState);
-  }
-
-  static void handleAbility6Input(bool pressed, GameState gameState) {
-    if (pressed && gameState.activeAbilityCooldowns[5] <= 0) executeSlotAbility(5, gameState);
-  }
-
-  static void handleAbility7Input(bool pressed, GameState gameState) {
-    if (pressed && gameState.activeAbilityCooldowns[6] <= 0) executeSlotAbility(6, gameState);
-  }
-
-  static void handleAbility8Input(bool pressed, GameState gameState) {
-    if (pressed && gameState.activeAbilityCooldowns[7] <= 0) executeSlotAbility(7, gameState);
-  }
-
-  static void handleAbility9Input(bool pressed, GameState gameState) {
-    if (pressed && gameState.activeAbilityCooldowns[8] <= 0) executeSlotAbility(8, gameState);
-  }
-
-  static void handleAbility10Input(bool pressed, GameState gameState) {
-    if (pressed && gameState.activeAbilityCooldowns[9] <= 0) executeSlotAbility(9, gameState);
-  }
+  static void handleAbility1Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(0, pressed, gameState);
+  static void handleAbility2Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(1, pressed, gameState);
+  static void handleAbility3Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(2, pressed, gameState);
+  static void handleAbility4Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(3, pressed, gameState);
+  static void handleAbility5Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(4, pressed, gameState);
+  static void handleAbility6Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(5, pressed, gameState);
+  static void handleAbility7Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(6, pressed, gameState);
+  static void handleAbility8Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(7, pressed, gameState);
+  static void handleAbility9Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(8, pressed, gameState);
+  static void handleAbility10Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(9, pressed, gameState);
 }

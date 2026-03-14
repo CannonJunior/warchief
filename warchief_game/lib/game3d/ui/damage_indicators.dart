@@ -121,21 +121,23 @@ class DamageIndicatorOverlay extends StatelessWidget {
         ? (1.0 - (progress - fadeStart) / (1.0 - fadeStart)).clamp(0.0, 1.0)
         : 1.0;
 
-    // Color: green for heals, yellow for damage, yellow→red for killing blow
+    // Color: read from typography settings, with killing-blow lerp toward kill color
+    final s = globalGameplaySettings;
     Color textColor;
     if (indicator.isHeal) {
-      textColor = const Color(0xFF44FF44); // bright green
+      textColor = Color(s?.combatHealColor ?? 0xFF44FF44);
     } else if (indicator.isKillingBlow) {
-      // Start yellow, transition to red
+      // Start at damage color, transition to kill color
       final redProgress = (progress * 2.0).clamp(0.0, 1.0);
       textColor = Color.lerp(
-        const Color(0xFFFFDD00), // bright yellow
-        const Color(0xFFFF2222), // bright red
+        Color(s?.combatDamageColor ?? 0xFFFFDD00),
+        Color(s?.combatKillColor   ?? 0xFFFF2222),
         redProgress,
       )!;
     } else {
-      textColor = const Color(0xFFFFDD00); // bright yellow
+      textColor = Color(s?.combatDamageColor ?? 0xFFFFDD00);
     }
+    final useShadow = s?.combatShadow ?? true;
 
     // Reason: Font size increased 10% from original (33→36.3, 30→33), scaled by settings
     final userScale = globalGameplaySettings?.damageNumberScale ?? 1.0;
@@ -174,33 +176,39 @@ class DamageIndicatorOverlay extends StatelessWidget {
                 style: TextStyle(
                   color: textColor.withValues(alpha: opacity),
                   fontSize: fontSize,
+                  fontFamily: s?.combatFontFamily == 'Default'
+                      ? null
+                      : (s?.combatFontFamily ?? 'Bangers'),
                   fontWeight: FontWeight.w900,
-                  shadows: indicator.isKillingBlow
-                      ? [
-                          // Reason: Killing blow gets black + yellow shadows for emphasis
-                          Shadow(
-                            color: Colors.black.withValues(alpha: opacity * 0.9),
-                            blurRadius: 4,
-                            offset: const Offset(1, 1),
-                          ),
-                          Shadow(
-                            color: const Color(0xFFFFDD00).withValues(alpha: opacity * 0.6),
-                            blurRadius: 8,
-                            offset: const Offset(0, 0),
-                          ),
-                        ]
-                      : [
-                          Shadow(
-                            color: Colors.black.withValues(alpha: opacity * 0.9),
-                            blurRadius: 3,
-                            offset: const Offset(1, 1),
-                          ),
-                          Shadow(
-                            color: Colors.black.withValues(alpha: opacity * 0.7),
-                            blurRadius: 6,
-                            offset: const Offset(0, 0),
-                          ),
-                        ],
+                  shadows: !useShadow
+                      ? null
+                      : indicator.isKillingBlow
+                          ? [
+                              // Reason: Killing blow gets black + kill-color shadows for emphasis
+                              Shadow(
+                                color: Colors.black.withValues(alpha: opacity * 0.9),
+                                blurRadius: 4,
+                                offset: const Offset(1, 1),
+                              ),
+                              Shadow(
+                                color: Color(s?.combatKillColor ?? 0xFFFF2222)
+                                    .withValues(alpha: opacity * 0.6),
+                                blurRadius: 8,
+                                offset: const Offset(0, 0),
+                              ),
+                            ]
+                          : [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: opacity * 0.9),
+                                blurRadius: 3,
+                                offset: const Offset(1, 1),
+                              ),
+                              Shadow(
+                                color: Colors.black.withValues(alpha: opacity * 0.7),
+                                blurRadius: 6,
+                                offset: const Offset(0, 0),
+                              ),
+                            ],
                 ),
               ),
             ],
@@ -318,35 +326,46 @@ class QueuedAbilityLabel {
   double get progress => (age / maxAge).clamp(0.0, 1.0);
 }
 
-/// World-space overlay that shows the queued/executing ability name below
-/// the active unit.
+/// World-space overlay showing queued and executing ability names below the unit.
 ///
-/// - **Queued** (casting or winding up): white text, no fade.
-/// - **Executing** (just fired): yellow text with black shadow, dissolves.
+/// One entry in the queued-ability display, carrying its display name and
+/// whether its slot is currently on cooldown (drives text colour).
+class QueuedDisplayEntry {
+  final String name;
+  final bool isOnCooldown;
+  const QueuedDisplayEntry(this.name, {required this.isOnCooldown});
+}
+
+/// - **Queue**: Bangers, right-aligned single line joined by " > ".
+///   On-cooldown entries render in Colors.white38, matching the muted label
+///   colour used on ability buttons during their cooldown sweep.
+/// - **Executing** (just fired): yellow + black shadow, dissolves upward.
 class QueuedAbilityLabelOverlay extends StatelessWidget {
-  /// Label currently dissolving after execution (null = none).
   final QueuedAbilityLabel? executingLabel;
 
-  /// Ability name in the cast/windup queue (empty = none).
-  final String queuedName;
+  /// Entries waiting in the queue, in order, with per-entry cooldown state.
+  final List<QueuedDisplayEntry> queuedEntries;
 
   final Camera3D? camera;
-
-  /// World-space position of the active unit's feet.
   final Vector3? unitPosition;
 
   const QueuedAbilityLabelOverlay({
     super.key,
     required this.executingLabel,
-    required this.queuedName,
+    required this.queuedEntries,
     required this.camera,
     required this.unitPosition,
   });
 
+  // Reason: wide enough that a full queue (5 long names) fits on one line
+  // at 26px without wrapping.
+  static const double _width = 1000.0;
+  static const double _baseFontSize = 26.0;
+
   @override
   Widget build(BuildContext context) {
     if (camera == null || unitPosition == null) return const SizedBox.shrink();
-    if (queuedName.isEmpty && executingLabel == null) return const SizedBox.shrink();
+    if (queuedEntries.isEmpty && executingLabel == null) return const SizedBox.shrink();
 
     final screenSize = MediaQuery.of(context).size;
     final screenPos  = worldToScreen(
@@ -357,41 +376,31 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
     );
     if (screenPos == null) return const SizedBox.shrink();
 
-    // Render below the unit: +30px below the projected foot position
-    const double yOffset = 30.0;
     final x = screenPos.dx;
-    final y = screenPos.dy + yOffset;
+    final y = screenPos.dy + 30.0;
 
-    if (x < -100 || x > screenSize.width + 100 ||
-        y < -20  || y > screenSize.height + 20) {
+    if (x < -200 || x > screenSize.width + 200 ||
+        y < -40   || y > screenSize.height + 40) {
       return const SizedBox.shrink();
     }
 
     final children = <Widget>[];
 
-    // Queued label — white, always opaque while cast/windup is active
-    if (queuedName.isNotEmpty) {
-      children.add(_buildLabel(
-        text:    queuedName,
-        color:   Colors.white,
-        opacity: 1.0,
-        x: x,
-        y: y,
-      ));
+    if (queuedEntries.isNotEmpty) {
+      children.add(_buildQueueText(queuedEntries, x, y));
     }
 
-    // Executing label — yellow, dissolves upward
     if (executingLabel != null) {
       final p       = executingLabel!.progress;
       final opacity = (1.0 - p).clamp(0.0, 1.0);
-      // Slight upward drift during dissolve
-      final drift   = -p * 18.0;
-      children.add(_buildLabel(
+      // Reason: start 24px above queue line so it's never visually merged with it,
+      // then drift another 18px upward as it dissolves.
+      children.add(_buildText(
         text:    executingLabel!.name,
         color:   const Color(0xFFFFDD00),
         opacity: opacity,
         x: x,
-        y: y + drift,
+        y: y - 24.0 - p * 18.0,
         shadow: true,
       ));
     }
@@ -401,7 +410,68 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
     );
   }
 
-  Widget _buildLabel({
+  /// Builds the queue line as a [RichText] so each entry can be coloured
+  /// independently — white when ready, [Colors.white38] when on cooldown
+  /// (matching the ability-button label colour during its cooldown sweep).
+  Widget _buildQueueText(List<QueuedDisplayEntry> entries, double x, double y) {
+    final s = globalGameplaySettings;
+    final queueFamily = s?.queueFontFamily ?? 'Bangers';
+    final fontSize = _baseFontSize * (s?.queueFontScale ?? 1.0);
+    final fontFamily = queueFamily == 'Default' ? null : queueFamily;
+
+    final spans = <InlineSpan>[];
+    for (int i = 0; i < entries.length; i++) {
+      if (i > 0) {
+        spans.add(TextSpan(
+          text: ' > ',
+          style: TextStyle(color: Colors.white70, fontFamily: fontFamily),
+        ));
+      }
+      final readyColor = Color(s?.queueTextColor ?? 0xFFFFFFFF);
+      spans.add(TextSpan(
+        text: entries[i].name,
+        style: TextStyle(
+          // Reason: mirror the Colors.white38 used on button labels during cooldown.
+          color: entries[i].isOnCooldown
+              ? readyColor.withValues(alpha: 0.38)
+              : readyColor,
+          fontFamily: fontFamily,
+        ),
+      ));
+    }
+
+    return Positioned(
+      left: x - _width,
+      top:  y,
+      child: IgnorePointer(
+        child: SizedBox(
+          width: _width,
+          child: RichText(
+            textAlign:  TextAlign.right,
+            maxLines:   1,
+            softWrap:   false,
+            overflow:   TextOverflow.visible,
+            text: TextSpan(
+              style: TextStyle(
+                fontSize:   fontSize,
+                fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(
+                    color:      Colors.black.withValues(alpha: 0.7),
+                    blurRadius: 2,
+                    offset:     const Offset(1, 1),
+                  ),
+                ],
+              ),
+              children: spans,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildText({
     required String text,
     required Color  color,
     required double opacity,
@@ -409,20 +479,29 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
     required double y,
     bool shadow = false,
   }) {
-    const double width = 160.0;
+    final s = globalGameplaySettings;
+    final queueFamily = s?.queueFontFamily ?? 'Bangers';
+    final fontSize = _baseFontSize * (s?.queueFontScale ?? 1.0);
+
     return Positioned(
-      left: x - width / 2,
+      // Reason: right edge of the box is anchored at the unit's screen x so
+      // text grows leftward and never clips off the right side of the screen.
+      left: x - _width,
       top:  y,
       child: IgnorePointer(
         child: SizedBox(
-          width: width,
+          width: _width,
           child: Text(
             text,
-            textAlign: TextAlign.center,
+            textAlign:  TextAlign.right,
+            maxLines:   1,
+            softWrap:   false,
+            overflow:   TextOverflow.visible,
             style: TextStyle(
               color:      color.withValues(alpha: opacity),
-              fontSize:   13.0,
-              fontWeight: FontWeight.w700,
+              fontSize:   fontSize,
+              fontWeight: FontWeight.bold,
+              fontFamily: queueFamily == 'Default' ? null : queueFamily,
               shadows: shadow
                   ? [
                       Shadow(
@@ -433,11 +512,9 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
                       Shadow(
                         color:      Colors.black.withValues(alpha: opacity * 0.6),
                         blurRadius: 6,
-                        offset:     const Offset(0, 0),
                       ),
                     ]
                   : [
-                      // Subtle shadow so white text is readable on any terrain
                       Shadow(
                         color:      Colors.black.withValues(alpha: 0.7),
                         blurRadius: 2,

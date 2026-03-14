@@ -478,7 +478,18 @@ class RenderSystem {
         gameState.lastTargetIndicatorSize != targetSize ||
         gameState.lastTargetIndicatorId != gameState.currentTargetId;
 
+    // Detect target ID change to start the slide animation.
+    final targetChanged = gameState.lastTargetIndicatorId != gameState.currentTargetId;
+
     if (needsNewMesh) {
+      // Reason: capture previous indicator world position BEFORE updating the
+      // cached ID so we know where to start the slide from.
+      if (targetChanged && gameState.targetIndicatorTransform != null) {
+        gameState.targetIndicatorAnimFrom =
+            gameState.targetIndicatorTransform!.position.clone();
+        gameState.targetIndicatorAnimStartTime = gameState.gameTimeSec;
+      }
+
       gameState.targetIndicatorMesh = Mesh.targetIndicator(
         size: targetSize,
         lineWidth: 0.10,
@@ -488,13 +499,58 @@ class RenderSystem {
       gameState.lastTargetIndicatorId = gameState.currentTargetId;
     }
 
-    // Update transform position - place at unit's center height for visibility
+    // Yellow "target acquired" flash — created on each target change, shown for 2 s.
+    if (targetChanged) {
+      gameState.targetAcquiredMesh = Mesh.targetIndicator(
+        size: targetSize * 1.3,
+        lineWidth: 0.13,
+        color: Vector3(1.0, 0.95, 0.0), // bright yellow
+      );
+      gameState.targetAcquiredStartTime = gameState.gameTimeSec;
+    }
+    if (gameState.targetAcquiredMesh != null &&
+        gameState.targetAcquiredStartTime >= 0) {
+      final acquiredAge =
+          gameState.gameTimeSec - gameState.targetAcquiredStartTime;
+      if (acquiredAge < GameState.targetAcquiredDuration) {
+        gameState.targetAcquiredTransform ??= Transform3d();
+        // Reason: yellow flash tracks the target's live position (may be moving).
+        gameState.targetAcquiredTransform!.position = targetPosition;
+        renderer.render(
+          gameState.targetAcquiredMesh!,
+          gameState.targetAcquiredTransform!,
+          camera,
+        );
+      }
+    }
+
+    // Compute animated display position — ease-out cubic slide from old to new.
     gameState.targetIndicatorTransform ??= Transform3d();
-    gameState.targetIndicatorTransform!.position = Vector3(
-      targetPosition.x,
-      targetPosition.y, // At unit's center (halfway up)
-      targetPosition.z,
-    );
+    Vector3 displayPosition;
+    final animFrom = gameState.targetIndicatorAnimFrom;
+    if (animFrom != null && gameState.targetIndicatorAnimStartTime >= 0) {
+      final age = gameState.gameTimeSec - gameState.targetIndicatorAnimStartTime;
+      final raw = (age / GameState.targetIndicatorAnimDuration).clamp(0.0, 1.0);
+      // Reason: ease-out cubic — starts fast, decelerates into target position.
+      final t = 1.0 - math.pow(1.0 - raw, 3.0).toDouble();
+
+      // Interpolate X and Z along the slide path.
+      final interpX = animFrom.x + (targetPosition.x - animFrom.x) * t;
+      final interpZ = animFrom.z + (targetPosition.z - animFrom.z) * t;
+
+      // Reason: linearly interpolating Y between two entity heights cuts through
+      // terrain whenever the ground between them is higher than either endpoint.
+      // Sampling the actual terrain height keeps the indicator on the surface.
+      final terrainY = gameState.infiniteTerrainManager
+          ?.getTerrainHeight(interpX, interpZ) ?? targetPosition.y;
+      displayPosition = Vector3(interpX, terrainY, interpZ);
+
+      if (raw >= 1.0) gameState.targetIndicatorAnimFrom = null; // animation done
+    } else {
+      displayPosition = targetPosition;
+    }
+
+    gameState.targetIndicatorTransform!.position = displayPosition;
 
     // Render the indicator
     renderer.render(
