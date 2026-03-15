@@ -1,14 +1,17 @@
 import 'package:vector_math/vector_math.dart';
 import 'ability_types.dart';
 
-/// Nature/Druid abilities - Control and nature-based damage
+/// Nature/Druid abilities — Control, thorn damage, and combo chains.
+///
+/// Combo chain: Thornstep (gap-closer) → Briar Lash → Ironwood Smash → Nature's Wrath.
+/// Entangling Roots and Silencing Vine open combo punish windows.
 class NatureAbilities {
   NatureAbilities._();
 
-  /// Entangling Roots - Root enemies in place
+  /// Entangling Roots — Root enemies in place.
   static final entanglingRoots = AbilityData(
     name: 'Entangling Roots',
-    description: 'Roots enemy in place, preventing movement',
+    description: 'Roots enemy in place, preventing movement.',
     type: AbilityType.debuff,
     damage: 5.0,
     cooldown: 12.0,
@@ -21,12 +24,13 @@ class NatureAbilities {
     statusDuration: 4.0,
     category: 'nature',
     damageSchool: DamageSchool.nature,
+    comboPrimes: ['Ironwood Smash', 'Briar Lash'],
   );
 
-  /// Thorns - Reflect damage buff
+  /// Thorns — Reflect damage buff.
   static final thorns = AbilityData(
     name: 'Thorns',
-    description: 'Attackers take damage when hitting the target',
+    description: 'Attackers take damage when hitting the target.',
     type: AbilityType.buff,
     cooldown: 30.0,
     duration: 20.0,
@@ -38,10 +42,10 @@ class NatureAbilities {
     damageSchool: DamageSchool.nature,
   );
 
-  /// Nature's Wrath - AoE nature damage
+  /// Nature's Wrath — AoE nature damage.
   static final naturesWrath = AbilityData(
     name: "Nature's Wrath",
-    description: 'Unleashes the fury of nature on enemies',
+    description: 'Unleashes the fury of nature on enemies.',
     type: AbilityType.aoe,
     damage: 25.0,
     cooldown: 14.0,
@@ -53,14 +57,36 @@ class NatureAbilities {
     aoeRadius: 5.0,
     category: 'nature',
     damageSchool: DamageSchool.nature,
+    comboPrimes: ['Briar Lash', 'Ancient Surge'],
   );
 
   // ==================== MELEE ABILITIES ====================
 
-  /// Briar Lash — Thorn whip strike with bleed
+  /// Thornstep — Surge forward on thorns, rooting first enemy hit.
+  /// Gap-closer that opens Briar Lash combos.
+  static final thornstep = AbilityData(
+    name: 'Thornstep',
+    description: 'Surge forward on a wave of thorns, closing distance and rooting the first enemy hit for 1.5 seconds.',
+    type: AbilityType.melee,
+    damage: 15.0,
+    cooldown: 10.0,
+    range: 8.0,
+    color: Vector3(0.38, 0.62, 0.22),
+    impactColor: Vector3(0.52, 0.75, 0.30),
+    impactSize: 0.6,
+    statusEffect: StatusEffect.root,
+    statusDuration: 1.5,
+    manaColor: ManaColor.green,
+    manaCost: 14.0,
+    category: 'nature',
+    damageSchool: DamageSchool.nature,
+    comboPrimes: ['Briar Lash', 'Ironwood Smash'],
+  );
+
+  /// Briar Lash — Thorn whip strike with bleed.
   static final briarLash = AbilityData(
     name: 'Briar Lash',
-    description: 'Lash out with a thorned vine whip, causing bleeding wounds',
+    description: 'Lash out with a thorned vine whip, causing bleeding wounds.',
     type: AbilityType.melee,
     damage: 15.0,
     cooldown: 1.0,
@@ -73,12 +99,13 @@ class NatureAbilities {
     dotTicks: 2,
     category: 'nature',
     damageSchool: DamageSchool.nature,
+    comboPrimes: ['Ironwood Smash', 'Ancient Surge'],
   );
 
-  /// Ironwood Smash — Bark-encased slam that roots the target
+  /// Ironwood Smash — Bark-encased slam that roots target.
   static final ironwoodSmash = AbilityData(
     name: 'Ironwood Smash',
-    description: 'Smash with an ironwood-hardened fist, rooting the target in place',
+    description: 'Smash with an ironwood-hardened fist, rooting the target in place.',
     type: AbilityType.melee,
     damage: 25.0,
     cooldown: 6.0,
@@ -90,9 +117,10 @@ class NatureAbilities {
     statusDuration: 1.5,
     category: 'nature',
     damageSchool: DamageSchool.nature,
+    comboPrimes: ["Nature's Wrath", 'Entangling Roots'],
   );
 
-  /// Thornbind Mark — Nature strike that permanently exposes target
+  /// Thornbind Mark — Nature strike that permanently exposes target.
   static final thornbindMark = AbilityData(
     name: 'Thornbind Mark',
     description: 'A nature-infused strike that permanently exposes the target to nature damage.',
@@ -106,15 +134,15 @@ class NatureAbilities {
     category: 'nature',
     damageSchool: DamageSchool.nature,
     appliesPermanentVulnerability: true,
+    comboPrimes: ["Nature's Wrath", 'Ironwood Smash'],
   );
 
   // ==================== INTERRUPT ====================
 
-  /// Silencing Vine — Whips a razor vine that tears through magical concentration
-  /// Cooldown tunable (default 18 s, range 15–30 s) via ability overrides.
+  /// Silencing Vine — Ranged vine interrupt.
   static final silencingVine = AbilityData(
     name: 'Silencing Vine',
-    description: 'Whip a razor-sharp vine that tears through the target\'s magical concentration, interrupting their spellcasting for 3 seconds',
+    description: 'Whip a razor-sharp vine that interrupts the target\'s spellcasting for 3 seconds.',
     type: AbilityType.ranged,
     damage: 11.0,
     cooldown: 18.0,
@@ -130,12 +158,12 @@ class NatureAbilities {
     manaCost: 18.0,
     damageSchool: DamageSchool.nature,
     category: 'nature',
+    comboPrimes: ['Briar Lash', 'Thornstep'],
   );
 
   // ==================== CHAIN COMBO PRIMER ====================
 
-  /// Ancient Surge — Activates chain-combo mode for nature.
-  /// Land 7 consecutive nature strikes within 7 seconds to fire the chain combo.
+  /// Ancient Surge — Activates chain-combo mode.
   static final ancientSurge = AbilityData(
     name: 'Ancient Surge',
     description: 'Channel ancient forest power through your strikes — activate chain-combo mode. '
@@ -152,13 +180,13 @@ class NatureAbilities {
     damageSchool: DamageSchool.nature,
     category: 'nature',
     enablesComboChain: true,
+    comboPrimes: ['Briar Lash', 'Thornstep'],
   );
 
-  /// Nature's Resilience — Nature self-buff granting health regeneration
+  /// Nature's Resilience — Self-buff granting health regeneration.
   static final naturesResilience = AbilityData(
     name: 'Nature\'s Resilience',
-    description: 'Draw upon the eternal regenerative power of nature, '
-        'sustaining your health over time.',
+    description: 'Draw upon the eternal regenerative power of nature, sustaining your health over time.',
     type: AbilityType.buff,
     cooldown: 5.0,
     duration: 3600.0,
@@ -173,10 +201,18 @@ class NatureAbilities {
     damageSchool: DamageSchool.nature,
   );
 
-  /// All nature abilities as a list
+  /// All nature abilities as a list.
+  /// Ordered short→long cooldown; slots 8-10 hold the longest cooldowns.
   static List<AbilityData> get all => [
-    entanglingRoots, thorns, naturesWrath,
-    briarLash, ironwoodSmash, thornbindMark, ancientSurge, silencingVine,
-    naturesResilience,
+    briarLash,        //  1  1.0s  free melee bleed
+    naturesResilience,//  2  5.0s  regen aura
+    ironwoodSmash,    //  3  6.0s  melee root
+    thornstep,        //  4 10.0s  gap closer root CC
+    ancientSurge,     //  5 10.0s  chain combo primer
+    entanglingRoots,  //  6 12.0s  CC root ranged
+    thornbindMark,    //  7 12.0s  permanent vulnerability
+    naturesWrath,     //  8 14.0s  AoE
+    silencingVine,    //  9 18.0s  interrupt ranged
+    thorns,           // 10 30.0s  buff damage reflect
   ];
 }

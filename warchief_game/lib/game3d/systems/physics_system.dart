@@ -14,12 +14,13 @@ import '../state/game_config.dart';
 class PhysicsSystem {
   PhysicsSystem._(); // Private constructor to prevent instantiation
 
-  /// Get terrain height at position, with fallback to groundLevel
-  static double _getTerrainHeight(GameState gameState, double x, double z) {
-    if (gameState.infiniteTerrainManager != null) {
-      return gameState.infiniteTerrainManager!.getTerrainHeight(x, z);
-    }
-    return gameState.groundLevel;
+  /// Effective ground height at (x, z) for a unit near [playerY].
+  ///
+  /// Delegates to [GameState.getEffectiveGroundHeight] which combines the
+  /// base terrain, floating island surface, tower floors/ramp, and buildings.
+  static double _getTerrainHeight(GameState gameState, double x, double z,
+      {double playerY = 1000.0}) {
+    return gameState.getEffectiveGroundHeight(x, z, playerY: playerY);
   }
 
   /// Updates physics state for the player
@@ -69,6 +70,7 @@ class PhysicsSystem {
       gameState,
       gameState.playerTransform!.position.x,
       gameState.playerTransform!.position.z,
+      playerY: gameState.playerTransform!.position.y,
     );
     final groundY = terrainHeight + GameConfig.playerSize / 2 + _terrainBuffer;
     gameState.flightAltitude =
@@ -129,6 +131,7 @@ class PhysicsSystem {
       gameState,
       gameState.activeTransform!.position.x,
       gameState.activeTransform!.position.z,
+      playerY: gameState.activeTransform!.position.y,
     );
 
     // Character mesh is centered, so add half height + buffer to sit above terrain
@@ -151,12 +154,14 @@ class PhysicsSystem {
   static double getPlayerHeight(GameState gameState) {
     if (gameState.activeTransform == null) return 0.0;
 
+    final pos = gameState.activeTransform!.position;
     final terrainHeight = _getTerrainHeight(
       gameState,
-      gameState.activeTransform!.position.x,
-      gameState.activeTransform!.position.z,
+      pos.x,
+      pos.z,
+      playerY: pos.y,
     );
 
-    return gameState.activeTransform!.position.y - terrainHeight;
+    return pos.y - terrainHeight;
   }
 }

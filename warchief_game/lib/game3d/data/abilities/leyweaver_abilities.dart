@@ -182,9 +182,18 @@ class LeyweaverAbilities {
     isPartyBuff: true,
   );
 
-  /// All Leyweaver abilities as a list
+  /// All Leyweaver abilities as a list.
+  /// Ordered short→long cooldown; slots 8-10 hold the longest cooldowns.
   static List<AbilityData> get all => [
-    holyLight, rejuvenation, circleOfHealing, blessingOfStrength, purify,
-    holySmite, judgmentHammer, judgmentMark, battleBlessing, blessingOfKings,
+    holySmite,          //  1  1.0s  free basic melee
+    holyLight,          //  2  4.0s  single-target heal
+    blessingOfKings,    //  3  5.0s  party strength aura
+    rejuvenation,       //  4  6.0s  HoT
+    judgmentHammer,     //  5  6.0s  melee stun CC
+    purify,             //  6  8.0s  debuff removal
+    battleBlessing,     //  7 10.0s  chain combo primer
+    judgmentMark,       //  8 12.0s  permanent vulnerability
+    circleOfHealing,    //  9 15.0s  AoE heal
+    blessingOfStrength, // 10 20.0s  buff damage
   ];
 }

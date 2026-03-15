@@ -318,11 +318,22 @@ class AethermancerAbilities {
     isPartyBuff: true,
   );
 
-  /// All Aethermancer abilities as a list
+  /// All Aethermancer abilities as a list.
+  /// Ordered short→long cooldown; slots 11-14 hold the longest cooldowns.
   static List<AbilityData> get all => [
-    windMend, leyFlow, aetherCircle, zephyrWard, arcaneCleanse,
-    galeFist, leySurge, aetherSurge,
-    leyBolt, tempestLance, aetherChill,
-    aethericMending, aetherAegis, aetherFlow,
+    galeFist,        //  1  1.0s  free basic melee
+    leyBolt,         //  2  3.0s  ranged dual mana
+    windMend,        //  3  4.0s  single-target heal
+    aetherFlow,      //  4  5.0s  party haste aura
+    aethericMending, //  5  5.0s  dual-mana heal
+    leyFlow,         //  6  6.0s  HoT
+    leySurge,        //  7  6.0s  melee slow
+    tempestLance,    //  8  8.0s  piercing ranged slow
+    arcaneCleanse,   //  9  8.0s  debuff removal
+    aetherSurge,     // 10 10.0s  chain combo primer
+    aetherCircle,    // 11 15.0s  AoE heal
+    aetherChill,     // 12 16.0s  ranged freeze CC
+    aetherAegis,     // 13 18.0s  heal + shield
+    zephyrWard,      // 14 20.0s  buff haste
   ];
 }

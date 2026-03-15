@@ -1,14 +1,17 @@
 import 'package:vector_math/vector_math.dart';
 import 'ability_types.dart';
 
-/// Necromancer/Dark abilities - Life drain, curses, and summoning
+/// Necromancer abilities — Life drain, curses, and shadow combo chains.
+///
+/// Combo chain: Curse of Weakness → Grave Touch → Soul Scythe → Soul Rot → Life Drain.
+/// Fear and Null Bolt open punish windows for the melee follow-up chain.
 class NecromancerAbilities {
   NecromancerAbilities._();
 
-  /// Life Drain - Damage and heal
+  /// Life Drain — Channeled damage and heal.
   static final lifeDrain = AbilityData(
     name: 'Life Drain',
-    description: 'Drains life from enemy, healing self',
+    description: 'Drains life from enemy, healing self.',
     type: AbilityType.channeled,
     damage: 6.0,
     cooldown: 10.0,
@@ -22,12 +25,13 @@ class NecromancerAbilities {
     channelEffect: ChannelEffect.lifeDrain,
     category: 'necromancer',
     damageSchool: DamageSchool.shadow,
+    comboPrimes: ['Curse of Weakness', 'Soul Scythe'],
   );
 
-  /// Curse of Weakness - Reduce enemy damage
+  /// Curse of Weakness — Reduce enemy damage output.
   static final curseOfWeakness = AbilityData(
     name: 'Curse of Weakness',
-    description: 'Curses enemy, reducing their damage output',
+    description: 'Curses enemy, reducing their damage output.',
     type: AbilityType.debuff,
     cooldown: 16.0,
     duration: 10.0,
@@ -39,12 +43,13 @@ class NecromancerAbilities {
     statusStrength: 0.75,
     category: 'necromancer',
     damageSchool: DamageSchool.shadow,
+    comboPrimes: ['Soul Scythe', 'Life Drain'],
   );
 
-  /// Fear - Makes enemy flee
+  /// Fear — Makes enemy flee.
   static final fear = AbilityData(
     name: 'Fear',
-    description: 'Terrifies enemy, causing them to flee',
+    description: 'Terrifies enemy, causing them to flee.',
     type: AbilityType.debuff,
     cooldown: 20.0,
     duration: 4.0,
@@ -56,12 +61,13 @@ class NecromancerAbilities {
     statusDuration: 4.0,
     category: 'necromancer',
     damageSchool: DamageSchool.shadow,
+    comboPrimes: ['Soul Rot', 'Curse of Weakness'],
   );
 
-  /// Soul Rot - Dark projectile that applies a damage-over-time curse
+  /// Soul Rot — Dark projectile applying a damage-over-time curse.
   static final soulRot = AbilityData(
     name: 'Soul Rot',
-    description: 'Launches a bolt of necrotic energy that rots the target\'s soul, dealing damage over time',
+    description: 'Launches a bolt of necrotic energy that rots the target\'s soul, dealing damage over time.',
     type: AbilityType.dot,
     damage: 60.0,
     cooldown: 12.0,
@@ -77,12 +83,13 @@ class NecromancerAbilities {
     dotTicks: 5,
     category: 'necromancer',
     damageSchool: DamageSchool.shadow,
+    comboPrimes: ['Life Drain', 'Soul Scythe'],
   );
 
-  /// Summon Skeleton - Creates temporary melee ally with red mana attunement
+  /// Summon Skeleton — Creates temporary melee ally.
   static final summonSkeleton = AbilityData(
     name: 'Summon Skeleton',
-    description: 'Raises a skeleton warrior with red mana melee abilities',
+    description: 'Raises a skeleton warrior with red mana melee abilities.',
     type: AbilityType.summon,
     cooldown: 25.0,
     duration: 60.0,
@@ -93,10 +100,10 @@ class NecromancerAbilities {
     damageSchool: DamageSchool.shadow,
   );
 
-  /// Summon Skeleton Mage - Creates temporary caster ally with blue mana attunement
+  /// Summon Skeleton Mage — Creates temporary caster ally.
   static final summonSkeletonMage = AbilityData(
     name: 'Summon Skeleton Mage',
-    description: 'Raises a skeleton mage with blue mana ranged abilities',
+    description: 'Raises a skeleton mage with blue mana ranged abilities.',
     type: AbilityType.summon,
     cooldown: 30.0,
     duration: 60.0,
@@ -109,10 +116,10 @@ class NecromancerAbilities {
 
   // ==================== MELEE ABILITIES ====================
 
-  /// Grave Touch — Necrotic palm strike with weakness debuff
+  /// Grave Touch — Necrotic palm strike with weakness debuff.
   static final graveTouch = AbilityData(
     name: 'Grave Touch',
-    description: 'Touch the target with grave-cold hands, sapping their strength',
+    description: 'Touch the target with grave-cold hands, sapping their strength.',
     type: AbilityType.melee,
     damage: 14.0,
     cooldown: 1.0,
@@ -125,12 +132,13 @@ class NecromancerAbilities {
     statusDuration: 4.0,
     category: 'necromancer',
     damageSchool: DamageSchool.shadow,
+    comboPrimes: ['Soul Scythe', 'Soul Chain'],
   );
 
-  /// Soul Scythe — Spectral scythe swing with bleed
+  /// Soul Scythe — Spectral scythe swing with bleed.
   static final soulScythe = AbilityData(
     name: 'Soul Scythe',
-    description: 'Sweep a spectral scythe through the target, causing deep bleeding wounds',
+    description: 'Sweep a spectral scythe through the target, causing deep bleeding wounds.',
     type: AbilityType.melee,
     damage: 28.0,
     cooldown: 7.0,
@@ -143,9 +151,10 @@ class NecromancerAbilities {
     dotTicks: 2,
     category: 'necromancer',
     damageSchool: DamageSchool.shadow,
+    comboPrimes: ['Soul Rot', 'Null Bolt'],
   );
 
-  /// Soul Fracture — Shadow strike that applies permanent vulnerability
+  /// Soul Fracture — Shadow strike applying permanent vulnerability.
   static final soulFracture = AbilityData(
     name: 'Soul Fracture',
     description: 'A shadow-infused strike that permanently exposes the target to shadow damage.',
@@ -159,15 +168,15 @@ class NecromancerAbilities {
     category: 'necromancer',
     damageSchool: DamageSchool.shadow,
     appliesPermanentVulnerability: true,
+    comboPrimes: ['Soul Scythe', 'Life Drain'],
   );
 
   // ==================== INTERRUPT ====================
 
-  /// Null Bolt — Dark projectile that voids the target's magical focus
-  /// Cooldown tunable (default 24 s, range 15–30 s) via ability overrides.
+  /// Null Bolt — Void bolt that interrupts spellcasting.
   static final nullBolt = AbilityData(
     name: 'Null Bolt',
-    description: 'Fire a bolt of void-null energy that unravels the target\'s magical weaving, interrupting their spellcasting for 3 seconds',
+    description: 'Fire a bolt of void-null energy that interrupts the target\'s spellcasting for 3 seconds.',
     type: AbilityType.ranged,
     damage: 14.0,
     cooldown: 24.0,
@@ -183,12 +192,12 @@ class NecromancerAbilities {
     manaCost: 22.0,
     damageSchool: DamageSchool.shadow,
     category: 'necromancer',
+    comboPrimes: ['Grave Touch', 'Soul Scythe'],
   );
 
   // ==================== CHAIN COMBO PRIMER ====================
 
-  /// Soul Chain — Activates chain-combo mode for necromancers.
-  /// Land 7 consecutive necromancer strikes within 7 seconds to fire the chain combo.
+  /// Soul Chain — Activates chain-combo mode.
   static final soulChain = AbilityData(
     name: 'Soul Chain',
     description: 'Link your strikes with soul-chains — activate chain-combo mode. '
@@ -205,13 +214,13 @@ class NecromancerAbilities {
     damageSchool: DamageSchool.shadow,
     category: 'necromancer',
     enablesComboChain: true,
+    comboPrimes: ['Grave Touch', 'Soul Scythe'],
   );
 
-  /// Death Shroud — Necromancer self-buff wrapping themselves in undead protection
+  /// Death Shroud — Aura wrapping in undead protection.
   static final deathShroud = AbilityData(
     name: 'Death Shroud',
-    description: 'Envelop yourself in a shroud of death energy that absorbs '
-        'incoming damage for a full hour.',
+    description: 'Envelop yourself in a shroud of death energy that absorbs incoming damage.',
     type: AbilityType.buff,
     cooldown: 5.0,
     duration: 3600.0,
@@ -226,9 +235,20 @@ class NecromancerAbilities {
     damageSchool: DamageSchool.shadow,
   );
 
-  /// All necromancer abilities as a list
+  /// All necromancer abilities as a list.
+  /// Ordered short→long cooldown; slots 11-12 hold the longest cooldowns.
   static List<AbilityData> get all => [
-    lifeDrain, curseOfWeakness, fear, soulRot, summonSkeleton, summonSkeletonMage,
-    graveTouch, soulScythe, soulFracture, soulChain, nullBolt, deathShroud,
+    graveTouch,          //  1  1.0s  melee weakness debuff
+    deathShroud,         //  2  5.0s  shield aura
+    soulScythe,          //  3  7.0s  melee bleed
+    soulChain,           //  4 10.0s  chain combo primer
+    lifeDrain,           //  5 10.0s  channeled lifesteal
+    soulRot,             //  6 12.0s  DoT ranged
+    soulFracture,        //  7 12.0s  permanent vulnerability
+    curseOfWeakness,     //  8 16.0s  CC damage reduction
+    fear,                //  9 20.0s  CC flee
+    nullBolt,            // 10 24.0s  interrupt ranged
+    summonSkeleton,      // 11 25.0s  summon melee ally
+    summonSkeletonMage,  // 12 30.0s  summon caster ally
   ];
 }

@@ -38,11 +38,11 @@ class CombatHUD extends StatelessWidget {
   final bool hasTarget;
   final Widget? targetPortraitWidget; // Custom portrait widget (e.g., 3D cube)
 
-  // Ability cooldowns (slots 0-9)
+  // Ability cooldowns (slots 0-14)
   final List<double> abilityCooldowns;
   final List<double> abilityCooldownMaxes;
 
-  // Callbacks
+  // Callbacks — rows 1-2 (keyboard bound)
   final VoidCallback onAbility1Pressed;
   final VoidCallback onAbility2Pressed;
   final VoidCallback onAbility3Pressed;
@@ -53,6 +53,12 @@ class CombatHUD extends StatelessWidget {
   final VoidCallback? onAbility8Pressed;
   final VoidCallback? onAbility9Pressed;
   final VoidCallback? onAbility10Pressed;
+  // Callbacks — row 3 (click-only, no keyboard binding)
+  final VoidCallback? onAbility11Pressed;
+  final VoidCallback? onAbility12Pressed;
+  final VoidCallback? onAbility13Pressed;
+  final VoidCallback? onAbility14Pressed;
+  final VoidCallback? onAbility15Pressed;
 
   // Target frame colors (friendly = green, enemy = red)
   final Color targetBorderColor;
@@ -108,6 +114,11 @@ class CombatHUD extends StatelessWidget {
     this.onAbility8Pressed,
     this.onAbility9Pressed,
     this.onAbility10Pressed,
+    this.onAbility11Pressed,
+    this.onAbility12Pressed,
+    this.onAbility13Pressed,
+    this.onAbility14Pressed,
+    this.onAbility15Pressed,
     this.targetBorderColor = const Color(0xFFFF6B6B),
     this.targetHealthColor = const Color(0xFFEF5350),
     this.totName,

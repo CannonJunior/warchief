@@ -115,4 +115,15 @@ class AbilitySystem {
       _handleAbilityInput(8, pressed, gameState);
   static void handleAbility10Input(bool pressed, GameState gameState) =>
       _handleAbilityInput(9, pressed, gameState);
+  // Row 3 — click-only (no keyboard binding)
+  static void handleAbility11Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(10, pressed, gameState);
+  static void handleAbility12Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(11, pressed, gameState);
+  static void handleAbility13Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(12, pressed, gameState);
+  static void handleAbility14Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(13, pressed, gameState);
+  static void handleAbility15Input(bool pressed, GameState gameState) =>
+      _handleAbilityInput(14, pressed, gameState);
 }

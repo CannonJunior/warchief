@@ -1,20 +1,19 @@
 import 'package:vector_math/vector_math.dart';
 import 'ability_types.dart';
 
-/// Wind Walker abilities — 10 White Mana abilities (5 movement, 5 non-movement)
+/// Wind Walker abilities — White Mana martial arts with juggling combos.
 ///
-/// All abilities use White Mana (wind energy) and belong to the 'windwalker'
-/// category. Silver-white color theme with variations per ability.
+/// Juggle chain: Dragon Ascent (launcher) → Aerial Pursuit → Tempest Crash (ground slam).
+/// All abilities use White Mana and belong to the 'windwalker' category.
 class WindWalkerAbilities {
   WindWalkerAbilities._();
 
-  // ==================== MOVEMENT ABILITIES (5) ====================
+  // ==================== MOVEMENT ABILITIES ====================
 
-  /// Gale Step — Forward dash through enemies dealing damage along the path.
-  /// 2 charges via short cooldown.
+  /// Gale Step — Forward dash dealing damage along path.
   static final galeStep = AbilityData(
     name: 'Gale Step',
-    description: 'Dash forward through enemies, dealing damage along the path',
+    description: 'Dash forward through enemies, dealing damage along the path.',
     type: AbilityType.melee,
     damage: 30.0,
     cooldown: 4.0,
@@ -26,13 +25,13 @@ class WindWalkerAbilities {
     manaColor: ManaColor.white,
     manaCost: 10.0,
     category: 'windwalker',
+    comboPrimes: ['Swift Jab', 'Gale Punch'],
   );
 
-  /// Zephyr Roll — Evasive roll granting brief invulnerability (i-frames).
-  /// Moves player forward 4 units quickly.
+  /// Zephyr Roll — Evasive roll granting brief invulnerability.
   static final zephyrRoll = AbilityData(
     name: 'Zephyr Roll',
-    description: 'Evasive roll granting brief invulnerability',
+    description: 'Evasive roll granting brief invulnerability.',
     type: AbilityType.buff,
     cooldown: 5.0,
     duration: 0.4,
@@ -45,30 +44,13 @@ class WindWalkerAbilities {
     manaColor: ManaColor.white,
     manaCost: 8.0,
     category: 'windwalker',
+    comboPrimes: ['Swift Jab', 'Gale Punch'],
   );
 
-  /// Tailwind Retreat — Backflip away from enemies, pushing nearby foes back.
-  static final tailwindRetreat = AbilityData(
-    name: 'Tailwind Retreat',
-    description: 'Backflip away from enemies, pushing nearby foes back',
-    type: AbilityType.utility,
-    cooldown: 12.0,
-    duration: 0.4,
-    range: 5.0,
-    color: Vector3(0.8, 0.88, 0.98),
-    impactColor: Vector3(0.7, 0.8, 1.0),
-    impactSize: 0.6,
-    knockbackForce: 4.0,
-    manaColor: ManaColor.white,
-    manaCost: 12.0,
-    category: 'windwalker',
-  );
-
-  /// Flying Serpent Strike — Long-range dash dealing damage to all in path.
-  /// Higher damage and longer range than Gale Step.
+  /// Flying Serpent Strike — Long-range piercing dash.
   static final flyingSerpentStrike = AbilityData(
     name: 'Flying Serpent Strike',
-    description: 'Dash forward at low altitude, damaging all enemies in path',
+    description: 'Dash forward at low altitude, damaging all enemies in path.',
     type: AbilityType.melee,
     damage: 45.0,
     cooldown: 10.0,
@@ -81,13 +63,13 @@ class WindWalkerAbilities {
     manaColor: ManaColor.white,
     manaCost: 20.0,
     category: 'windwalker',
+    comboPrimes: ['Tempest Crash'],
   );
 
-  /// Take Flight — Toggle flight mode on/off. Core flight ability.
-  /// 1s cooldown prevents spam, 15 white mana initial + 3/sec drain.
+  /// Take Flight — Toggle flight mode.
   static final takeFlight = AbilityData(
     name: 'Take Flight',
-    description: 'Toggle flight mode — soar through the skies consuming White Mana',
+    description: 'Toggle flight mode — soar through the skies consuming White Mana.',
     type: AbilityType.buff,
     cooldown: 1.0,
     duration: 0.0,
@@ -99,13 +81,88 @@ class WindWalkerAbilities {
     category: 'windwalker',
   );
 
-  // ==================== NON-MOVEMENT ABILITIES (5) ====================
+  // ==================== JUGGLE CHAIN ====================
+  // Dragon Ascent → Aerial Pursuit → Tempest Crash
 
-  /// Cyclone Dive — AoE slam from above. Leap up then slam down
-  /// dealing damage + stun at center.
+  /// Dragon Ascent — Rising dragon fist that launches the target airborne.
+  /// Juggle launcher: stuns and sends the target up, enabling aerial follow-ups.
+  static final dragonAscent = AbilityData(
+    name: 'Dragon Ascent',
+    description:
+        'Launch skyward with a rising dragon fist, hurling the target airborne '
+        'and stunning them. Sets up Aerial Pursuit for the juggle combo.',
+    type: AbilityType.melee,
+    damage: 28.0,
+    cooldown: 8.0,
+    range: 2.0,
+    color: Vector3(0.85, 0.95, 1.0),
+    impactColor: Vector3(1.0, 0.98, 0.8),
+    impactSize: 0.8,
+    statusEffect: StatusEffect.stun,
+    statusDuration: 1.5,
+    knockbackForce: 3.0,
+    windupTime: 0.25,
+    windupMovementSpeed: 0.5,
+    manaColor: ManaColor.white,
+    manaCost: 18.0,
+    category: 'windwalker',
+    damageSchool: DamageSchool.physical,
+    comboPrimes: ['Aerial Pursuit', 'Flying Serpent Strike'],
+  );
+
+  /// Aerial Pursuit — Soar after the airborne target and strike mid-air.
+  /// Best used immediately after Dragon Ascent.
+  static final aerialPursuit = AbilityData(
+    name: 'Aerial Pursuit',
+    description:
+        'Soar after the airborne target and strike in mid-air. '
+        'Follow with Tempest Crash to complete the juggle finisher.',
+    type: AbilityType.melee,
+    damage: 35.0,
+    cooldown: 10.0,
+    range: 2.5,
+    color: Vector3(0.78, 0.88, 1.0),
+    impactColor: Vector3(0.9, 0.95, 1.0),
+    impactSize: 0.75,
+    manaColor: ManaColor.white,
+    manaCost: 20.0,
+    category: 'windwalker',
+    damageSchool: DamageSchool.physical,
+    comboPrimes: ['Tempest Crash'],
+  );
+
+  /// Tempest Crash — Slam the target into the ground with AoE impact.
+  /// Juggle finisher: devastating if following Aerial Pursuit.
+  static final tempestCrash = AbilityData(
+    name: 'Tempest Crash',
+    description:
+        'Slam the target into the ground with devastating force, dealing AoE damage '
+        'on impact and briefly stunning nearby enemies. The juggle finisher.',
+    type: AbilityType.aoe,
+    damage: 42.0,
+    cooldown: 12.0,
+    range: 2.0,
+    color: Vector3(0.65, 0.78, 1.0),
+    impactColor: Vector3(0.7, 0.82, 1.0),
+    impactSize: 1.1,
+    aoeRadius: 3.0,
+    statusEffect: StatusEffect.stun,
+    statusDuration: 0.8,
+    windupTime: 0.3,
+    windupMovementSpeed: 0.3,
+    manaColor: ManaColor.white,
+    manaCost: 25.0,
+    category: 'windwalker',
+    damageSchool: DamageSchool.physical,
+    comboPrimes: ['Gale Step', 'Swift Jab'],
+  );
+
+  // ==================== NON-MOVEMENT ABILITIES ====================
+
+  /// Cyclone Dive — AoE slam with stun.
   static final cycloneDive = AbilityData(
     name: 'Cyclone Dive',
-    description: 'Leap upward then slam down, dealing AoE damage and stunning',
+    description: 'Leap upward then slam down, dealing AoE damage and stunning.',
     type: AbilityType.aoe,
     damage: 60.0,
     cooldown: 15.0,
@@ -119,12 +176,13 @@ class WindWalkerAbilities {
     manaColor: ManaColor.white,
     manaCost: 25.0,
     category: 'windwalker',
+    comboPrimes: ['Swift Jab', 'Stormfist Barrage'],
   );
 
-  /// Wind Wall — Blocks projectiles in front of player for 4 seconds.
+  /// Wind Wall — Blocks projectiles for 4 seconds.
   static final windWall = AbilityData(
     name: 'Wind Wall',
-    description: 'Summon a wall of wind that blocks incoming projectiles',
+    description: 'Summon a wall of wind that blocks incoming projectiles.',
     type: AbilityType.buff,
     cooldown: 20.0,
     duration: 4.0,
@@ -136,10 +194,10 @@ class WindWalkerAbilities {
     category: 'windwalker',
   );
 
-  /// Tempest Charge — Charge to target dealing damage + knockback along path.
+  /// Tempest Charge — Charge to target with knockback.
   static final tempestCharge = AbilityData(
     name: 'Tempest Charge',
-    description: 'Charge to target with tempest force, knocking back enemies',
+    description: 'Charge to target with tempest force, knocking back enemies.',
     type: AbilityType.melee,
     damage: 35.0,
     cooldown: 8.0,
@@ -152,12 +210,13 @@ class WindWalkerAbilities {
     manaColor: ManaColor.white,
     manaCost: 15.0,
     category: 'windwalker',
+    comboPrimes: ['Dragon Ascent', 'Cyclone Kick'],
   );
 
-  /// Healing Gale — Heal self for 40 HP over time.
+  /// Healing Gale — Heal over time.
   static final healingGale = AbilityData(
     name: 'Healing Gale',
-    description: 'Soothing winds restore health over time',
+    description: 'Soothing winds restore health over time.',
     type: AbilityType.heal,
     cooldown: 18.0,
     duration: 4.0,
@@ -170,11 +229,10 @@ class WindWalkerAbilities {
     category: 'windwalker',
   );
 
-  /// Sovereign of the Sky — 12-second buff: enhanced flight speed (+50%),
-  /// all wind abilities -30% mana cost.
+  /// Sovereign of the Sky — Enhanced flight speed + mana cost reduction.
   static final sovereignOfTheSky = AbilityData(
     name: 'Sovereign of the Sky',
-    description: 'Become one with the wind — enhanced flight speed and reduced mana costs',
+    description: 'Become one with the wind — enhanced flight speed and reduced mana costs.',
     type: AbilityType.buff,
     cooldown: 90.0,
     duration: 12.0,
@@ -184,65 +242,13 @@ class WindWalkerAbilities {
     manaColor: ManaColor.white,
     manaCost: 40.0,
     category: 'windwalker',
+    comboPrimes: ['Dragon Ascent', 'Swift Jab'],
   );
 
-  // ==================== ADDITIONAL ABILITIES (4) ====================
-
-  /// Wind Affinity — Doubles white mana regen rate for 15 seconds.
-  static final windAffinity = AbilityData(
-    name: 'Wind Affinity',
-    description: 'Attune to the wind — doubles white mana regeneration for 15 seconds',
-    type: AbilityType.buff,
-    cooldown: 60.0,
-    duration: 15.0,
-    color: Vector3(0.8, 0.92, 1.0),
-    impactColor: Vector3(0.75, 0.88, 1.0),
-    impactSize: 0.6,
-    manaColor: ManaColor.white,
-    manaCost: 15.0,
-    category: 'windwalker',
-  );
-
-  /// Silent Mind — Fully restores white mana; next white ability is free and instant.
-  static final silentMind = AbilityData(
-    name: 'Silent Mind',
-    description: 'Clear your mind — fully restore white mana; next white ability costs 0 and casts instantly',
-    type: AbilityType.buff,
-    cooldown: 120.0,
-    duration: 0.0,
-    color: Vector3(0.95, 0.98, 1.0),
-    impactColor: Vector3(0.9, 0.95, 1.0),
-    impactSize: 0.8,
-    manaColor: ManaColor.white,
-    manaCost: 0.0,
-    category: 'windwalker',
-  );
-
-  /// Windshear — 90-degree cone AoE (40 yards). Lifts targets: enemies take
-  /// 10 damage + knockdown, friendlies are healed for 10 HP.
-  static final windshear = AbilityData(
-    name: 'Windshear',
-    description: 'Unleash a shearing gust in a cone — enemies take damage and are knocked down, allies are healed',
-    type: AbilityType.aoe,
-    damage: 10.0,
-    cooldown: 240.0,
-    duration: 0.0,
-    color: Vector3(0.7, 0.85, 1.0),
-    impactColor: Vector3(0.65, 0.8, 1.0),
-    impactSize: 1.0,
-    aoeRadius: 40.0,
-    healAmount: 10.0,
-    statusEffect: StatusEffect.stun,
-    statusDuration: 2.0,
-    manaColor: ManaColor.white,
-    manaCost: 35.0,
-    category: 'windwalker',
-  );
-
-  /// Wind Warp — Dash forward on ground; if flying, doubles flight speed for 5s.
+  /// Wind Warp — Dash forward; doubles flight speed if airborne.
   static final windWarp = AbilityData(
     name: 'Wind Warp',
-    description: 'Warp through the wind — dash forward on ground, or double flight speed for 5 seconds while airborne',
+    description: 'Warp through the wind — dash forward on ground, or double flight speed while airborne.',
     type: AbilityType.melee,
     cooldown: 10.0,
     duration: 0.3,
@@ -253,15 +259,15 @@ class WindWalkerAbilities {
     manaColor: ManaColor.white,
     manaCost: 12.0,
     category: 'windwalker',
+    comboPrimes: ['Dragon Ascent', 'Stormfist Barrage'],
   );
 
-  // ==================== MELEE COMBO ABILITIES ====================
-  // Combo: Zephyr Palm -> Cyclone Kick -> Stormfist Barrage
+  // ==================== MELEE COMBO CHAIN ====================
 
-  /// Zephyr Palm — Quick palm strike, combo starter
+  /// Zephyr Palm — Quick palm strike, combo opener.
   static final zephyrPalm = AbilityData(
     name: 'Zephyr Palm',
-    description: 'Swift wind-charged palm strike — quick combo opener',
+    description: 'Swift wind-charged palm strike — quick combo opener.',
     type: AbilityType.melee,
     damage: 14.0,
     cooldown: 2.5,
@@ -272,12 +278,13 @@ class WindWalkerAbilities {
     manaColor: ManaColor.white,
     manaCost: 8.0,
     category: 'windwalker',
+    comboPrimes: ['Dragon Ascent', 'Stormfist Barrage'],
   );
 
-  /// Cyclone Kick — Spinning kick with knockback displacement
+  /// Cyclone Kick — Spinning kick with knockback.
   static final cycloneKick = AbilityData(
     name: 'Cyclone Kick',
-    description: 'Spinning wind-powered kick that knocks enemies away',
+    description: 'Spinning wind-powered kick that knocks enemies away.',
     type: AbilityType.melee,
     damage: 22.0,
     cooldown: 5.0,
@@ -289,12 +296,13 @@ class WindWalkerAbilities {
     manaColor: ManaColor.white,
     manaCost: 12.0,
     category: 'windwalker',
+    comboPrimes: ['Dragon Ascent', 'Stormfist Barrage'],
   );
 
-  /// Stormfist Barrage — Triple-punch finisher with windup and stun
+  /// Stormfist Barrage — Triple-punch finisher with stun.
   static final stormfistBarrage = AbilityData(
     name: 'Stormfist Barrage',
-    description: 'Channel the storm into a three-hit punch barrage that stuns on impact',
+    description: 'Three-hit punch barrage that stuns on impact.',
     type: AbilityType.melee,
     damage: 30.0,
     cooldown: 7.0,
@@ -309,11 +317,12 @@ class WindWalkerAbilities {
     manaColor: ManaColor.white,
     manaCost: 18.0,
     category: 'windwalker',
+    comboPrimes: ['Flying Serpent Strike'],
   );
 
   // ==================== BASIC NO-MANA MELEE ====================
 
-  /// Basic no-mana melee: quick jab
+  /// Swift Jab — Quick manaless jab.
   static final swiftJab = AbilityData(
     name: 'Swift Jab',
     description: 'A quick, manaless jab.',
@@ -325,9 +334,10 @@ class WindWalkerAbilities {
     impactColor: Vector3(0.9, 1.0, 1.0),
     impactSize: 0.4,
     category: 'windwalker',
+    comboPrimes: ['Gale Punch', 'Zephyr Palm'],
   );
 
-  /// Basic no-mana melee: wind punch
+  /// Gale Punch — Wind-enhanced punch.
   static final galePunch = AbilityData(
     name: 'Gale Punch',
     description: 'A forceful wind-enhanced punch.',
@@ -339,9 +349,10 @@ class WindWalkerAbilities {
     impactColor: Vector3(0.8, 1.0, 1.0),
     impactSize: 0.5,
     category: 'windwalker',
+    comboPrimes: ['Cyclone Kick', 'Zephyr Palm'],
   );
 
-  /// Medium-cooldown permanent physical vulnerability
+  /// Pressure Point — Applies permanent physical vulnerability.
   static final pressurePoint = AbilityData(
     name: 'Pressure Point',
     description: 'A precise strike that permanently exposes the target\'s physical weakness.',
@@ -354,16 +365,16 @@ class WindWalkerAbilities {
     impactSize: 0.6,
     category: 'windwalker',
     appliesPermanentVulnerability: true,
+    comboPrimes: ['Swift Jab', 'Gale Punch'],
   );
 
   // ==================== CHAIN COMBO PRIMER ====================
 
-  /// Gale Fury — Activates chain-combo mode for windwalkers.
-  /// Land 7 consecutive windwalker strikes within 7 seconds to fire the chain combo.
+  /// Gale Fury — Activates chain-combo mode.
   static final galeFury = AbilityData(
     name: 'Gale Fury',
     description: 'Unleash the fury of the gale — activate chain-combo mode. '
-        'Land 7 windwalker strikes within 7 seconds to trigger a powerful haste surge.',
+        'Land 7 windwalker strikes within 7 seconds to trigger a haste surge.',
     type: AbilityType.melee,
     damage: 18.0,
     cooldown: 10.0,
@@ -375,13 +386,13 @@ class WindWalkerAbilities {
     manaCost: 15.0,
     category: 'windwalker',
     enablesComboChain: true,
+    comboPrimes: ['Swift Jab', 'Dragon Ascent'],
   );
 
-  /// Seal Palm — Swift palm strike that seals the target's spellcasting
-  /// Cooldown tunable (default 8 s, range 8–16 s) via ability overrides.
+  /// Seal Palm — Interrupts target spellcasting for 3s.
   static final sealPalm = AbilityData(
     name: 'Seal Palm',
-    description: 'A precise palm strike that disrupts the flow of magical energy, interrupting the target\'s spellcasting for 3 seconds',
+    description: 'A precise palm strike that interrupts the target\'s spellcasting for 3 seconds.',
     type: AbilityType.melee,
     damage: 11.0,
     cooldown: 8.0,
@@ -395,9 +406,10 @@ class WindWalkerAbilities {
     manaCost: 8.0,
     category: 'windwalker',
     damageSchool: DamageSchool.physical,
+    comboPrimes: ['Swift Jab', 'Zephyr Palm'],
   );
 
-  /// Gale Stride — Windwalker aura granting haste to nearby allies
+  /// Gale Stride — Aura granting haste to nearby allies.
   static final galeStride = AbilityData(
     name: 'Gale Stride',
     description: 'The windwalker becomes a living vortex of wind energy, '
@@ -417,30 +429,25 @@ class WindWalkerAbilities {
     auraRange: 10.0,
   );
 
-  /// All Wind Walker abilities as a list
+  /// All Wind Walker abilities as a list.
+  /// Ordered short→long cooldown; slots 11-15 hold the longest cooldowns.
+  /// Cut: zephyrPalm, tempestCharge, healingGale, windWarp, stormfistBarrage,
+  ///      pressurePoint, cycloneDive (redundant/overlapping).
   static List<AbilityData> get all => [
-    galeStep,
-    zephyrRoll,
-    tailwindRetreat,
-    flyingSerpentStrike,
-    takeFlight,
-    cycloneDive,
-    windWall,
-    tempestCharge,
-    healingGale,
-    sovereignOfTheSky,
-    windAffinity,
-    silentMind,
-    windshear,
-    windWarp,
-    zephyrPalm,
-    cycloneKick,
-    stormfistBarrage,
-    swiftJab,
-    galePunch,
-    pressurePoint,
-    galeFury,
-    sealPalm,
-    galeStride,
+    swiftJab,            //  1  1.0s  free basic
+    galePunch,           //  2  1.0s  free basic
+    takeFlight,          //  3  1.0s  unique flight toggle
+    galeStep,            //  4  4.0s  dash
+    zephyrRoll,          //  5  5.0s  evasive buff
+    cycloneKick,         //  6  5.0s  knockback kick
+    galeStride,          //  7  5.0s  haste aura
+    sealPalm,            //  8  8.0s  interrupt
+    dragonAscent,        //  9  8.0s  CC stun + juggle launcher
+    galeFury,            // 10 10.0s  chain combo primer
+    aerialPursuit,       // 11 10.0s  juggle mid
+    flyingSerpentStrike, // 12 10.0s  piercing dash
+    tempestCrash,        // 13 12.0s  juggle finisher AoE
+    windWall,            // 14 20.0s  projectile block
+    sovereignOfTheSky,   // 15 90.0s  ultimate buff
   ];
 }

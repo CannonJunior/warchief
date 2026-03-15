@@ -17,11 +17,11 @@ extension _CombatHUDActionBar on CombatHUD {
   }
 
   Widget _buildActionBar() {
-    // Reason: Summoned units get only 5 action bar slots vs 10 for player characters
-    final visibleSlots = gameState?.activeActionBarSlots ?? 10;
+    // Reason: Summoned units get only 5 action bar slots vs 15 for player characters
+    final visibleSlots = gameState?.activeActionBarSlots ?? 15;
 
     // Get colors from action bar config if available
-    final slotColors = List.generate(10, (i) =>
+    final slotColors = List.generate(15, (i) =>
       actionBarConfig?.getSlotColor(i) ?? const Color(0xFFB3B3CC));
 
     // Compute distance to current target once for range checking
@@ -53,7 +53,7 @@ extension _CombatHUDActionBar on CombatHUD {
       return (label: label, cooldown: cd, maxCooldown: max, isComboReady: isComboReady, onPressed: onPressed);
     }
 
-    // Define slot data for all 10 slots
+    // Define slot data for all 15 slots; row 3 (10-14) has no key label
     final slots = [
       makeSlot('1', 0, onAbility1Pressed),
       makeSlot('2', 1, onAbility2Pressed),
@@ -65,6 +65,11 @@ extension _CombatHUDActionBar on CombatHUD {
       makeSlot('8', 7, onAbility8Pressed),
       makeSlot('9', 8, onAbility9Pressed),
       makeSlot('0', 9, onAbility10Pressed),
+      makeSlot('', 10, onAbility11Pressed), // click-only
+      makeSlot('', 11, onAbility12Pressed), // click-only
+      makeSlot('', 12, onAbility13Pressed), // click-only
+      makeSlot('', 13, onAbility14Pressed), // click-only
+      makeSlot('', 14, onAbility15Pressed), // click-only
     ];
 
     return Container(
@@ -119,6 +124,34 @@ extension _CombatHUDActionBar on CombatHUD {
               mainAxisSize: MainAxisSize.min,
               children: List.generate(5, (i) {
                 final slotIdx = i + 5;
+                final slot = slots[slotIdx];
+                return MouseRegion(
+                  onEnter: (_) => onSlotHovered?.call(slotIdx),
+                  onExit: (_) => onSlotHovered?.call(null),
+                  child: Padding(
+                    padding: EdgeInsets.only(left: i > 0 ? 4 : 0),
+                    child: _buildDraggableSlot(
+                      slotIndex: slotIdx,
+                      label: slot.label,
+                      color: slotColors[slotIdx],
+                      cooldown: slot.cooldown,
+                      maxCooldown: slot.maxCooldown,
+                      onPressed: slot.onPressed ?? () {},
+                      isOutOfRange: _isSlotOutOfRange(slotIdx, distanceToTarget),
+                      isComboReady: slot.isComboReady,
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
+          // Reason: Row 3 click-only (no keyboard bindings) for long-CD abilities 11-15
+          if (visibleSlots > 10) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(5, (i) {
+                final slotIdx = i + 10;
                 final slot = slots[slotIdx];
                 return MouseRegion(
                   onEnter: (_) => onSlotHovered?.call(slotIdx),

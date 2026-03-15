@@ -119,6 +119,16 @@ class RenderSystem {
       }
     }
 
+    // Render floating island (static, never updates after init)
+    if (gameState.floatingIslandMesh != null && gameState.floatingIslandTransform != null) {
+      renderer.render(gameState.floatingIslandMesh!, gameState.floatingIslandTransform!, camera);
+    }
+
+    // Render tower (static, never updates after init)
+    if (gameState.towerMesh != null && gameState.towerTransform != null) {
+      renderer.render(gameState.towerMesh!, gameState.towerTransform!, camera);
+    }
+
     // Render Ley Lines (magical energy lines on terrain)
     _renderLeyLines(renderer, camera, gameState);
 

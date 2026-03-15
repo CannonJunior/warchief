@@ -20,6 +20,12 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     // Process player and camera input
     InputSystem.update(dt, inputManager!, camera!, gameState);
 
+    // Advance any active camera pitch/distance/FOV lerp (dungeon transitions)
+    camera!.updateCameraLerp(dt);
+
+    // Detect tower zone (isIndoors + currentFloor)
+    _updateTowerZone();
+
     // Handle jump input
     final jumpKeyIsPressed = inputManager!.isActionPressed(GameAction.jump);
     PhysicsSystem.handleJumpInput(jumpKeyIsPressed, gameState);
@@ -255,6 +261,46 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     if (wind == null) return;
     globalWindSwirlState ??= WindSwirlState();
     globalWindSwirlState!.update(dt, gameState, wind);
+  }
+
+  // ==================== TOWER ZONE DETECTION ====================
+
+  /// Update [GameState.isIndoors] and [GameState.currentFloor] each frame.
+  ///
+  /// Triggers a smooth camera transition via [Camera3D.setDungeonMode] whenever
+  /// the player crosses the tower threshold.
+  void _updateTowerZone() {
+    final playerPos = gameState.activeTransform?.position;
+    if (playerPos == null || camera == null) return;
+
+    final dx = playerPos.x - TowerMesh.centerX;
+    final dz = playerPos.z - TowerMesh.centerZ;
+    final distXZ = math.sqrt(dx * dx + dz * dz);
+
+    final inTowerXZ = distXZ < TowerMesh.exteriorRadius;
+    final inTowerY  = playerPos.y > TowerMesh.islandBaseY;
+    final nowIndoors = inTowerXZ && inTowerY;
+
+    if (nowIndoors != gameState.isIndoors) {
+      gameState.isIndoors = nowIndoors;
+      camera!.setDungeonMode(nowIndoors);
+
+      gameState.currentZoneName = nowIndoors
+          ? 'tower_floor_${gameState.currentFloor}'
+          : 'overworld';
+    }
+
+    if (gameState.isIndoors) {
+      final floorIndex = ((playerPos.y - TowerMesh.islandBaseY) / TowerMesh.floorHeight)
+          .floor()
+          .clamp(0, TowerMesh.floorCount - 1);
+      gameState.currentFloor = floorIndex;
+
+      // Keep dungeon map floor in sync with player position
+      if (gameState.mapState.selectedFloor != floorIndex) {
+        gameState.mapState.selectedFloor = floorIndex;
+      }
+    }
   }
 
   /// Apply passive wind drift to non-player units during strong derechos.

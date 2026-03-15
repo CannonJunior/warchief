@@ -345,26 +345,23 @@ class PlayerAbilities {
   }
 
   /// All player abilities as a list
+  /// Ordered short→long cooldown; slots 11-15 hold the longest cooldowns.
   static List<AbilityData> get all => [
-    // Physical melee (no mana)
-    sword,
-    dashAttack,
-    heavyStrike,
-    whirlwind,
-    crushingBlow,
-    // Magical ranged (blue mana)
-    fireball,
-    iceShard,
-    lightningBolt,
-    pyroblast,
-    arcaneMissile,
-    frostNova,
-    // Healing (blue mana)
-    heal,
-    greaterHeal,
-    // Magical melee (blue mana)
-    arcaneStrike,
-    frostStrike,
+    sword,         //  1  1.0s  free basic melee
+    iceShard,      //  2  1.8s  ranged slow
+    arcaneStrike,  //  3  2.0s  melee arcane
+    fireball,      //  4  2.5s  ranged
+    frostStrike,   //  5  3.0s  melee slow
+    arcaneMissile, //  6  3.5s  ranged cast
+    heavyStrike,   //  7  4.0s  melee windup
+    lightningBolt, //  8  5.0s  ranged cast
+    dashAttack,    //  9  6.0s  dash melee
+    whirlwind,     // 10  8.0s  AoE
+    heal,          // 11 10.0s  self-heal
+    crushingBlow,  // 12 10.0s  melee stun
+    pyroblast,     // 13 12.0s  ranged burn DoT
+    frostNova,     // 14 15.0s  AoE freeze CC
+    greaterHeal,   // 15 15.0s  big heal
   ];
 
   /// Get all physical abilities (no mana cost)

@@ -13,19 +13,24 @@ class ActionBarConfig extends ChangeNotifier {
   /// Character index this config belongs to (0 = Warchief, 1+ = ally)
   final int _characterIndex;
 
-  /// Current ability assignments by slot index (0-9)
-  /// Stores the ability name as the identifier
+  /// Current ability assignments by slot index (0-14).
+  /// Slots 0-9 map to keyboard keys 1-0; slots 10-14 are click-only (row 3).
   List<String> _slotAssignments = [
-    'Sword',       // Slot 1 (key 1)
-    'Fireball',    // Slot 2 (key 2)
-    'Heal',        // Slot 3 (key 3)
-    'Dash Attack', // Slot 4 (key 4)
-    'Sword',       // Slot 5 (key 5)
-    'Sword',       // Slot 6 (key 6)
-    'Sword',       // Slot 7 (key 7)
-    'Sword',       // Slot 8 (key 8)
-    'Sword',       // Slot 9 (key 9)
+    'Sword',       // Slot 1  (key 1)
+    'Fireball',    // Slot 2  (key 2)
+    'Heal',        // Slot 3  (key 3)
+    'Dash Attack', // Slot 4  (key 4)
+    'Sword',       // Slot 5  (key 5)
+    'Sword',       // Slot 6  (key 6)
+    'Sword',       // Slot 7  (key 7)
+    'Sword',       // Slot 8  (key 8)
+    'Sword',       // Slot 9  (key 9)
     'Sword',       // Slot 10 (key 0)
+    'Sword',       // Slot 11 (click-only)
+    'Sword',       // Slot 12 (click-only)
+    'Sword',       // Slot 13 (click-only)
+    'Sword',       // Slot 14 (click-only)
+    'Sword',       // Slot 15 (click-only)
   ];
 
   ActionBarConfig({int characterIndex = 0}) : _characterIndex = characterIndex;
@@ -129,8 +134,8 @@ class ActionBarConfig extends ChangeNotifier {
       if (configJson != null) {
         final List<dynamic> loaded = jsonDecode(configJson);
         final assignments = loaded.cast<String>();
-        // Pad to 10 slots if saved config has fewer (upgrade from older versions)
-        while (assignments.length < 10) {
+        // Pad to 15 slots if saved config has fewer (upgrade from older versions)
+        while (assignments.length < 15) {
           assignments.add('Sword');
         }
         _slotAssignments = assignments;
@@ -154,6 +159,11 @@ class ActionBarConfig extends ChangeNotifier {
       'Sword',
       'Sword',
       'Sword',
+      'Sword', // slot 11 click-only
+      'Sword', // slot 12 click-only
+      'Sword', // slot 13 click-only
+      'Sword', // slot 14 click-only
+      'Sword', // slot 15 click-only
     ];
     notifyListeners();
     _saveConfig();

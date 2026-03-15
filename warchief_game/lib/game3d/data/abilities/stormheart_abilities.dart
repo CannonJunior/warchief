@@ -3,17 +3,15 @@ import 'ability_types.dart';
 
 /// Stormheart abilities — Lightning warriors harnessing storm fury.
 ///
-/// Fast combos with burst damage playstyle: chain lightning strikes,
-/// stuns, and storm transformations. 10 abilities using White mana
-/// with several dual-mana (White + Red) combos for heavy burst.
+/// Combo chain: Volt Strike → Arc Punch → Chain Shock → Storm Surge → Thundergod Fist.
+/// Fast combos with burst damage playstyle using White and dual White/Red mana.
 class StormheartAbilities {
   StormheartAbilities._();
 
   /// Thunder Strike — Lightning-charged melee with bonus damage to stunned.
-  /// Dual-mana (White + Red) for electrified close-range assault.
   static final thunderStrike = AbilityData(
     name: 'Thunder Strike',
-    description: 'Strike with lightning-charged fists, dealing bonus damage to stunned targets',
+    description: 'Strike with lightning-charged fists, dealing bonus damage to stunned targets.',
     type: AbilityType.melee,
     damage: 25.0,
     cooldown: 5.0,
@@ -29,13 +27,13 @@ class StormheartAbilities {
     secondaryManaCost: 10.0,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Chain Shock', 'Thundergod Fist'],
   );
 
   /// Storm Bolt — Lightning projectile that chains to 2 nearby enemies.
-  /// Fast-moving bolt with chain lightning effect.
   static final stormBolt = AbilityData(
     name: 'Storm Bolt',
-    description: 'Hurl a bolt of lightning that chains to up to 2 nearby enemies on impact',
+    description: 'Hurl a bolt of lightning that chains to up to 2 nearby enemies on impact.',
     type: AbilityType.ranged,
     damage: 20.0,
     cooldown: 7.0,
@@ -50,13 +48,13 @@ class StormheartAbilities {
     manaCost: 20.0,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Chain Shock', 'Thunder Strike'],
   );
 
   /// Tempest Fury — +40% attack speed buff for 8 seconds.
-  /// Channel storm energy to accelerate combat rhythm.
   static final tempestFury = AbilityData(
     name: 'Tempest Fury',
-    description: 'Channel the fury of the tempest, increasing attack speed by 40% for 8 seconds',
+    description: 'Channel the fury of the tempest, increasing attack speed by 40% for 8 seconds.',
     type: AbilityType.buff,
     cooldown: 10.0,
     color: Vector3(0.75, 0.85, 1.0),
@@ -69,13 +67,13 @@ class StormheartAbilities {
     manaCost: 15.0,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Thunder Strike', 'Thundergod Fist'],
   );
 
-  /// Eye of the Storm — 4s damage immunity + AoE slow around caster.
-  /// Dual-mana (White + Red) defensive ultimate with crowd control.
+  /// Eye of the Storm — 4s damage immunity + AoE slow.
   static final eyeOfTheStorm = AbilityData(
     name: 'Eye of the Storm',
-    description: 'Become the calm center of a raging storm — immune to damage for 4 seconds while slowing nearby enemies',
+    description: 'Become the calm center of a raging storm — immune to damage for 4 seconds while slowing nearby enemies.',
     type: AbilityType.buff,
     cooldown: 35.0,
     duration: 4.0,
@@ -92,13 +90,13 @@ class StormheartAbilities {
     secondaryManaCost: 15.0,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Arc Punch', 'Volt Strike'],
   );
 
   /// Blood Thunder — AoE lightning burst with stun.
-  /// Dual-mana (Red + White) for devastating area stun.
   static final bloodThunder = AbilityData(
     name: 'Blood Thunder',
-    description: 'Unleash a thunderous burst of blood-lightning, dealing 40 damage and stunning enemies for 2 seconds',
+    description: 'Unleash a thunderous burst of blood-lightning, dealing 40 damage and stunning enemies for 2 seconds.',
     type: AbilityType.aoe,
     damage: 40.0,
     cooldown: 18.0,
@@ -114,14 +112,13 @@ class StormheartAbilities {
     secondaryManaCost: 15.0,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Thunder Strike', 'Thundergod Fist'],
   );
 
-  /// Avatar of Storms — Transform into a storm elemental.
-  /// Dual-mana (White + Red) ultimate: lightning aura, +40% damage,
-  /// immune to slow/root for 20 seconds.
+  /// Avatar of Storms — Transform into a storm elemental for 20 seconds.
   static final avatarOfStorms = AbilityData(
     name: 'Avatar of Storms',
-    description: 'Become a living storm — lightning aura damages nearby foes, +40% damage, immune to slow and root for 20 seconds',
+    description: 'Become a living storm — lightning aura damages nearby foes, +40% damage, immune to slow and root for 20 seconds.',
     type: AbilityType.summon,
     damage: 5.0,
     cooldown: 120.0,
@@ -138,13 +135,13 @@ class StormheartAbilities {
     secondaryManaCost: 30.0,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Thunder Strike', 'Thundergod Fist'],
   );
 
   /// Lightning Dash — Short-range teleport leaving a lightning trail.
-  /// Quick repositioning tool that deals damage where you pass.
   static final lightningDash = AbilityData(
     name: 'Lightning Dash',
-    description: 'Blink forward in a flash of lightning, leaving a damaging trail behind',
+    description: 'Blink forward in a flash of lightning, leaving a damaging trail behind.',
     type: AbilityType.utility,
     damage: 10.0,
     cooldown: 6.0,
@@ -156,13 +153,13 @@ class StormheartAbilities {
     manaCost: 10.0,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Volt Strike', 'Arc Punch'],
   );
 
-  /// Static Charge — Mark an enemy so the next 3 hits deal +50% damage.
-  /// Debuff that amplifies follow-up burst from allies or self.
+  /// Static Charge — Mark target: next 3 hits deal +50% damage.
   static final staticCharge = AbilityData(
     name: 'Static Charge',
-    description: 'Mark an enemy with static electricity — the next 3 hits against them deal +50% bonus damage',
+    description: 'Mark an enemy with static electricity — the next 3 hits against them deal +50% bonus damage.',
     type: AbilityType.debuff,
     cooldown: 8.0,
     range: 30.0,
@@ -176,13 +173,13 @@ class StormheartAbilities {
     manaCost: 15.0,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Thunder Strike', 'Thundergod Fist'],
   );
 
   /// Thunderclap — Melee AoE stun with lightning damage.
-  /// Dual-mana (Red + White) for close-range crowd control burst.
   static final thunderclap = AbilityData(
     name: 'Thunderclap',
-    description: 'Slam the ground with thunder force, dealing 30 damage and stunning enemies within 4 yards for 3 seconds',
+    description: 'Slam the ground with thunder force, dealing 30 damage and stunning enemies within 4 yards for 3 seconds.',
     type: AbilityType.aoe,
     damage: 30.0,
     cooldown: 15.0,
@@ -198,13 +195,13 @@ class StormheartAbilities {
     secondaryManaCost: 10.0,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Thunder Strike', 'Volt Strike'],
   );
 
-  /// Conduit — Channel lightning to a target: 8 dps for 5 seconds.
-  /// Dual-mana (White + Red) sustained damage, self-rooted while channeling.
+  /// Conduit — Channel lightning to target: 40 damage over 5 seconds.
   static final conduit = AbilityData(
     name: 'Conduit',
-    description: 'Channel a continuous stream of lightning into a target, dealing 40 damage over 5 seconds — you cannot move while channeling',
+    description: 'Channel a continuous stream of lightning into a target, dealing 40 damage over 5 seconds — you cannot move while channeling.',
     type: AbilityType.channeled,
     damage: 40.0,
     cooldown: 20.0,
@@ -224,30 +221,13 @@ class StormheartAbilities {
     damageSchool: DamageSchool.lightning,
   );
 
-  // ==================== MELEE COMBO ABILITIES ====================
-  // Combo: Spark Jab -> Chain Shock -> Storm Surge -> Thundergod Fist
+  // ==================== MELEE COMBO CHAIN ====================
+  // Volt Strike → Arc Punch → Chain Shock → Storm Surge → Thundergod Fist
 
-  /// Spark Jab — Lightning-fast jab, combo starter
-  static final sparkJab = AbilityData(
-    name: 'Spark Jab',
-    description: 'Lightning-quick electrified jab — fast combo opener',
-    type: AbilityType.melee,
-    damage: 14.0,
-    cooldown: 2.5,
-    range: 2.0,
-    color: Vector3(0.75, 0.85, 1.0),
-    impactColor: Vector3(0.85, 0.9, 1.0),
-    impactSize: 0.4,
-    manaColor: ManaColor.white,
-    manaCost: 8.0,
-    category: 'stormheart',
-    damageSchool: DamageSchool.lightning,
-  );
-
-  /// Chain Shock — Chain punch with brief stun
+  /// Chain Shock — Chain punch with brief stun.
   static final chainShock = AbilityData(
     name: 'Chain Shock',
-    description: 'Rapid chain punches charged with lightning, briefly stunning the target',
+    description: 'Rapid chain punches charged with lightning, briefly stunning the target.',
     type: AbilityType.melee,
     damage: 18.0,
     cooldown: 4.0,
@@ -261,12 +241,13 @@ class StormheartAbilities {
     manaCost: 12.0,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Thundergod Fist', 'Storm Surge'],
   );
 
-  /// Storm Surge — Lightning dash-punch gap-closer
+  /// Storm Surge — Lightning dash-punch gap-closer.
   static final stormSurge = AbilityData(
     name: 'Storm Surge',
-    description: 'Surge forward in a burst of lightning to close the gap',
+    description: 'Surge forward in a burst of lightning to close the gap.',
     type: AbilityType.melee,
     damage: 22.0,
     cooldown: 6.0,
@@ -278,12 +259,13 @@ class StormheartAbilities {
     manaCost: 15.0,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Thundergod Fist', 'Thunder Strike'],
   );
 
-  /// Thundergod Fist — Dual-mana finisher with windup, stun, and knockback
+  /// Thundergod Fist — Dual-mana finisher with windup, stun, and knockback.
   static final thundergodFist = AbilityData(
     name: 'Thundergod Fist',
-    description: 'Channel the fury of the storm into a devastating fist strike',
+    description: 'Channel the fury of the storm into a devastating fist strike.',
     type: AbilityType.melee,
     damage: 40.0,
     cooldown: 10.0,
@@ -302,12 +284,13 @@ class StormheartAbilities {
     secondaryManaCost: 12.0,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Blood Thunder', 'Thunderclap'],
   );
 
-  /// Basic no-mana melee: lightning jab
+  /// Volt Strike — Free lightning-infused strike, combo starter.
   static final voltStrike = AbilityData(
     name: 'Volt Strike',
-    description: 'A quick, manaless lightning-infused strike.',
+    description: 'A quick, manaless lightning-infused strike. Opens the Stormheart combo chain.',
     type: AbilityType.melee,
     damage: 13.0,
     cooldown: 1.0,
@@ -317,9 +300,10 @@ class StormheartAbilities {
     impactSize: 0.4,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Chain Shock', 'Arc Punch'],
   );
 
-  /// Basic no-mana melee: arc punch
+  /// Arc Punch — Crackling electrical punch.
   static final arcPunch = AbilityData(
     name: 'Arc Punch',
     description: 'A crackling electrical punch.',
@@ -332,9 +316,10 @@ class StormheartAbilities {
     impactSize: 0.5,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Storm Surge', 'Chain Shock'],
   );
 
-  /// Medium-cooldown permanent lightning vulnerability
+  /// Lightning Brand — Permanent lightning vulnerability.
   static final lightningBrand = AbilityData(
     name: 'Lightning Brand',
     description: 'A searing lightning strike that permanently exposes the target to electrical damage.',
@@ -348,12 +333,12 @@ class StormheartAbilities {
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
     appliesPermanentVulnerability: true,
+    comboPrimes: ['Thunder Strike', 'Thundergod Fist'],
   );
 
   // ==================== CHAIN COMBO PRIMER ====================
 
-  /// Thunderstorm Strike — Activates chain-combo mode for stormhearts.
-  /// Land 7 consecutive stormheart strikes within 7 seconds to fire the chain combo.
+  /// Thunderstorm Strike — Activates chain-combo mode.
   static final thunderstormStrike = AbilityData(
     name: 'Thunderstorm Strike',
     description: 'Channel storm fury through your fists — activate chain-combo mode. '
@@ -372,13 +357,13 @@ class StormheartAbilities {
     damageSchool: DamageSchool.lightning,
     category: 'stormheart',
     enablesComboChain: true,
+    comboPrimes: ['Volt Strike', 'Chain Shock'],
   );
 
-  /// Static Discharge — Lightning-charged strike that disrupts spellcasting
-  /// Cooldown tunable (default 12 s, range 8–16 s) via ability overrides.
+  /// Static Discharge — Interrupts spellcasting for 3s.
   static final staticDischarge = AbilityData(
     name: 'Static Discharge',
-    description: 'Release a burst of focused static electricity into the target, interrupting their spellcasting for 3 seconds',
+    description: 'Release a burst of focused static electricity, interrupting the target\'s spellcasting for 3 seconds.',
     type: AbilityType.melee,
     damage: 14.0,
     cooldown: 12.0,
@@ -392,13 +377,13 @@ class StormheartAbilities {
     manaCost: 12.0,
     category: 'stormheart',
     damageSchool: DamageSchool.lightning,
+    comboPrimes: ['Thundergod Fist', 'Thunder Strike'],
   );
 
-  /// Storm Hardened — Stormheart self-buff granting health regeneration
+  /// Storm Hardened — Self-buff granting health regeneration.
   static final stormHardened = AbilityData(
     name: 'Storm Hardened',
-    description: 'Temper yourself against the storm, gaining sustained'
-        ' health regeneration from its relentless power.',
+    description: 'Temper yourself against the storm, gaining sustained health regeneration.',
     type: AbilityType.buff,
     cooldown: 5.0,
     duration: 3600.0,
@@ -412,27 +397,24 @@ class StormheartAbilities {
     category: 'stormheart',
   );
 
-  /// All stormheart abilities as a list
+  /// All stormheart abilities as a list.
+  /// Ordered short→long cooldown; slots 11-15 hold the longest cooldowns.
+  /// Cut: thunderStrike, thunderclap, conduit, lightningBrand (redundant/overlapping).
   static List<AbilityData> get all => [
-    thunderStrike,
-    stormBolt,
-    tempestFury,
-    eyeOfTheStorm,
-    bloodThunder,
-    avatarOfStorms,
-    lightningDash,
-    staticCharge,
-    thunderclap,
-    conduit,
-    sparkJab,
-    chainShock,
-    stormSurge,
-    thundergodFist,
-    voltStrike,
-    arcPunch,
-    lightningBrand,
-    thunderstormStrike,
-    staticDischarge,
-    stormHardened,
+    voltStrike,          //  1  1.0s  free basic, combo starter
+    arcPunch,            //  2  1.0s  free basic, combo 2
+    chainShock,          //  3  4.0s  combo 3, brief stun
+    stormHardened,       //  4  5.0s  regen aura
+    stormSurge,          //  5  6.0s  combo 4, gap closer
+    lightningDash,       //  6  6.0s  blink mobility
+    stormBolt,           //  7  7.0s  ranged chain lightning
+    staticCharge,        //  8  8.0s  debuff amplifier
+    tempestFury,         //  9 10.0s  attack speed buff
+    thundergodFist,      // 10 10.0s  combo finisher, stun + knockback
+    thunderstormStrike,  // 11 10.0s  chain combo primer
+    staticDischarge,     // 12 12.0s  interrupt
+    bloodThunder,        // 13 18.0s  CC AoE stun
+    eyeOfTheStorm,       // 14 35.0s  damage immunity buff
+    avatarOfStorms,      // 15 120.0s ultimate transform
   ];
 }

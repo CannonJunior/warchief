@@ -28,6 +28,8 @@ import '../../models/combat_log_entry.dart';
 import '../../models/console_log_entry.dart';
 import '../../models/active_effect.dart';
 import '../../rendering3d/building_mesh.dart';
+import '../rendering/floating_island.dart';
+import '../rendering/tower_mesh.dart';
 import '../../data/item_database.dart';
 import 'game_config.dart';
 import 'mana_config.dart';
@@ -45,6 +47,7 @@ import '../data/abilities/ability_types.dart' show ManaColor, AbilityData, Statu
 import '../data/stances/stances.dart';
 import 'gameplay_settings.dart';
 import 'action_bar_config.dart' show globalActionBarConfigManager;
+import 'map_state.dart';
 import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -77,6 +80,38 @@ class GameState {
 
   // New infinite terrain system with LOD
   InfiniteTerrainManager? infiniteTerrainManager;
+
+  // ==================== WORLD OBJECTS ====================
+
+  /// Floating island mesh (procedurally generated on init, never changes)
+  Mesh? floatingIslandMesh;
+  Transform3d? floatingIslandTransform;
+
+  // ==================== TOWER / ZONE STATE ====================
+
+  /// Tower mesh (procedurally generated on init, never changes)
+  Mesh? towerMesh;
+  Transform3d? towerTransform;
+
+  /// True when the player is inside the tower.
+  bool isIndoors = false;
+
+  /// Current tower floor (0 = ground floor).  Updated each frame when isIndoors.
+  int currentFloor = 0;
+
+  /// Current zone name for display / future scripting.
+  String currentZoneName = 'overworld';
+
+  // ==================== MAP PANEL STATE ====================
+
+  /// Whether the large map overlay is open.
+  bool mapPanelOpen = false;
+
+  /// M-key cycle index (0-3 drives minimap+map open/close states).
+  int mKeyCycle = 0;
+
+  /// Persistent map panel state (zoom, pan, floor selection).
+  final MapState mapState = MapState();
 
   // ==================== PLAYER STATE ====================
 
@@ -426,7 +461,7 @@ class GameState {
   bool get isActiveSummoned => activeAlly?.isSummoned ?? false;
 
   /// Number of action bar slots for the active character (5 for summoned, 10 for player chars)
-  int get activeActionBarSlots => isActiveSummoned ? 5 : 10;
+  int get activeActionBarSlots => isActiveSummoned ? 5 : 15;
 
   /// Active effects on the currently controlled character (Warchief or active ally/summon).
   List<ActiveEffect> get activeCharacterActiveEffects {
@@ -674,7 +709,7 @@ class GameState {
   /// Minimap state: zoom, pings, elapsed time, terrain cache
   final MinimapState minimapState = MinimapState();
 
-  /// Whether the minimap is currently visible (M key toggle)
+  /// Whether the minimap is currently visible (driven by M key 4-state cycle).
   bool minimapOpen = true;
 
   // ==================== BUILDINGS ====================
@@ -1037,17 +1072,17 @@ class GameState {
     return activeAlly?.gcdMax ?? 1.0;
   }
 
-  // ==================== ABILITY COOLDOWNS (slots 0-9) ====================
+  // ==================== ABILITY COOLDOWNS (slots 0-14) ====================
 
-  /// Current cooldown remaining per slot (indexed 0-9).
-  final List<double> abilityCooldowns = List<double>.filled(10, 0.0);
+  /// Current cooldown remaining per slot (indexed 0-14).
+  final List<double> abilityCooldowns = List<double>.filled(15, 0.0);
 
   /// Per-slot combo GCD bonus (seconds shaved off GCD display for this slot).
   ///
   /// Set to 0.5 when a recently-fired ability primes this slot for a combo.
   /// Cleared to 0.0 when the GCD expires. Slots with a non-zero bonus show
   /// their cooldown clock in yellow to signal the combo window.
-  final List<double> abilityComboGcdBonuses = List<double>.filled(10, 0.0);
+  final List<double> abilityComboGcdBonuses = List<double>.filled(15, 0.0);
 
   /// Per-slot preview highlight driven by the ability queue.
   ///
@@ -1055,13 +1090,19 @@ class GameState {
   /// list that includes the ability assigned to slot i. Cleared when the queue
   /// empties. Used by the action bar to show the yellow combo-ready tint before
   /// the queued ability has actually fired.
-  final List<bool> abilityQueuePrimedSlots = List<bool>.filled(10, false);
+  final List<bool> abilityQueuePrimedSlots = List<bool>.filled(15, false);
 
   /// Number of combo-primed abilities fired in the current chain (0, 1, or 2).
   ///
   /// Drives [comboRangeMultiplier]: depth 1 → +20%, depth 2 → +40%.
   /// Reset to 0 when the GCD expires with no active combo bonus.
   int comboDepth = 0;
+
+  /// Number of consecutive abilities fired within active combo windows.
+  /// Starts at 1 on any ability fire; increments each time a primed follow-up
+  /// is used; resets to 0 on GCD expiry without a combo follow-up.
+  /// Displayed as "x{comboStreak} COMBO" when ≥ 2.
+  int comboStreak = 0;
 
   /// Temporary range multiplier for the next ability, derived from [comboDepth].
   double get comboRangeMultiplier =>
@@ -1072,13 +1113,14 @@ class GameState {
   /// circle overlay when [GameplaySettings.showAbilityRanges] is enabled.
   int? hoveredActionBarSlot;
 
-  /// Maximum cooldown per slot (indexed 0-9).
+  /// Maximum cooldown per slot (indexed 0-14).
   final List<double> abilityCooldownMaxes = [
     GameConfig.ability1CooldownMax, // slot 0: Sword
     GameConfig.ability2CooldownMax, // slot 1: Fireball
     GameConfig.ability3CooldownMax, // slot 2: Heal
     6.0,                            // slot 3: Dash Attack
-    5.0, 5.0, 5.0, 5.0, 5.0, 5.0,  // slots 4-9: Extended
+    5.0, 5.0, 5.0, 5.0, 5.0, 5.0,  // slots 4-9
+    5.0, 5.0, 5.0, 5.0, 5.0,        // slots 10-14: Row 3 (click-only)
   ];
 
   // ==================== ABILITY 1: SWORD ====================

@@ -141,7 +141,7 @@ class DuelDefinitions {
                 RogueAbilities.gouge];
       case 'windwalker':
         return [WindWalkerAbilities.galeStep, WindWalkerAbilities.zephyrRoll,
-                WindWalkerAbilities.tailwindRetreat, WindWalkerAbilities.sealPalm];
+                WindWalkerAbilities.tempestCharge, WindWalkerAbilities.sealPalm];
       case 'starbreaker':
         return [StarbreakerAbilities.voidStrike, StarbreakerAbilities.soulRend,
                 StarbreakerAbilities.voidFracture];

@@ -280,6 +280,16 @@ mixin _WidgetInitMixin on _GameStateBase {
         scale: Vector3(1, 1, 1),
       );
 
+      // Initialize floating island (100 yards above player start position)
+      final (islandMesh, islandTransform) = FloatingIsland.create();
+      gameState.floatingIslandMesh = islandMesh;
+      gameState.floatingIslandTransform = islandTransform;
+
+      // Initialize tower (rises from island centre)
+      final (towerMesh, towerTransform) = TowerMesh.create();
+      gameState.towerMesh      = towerMesh;
+      gameState.towerTransform = towerTransform;
+
       // Initialize shadow (dark semi-transparent plane under player)
       gameState.shadowMesh = Mesh.plane(
         width: 1.0,

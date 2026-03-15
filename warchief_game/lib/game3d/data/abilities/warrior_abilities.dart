@@ -266,9 +266,21 @@ class WarriorAbilities {
   );
 
   /// All warrior abilities as a list
+  /// Ordered short→long cooldown; slots 11-14 hold the longest cooldowns.
   static List<AbilityData> get all => [
-    shieldBash, whirlwind, charge, taunt, fortify,
-    gauntletJab, ironSweep, rendingChains, warcryUppercut, executionStrike,
-    sunderArmor, ironMomentum, pummel, battlePresence,
+    gauntletJab,      //  1  1.0s  combo starter
+    ironSweep,        //  2  1.0s  combo 2 slow
+    battlePresence,   //  3  5.0s  damage aura
+    shieldBash,       //  4  6.0s  CC stun
+    rendingChains,    //  5  6.0s  combo 3 bleed
+    warcryUppercut,   //  6  7.0s  combo 4 stun + knockback
+    whirlwind,        //  7  8.0s  AoE
+    executionStrike,  //  8 10.0s  combo finisher
+    ironMomentum,     //  9 10.0s  chain combo primer
+    charge,           // 10 10.0s  gap closer knockback
+    sunderArmor,      // 11 12.0s  permanent vulnerability
+    pummel,           // 12 12.0s  interrupt
+    taunt,            // 13 12.0s  CC aggro debuff
+    fortify,          // 14 15.0s  buff shield
   ];
 }

@@ -33,6 +33,7 @@ void _updateCooldowns(double dt, GameState gameState) {
       }
       // Reason: combo chain breaks when GCD window closes with no remaining bonus.
       gameState.comboDepth = 0;
+      gameState.comboStreak = 0;
     }
   }
   for (final ally in gameState.allies) {

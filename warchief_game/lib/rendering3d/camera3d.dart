@@ -6,6 +6,7 @@ import 'math/transform3d.dart';
 enum CameraMode {
   static,       // Static orbit camera
   thirdPerson,  // Third-person over-the-shoulder following camera
+  dungeon,      // Interior dungeon view (steeper pitch, closer zoom)
 }
 
 /// Camera3D - 3D perspective camera with dual-axis rotation
@@ -71,6 +72,14 @@ class Camera3D {
 
   /// Smooth camera interpolation speed
   final double _cameraLerpSpeed = 8.0;
+
+  // ── Dungeon / zone camera lerp targets (null = no active transition) ──────
+  // Reason: nullable so we only override camera state when a transition is in
+  // progress; once the value reaches the target we clear it so manual keys
+  // take full control again.
+  double? _lerpTargetPitch;
+  double? _lerpTargetDistance;
+  double? _lerpTargetFov;
 
   Camera3D({
     Vector3? position,
@@ -347,5 +356,62 @@ class Camera3D {
   /// Set third-person camera pitch angle
   void setThirdPersonPitch(double pitch) {
     _thirdPersonPitch = pitch.clamp(0.0, 60.0);
+  }
+
+  // ==================== DUNGEON CAMERA MODE ====================
+
+  /// Request a smooth transition to dungeon (or outdoor) camera parameters.
+  ///
+  /// Sets lerp targets; [updateCameraLerp] advances them each frame.
+  ///
+  /// Dungeon:  pitch 55°, distance 11, FOV 68°
+  /// Outdoor:  pitch 35°, distance 15, FOV 60°
+  void setDungeonMode(bool isIndoors) {
+    if (isIndoors) {
+      _lerpTargetPitch    = 55.0;
+      _lerpTargetDistance = 11.0;
+      _lerpTargetFov      = 68.0;
+    } else {
+      _lerpTargetPitch    = 35.0;
+      _lerpTargetDistance = 15.0;
+      _lerpTargetFov      = 60.0;
+    }
+  }
+
+  /// Advance active camera lerp targets.  Call once per frame from the update loop.
+  ///
+  /// Lerps pitch, distance, and FOV independently toward their targets using
+  /// the existing [_cameraLerpSpeed]. Clears a target once it converges so
+  /// player key input takes over from that point.
+  void updateCameraLerp(double dt) {
+    final t = math.min(1.0, _cameraLerpSpeed * dt);
+
+    if (_lerpTargetPitch != null) {
+      final cur = transform.rotation.x;
+      final next = cur + (_lerpTargetPitch! - cur) * t;
+      transform.rotation.x = next.clamp(minPitch, maxPitch);
+      if ((transform.rotation.x - _lerpTargetPitch!).abs() < 0.05) {
+        transform.rotation.x = _lerpTargetPitch!;
+        _lerpTargetPitch = null;
+      }
+      if (_target != null) updatePositionFromTarget();
+    }
+
+    if (_lerpTargetDistance != null) {
+      _targetDistance += (_lerpTargetDistance! - _targetDistance) * t;
+      if ((_targetDistance - _lerpTargetDistance!).abs() < 0.05) {
+        _targetDistance     = _lerpTargetDistance!;
+        _lerpTargetDistance = null;
+      }
+      if (_target != null) updatePositionFromTarget();
+    }
+
+    if (_lerpTargetFov != null) {
+      fov += (_lerpTargetFov! - fov) * t;
+      if ((fov - _lerpTargetFov!).abs() < 0.05) {
+        fov            = _lerpTargetFov!;
+        _lerpTargetFov = null;
+      }
+    }
   }
 }

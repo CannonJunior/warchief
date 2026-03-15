@@ -63,11 +63,25 @@ mixin _WidgetInputMixin on _GameStateBase {
       return;
     }
 
-    // Handle M key for minimap toggle (only on key down, not repeat)
+    // Handle M key — 4-state cycle: minimap+map / minimap only / minimap only / hidden
+    // cycle 0 (default): minimap visible, map closed
+    // cycle 1:           minimap + big map overlay
+    // cycle 2:           minimap only (duplicate of 0; next press hides minimap)
+    // cycle 3:           clean screen (both hidden)
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyM) {
-      if (!_isVisible('minimap')) return;
       setState(() {
-        gameState.minimapOpen = !gameState.minimapOpen;
+        gameState.mKeyCycle = (gameState.mKeyCycle + 1) % 4;
+        switch (gameState.mKeyCycle) {
+          case 1:
+            gameState.mapPanelOpen = true;  gameState.minimapOpen = true;  break;
+          case 2:
+            gameState.mapPanelOpen = false; gameState.minimapOpen = true;  break;
+          case 3:
+            gameState.mapPanelOpen = false; gameState.minimapOpen = false; break;
+          case 0:
+          default:
+            gameState.mapPanelOpen = false; gameState.minimapOpen = true;  break;
+        }
       });
       return;
     }
@@ -252,6 +266,13 @@ mixin _WidgetInputMixin on _GameStateBase {
 
     // Handle Escape key to close any open modal/panel or clear target
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+      if (gameState.mapPanelOpen) {
+        setState(() {
+          gameState.mapPanelOpen = false;
+          gameState.mKeyCycle = 0;
+        });
+        return;
+      }
       if (gameState.abilitiesModalOpen) {
         setState(() { gameState.abilitiesModalOpen = false; });
         return;
@@ -505,6 +526,31 @@ mixin _WidgetInputMixin on _GameStateBase {
   @override
   void _activateAbility10() {
     AbilitySystem.handleAbility10Input(true, gameState);
+  }
+
+  @override
+  void _activateAbility11() {
+    AbilitySystem.handleAbility11Input(true, gameState);
+  }
+
+  @override
+  void _activateAbility12() {
+    AbilitySystem.handleAbility12Input(true, gameState);
+  }
+
+  @override
+  void _activateAbility13() {
+    AbilitySystem.handleAbility13Input(true, gameState);
+  }
+
+  @override
+  void _activateAbility14() {
+    AbilitySystem.handleAbility14Input(true, gameState);
+  }
+
+  @override
+  void _activateAbility15() {
+    AbilitySystem.handleAbility15Input(true, gameState);
   }
 
   /// Update the action bar config manager to match the active character

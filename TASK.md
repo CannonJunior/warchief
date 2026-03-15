@@ -4,6 +4,35 @@
 
 ### ✅ Completed - 2026-03-15
 
+#### Fighting Game Combo Redesign — All Melee/Ranged Classes
+- ✅ **Windwalker** (JUGGLER): Added 3 new abilities — `Dragon Ascent` (launcher, stun+knockback), `Aerial Pursuit` (aerial follow-up), `Tempest Crash` (AoE ground slam finisher). Removed 4 redundant abilities (Tailwind Retreat, Wind Affinity, Silent Mind, Windshear). Added `comboPrimes` to all 22 abilities. Full juggle chain: Dragon Ascent → Aerial Pursuit → Tempest Crash.
+- ✅ **Stormheart**: Removed `Spark Jab` (duplicate of Volt Strike). New combo chain: Volt Strike → Arc Punch → Chain Shock → Storm Surge → Thundergod Fist. Added `comboPrimes` to all 19 abilities.
+- ✅ **Spiritkin**: Added 2 new abilities — `Pounce` (gap-closer, slow) and `Savage Tear` (heavy dual-claw finisher with bleed). Combo chain: Pounce → Swipe → Feral Strike → Spirit Bite → Savage Tear. Added `comboPrimes` to all combat abilities.
+- ✅ **Mage**: Added `comboPrimes` to all abilities. Teleport/Counterspell prime melee punish combos. Chain: Arcane Pulse → Rift Blade → Chain Lightning.
+- ✅ **Elemental**: Added `comboPrimes` throughout. Elemental reaction combos: Frostbite Slash (chill) → Magma Strike (fire reaction). Chain: Frostbite Slash → Magma Strike → Flame Wave.
+- ✅ **Necromancer**: Added `comboPrimes` throughout. Chain: Curse of Weakness → Grave Touch → Soul Scythe → Soul Rot → Life Drain. Fear/Null Bolt prime punish windows.
+- ✅ **Nature**: Added `Thornstep` (gap-closer with root, 8-range charge). Combo chain: Thornstep → Briar Lash → Ironwood Smash → Nature's Wrath. Added `comboPrimes` to all combat abilities.
+- ✅ **Starbreaker**: Added `comboPrimes` throughout. Melee stack-build chain: Void Strike → Soul Rend → Entropy Smash → Singularity → Entropy Cascade → Stellar Collapse.
+- ✅ Fixed dead references in `ability_system_windwalker.dart` and `ability_system_dispatch.dart` (removed 4 functions for deleted abilities). Fixed `duel_definitions.dart` to use `tempestCharge` instead of `tailwindRetreat`.
+- ✅ `flutter analyze` — 0 new errors.
+
+#### Giant Tower + World Map Interface
+- ✅ **`lib/game3d/rendering/tower_mesh.dart`** (new, ~165 lines): 7-floor octagonal stone tower. `TowerMesh.create()` → (Mesh, Transform3d). Contains `_addFloorPlatforms`, `_addExteriorWalls`, `_addSpiralRamp` (1/4-turn per floor, 56 steps), `_addBattlements` (alternating merlons). Door opening on face 4 at ground floor. Static getters `centerX`, `centerZ`, `islandBaseY` for zone detection.
+- ✅ **`lib/game3d/state/map_state.dart`** (new, ~65 lines): `MapMode` enum (world/dungeon). `MapState` class with zoomLevel (0-4), selectedFloor, panX/Z, terrainDirty, `worldZoomLevels/Labels/Resolutions`, `zoomIn()`, `zoomOut()`, `pan()`, `resetPan()`.
+- ✅ **`lib/game3d/ui/map/world_map_painter.dart`** (new, ~170 lines): `WorldMapPainter` CustomPainter. Samples `InfiniteTerrainManager.getTerrainHeight()` on a grid; falls back to SimplexNoise for unloaded chunks. Static cache keyed on zoom/pan/chunk-count. Draws player yellow dot.
+- ✅ **`lib/game3d/ui/map/dungeon_map_painter.dart`** (new, ~180 lines): `DungeonMapPainter` CustomPainter. Octagonal floor outlines (active floor filled grey, others faint). Door arrow on ground floor. Up/down stair arrows. Player, ally, enemy dots.
+- ✅ **`lib/game3d/ui/map/map_panel.dart`** (new, ~200 lines): `MapPanel` StatelessWidget. 80% screen centered overlay. Title bar, close button, reset-pan button. Floor selector (1-7 buttons) in dungeon mode. Drag-to-pan in world mode. Zoom bar (−/label/+) in world mode. Auto-switches mode based on `gameState.isIndoors`.
+- ✅ **`lib/game3d/state/game_state.dart`**: Added `towerMesh`, `towerTransform`, `isIndoors`, `currentFloor`, `currentZoneName`, `mapPanelOpen`, `mKeyCycle`, `mapState` fields. Imports `map_state.dart`.
+- ✅ **`lib/rendering3d/camera3d.dart`**: Added `CameraMode.dungeon` enum value. Added `_lerpTargetPitch/Distance/Fov` nullable fields. Added `setDungeonMode(bool)` (sets outdoor 35°/15/60° or dungeon 55°/11/68° targets). Added `updateCameraLerp(dt)` (lerps each target using `_cameraLerpSpeed = 8.0`).
+- ✅ **`lib/game3d/game3d_widget_init.dart`**: Initializes tower mesh after floating island.
+- ✅ **`lib/game3d/systems/render_system.dart`**: Renders tower mesh after floating island.
+- ✅ **`lib/game3d/game3d_widget_input.dart`**: M key replaced with 4-state cycle (mKeyCycle 0-3 → minimap+map open states). Escape closes mapPanelOpen first.
+- ✅ **`lib/game3d/game3d_widget_update.dart`**: Calls `camera.updateCameraLerp(dt)` each frame. `_updateTowerZone()` detects XZ+Y tower threshold → sets `isIndoors`, `currentFloor`, `currentZoneName`, triggers `camera.setDungeonMode()`.
+- ✅ **`lib/game3d/game3d_widget_ui.dart`**: Added `MapPanel` to stack (shown when `mapPanelOpen`). Minimap unchanged (still `minimapOpen && _isVisible('minimap')`).
+- ✅ **`lib/models/game_action.dart`**: `cameraPitchDown` rebound from `keyM` → `comma`.
+- ✅ **`lib/game3d/ui/settings/interface_config.dart`**: Minimap `shortcutKey` → `''`. Added `map_panel` entry with `shortcutKey: 'M'`.
+- ✅ Build verified: `flutter analyze --no-pub` — 0 new errors/warnings (3 pre-existing warnings unchanged).
+
 #### Class Self-Buffs, Party Buffs, and Aura System
 - ✅ **`ability_types.dart`**: Added `isAura` (bool), `auraRange` (double, default 10.0), `isPartyBuff` (bool) to `AbilityData` with full serialization (constructor, copyWith, toJson, fromJson, applyOverrides).
 - ✅ **`active_effect.dart`**: Fixed `isDoT` to use `damagePerTick.abs() > 0` so HoT (healing-over-time with negative damagePerTick) also ticks.

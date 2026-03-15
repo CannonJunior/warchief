@@ -1,14 +1,17 @@
 import 'package:vector_math/vector_math.dart';
 import 'ability_types.dart';
 
-/// Elemental abilities - Advanced elemental attacks
+/// Elemental abilities — Elemental reaction combos: ice→fire, freeze→smash.
+///
+/// Combo chain: Frostbite Slash (chill) → Magma Strike (fire reaction) → Flame Wave.
+/// Earthquake sets up ground-slam follow-ups. Magnetic Disrupt opens punish windows.
 class ElementalAbilities {
   ElementalAbilities._();
 
-  /// Ice Lance - Piercing ice projectile
+  /// Ice Lance — Piercing ice projectile.
   static final iceLance = AbilityData(
     name: 'Ice Lance',
-    description: 'Sharp ice projectile that pierces through enemies',
+    description: 'Sharp ice projectile that pierces through enemies.',
     type: AbilityType.ranged,
     damage: 18.0,
     cooldown: 3.0,
@@ -22,12 +25,13 @@ class ElementalAbilities {
     maxTargets: 3,
     category: 'elemental',
     damageSchool: DamageSchool.frost,
+    comboPrimes: ['Frostbite Slash', 'Earthquake'],
   );
 
-  /// Flame Wave - Line AoE fire attack
+  /// Flame Wave — Line AoE fire attack.
   static final flameWave = AbilityData(
     name: 'Flame Wave',
-    description: 'Sends a wave of fire in a line',
+    description: 'Sends a wave of fire in a line.',
     type: AbilityType.aoe,
     damage: 30.0,
     cooldown: 7.0,
@@ -41,12 +45,13 @@ class ElementalAbilities {
     statusDuration: 2.0,
     category: 'elemental',
     damageSchool: DamageSchool.fire,
+    comboPrimes: ['Ice Lance', 'Earthquake'],
   );
 
-  /// Earthquake - Ground AoE with stun
+  /// Earthquake — Channeled ground AoE with periodic stun.
   static final earthquake = AbilityData(
     name: 'Earthquake',
-    description: 'Shakes the ground, damaging and stunning enemies',
+    description: 'Shakes the ground, damaging and stunning enemies.',
     type: AbilityType.channeled,
     damage: 15.0,
     cooldown: 25.0,
@@ -63,14 +68,16 @@ class ElementalAbilities {
     channelEffect: ChannelEffect.earthquake,
     category: 'elemental',
     damageSchool: DamageSchool.nature,
+    comboPrimes: ['Magma Strike', 'Flame Wave'],
   );
 
   // ==================== MELEE ABILITIES ====================
 
-  /// Frostbite Slash — Ice-enchanted blade that slows
+  /// Frostbite Slash — Ice-enchanted blade that slows. Combo opener.
   static final frostbiteSlash = AbilityData(
     name: 'Frostbite Slash',
-    description: 'Slash with an ice-enchanted blade, chilling the target',
+    description: 'Slash with an ice-enchanted blade, chilling the target. '
+        'Chilled targets take bonus damage from Magma Strike (ice-fire reaction).',
     type: AbilityType.melee,
     damage: 18.0,
     cooldown: 1.0,
@@ -82,12 +89,14 @@ class ElementalAbilities {
     statusDuration: 2.0,
     category: 'elemental',
     damageSchool: DamageSchool.frost,
+    comboPrimes: ['Magma Strike', 'Ice Lance'],
   );
 
-  /// Magma Strike — Molten fist slam with burn
+  /// Magma Strike — Molten fist slam. Deals bonus damage to chilled targets.
   static final magmaStrike = AbilityData(
     name: 'Magma Strike',
-    description: 'Slam with a molten fist, searing the target with lingering flames',
+    description: 'Slam with a molten fist, searing the target with lingering flames. '
+        'Deals amplified damage to chilled targets (ice-fire reaction).',
     type: AbilityType.melee,
     damage: 28.0,
     cooldown: 7.0,
@@ -99,9 +108,10 @@ class ElementalAbilities {
     statusDuration: 3.0,
     category: 'elemental',
     damageSchool: DamageSchool.fire,
+    comboPrimes: ['Flame Wave', 'Elemental Chain'],
   );
 
-  /// Elemental Rend — Fiery strike that permanently exposes target
+  /// Elemental Rend — Fiery strike that permanently exposes target.
   static final elementalRend = AbilityData(
     name: 'Elemental Rend',
     description: 'A fiery strike that permanently exposes the target to fire damage.',
@@ -115,15 +125,15 @@ class ElementalAbilities {
     category: 'elemental',
     damageSchool: DamageSchool.fire,
     appliesPermanentVulnerability: true,
+    comboPrimes: ['Flame Wave', 'Magma Strike'],
   );
 
   // ==================== INTERRUPT ====================
 
-  /// Magnetic Disrupt — Focused electromagnetic pulse that disrupts spellcasting
-  /// Cooldown tunable (default 22 s, range 15–30 s) via ability overrides.
+  /// Magnetic Disrupt — Electromagnetic pulse interrupt.
   static final magneticDisrupt = AbilityData(
     name: 'Magnetic Disrupt',
-    description: 'Fire a focused electromagnetic pulse that scrambles the target\'s magical pathways, interrupting their spellcasting for 3 seconds',
+    description: 'Fire a focused electromagnetic pulse that interrupts the target\'s spellcasting for 3 seconds.',
     type: AbilityType.ranged,
     damage: 16.0,
     cooldown: 22.0,
@@ -139,12 +149,12 @@ class ElementalAbilities {
     manaCost: 20.0,
     damageSchool: DamageSchool.lightning,
     category: 'elemental',
+    comboPrimes: ['Frostbite Slash', 'Ice Lance'],
   );
 
   // ==================== CHAIN COMBO PRIMER ====================
 
-  /// Elemental Chain — Activates chain-combo mode for elementals.
-  /// Land 7 consecutive elemental strikes within 7 seconds to fire the chain combo.
+  /// Elemental Chain — Activates chain-combo mode.
   static final elementalChain = AbilityData(
     name: 'Elemental Chain',
     description: 'Chain elemental forces through your blows — activate chain-combo mode. '
@@ -161,13 +171,13 @@ class ElementalAbilities {
     damageSchool: DamageSchool.fire,
     category: 'elemental',
     enablesComboChain: true,
+    comboPrimes: ['Magma Strike', 'Frostbite Slash'],
   );
 
-  /// Elemental Attunement — Elemental self-buff channeling elemental forces into damage
+  /// Elemental Attunement — Aura channeling elemental forces into damage.
   static final elementalAttunement = AbilityData(
     name: 'Elemental Attunement',
-    description: 'Attune to the raw elemental forces within you, channeling '
-        'their power to amplify all your attacks.',
+    description: 'Attune to the raw elemental forces within you, channeling their power to amplify all your attacks.',
     type: AbilityType.buff,
     cooldown: 5.0,
     duration: 3600.0,
@@ -181,10 +191,17 @@ class ElementalAbilities {
     category: 'elemental',
   );
 
-  /// All elemental abilities as a list
+  /// All elemental abilities as a list.
+  /// Ordered short→long cooldown; slots 7-9 hold the longest cooldowns.
   static List<AbilityData> get all => [
-    iceLance, flameWave, earthquake,
-    frostbiteSlash, magmaStrike, elementalRend, elementalChain, magneticDisrupt,
-    elementalAttunement,
+    frostbiteSlash,      //  1  1.0s  combo opener chill
+    iceLance,            //  2  3.0s  ranged piercing
+    elementalAttunement, //  3  5.0s  damage aura
+    flameWave,           //  4  7.0s  AoE fire line
+    magmaStrike,         //  5  7.0s  melee fire reaction
+    elementalChain,      //  6 10.0s  chain combo primer
+    elementalRend,       //  7 12.0s  permanent vulnerability
+    magneticDisrupt,     //  8 22.0s  interrupt ranged
+    earthquake,          //  9 25.0s  channeled AoE stun CC
   ];
 }

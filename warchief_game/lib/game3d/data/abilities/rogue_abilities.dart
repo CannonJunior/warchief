@@ -262,9 +262,21 @@ class RogueAbilities {
   );
 
   /// All rogue abilities as a list
+  /// Ordered short→long cooldown; slots 11-14 hold the longest cooldowns.
   static List<AbilityData> get all => [
-    backstab, poisonBlade, smokeBomb, fanOfKnives, shadowStep,
-    shiv, shadowfangRake, shadowSpike, umbralLunge, deathMark,
-    exposeWeakness, shadowChain, gouge, shadowForm,
+    shiv,           //  1  1.0s  combo starter free
+    shadowfangRake, //  2  1.0s  combo 2 bleed
+    shadowForm,     //  3  5.0s  buff haste
+    shadowSpike,    //  4  5.0s  combo 3 piercing
+    backstab,       //  5  6.0s  high dmg from behind
+    umbralLunge,    //  6  6.0s  combo 4 gap closer
+    poisonBlade,    //  7  8.0s  DoT poison
+    deathMark,      //  8  8.0s  combo finisher weakness
+    shadowChain,    //  9 10.0s  chain combo primer
+    gouge,          // 10 10.0s  interrupt
+    fanOfKnives,    // 11 10.0s  AoE
+    exposeWeakness, // 12 12.0s  permanent vulnerability
+    smokeBomb,      // 13 18.0s  CC blind AoE
+    shadowStep,     // 14 20.0s  teleport behind target
   ];
 }

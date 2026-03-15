@@ -318,6 +318,11 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
     gameState.comboDepth = _wasComboFired
         ? (gameState.comboDepth + 1).clamp(0, 2)
         : 0;
+    // Reason: streak=1 marks any single ability fire as a chain seed;
+    // subsequent combo fires increment it so the UI shows "x2 COMBO", "x3 COMBO", etc.
+    gameState.comboStreak = _wasComboFired
+        ? gameState.comboStreak + 1
+        : 1;
   }
 
   // Apply combo GCD bonuses to primed follow-up slots.
@@ -396,7 +401,6 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
     // Wind Walker
     case 'Gale Step': _executeGaleStep(slotIndex, gameState); break;
     case 'Zephyr Roll': _executeZephyrRoll(slotIndex, gameState); break;
-    case 'Tailwind Retreat': _executeTailwindRetreat(slotIndex, gameState); break;
     case 'Flying Serpent Strike': _executeFlyingSerpentStrike(slotIndex, gameState); break;
     case 'Take Flight': _executeTakeFlight(slotIndex, gameState); break;
     case 'Cyclone Dive': _executeCycloneDive(slotIndex, gameState); break;
@@ -404,9 +408,6 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
     case 'Tempest Charge': _executeTempestCharge(slotIndex, gameState); break;
     case 'Healing Gale': _executeHealingGale(slotIndex, gameState); break;
     case 'Sovereign of the Sky': _executeSovereignOfTheSky(slotIndex, gameState); break;
-    case 'Wind Affinity': _executeWindAffinity(slotIndex, gameState); break;
-    case 'Silent Mind': _executeSilentMind(slotIndex, gameState); break;
-    case 'Windshear': _executeWindshear(slotIndex, gameState); break;
     case 'Wind Warp': _executeWindWarp(slotIndex, gameState); break;
 
     // ==================== CLASS LONG BUFFS ====================

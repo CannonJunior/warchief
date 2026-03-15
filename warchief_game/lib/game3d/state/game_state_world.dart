@@ -170,6 +170,52 @@ extension GameStateWorldExt on GameState {
     return nearest;
   }
 
+  // ==================== GROUND HEIGHT ====================
+
+  /// Effective ground height at (x, z) for a unit currently near [playerY].
+  ///
+  /// Returns the highest solid surface below [playerY] from:
+  ///   1. Base infinite terrain
+  ///   2. Floating island top surface (hill noise)
+  ///   3. Tower floor platforms
+  ///   4. Tower exterior ramp
+  ///   5. Tops of placed buildings (walkable rooftops / inside floors)
+  ///
+  /// Used by [PhysicsSystem] for ground collision and by building placement
+  /// to site structures at the correct elevation.
+  double getEffectiveGroundHeight(double x, double z, {double playerY = 1000.0}) {
+    // 1. Base terrain
+    double ground = infiniteTerrainManager?.getTerrainHeight(x, z) ?? groundLevel;
+
+    // 2. Floating island surface — only use if player is already near or above it,
+    // so entities on normal terrain (y≈0.5) are not snapped up to island (y≈104).
+    final islandY = FloatingIsland.surfaceHeightAt(x, z);
+    if (islandY != null && islandY <= playerY + 0.5) ground = math.max(ground, islandY);
+
+    // 3. Tower floors (interior platforms)
+    final towerFloor = TowerMesh.floorGroundAt(x, z, playerY);
+    if (towerFloor != null) ground = math.max(ground, towerFloor);
+
+    // 4. Tower exterior ramp
+    final rampY = TowerMesh.rampGroundAt(x, z, playerY);
+    if (rampY != null) ground = math.max(ground, rampY);
+
+    // 5. Building collision (wall-top height within footprint radius)
+    for (final building in buildings) {
+      if (!building.isPlaced) continue;
+      final bx = building.transform.position.x;
+      final bz = building.transform.position.z;
+      final dx = x - bx;
+      final dz = z - bz;
+      if (dx * dx + dz * dz <= building.footprintRadius * building.footprintRadius) {
+        final bTop = building.wallTopY;
+        if (bTop <= playerY + 0.5) ground = math.max(ground, bTop);
+      }
+    }
+
+    return ground;
+  }
+
   /// Spawn the warchief's home at a fixed position near player start.
   ///
   /// Only spawns once — skips if a warchief_home already exists.
@@ -213,10 +259,11 @@ extension GameStateWorldExt on GameState {
     // Uses BuildingSystem.placeBuilding from systems layer
     final tierDef = definition.getTier(tier);
     final mesh = _createBuildingMeshFromTier(tierDef);
-    double y = 0.0;
-    if (terrainManager != null) {
-      y = terrainManager.getTerrainHeight(worldX, worldZ);
-    }
+    // Reason: use raw terrain height for initial placement so buildings on the
+    // main terrain spawn at ground level (~0-3 units), not the floating island
+    // surface (~104 units). The effective ground height would snap them up to
+    // the island since playerY defaults to 1000 (above everything).
+    final y = terrainManager?.getTerrainHeight(worldX, worldZ) ?? groundLevel;
     final transform = Transform3d(
       position: Vector3(worldX, y, worldZ),
     );

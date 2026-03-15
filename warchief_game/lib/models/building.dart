@@ -146,6 +146,27 @@ class Building {
   /// Current tier definition (shorthand).
   BuildingTierDef get tierDef => definition.getTier(currentTier);
 
+  /// XZ half-diagonal of the building footprint, used for physics collision.
+  ///
+  /// Derived from the foundation width/depth so it matches the actual mesh.
+  double get footprintRadius {
+    final f = tierDef.getPart('foundation');
+    final w = (f?['width']  as num?)?.toDouble() ?? 6.0;
+    final d = (f?['depth']  as num?)?.toDouble() ?? 8.0;
+    return math.sqrt(w * w + d * d) / 2.0;
+  }
+
+  /// World-Y of the building's walkable roof (top of walls).
+  ///
+  /// Units can stand on this surface; it is also used as the floor-collision
+  /// reference so a player standing inside the building is not pushed up.
+  double get wallTopY {
+    final t = tierDef;
+    final fH = (t.getPart('foundation')?['height'] as num?)?.toDouble() ?? 0.3;
+    final wH = (t.getPart('walls')?['height']      as num?)?.toDouble() ?? 3.0;
+    return transform.position.y + fH + wH;
+  }
+
   /// Aura radius for the current tier.
   double get auraRadius => tierDef.auraRadius;
 

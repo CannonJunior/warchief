@@ -78,6 +78,7 @@ mixin _WidgetUIMixin on _GameStateBase {
               )).toList(growable: false),
               camera: camera,
               unitPosition: gameState.activeTransform?.position,
+              comboStreak: gameState.comboStreak,
             ),
 
             // World-space CC status indicators (persistent badges above affected units)
@@ -111,7 +112,7 @@ mixin _WidgetUIMixin on _GameStateBase {
             // Stance visual effects (Drunken pulse, Fury vignette)
             StanceEffectsOverlay(gameState: gameState),
 
-            // Minimap (draggable, replaces standalone WindIndicator)
+            // Minimap (draggable; visibility driven by M key cycle)
             if (gameState.minimapOpen && _isVisible('minimap'))
               _draggable('minimap',
                 MinimapWidget(
@@ -121,6 +122,16 @@ mixin _WidgetUIMixin on _GameStateBase {
                   onPingCreated: _handleMinimapPing,
                 ),
                 width: 180, height: 200,
+              ),
+
+            // World Map / Tower floor-plan overlay (M key cycle state 1)
+            if (gameState.mapPanelOpen)
+              MapPanel(
+                gameState: gameState,
+                onClose: () => setState(() {
+                  gameState.mapPanelOpen = false;
+                  gameState.mKeyCycle = 0;
+                }),
               ),
 
             // Stance selector (left side, vertically centered)

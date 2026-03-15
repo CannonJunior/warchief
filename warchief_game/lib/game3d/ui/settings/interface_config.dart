@@ -231,17 +231,30 @@ class InterfaceConfigManager {
       defaultPosition: const Offset(0, 0),
     );
 
-    // Minimap (fixed top-right, Press M to toggle)
+    // Minimap (fixed top-right; visibility controlled by M key cycle)
     _interfaces['minimap'] = InterfaceConfig(
       id: 'minimap',
       name: 'Minimap',
       description: 'Overhead terrain map with entity tracking',
       icon: Icons.map,
       category: 'ui_panels',
-      shortcutKey: 'M',
+      shortcutKey: '',
       isVisible: true,
       position: const Offset(1410, 8),
       defaultPosition: const Offset(1410, 8),
+    );
+
+    // World Map overlay (M key cycles through minimap/map/hidden states)
+    _interfaces['map_panel'] = InterfaceConfig(
+      id: 'map_panel',
+      name: 'World Map',
+      description: 'Full-screen world terrain and dungeon floor plan',
+      icon: Icons.public,
+      category: 'ui_panels',
+      shortcutKey: 'M',
+      isVisible: true,
+      position: const Offset(0, 0),
+      defaultPosition: const Offset(0, 0),
     );
 
     // DPS Panel (Press SHIFT+D to toggle)

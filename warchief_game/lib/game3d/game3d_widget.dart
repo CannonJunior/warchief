@@ -99,6 +99,9 @@ import 'ai/warrior_spirit.dart';
 import 'effects/aura_system.dart';
 import 'rendering/equipment_renderer.dart'
     show EquipmentVisualConfig, globalEquipmentVisualConfig;
+import 'rendering/floating_island.dart';
+import 'rendering/tower_mesh.dart';
+import 'ui/map/map_panel.dart';
 // Note: WindIndicator replaced by minimap border wind arrow
 
 part 'game3d_widget_init.dart';
@@ -205,6 +208,11 @@ abstract class _GameStateBase extends State<Game3D> {
   void _activateAbility8();
   void _activateAbility9();
   void _activateAbility10();
+  void _activateAbility11();
+  void _activateAbility12();
+  void _activateAbility13();
+  void _activateAbility14();
+  void _activateAbility15();
   void _handleAbilityDropped(int slotIndex, String abilityName);
   void _handleClassLoaded(String category);
 

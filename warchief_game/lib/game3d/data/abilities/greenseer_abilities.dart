@@ -335,24 +335,24 @@ class GreenseerAbilities {
     auraRange: 10.0,
   );
 
-  /// All greenseer abilities as a list
+  /// All greenseer abilities as a list.
+  /// Ordered short→long cooldown; slots 11-15 hold the longest cooldowns.
+  /// Cut: barkFist (redundant basic), verdantCurse (perm vuln not core to healer).
   static List<AbilityData> get all => [
-    lifeThread,
-    spiritBloom,
-    verdantEmbrace,
-    soulShield,
-    naturesGrace,
-    etherealForm,
-    cleansingRain,
-    rejuvenatingRoots,
-    harmony,
-    awakening,
-    lifebloomTouch,
-    thornguardStrike,
-    thornLash,
-    barkFist,
-    verdantCurse,
-    earthBond,
-    livingWeb,
+    thornLash,         //  1  1.0s  free basic melee
+    lifebloomTouch,    //  2  3.0s  melee self-heal
+    lifeThread,        //  3  4.0s  single-target heal
+    thornguardStrike,  //  4  5.0s  melee poison
+    livingWeb,         //  5  5.0s  regen aura
+    rejuvenatingRoots, //  6  6.0s  HoT zone
+    verdantEmbrace,    //  7  8.0s  HoT
+    naturesGrace,      //  8 10.0s  +40% healing received buff
+    earthBond,         //  9 10.0s  chain combo primer
+    spiritBloom,       // 10 12.0s  AoE heal
+    cleansingRain,     // 11 15.0s  AoE debuff cleanse
+    harmony,           // 12 20.0s  damage-split link
+    awakening,         // 13 25.0s  big single-target heal
+    soulShield,        // 14 30.0s  large absorb shield
+    etherealForm,      // 15 120.0s ultimate transform
   ];
 }

@@ -368,6 +368,10 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
   final Camera3D? camera;
   final Vector3? unitPosition;
 
+  /// Number of consecutive abilities fired in an active combo window.
+  /// Displayed as "x{n} COMBO" above the queue when ≥ 2.
+  final int comboStreak;
+
   const QueuedAbilityLabelOverlay({
     super.key,
     required this.executingLabel,
@@ -375,6 +379,7 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
     required this.queuedEntries,
     required this.camera,
     required this.unitPosition,
+    this.comboStreak = 0,
   });
 
   // Reason: wide enough that a full queue (5 long names) fits on one line
@@ -385,7 +390,7 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (camera == null || unitPosition == null) return const SizedBox.shrink();
-    if (queuedEntries.isEmpty && exitingLabels.isEmpty && executingLabel == null) {
+    if (queuedEntries.isEmpty && exitingLabels.isEmpty && executingLabel == null && comboStreak < 2) {
       return const SizedBox.shrink();
     }
 
@@ -408,6 +413,11 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
 
     final children = <Widget>[];
 
+    // Combo tracker — displayed above the queue line when a chain is active.
+    if (comboStreak >= 2) {
+      children.add(_buildComboTracker(comboStreak, x, y));
+    }
+
     if (queuedEntries.isNotEmpty || exitingLabels.isNotEmpty) {
       children.add(_buildQueueText(queuedEntries, exitingLabels, x, y));
     }
@@ -429,6 +439,45 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
 
     return SizedBox.expand(
       child: Stack(clipBehavior: Clip.none, children: children),
+    );
+  }
+
+  /// Renders "x{n} COMBO" in gold above the queue line while a combo chain
+  /// is active (streak ≥ 2).  Positioned [_comboTrackerOffset]px above the
+  /// queue baseline so the two labels never overlap.
+  static const double _comboTrackerOffset = 30.0;
+  static const double _comboFontSize = 20.0;
+
+  Widget _buildComboTracker(int streak, double x, double y) {
+    final s          = globalGameplaySettings;
+    final fontFamily = (s?.queueFontFamily ?? 'Bangers') == 'Default'
+        ? null
+        : (s?.queueFontFamily ?? 'Bangers');
+
+    return Positioned(
+      left: x - _width,
+      top:  y - _comboTrackerOffset,
+      child: IgnorePointer(
+        child: SizedBox(
+          width: _width,
+          child: Text(
+            'x$streak COMBO',
+            textAlign: TextAlign.right,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.visible,
+            style: TextStyle(
+              fontFamily:  fontFamily,
+              fontSize:    _comboFontSize,
+              fontWeight:  FontWeight.bold,
+              color:       const Color(0xFFFFAA00),
+              shadows: const [
+                Shadow(color: Colors.black, blurRadius: 3, offset: Offset(1, 1)),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
