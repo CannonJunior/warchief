@@ -397,6 +397,26 @@ class WindWalkerAbilities {
     damageSchool: DamageSchool.physical,
   );
 
+  /// Gale Stride — Windwalker aura granting haste to nearby allies
+  static final galeStride = AbilityData(
+    name: 'Gale Stride',
+    description: 'The windwalker becomes a living vortex of wind energy, '
+        'granting all nearby allies the speed of gale-force winds.',
+    type: AbilityType.buff,
+    cooldown: 5.0,
+    duration: 3600.0,
+    color: Vector3(0.9, 0.95, 1.0),
+    impactColor: Vector3(1.0, 1.0, 1.0),
+    impactSize: 1.4,
+    statusEffect: StatusEffect.haste,
+    statusStrength: 0.20,
+    manaColor: ManaColor.white,
+    manaCost: 30.0,
+    category: 'windwalker',
+    isAura: true,
+    auraRange: 10.0,
+  );
+
   /// All Wind Walker abilities as a list
   static List<AbilityData> get all => [
     galeStep,
@@ -421,5 +441,6 @@ class WindWalkerAbilities {
     pressurePoint,
     galeFury,
     sealPalm,
+    galeStride,
   ];
 }

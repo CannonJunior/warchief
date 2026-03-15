@@ -448,45 +448,33 @@ class MeleeComboSystem {
     String effect,
   ) {
     final label = _effectLabel(effect);
-    gameState.combatLogMessages.add(CombatLogEntry(
+    gameState.addCombatLog(CombatLogEntry(
       source: 'Combo',
       action: '$category combo: $label',
       type: CombatLogType.damage,
       amount: 0,
       target: 'Self',
     ));
-    if (gameState.combatLogMessages.length > 250) {
-      gameState.combatLogMessages
-          .removeRange(0, gameState.combatLogMessages.length - 200);
-    }
   }
 
   static void _logChainActivated(GameState gameState, String category) {
-    gameState.combatLogMessages.add(CombatLogEntry(
+    gameState.addCombatLog(CombatLogEntry(
       source: 'Chain',
       action: '$category chain primed — land 7 hits!',
       type: CombatLogType.damage,
       amount: 0,
       target: 'Self',
     ));
-    if (gameState.combatLogMessages.length > 250) {
-      gameState.combatLogMessages
-          .removeRange(0, gameState.combatLogMessages.length - 200);
-    }
   }
 
   static void _logChainTrigger(GameState gameState, String category) {
-    gameState.combatLogMessages.add(CombatLogEntry(
+    gameState.addCombatLog(CombatLogEntry(
       source: 'Chain',
       action: '$category CHAIN COMBO!',
       type: CombatLogType.damage,
       amount: 0,
       target: 'Self',
     ));
-    if (gameState.combatLogMessages.length > 250) {
-      gameState.combatLogMessages
-          .removeRange(0, gameState.combatLogMessages.length - 200);
-    }
   }
 
   static String _effectLabel(String effect) {

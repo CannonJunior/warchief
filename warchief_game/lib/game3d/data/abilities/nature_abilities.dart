@@ -154,9 +154,29 @@ class NatureAbilities {
     enablesComboChain: true,
   );
 
+  /// Nature's Resilience — Nature self-buff granting health regeneration
+  static final naturesResilience = AbilityData(
+    name: 'Nature\'s Resilience',
+    description: 'Draw upon the eternal regenerative power of nature, '
+        'sustaining your health over time.',
+    type: AbilityType.buff,
+    cooldown: 5.0,
+    duration: 3600.0,
+    color: Vector3(0.3, 0.8, 0.3),
+    impactColor: Vector3(0.4, 0.9, 0.4),
+    impactSize: 1.2,
+    statusEffect: StatusEffect.regen,
+    statusStrength: 3.0,
+    manaColor: ManaColor.green,
+    manaCost: 25.0,
+    category: 'nature',
+    damageSchool: DamageSchool.nature,
+  );
+
   /// All nature abilities as a list
   static List<AbilityData> get all => [
     entanglingRoots, thorns, naturesWrath,
     briarLash, ironwoodSmash, thornbindMark, ancientSurge, silencingVine,
+    naturesResilience,
   ];
 }

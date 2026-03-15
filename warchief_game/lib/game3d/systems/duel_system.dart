@@ -179,6 +179,12 @@ class DuelSystem {
       if (manager.combatantComboWindows[i] > 0) {
         manager.combatantComboWindows[i] =
             (manager.combatantComboWindows[i] - dt).clamp(0.0, double.infinity);
+        // Reason: clear primed set when window expires so the AI does not
+        // permanently prefer stale combo follow-ups after the window closes.
+        if (manager.combatantComboWindows[i] <= 0 &&
+            i < manager.combatantPrimedAbilities.length) {
+          manager.combatantPrimedAbilities[i].clear();
+        }
       }
       // Hard CC (stun / root / fear / silence).
       if (manager.combatantCcRemaining[i] > 0) {
@@ -305,6 +311,19 @@ class DuelSystem {
     // Reason: combo primers bypass GCD and open a window for follow-up abilities.
     final gcdActive     = combatantIdx < manager.combatantGcds.length && manager.combatantGcds[combatantIdx] > 0;
     final inComboWindow = combatantIdx < manager.combatantComboWindows.length && manager.combatantComboWindows[combatantIdx] > 0;
+    // Reason: read primed ability names so both greedy and priority strategies
+    // can preferentially fire combo follow-ups during the open window.
+    final primedAbilities = combatantIdx < manager.combatantPrimedAbilities.length
+        ? manager.combatantPrimedAbilities[combatantIdx]
+        : const <String>{};
+
+    // ── Distance to primary target (needed for range checks below) ────────────
+    // Reason: computed once here rather than once per ability candidate in the
+    // selection loops to avoid redundant sqrt calls every frame.
+    final tdx = target.transform.position.x - self.transform.position.x;
+    final tdz = target.transform.position.z - self.transform.position.z;
+    final distToTarget = math.sqrt(tdx * tdx + tdz * tdz);
+
     // ── Ability selection ─────────────────────────────────────────────────────
     int? chosenIdx;
     // Reason: interrupt lockout prevents casting spell-type abilities (ranged /
@@ -313,24 +332,42 @@ class DuelSystem {
     final interrupted = manager.isInterrupted(combatantIdx);
 
     if (effectiveStrategy == DuelStrategy.balanced) {
-      // Greedy: first usable ability in list order (original behaviour)
-      for (int i = 0; i < abilities.length; i++) {
-        if (!_abilityReady(self, abilities[i], i)) continue;
-        // Skip non-exempt abilities while GCD is active
-        if (gcdActive && !abilities[i].enablesComboChain && !inComboWindow) continue;
-        // Skip spell-type abilities while interrupt-locked
-        if (interrupted && _isSpellAbility(abilities[i])) continue;
-        chosenIdx = i;
-        break;
+      // Greedy: during combo window try primed follow-ups first, then fallback
+      // to normal list-order selection.
+      if (inComboWindow && primedAbilities.isNotEmpty) {
+        for (int i = 0; i < abilities.length; i++) {
+          if (!primedAbilities.contains(abilities[i].name)) continue;
+          if (!_abilityReady(self, abilities[i], i)) continue;
+          if (!_abilityInRange(abilities[i], distToTarget)) continue;
+          if (interrupted && _isSpellAbility(abilities[i])) continue;
+          chosenIdx = i;
+          break;
+        }
+      }
+      if (chosenIdx == null) {
+        // Standard greedy: first usable ability in list order.
+        for (int i = 0; i < abilities.length; i++) {
+          if (!_abilityReady(self, abilities[i], i)) continue;
+          if (!_abilityInRange(abilities[i], distToTarget)) continue;
+          // Skip non-exempt abilities while GCD is active
+          if (gcdActive && !abilities[i].enablesComboChain && !inComboWindow) continue;
+          // Skip spell-type abilities while interrupt-locked
+          if (interrupted && _isSpellAbility(abilities[i])) continue;
+          chosenIdx = i;
+          break;
+        }
       }
     } else {
-      // Priority-scored: highest-scoring usable ability wins
+      // Priority-scored: highest-scoring usable ability wins;
+      // primed follow-ups receive a large bonus when the combo window is open.
       int bestScore = -1;
       for (int i = 0; i < abilities.length; i++) {
         if (!_abilityReady(self, abilities[i], i)) continue;
+        if (!_abilityInRange(abilities[i], distToTarget)) continue;
         if (gcdActive && !abilities[i].enablesComboChain && !inComboWindow) continue;
         if (interrupted && _isSpellAbility(abilities[i])) continue;
-        final score = _abilityPriority(abilities[i], effectiveStrategy, self);
+        final score = _abilityPriority(abilities[i], effectiveStrategy, self,
+            primedNames: primedAbilities);
         if (score > bestScore) {
           bestScore = score;
           chosenIdx = i;
@@ -379,6 +416,20 @@ class DuelSystem {
       final gcdDur = globalDuelConfig?.gcdSeconds ?? 1.0;
       if (combatantIdx < manager.combatantGcds.length) {
         manager.combatantGcds[combatantIdx] = gcdDur;
+      }
+    }
+
+    // ── Track combo-primed follow-ups for AI awareness ────────────────────────
+    // Reason: when an ability lists comboPrimes, the AI should prefer those
+    // named follow-ups during the open combo window, just as a skilled player
+    // would deliberately chain them.
+    if (combatantIdx < manager.combatantPrimedAbilities.length) {
+      if (ability.comboPrimes.isNotEmpty) {
+        manager.combatantPrimedAbilities[combatantIdx] =
+            Set<String>.from(ability.comboPrimes);
+      } else if (!ability.enablesComboChain) {
+        // Non-combo ability fired outside a chain — clear primed state.
+        manager.combatantPrimedAbilities[combatantIdx].clear();
       }
     }
 

@@ -120,13 +120,10 @@ void _applyLifesteal(GameState gameState, double damage) {
   gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + heal);
   final healed = gameState.activeHealth - oldHealth;
   if (healed > 0) {
-    gameState.combatLogMessages.add(CombatLogEntry(
+    gameState.addCombatLog(CombatLogEntry(
       source: 'Player', action: 'Lifesteal', type: CombatLogType.heal,
       amount: healed, target: 'Player',
     ));
-    if (gameState.combatLogMessages.length > 250) {
-      gameState.combatLogMessages.removeRange(0, gameState.combatLogMessages.length - 200);
-    }
     _showHealIndicator(gameState, healed, gameState.activeTransform?.position);
   }
 }
@@ -175,6 +172,18 @@ void _applyDashEffects(GameState gameState, AbilityData dashConfig) {
 
 // ==================== GENERIC ABILITY EXECUTORS ====================
 
+/// Returns the strength multiplier from active buffs on the active character.
+double _activeStrengthMult(GameState gameState) {
+  double mult = 1.0;
+  for (final e in gameState.activeCharacterActiveEffects) {
+    if (e.type == StatusEffect.strength && !e.isExpired) {
+      // Reason: apply active strength buffs (from auras, self-buffs, party buffs) to outgoing damage
+      mult += e.strength.clamp(0.0, 1.0);
+    }
+  }
+  return mult;
+}
+
 /// Generic melee attack — gap-closer if range >= [_gapCloserRangeThreshold].
 void _executeGenericMelee(int slotIndex, GameState gameState, AbilityData rawAbility, String message) {
   final ability = globalAbilityOverrideManager?.getEffectiveAbility(rawAbility) ?? rawAbility;
@@ -183,7 +192,9 @@ void _executeGenericMelee(int slotIndex, GameState gameState, AbilityData rawAbi
     return;
   }
   if (gameState.ability1Active) return;
-  gameState.activeGenericMeleeAbility = ability;
+  gameState.activeGenericMeleeAbility = ability.copyWith(
+    damage: ability.damage * _activeStrengthMult(gameState),
+  );
   gameState.ability1Active = true;
   gameState.ability1ActiveTime = 0.0;
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
@@ -215,8 +226,7 @@ void _executeGenericProjectile(int slotIndex, GameState gameState, AbilityData r
     abilityName: ability.name,
     impactColor: ability.impactColor,
     impactSize: ability.impactSize,
-    statusEffect: ability.statusEffect,
-    statusDuration: ability.statusDuration > 0 ? ability.statusDuration : ability.duration,
+    statusEffects: ability.allStatusEffects,
     dotTicks: ability.dotTicks,
   ));
   _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
@@ -232,7 +242,7 @@ void _executeGenericAoE(int slotIndex, GameState gameState, AbilityData rawAbili
     transform: Transform3d(position: gameState.activeTransform!.position.clone(), scale: Vector3(1, 1, 1)),
     lifetime: 0.5,
   ));
-  final aoeDamage = ability.damage * gameState.activeStance.damageMultiplier;
+  final aoeDamage = ability.damage * gameState.activeStance.damageMultiplier * _activeStrengthMult(gameState);
   final hit = CombatSystem.checkAndDamageEnemies(
     gameState,
     attackerPosition: gameState.activeTransform!.position,
@@ -286,24 +296,23 @@ void _executeGenericHeal(int slotIndex, GameState gameState, AbilityData rawAbil
   debugPrint('$message Restored ${healedAmount.toStringAsFixed(1)} HP');
 }
 
-/// Apply a supportive buff from a heal ability to the given effect list.
+/// Apply supportive buffs from a heal ability to the given effect list.
 ///
-/// Handles shield and regen. Re-applying the same buff type refreshes the
-/// duration rather than stacking.  The shield expires after [ability.statusDuration]
-/// seconds whether or not the absorption has been fully consumed.
+/// Iterates all effects in [ability.allStatusEffects]. Re-applying the same
+/// buff type refreshes the duration rather than stacking.
 void _applyHealBuff(List<ActiveEffect> effects, AbilityData ability) {
-  if (ability.statusEffect == StatusEffect.none || ability.statusDuration <= 0) return;
-  // Reason: remove existing instance so recasting refreshes rather than stacks.
-  effects.removeWhere((e) => e.type == ability.statusEffect && !e.isPermanent);
-  effects.add(ActiveEffect(
-    type: ability.statusEffect,
-    remainingDuration: ability.statusDuration,
-    totalDuration: ability.statusDuration,
-    // Reason: statusStrength is the absorb amount for shields, or the speed
-    // multiplier for haste, etc. — preserved as-is from AbilityData.
-    strength: ability.statusStrength > 0 ? ability.statusStrength : 1.0,
-    sourceName: ability.name,
-  ));
+  for (final fx in ability.allStatusEffects) {
+    if (fx.duration <= 0) continue;
+    // Reason: remove existing instance so recasting refreshes rather than stacks.
+    effects.removeWhere((e) => e.type == fx.type && !e.isPermanent);
+    effects.add(ActiveEffect(
+      type: fx.type,
+      remainingDuration: fx.duration,
+      totalDuration: fx.duration,
+      strength: fx.strength,
+      sourceName: ability.name,
+    ));
+  }
 }
 
 /// Data-driven dispatcher: routes to the appropriate generic handler by ability type.
@@ -335,55 +344,135 @@ void _executeGenericAbility(int slotIndex, GameState gameState, AbilityData abil
 
 // ==================== STATUS EFFECTS ====================
 
-/// Apply CC, DoT, and knockback from a melee ability to the current target.
+/// Displace [targetId] by [displacement] in world space (instant, no ActiveEffect).
+void _displaceTarget(GameState gameState, String targetId, Vector3 displacement) {
+  if (targetId == 'boss' && gameState.monsterTransform != null) {
+    gameState.monsterTransform!.position += displacement;
+  } else {
+    final minion = gameState.minionById(targetId);
+    if (minion != null && minion.isAlive) minion.transform.position += displacement;
+  }
+}
+
+/// Unit vector in the caster's current facing direction.
+Vector3 _casterForward(GameState gameState) => Vector3(
+  -math.sin(_radians(gameState.activeRotation)),
+  0,
+  -math.cos(_radians(gameState.activeRotation)),
+);
+
+/// Apply one [AbilityStatusEffect] entry to [targetId].
+///
+/// knockback/grip are instant positional changes.
+/// knockdown creates both a stun and an interrupt ActiveEffect.
+/// All other effects create a standard timed ActiveEffect.
+void _applySingleStatusEffect(
+  GameState gameState,
+  String targetId,
+  AbilityStatusEffect fx,
+  String sourceName, {
+  int dotTicks = 0,
+  double dotDamage = 0.0,
+}) {
+  if (fx.type == StatusEffect.none) return;
+
+  switch (fx.type) {
+    // ── Instant positional effects (no ActiveEffect) ───────────────────
+    case StatusEffect.knockback:
+      // Reason: push target in caster's facing direction by strength world units
+      if (gameState.activeTransform != null) {
+        _displaceTarget(gameState, targetId, _casterForward(gameState) * fx.strength);
+      }
+      return;
+
+    case StatusEffect.grip:
+      // Reason: pull target toward caster by (strength * current distance);
+      // strength is clamped to 0–1 so the target can never overshoot the caster.
+      final casterPos = gameState.activeTransform?.position;
+      if (casterPos == null) return;
+      final targetPos = _getTargetPosition(gameState, targetId);
+      if (targetPos == null) return;
+      final toTarget = targetPos - casterPos;
+      final pullFraction = fx.strength.clamp(0.0, 1.0);
+      // Negative: move target toward caster
+      _displaceTarget(gameState, targetId, toTarget * (-pullFraction));
+      return;
+
+    // ── Composite effect ───────────────────────────────────────────────
+    case StatusEffect.knockdown:
+      // Reason: knockdown = stun + spell-lockout; both re-use existing CC checks
+      // in the AI and duel systems with zero additional changes there.
+      final dur = (fx.duration * gameState.activeStance.ccDurationInflicted).clamp(0.1, 30.0);
+      for (final ccType in [StatusEffect.stun, StatusEffect.interrupt]) {
+        final effect = ActiveEffect(
+          type: ccType, remainingDuration: dur, totalDuration: dur,
+          strength: 1.0, sourceName: sourceName,
+        );
+        if (targetId == 'boss') {
+          gameState.monsterActiveEffects.add(effect);
+        } else {
+          final minion = gameState.minionById(targetId);
+          if (minion != null && minion.isAlive) minion.activeEffects.add(effect);
+        }
+      }
+      gameState.combatLogMessages.add(CombatLogEntry(
+        source: sourceName, action: '$sourceName applied knockdown',
+        type: CombatLogType.ability,
+      ));
+      return;
+
+    // ── Standard timed effects ─────────────────────────────────────────
+    default:
+      if (fx.duration <= 0) return;
+      final effectiveDuration = fx.duration * gameState.activeStance.ccDurationInflicted;
+      double damagePerTick = 0;
+      double tickInterval = 0;
+      if (dotTicks > 0 && dotDamage > 0) {
+        tickInterval = effectiveDuration / dotTicks;
+        damagePerTick = dotDamage / dotTicks;
+      }
+      final effect = ActiveEffect(
+        type: fx.type,
+        remainingDuration: effectiveDuration,
+        totalDuration: effectiveDuration,
+        strength: fx.strength,
+        damagePerTick: damagePerTick,
+        tickInterval: tickInterval,
+        sourceName: sourceName,
+      );
+      if (targetId == 'boss') {
+        gameState.monsterActiveEffects.add(effect);
+      } else {
+        final minion = gameState.minionById(targetId);
+        if (minion != null && minion.isAlive) minion.activeEffects.add(effect);
+      }
+      gameState.combatLogMessages.add(CombatLogEntry(
+        source: sourceName,
+        action: '$sourceName applied ${fx.type.name}',
+        type: CombatLogType.ability,
+      ));
+  }
+}
+
+/// Apply CC, DoT, knockback, grip, or knockdown from a melee ability to the current target.
 void _applyMeleeStatusEffect(GameState gameState, AbilityData ability) {
-  if (ability.statusEffect == StatusEffect.none && ability.knockbackForce <= 0) return;
   final targetId = gameState.currentTargetId;
   if (targetId == null) return;
 
-  // Knockback
-  if (ability.knockbackForce > 0 && gameState.activeTransform != null) {
-    final forward = Vector3(
-      -math.sin(_radians(gameState.activeRotation)), 0,
-      -math.cos(_radians(gameState.activeRotation)),
-    );
-    if (targetId == 'boss' && gameState.monsterTransform != null) {
-      gameState.monsterTransform!.position += forward * ability.knockbackForce;
-    } else {
-      final minion = gameState.minionById(targetId);
-      if (minion != null && minion.isAlive) minion.transform.position += forward * ability.knockbackForce;
-    }
+  // Reason: legacy knockbackForce field is honored when no explicit knockback
+  // effect is present in statusEffects, preserving existing ability data.
+  final hasExplicitKnockback = ability.allStatusEffects
+      .any((e) => e.type == StatusEffect.knockback);
+  if (ability.knockbackForce > 0 && !hasExplicitKnockback && gameState.activeTransform != null) {
+    _displaceTarget(gameState, targetId, _casterForward(gameState) * ability.knockbackForce);
   }
 
-  // Status effect
-  if (ability.statusEffect != StatusEffect.none && ability.statusDuration > 0) {
-    final effectiveDuration = ability.statusDuration * gameState.activeStance.ccDurationInflicted;
-    double damagePerTick = 0;
-    double tickInterval = 0;
-    if (ability.dotTicks > 0) {
-      tickInterval = effectiveDuration / ability.dotTicks;
-      damagePerTick = ability.damage / ability.dotTicks;
-    }
-    final effect = ActiveEffect(
-      type: ability.statusEffect,
-      remainingDuration: effectiveDuration,
-      totalDuration: effectiveDuration,
-      strength: ability.statusStrength > 0 ? ability.statusStrength : 1.0,
-      damagePerTick: damagePerTick,
-      tickInterval: tickInterval,
-      sourceName: ability.name,
+  for (final fx in ability.allStatusEffects) {
+    _applySingleStatusEffect(
+      gameState, targetId, fx, ability.name,
+      dotTicks: ability.dotTicks,
+      dotDamage: ability.damage,
     );
-    if (targetId == 'boss') {
-      gameState.monsterActiveEffects.add(effect);
-    } else {
-      final minion = gameState.minionById(targetId);
-      if (minion != null && minion.isAlive) minion.activeEffects.add(effect);
-    }
-    gameState.combatLogMessages.add(CombatLogEntry(
-      source: ability.name,
-      action: '${ability.name} applied ${ability.statusEffect.name}',
-      type: CombatLogType.ability,
-    ));
   }
 }
 
@@ -465,27 +554,31 @@ void _damageTargetWithProjectile(GameState gameState, String targetId, Projectil
   _applyDoTFromProjectile(gameState, targetId, projectile);
 }
 
-/// Create a DoT ActiveEffect on the target from a projectile's DoT data.
+/// Apply status effects from a projectile hit to the target.
 void _applyDoTFromProjectile(GameState gameState, String targetId, Projectile projectile) {
-  if (projectile.dotTicks <= 0 || projectile.statusDuration <= 0) return;
-  final statusType = projectile.statusEffect != StatusEffect.none
-      ? projectile.statusEffect
-      : StatusEffect.burn;
-  final effectiveDuration = projectile.statusDuration * gameState.activeStance.ccDurationInflicted;
-  final tickInterval = effectiveDuration / projectile.dotTicks;
-  final damagePerTick = projectile.damage / projectile.dotTicks;
-  final effect = ActiveEffect(
-    type: statusType,
-    remainingDuration: effectiveDuration,
-    totalDuration: effectiveDuration,
-    damagePerTick: damagePerTick,
-    tickInterval: tickInterval,
-    sourceName: projectile.abilityName,
-  );
-  if (targetId == 'boss') {
-    gameState.monsterActiveEffects.add(effect);
-  } else {
-    final minion = gameState.minionById(targetId);
-    if (minion != null) minion.activeEffects.add(effect);
+  if (projectile.dotTicks <= 0 && projectile.statusEffects.isEmpty) return;
+
+  // Reason: if the projectile has explicit statusEffects entries, apply them all.
+  // Legacy path: if dotTicks > 0 but no entries, synthesize a burn DoT (backward compat).
+  if (projectile.statusEffects.isNotEmpty) {
+    for (final fx in projectile.statusEffects) {
+      _applySingleStatusEffect(
+        gameState, targetId, fx, projectile.abilityName,
+        dotTicks: projectile.dotTicks,
+        dotDamage: projectile.damage,
+      );
+    }
+  } else if (projectile.dotTicks > 0) {
+    // Legacy single-effect fallback: assume burn DoT
+    final burnFx = AbilityStatusEffect(
+      type: StatusEffect.burn,
+      duration: projectile.lifetime,
+      strength: 1.0,
+    );
+    _applySingleStatusEffect(
+      gameState, targetId, burnFx, projectile.abilityName,
+      dotTicks: projectile.dotTicks,
+      dotDamage: projectile.damage,
+    );
   }
 }

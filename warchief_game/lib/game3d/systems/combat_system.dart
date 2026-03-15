@@ -147,16 +147,13 @@ class CombatSystem {
       if (targetType == DamageTarget.player) {
         final dodgeChance = stance!.dodgeChance;
         if (dodgeChance > 0 && _csRng.nextDouble() < dodgeChance) {
-          gameState.combatLogMessages.add(CombatLogEntry(
+          gameState.addCombatLog(CombatLogEntry(
             source: attackType.contains(' ') ? attackType.substring(0, attackType.indexOf(' ')) : attackType,
             action: '$attackType DODGED',
             type: CombatLogType.damage,
             amount: 0,
             target: 'Player',
           ));
-          if (gameState.combatLogMessages.length > 250) {
-            gameState.combatLogMessages.removeRange(0, gameState.combatLogMessages.length - 200);
-          }
           return false;
         }
       }

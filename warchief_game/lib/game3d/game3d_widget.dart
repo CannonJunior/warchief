@@ -70,6 +70,7 @@ import 'state/macro_manager.dart';
 import 'state/gameplay_settings.dart';
 import 'state/combo_config.dart';
 import 'systems/melee_combo_system.dart';
+import 'systems/gameplay_aura_system.dart';
 import 'systems/duel_system.dart';
 import 'state/duel_config.dart';
 import 'state/duel_manager.dart';

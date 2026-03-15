@@ -26,17 +26,13 @@ void _csLogCombat(GameState gs, String attackType, double damage,
       target = 'Dummy';
       break;
   }
-  gs.combatLogMessages.add(CombatLogEntry(
+  gs.addCombatLog(CombatLogEntry(
     source: attackType.split(' ').first,
     action: attackType,
     type: CombatLogType.damage,
     amount: damage,
     target: target,
   ));
-  // Cap at 250 entries, batch-trim to 200 to amortize removeRange cost
-  if (gs.combatLogMessages.length > 250) {
-    gs.combatLogMessages.removeRange(0, gs.combatLogMessages.length - 200);
-  }
 }
 
 /// Convert Vector3 color to Flutter Color

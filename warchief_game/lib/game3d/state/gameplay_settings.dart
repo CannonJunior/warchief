@@ -37,6 +37,7 @@ class GameplaySettings {
   static const String _keyTargetSizeScale         = 'gameplay_target_size_scale';
   static const String _keyTargetAcquiredScale     = 'gameplay_target_acquired_scale';
   static const String _keyTargetAcquiredDuration  = 'gameplay_target_acquired_duration';
+  static const String _keyQueueExitDuration        = 'gameplay_queue_exit_duration';
 
   /// When true, characters must equip a Talisman that attunes them to a
   /// mana color before they can regenerate, spend, or see that mana pool.
@@ -121,6 +122,10 @@ class GameplaySettings {
   /// How long the acquired-flash rectangle stays visible in seconds (default 2.0).
   double targetAcquiredDuration;
 
+  /// Duration of the fade-out exit animation for queue entries that have
+  /// finished executing, in seconds (default 1.0).
+  double queueExitDuration;
+
   GameplaySettings({
     this.attunementRequired = true,
     this.manaSourceVisibilityGated = false,
@@ -148,6 +153,7 @@ class GameplaySettings {
     this.targetSizeScale         = 1.0,
     this.targetAcquiredScale     = 1.3,
     this.targetAcquiredDuration  = 2.0,
+    this.queueExitDuration       = 1.0,
   });
 
   /// Load saved settings from persistent storage.
@@ -180,6 +186,7 @@ class GameplaySettings {
       targetSizeScale         = prefs.getDouble(_keyTargetSizeScale)      ?? 1.0;
       targetAcquiredScale     = prefs.getDouble(_keyTargetAcquiredScale)  ?? 1.3;
       targetAcquiredDuration  = prefs.getDouble(_keyTargetAcquiredDuration) ?? 2.0;
+      queueExitDuration       = prefs.getDouble(_keyQueueExitDuration)      ?? 1.0;
       debugPrint('[GameplaySettings] Loaded: attunementRequired=$attunementRequired, '
           'manaSourceVisibilityGated=$manaSourceVisibilityGated, '
           'showDamageNumbers=$showDamageNumbers, showHealNumbers=$showHealNumbers, '
@@ -220,6 +227,7 @@ class GameplaySettings {
       await prefs.setDouble(_keyTargetSizeScale,         targetSizeScale);
       await prefs.setDouble(_keyTargetAcquiredScale,     targetAcquiredScale);
       await prefs.setDouble(_keyTargetAcquiredDuration,  targetAcquiredDuration);
+      await prefs.setDouble(_keyQueueExitDuration,        queueExitDuration);
       debugPrint('[GameplaySettings] Saved');
     } catch (e) {
       debugPrint('[GameplaySettings] Error saving: $e');

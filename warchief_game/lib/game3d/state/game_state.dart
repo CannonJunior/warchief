@@ -725,6 +725,20 @@ class GameState {
   /// Combat log entries (ability usage and effects).
   List<CombatLogEntry> combatLogMessages = [];
 
+  /// Add an entry to the combat log and keep the list bounded.
+  ///
+  /// Reason: centralises the duplicated add + removeRange(0,...) pattern that
+  /// previously appeared in 15+ call-sites, ensuring consistent trimming
+  /// behavior and a single place to tune the cap.
+  static const int _combatLogMax = 250;
+  static const int _combatLogTarget = 200;
+  void addCombatLog(CombatLogEntry entry) {
+    combatLogMessages.add(entry);
+    if (combatLogMessages.length > _combatLogMax) {
+      combatLogMessages.removeRange(0, combatLogMessages.length - _combatLogTarget);
+    }
+  }
+
   /// Console log entries (player actions for troubleshooting).
   List<ConsoleLogEntry> consoleLogMessages = [];
 
@@ -1115,8 +1129,13 @@ class GameState {
   List<ImpactEffect> impactEffects = []; // List of active impact effects
   List<DamageIndicator> damageIndicators = []; // Floating damage numbers
 
-  /// Dissolving yellow label shown below the unit when an ability executes.
+  /// Dissolving yellow label shown below the unit when an ability fires directly
+  /// (not via the queue).  Queue-executed abilities use [exitingQueueLabels].
   QueuedAbilityLabel? executingAbilityLabel;
+
+  /// Abilities that just executed out of the queue and are fading out in the
+  /// queue display line (yellow → transparent over the configured exit duration).
+  List<ExitingQueueLabel> exitingQueueLabels = [];
 
   /// Abilities waiting to execute once conditions are met.
   List<AbilityQueueEntry> abilityQueue = [];

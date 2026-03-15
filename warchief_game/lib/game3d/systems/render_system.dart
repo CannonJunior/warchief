@@ -630,14 +630,19 @@ class RenderSystem {
   ///
   /// Each segment is subdivided into sub-quads so that the line drapes
   /// over terrain topology rather than cutting through hills in the middle.
-  /// Subdivision step is 6 world units; a 60-unit segment → 10 quads per layer.
+  ///
+  /// Terrain height is sampled at the four actual corner positions of every
+  /// sub-quad (not just the two centerline endpoints), so lines drape correctly
+  /// across cross-slopes as well as along-line elevation changes.
+  ///
+  /// Subdivision step is 3 world units; a 60-unit segment → 20 quads per layer.
   static Mesh _createLeyLineMesh(
     List<LeyLineSegment> segments,
     GameState gameState,
   ) {
     const double hoverOffset = 0.15;  // Float above terrain surface
-    const double subdivStep  = 6.0;   // World units per sub-quad
-    const int    maxSteps    = 40;    // Safety cap on sub-division count
+    const double subdivStep  = 3.0;   // World units per sub-quad (halved for finer slope fidelity)
+    const int    maxSteps    = 80;    // Safety cap on sub-division count
 
     final tm       = gameState.infiniteTerrainManager;
     final vertices = <double>[];
@@ -651,8 +656,12 @@ class RenderSystem {
       final totalDz = seg.z2 - seg.z1;
 
       // Subdivide the segment so height samples follow the terrain contour.
-      // More subdivisions = smoother draping at the cost of more triangles.
       final steps = (seg.length / subdivStep).ceil().clamp(1, maxSteps);
+
+      // Outer (layer-0) half-width used as the reference for per-corner
+      // terrain sampling; inner layers interpolate between centerline and
+      // outer heights so that the slope is correctly reflected at all widths.
+      final outerHw = seg.thickness / 2;
 
       for (int step = 0; step < steps; step++) {
         final t0 = step       / steps;
@@ -663,14 +672,6 @@ class RenderSystem {
         final sx2 = seg.x1 + totalDx * t1;
         final sz2 = seg.z1 + totalDz * t1;
 
-        // Sample terrain height at each sub-segment endpoint
-        final sy1 = tm != null
-            ? tm.getTerrainHeight(sx1, sz1) + hoverOffset
-            : hoverOffset;
-        final sy2 = tm != null
-            ? tm.getTerrainHeight(sx2, sz2) + hoverOffset
-            : hoverOffset;
-
         // Perpendicular in XZ plane for quad width
         final subDx  = sx2 - sx1;
         final subDz  = sz2 - sz1;
@@ -680,20 +681,60 @@ class RenderSystem {
         final perpX = -subDz / subLen;
         final perpZ =  subDx / subLen;
 
-        // Three wispy layers per sub-quad (wide + faint to narrow + bright)
+        // Outer-layer corner XZ positions
+        final oc1x = sx1 - perpX * outerHw;  final oc1z = sz1 - perpZ * outerHw;
+        final oc2x = sx1 + perpX * outerHw;  final oc2z = sz1 + perpZ * outerHw;
+        final oc3x = sx2 + perpX * outerHw;  final oc3z = sz2 + perpZ * outerHw;
+        final oc4x = sx2 - perpX * outerHw;  final oc4z = sz2 - perpZ * outerHw;
+
+        // Sample terrain height at all 6 reference positions: the 4 outer
+        // corners plus the 2 centerline endpoints.  Inner layers lerp between
+        // the centerline and the outer heights proportionally to their width.
+        // Reason: this correctly tilts each quad to match the terrain slope in
+        // both the along-line and cross-line directions simultaneously.
+        double cy1, cy2, oc1y, oc2y, oc3y, oc4y;
+        if (tm != null) {
+          cy1  = tm.getTerrainHeight(sx1,  sz1)  + hoverOffset;
+          cy2  = tm.getTerrainHeight(sx2,  sz2)  + hoverOffset;
+          oc1y = tm.getTerrainHeight(oc1x, oc1z) + hoverOffset;
+          oc2y = tm.getTerrainHeight(oc2x, oc2z) + hoverOffset;
+          oc3y = tm.getTerrainHeight(oc3x, oc3z) + hoverOffset;
+          oc4y = tm.getTerrainHeight(oc4x, oc4z) + hoverOffset;
+        } else {
+          cy1 = cy2 = oc1y = oc2y = oc3y = oc4y = hoverOffset;
+        }
+
+        // Three wispy layers per sub-quad (wide + faint → narrow + bright)
         for (int layer = 0; layer < 3; layer++) {
           final halfWidth = seg.thickness * (1.0 - layer * 0.25) / 2;
           final alpha     = 0.8 - layer * 0.2;
+
+          // Fraction of the outer half-width this layer occupies.
+          // lerpT = 1.0 for layer-0 (exact sampled corners), < 1.0 for
+          // inner layers (lerp toward the sampled centerline height).
+          final lerpT = outerHw > 0 ? halfWidth / outerHw : 1.0;
+
+          // Corner XZ positions for this layer
+          final c1x = sx1 - perpX * halfWidth;  final c1z = sz1 - perpZ * halfWidth;
+          final c2x = sx1 + perpX * halfWidth;  final c2z = sz1 + perpZ * halfWidth;
+          final c3x = sx2 + perpX * halfWidth;  final c3z = sz2 + perpZ * halfWidth;
+          final c4x = sx2 - perpX * halfWidth;  final c4z = sz2 - perpZ * halfWidth;
+
+          // Lerped Y: inner layers sit proportionally between centerline and
+          // the outer corner heights so all three layers hug the same surface.
+          final c1y = cy1 + (oc1y - cy1) * lerpT;
+          final c2y = cy1 + (oc2y - cy1) * lerpT;
+          final c3y = cy2 + (oc3y - cy2) * lerpT;
+          final c4y = cy2 + (oc4y - cy2) * lerpT;
 
           final r = 0.2 * alpha;
           final g = 0.5 * alpha;
           final b = 1.0 * alpha;
 
-          // Four corners of the sub-quad (terrain-draped Y)
-          vertices.addAll([sx1 - perpX * halfWidth, sy1, sz1 - perpZ * halfWidth, r, g, b]);
-          vertices.addAll([sx1 + perpX * halfWidth, sy1, sz1 + perpZ * halfWidth, r, g, b]);
-          vertices.addAll([sx2 + perpX * halfWidth, sy2, sz2 + perpZ * halfWidth, r, g, b]);
-          vertices.addAll([sx2 - perpX * halfWidth, sy2, sz2 - perpZ * halfWidth, r, g, b]);
+          vertices.addAll([c1x, c1y, c1z, r, g, b]);
+          vertices.addAll([c2x, c2y, c2z, r, g, b]);
+          vertices.addAll([c3x, c3y, c3z, r, g, b]);
+          vertices.addAll([c4x, c4y, c4z, r, g, b]);
 
           final base = vertexCount;
           indices.addAll([base, base + 1, base + 2, base, base + 2, base + 3]);

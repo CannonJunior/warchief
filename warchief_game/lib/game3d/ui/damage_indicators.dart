@@ -326,6 +326,20 @@ class QueuedAbilityLabel {
   double get progress => (age / maxAge).clamp(0.0, 1.0);
 }
 
+/// An ability that was just executed out of the queue and is now playing its
+/// exit animation: shown in yellow, fading out over [maxAge] seconds.
+class ExitingQueueLabel {
+  final String name;
+  final double maxAge;
+  double age = 0.0;
+
+  ExitingQueueLabel(this.name, {required this.maxAge});
+
+  bool   get isExpired => age >= maxAge;
+  /// Opacity from 1.0 (just fired) down to 0.0 (fully faded).
+  double get opacity   => maxAge > 0 ? (1.0 - age / maxAge).clamp(0.0, 1.0) : 0.0;
+}
+
 /// World-space overlay showing queued and executing ability names below the unit.
 ///
 /// One entry in the queued-ability display, carrying its display name and
@@ -339,9 +353,14 @@ class QueuedDisplayEntry {
 /// - **Queue**: Bangers, right-aligned single line joined by " > ".
 ///   On-cooldown entries render in Colors.white38, matching the muted label
 ///   colour used on ability buttons during their cooldown sweep.
-/// - **Executing** (just fired): yellow + black shadow, dissolves upward.
+/// - **Exiting** (just fired from queue): rendered at the front of the queue
+///   line in yellow, fading to transparent over [ExitingQueueLabel.maxAge] s.
+/// - **Executing** (direct hotkey, not queue): yellow + black shadow, dissolves upward.
 class QueuedAbilityLabelOverlay extends StatelessWidget {
   final QueuedAbilityLabel? executingLabel;
+
+  /// Queue entries exiting via fade animation (rendered yellow, fading).
+  final List<ExitingQueueLabel> exitingLabels;
 
   /// Entries waiting in the queue, in order, with per-entry cooldown state.
   final List<QueuedDisplayEntry> queuedEntries;
@@ -352,6 +371,7 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
   const QueuedAbilityLabelOverlay({
     super.key,
     required this.executingLabel,
+    required this.exitingLabels,
     required this.queuedEntries,
     required this.camera,
     required this.unitPosition,
@@ -365,7 +385,9 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (camera == null || unitPosition == null) return const SizedBox.shrink();
-    if (queuedEntries.isEmpty && executingLabel == null) return const SizedBox.shrink();
+    if (queuedEntries.isEmpty && exitingLabels.isEmpty && executingLabel == null) {
+      return const SizedBox.shrink();
+    }
 
     final screenSize = MediaQuery.of(context).size;
     final screenPos  = worldToScreen(
@@ -386,8 +408,8 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
 
     final children = <Widget>[];
 
-    if (queuedEntries.isNotEmpty) {
-      children.add(_buildQueueText(queuedEntries, x, y));
+    if (queuedEntries.isNotEmpty || exitingLabels.isNotEmpty) {
+      children.add(_buildQueueText(queuedEntries, exitingLabels, x, y));
     }
 
     if (executingLabel != null) {
@@ -411,17 +433,56 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
   }
 
   /// Builds the queue line as a [RichText] so each entry can be coloured
-  /// independently — white when ready, [Colors.white38] when on cooldown
-  /// (matching the ability-button label colour during its cooldown sweep).
-  Widget _buildQueueText(List<QueuedDisplayEntry> entries, double x, double y) {
+  /// independently.
+  ///
+  /// Exiting entries (just fired from queue) appear first in yellow, fading
+  /// from opaque to transparent.  Waiting entries follow in white (or white38
+  /// when on cooldown, matching the ability-button label colour during cooldown).
+  Widget _buildQueueText(
+    List<QueuedDisplayEntry> entries,
+    List<ExitingQueueLabel> exiting,
+    double x,
+    double y,
+  ) {
     final s = globalGameplaySettings;
     final queueFamily = s?.queueFontFamily ?? 'Bangers';
     final fontSize = _baseFontSize * (s?.queueFontScale ?? 1.0);
     final fontFamily = queueFamily == 'Default' ? null : queueFamily;
 
     final spans = <InlineSpan>[];
-    for (int i = 0; i < entries.length; i++) {
-      if (i > 0) {
+    bool needsSeparator = false;
+
+    // Exiting entries: yellow, fading.
+    for (final ex in exiting) {
+      if (needsSeparator) {
+        spans.add(TextSpan(
+          text: ' > ',
+          style: TextStyle(
+            color: Colors.white70.withValues(alpha: ex.opacity),
+            fontFamily: fontFamily,
+          ),
+        ));
+      }
+      spans.add(TextSpan(
+        text: ex.name,
+        style: TextStyle(
+          color: const Color(0xFFFFDD00).withValues(alpha: ex.opacity),
+          fontFamily: fontFamily,
+          shadows: [
+            Shadow(
+              color: Colors.black.withValues(alpha: ex.opacity * 0.7),
+              blurRadius: 2,
+              offset: const Offset(1, 1),
+            ),
+          ],
+        ),
+      ));
+      needsSeparator = true;
+    }
+
+    // Waiting entries: white (or dimmed when on cooldown).
+    for (final entry in entries) {
+      if (needsSeparator) {
         spans.add(TextSpan(
           text: ' > ',
           style: TextStyle(color: Colors.white70, fontFamily: fontFamily),
@@ -429,15 +490,16 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
       }
       final readyColor = Color(s?.queueTextColor ?? 0xFFFFFFFF);
       spans.add(TextSpan(
-        text: entries[i].name,
+        text: entry.name,
         style: TextStyle(
           // Reason: mirror the Colors.white38 used on button labels during cooldown.
-          color: entries[i].isOnCooldown
+          color: entry.isOnCooldown
               ? readyColor.withValues(alpha: 0.38)
               : readyColor,
           fontFamily: fontFamily,
         ),
       ));
+      needsSeparator = true;
     }
 
     return Positioned(

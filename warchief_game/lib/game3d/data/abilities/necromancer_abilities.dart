@@ -207,9 +207,28 @@ class NecromancerAbilities {
     enablesComboChain: true,
   );
 
+  /// Death Shroud — Necromancer self-buff wrapping themselves in undead protection
+  static final deathShroud = AbilityData(
+    name: 'Death Shroud',
+    description: 'Envelop yourself in a shroud of death energy that absorbs '
+        'incoming damage for a full hour.',
+    type: AbilityType.buff,
+    cooldown: 5.0,
+    duration: 3600.0,
+    color: Vector3(0.4, 0.0, 0.5),
+    impactColor: Vector3(0.5, 0.1, 0.6),
+    impactSize: 1.2,
+    statusEffect: StatusEffect.shield,
+    statusStrength: 30.0,
+    manaColor: ManaColor.black,
+    manaCost: 25.0,
+    category: 'necromancer',
+    damageSchool: DamageSchool.shadow,
+  );
+
   /// All necromancer abilities as a list
   static List<AbilityData> get all => [
     lifeDrain, curseOfWeakness, fear, soulRot, summonSkeleton, summonSkeletonMage,
-    graveTouch, soulScythe, soulFracture, soulChain, nullBolt,
+    graveTouch, soulScythe, soulFracture, soulChain, nullBolt, deathShroud,
   ];
 }

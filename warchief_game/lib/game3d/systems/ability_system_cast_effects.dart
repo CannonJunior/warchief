@@ -238,16 +238,13 @@ Vector3 _getTargetPositionOrForward(GameState gameState, Vector3 playerPos) {
 
 /// Log a heal event to the combat log.
 void _logHeal(GameState gameState, String abilityName, double healedAmount) {
-  gameState.combatLogMessages.add(CombatLogEntry(
+  gameState.addCombatLog(CombatLogEntry(
     source: 'Player',
     action: abilityName,
     type: CombatLogType.heal,
     amount: healedAmount,
     target: 'Player',
   ));
-  if (gameState.combatLogMessages.length > 250) {
-    gameState.combatLogMessages.removeRange(0, gameState.combatLogMessages.length - 200);
-  }
 }
 
 /// Show a green floating heal number above the healed unit.

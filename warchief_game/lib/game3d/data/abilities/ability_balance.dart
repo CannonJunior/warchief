@@ -38,8 +38,9 @@ double computeBalanceScore(AbilityData ability) {
 
   final aoePower = (ability.aoeRadius / 40.0) * 0.15;
 
-  final statusPower = _statusEffectValue(ability.statusEffect) *
-      (ability.statusDuration / 30.0);
+  // Reason: sum power across all effects; multi-effect abilities cost more balance budget
+  final statusPower = ability.allStatusEffects.fold(0.0, (sum, fx) =>
+      sum + _statusEffectValue(fx.type) * (fx.duration / 30.0));
 
   final knockbackPower = (ability.knockbackForce / 5.0) * 0.1;
 
@@ -123,6 +124,9 @@ double _statusEffectValue(StatusEffect effect) => switch (effect) {
   StatusEffect.vulnerableArcane     => 0.05,
   StatusEffect.vulnerableHoly       => 0.05,
   StatusEffect.interrupt             => 0.2,
+  StatusEffect.knockback             => 0.1,
+  StatusEffect.grip                  => 0.1,
+  StatusEffect.knockdown             => 0.3,  // stun + interrupt composite
 };
 
 /// Returns a color for the given balance score.

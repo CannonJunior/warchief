@@ -1,6 +1,7 @@
-import 'dart:math' show max;
+import 'dart:math' show max, Random;
 import 'package:flutter/material.dart';
 import '../../state/duel_manager.dart';
+import '../../state/scenario_config.dart';
 import '../../data/duel/duel_definitions.dart';
 import '../../../models/duel_result.dart';
 import 'duel_history_detail.dart';
@@ -70,6 +71,10 @@ class _DuelPanelState extends State<DuelPanel> {
   DuelEndCondition _endCondition = DuelEndCondition.totalAnnihilation;
   bool             _showRecents  = false;
 
+  // ── Seed / randomize controllers ───────────────────────────────────────────
+  final TextEditingController _chalSeedCtrl  = TextEditingController();
+  final TextEditingController _enemySeedCtrl = TextEditingController();
+
   /// Non-null while the user is viewing a history entry's detail panel.
   DuelResult? _selectedHistoryResult;
 
@@ -84,6 +89,13 @@ class _DuelPanelState extends State<DuelPanel> {
     if (widget.manager.phase == DuelPhase.active && _tabIndex != 1) {
       setState(() => _tabIndex = 1);
     }
+  }
+
+  @override
+  void dispose() {
+    _chalSeedCtrl.dispose();
+    _enemySeedCtrl.dispose();
+    super.dispose();
   }
 
   // ── Party-array sync helpers ───────────────────────────────────────────────

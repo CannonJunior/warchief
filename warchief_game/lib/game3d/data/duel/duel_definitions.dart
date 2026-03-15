@@ -44,6 +44,21 @@ class DuelDefinitions {
     ...enemyFactionTypes,
   ];
 
+  /// Returns the combatant types available for the given Codex Mode setting.
+  ///
+  /// Mirrors the category filter used by the Abilities Codex:
+  /// - 'development' → only warrior + rogue challenger classes (+ all enemy archetypes)
+  /// - 'expanded' (or any other) → all challenger classes + enemy archetypes
+  ///
+  /// Enemy faction types are always included because they correspond to the
+  /// 'monster' category, which is visible in every codex mode.
+  static List<String> availableCombatantTypes(String codexMode) {
+    final List<String> challengers = codexMode == 'development'
+        ? const ['warrior', 'rogue']
+        : challengerClasses;
+    return [...challengers, ...enemyFactionTypes];
+  }
+
   /// Human-readable display names for challenger classes.
   static const Map<String, String> challengerDisplayNames = {
     'warrior':     'Warrior',

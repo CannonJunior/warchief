@@ -31,11 +31,8 @@ class Projectile {
   /// Impact effect size
   double impactSize;
 
-  /// Status effect to apply on hit (StatusEffect.none = no effect)
-  StatusEffect statusEffect;
-
-  /// Duration of the status effect in seconds
-  double statusDuration;
+  /// Status effects to apply on hit.
+  List<AbilityStatusEffect> statusEffects;
 
   /// Number of DoT ticks (0 = no DoT)
   int dotTicks;
@@ -52,8 +49,7 @@ class Projectile {
     this.abilityName = 'Projectile',
     Vector3? impactColor,
     this.impactSize = 0.5,
-    this.statusEffect = StatusEffect.none,
-    this.statusDuration = 0.0,
+    this.statusEffects = const [],
     this.dotTicks = 0,
   }) : impactColor = impactColor ?? Vector3(1.0, 0.5, 0.0);
 }

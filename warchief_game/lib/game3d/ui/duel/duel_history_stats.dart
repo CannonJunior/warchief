@@ -81,10 +81,14 @@ extension _DuelHistoryStats on _DuelHistoryDetailState {
   /// Per-class stat row: DPS / HPS / KB / CC, computed from per-ability maps.
   Widget _buildPerCharacterSection(double safeDur) {
     final result = widget.result;
-    // Skip section for simple 1v1 unless there is per-ability data worth showing.
-    final hasChalData = result.challengerStats.perAbilityDamage.isNotEmpty ||
-        result.challengerStats.perAbilityHealing.isNotEmpty;
-    if (!hasChalData) return const SizedBox.shrink();
+    // Reason: check either side — enemy monsters may have per-ability data even
+    // when the challenger had none (e.g. buff-only classes deal no direct damage).
+    final hasData =
+        result.challengerStats.perAbilityDamage.isNotEmpty ||
+        result.challengerStats.perAbilityHealing.isNotEmpty ||
+        result.enemyStats.perAbilityDamage.isNotEmpty       ||
+        result.enemyStats.perAbilityHealing.isNotEmpty;
+    if (!hasData) return const SizedBox.shrink();
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       const Text('Per Character',
@@ -191,6 +195,18 @@ extension _DuelHistoryStats on _DuelHistoryDetailState {
           style: TextStyle(
               color: _subtext, fontSize: 10, fontWeight: FontWeight.bold)),
       const SizedBox(height: 6),
+      // Reason: side headers prevent confusion when one column is sparse or empty;
+      // particularly important when the enemy side is a monster/minion archetype.
+      Row(children: [
+        Expanded(child: Text('Blue Side',
+            style: TextStyle(color: _blue.withValues(alpha: 0.8), fontSize: 9,
+                fontWeight: FontWeight.bold))),
+        const SizedBox(width: 8),
+        Expanded(child: Text('Red Side',
+            style: TextStyle(color: _red.withValues(alpha: 0.8), fontSize: 9,
+                fontWeight: FontWeight.bold))),
+      ]),
+      const SizedBox(height: 4),
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Expanded(child: _abilityColumn(chalAbils, _blue)),
         const SizedBox(width: 8),
@@ -200,7 +216,10 @@ extension _DuelHistoryStats on _DuelHistoryDetailState {
   }
 
   Widget _abilityColumn(List<MapEntry<String, int>> entries, Color color) {
-    if (entries.isEmpty) return const SizedBox.shrink();
+    if (entries.isEmpty) {
+      return const Text('—',
+          style: TextStyle(color: _subtext, fontSize: 9));
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: entries

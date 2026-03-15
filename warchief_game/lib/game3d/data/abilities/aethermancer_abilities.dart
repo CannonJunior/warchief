@@ -298,11 +298,31 @@ class AethermancerAbilities {
     enablesComboChain: true,
   );
 
+  /// Aether Flow — Party-wide haste buff for all friendly units
+  static final aetherFlow = AbilityData(
+    name: 'Aether Flow',
+    description: 'Suffuse all allies with flowing aetheric currents, accelerating'
+        ' their movement and casting for a full hour.',
+    type: AbilityType.buff,
+    cooldown: 5.0,
+    duration: 3600.0,
+    range: 100.0,
+    color: Vector3(0.7, 0.85, 1.0),
+    impactColor: Vector3(0.8, 0.9, 1.0),
+    impactSize: 1.6,
+    statusEffect: StatusEffect.haste,
+    statusStrength: 0.20,
+    manaColor: ManaColor.white,
+    manaCost: 40.0,
+    category: 'aethermancer',
+    isPartyBuff: true,
+  );
+
   /// All Aethermancer abilities as a list
   static List<AbilityData> get all => [
     windMend, leyFlow, aetherCircle, zephyrWard, arcaneCleanse,
     galeFist, leySurge, aetherSurge,
     leyBolt, tempestLance, aetherChill,
-    aethericMending, aetherAegis,
+    aethericMending, aetherAegis, aetherFlow,
   ];
 }

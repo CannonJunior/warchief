@@ -247,8 +247,16 @@ double _preferredDistance(DuelStrategy strategy) {
 }
 
 /// Priority score for ability selection (higher = use sooner).
+///
+/// [primedNames]: ability names primed by the last comboPrimes ability; primed
+/// abilities receive a large bonus so the AI chains combos like a skilled player.
+///
 /// Reason: strategy priority shapes decision-making without expensive tree evaluation.
-int _abilityPriority(AbilityData ability, DuelStrategy strategy, Ally self) {
+int _abilityPriority(AbilityData ability, DuelStrategy strategy, Ally self,
+    {Set<String> primedNames = const {}}) {
+  // Reason: primed bonus overrides all strategy logic — a combo follow-up
+  // should fire as soon as the window opens regardless of strategy posture.
+  if (primedNames.contains(ability.name)) return 200;
   final hpFraction = self.maxHealth > 0 ? self.health / self.maxHealth : 1.0;
   switch (strategy) {
     case DuelStrategy.aggressive:
@@ -278,6 +286,16 @@ bool _abilityReady(Ally ally, AbilityData ability, int index) {
   if (index >= ally.abilityCooldowns.length) return false;
   if (ally.abilityCooldowns[index] > 0) return false;
   return _canAffordMana(ally, ability);
+}
+
+/// Returns true when [ability] can reach a target at [dist] world-units.
+///
+/// Abilities with range == 0 are treated as unconstrained (no range defined).
+/// A half-unit tolerance is added to account for combatant body radius so that
+/// abilities don't stutter at the exact boundary.
+bool _abilityInRange(AbilityData ability, double dist) {
+  if (ability.range <= 0) return true;
+  return dist <= ability.range + 0.5;
 }
 
 void _regenMana(double dt, Ally ally) {

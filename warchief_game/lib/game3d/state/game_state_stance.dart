@@ -37,14 +37,11 @@ extension GameStateStanceExt on GameState {
     }
 
     // Combat log
-    combatLogMessages.add(CombatLogEntry(
+    addCombatLog(CombatLogEntry(
       source: 'Player',
       action: 'Switched to ${activeStance.name} stance',
       type: CombatLogType.ability,
     ));
-    if (combatLogMessages.length > 250) {
-      combatLogMessages.removeRange(0, combatLogMessages.length - 200);
-    }
 
     // Console log
     addConsoleLog('Stance switched to ${activeStance.name}');
@@ -92,15 +89,12 @@ extension GameStateStanceExt on GameState {
       final hpPct = activeHealth / maxHp;
       // Reason: only log once when crossing the 20% threshold
       if (hpPct < 0.20 && (activeHealth + drain) / maxHp >= 0.20) {
-        combatLogMessages.add(CombatLogEntry(
+        addCombatLog(CombatLogEntry(
           source: stance.name,
           action: '${stance.name}: HP critical!',
           type: CombatLogType.damage,
           amount: activeHealth,
         ));
-        if (combatLogMessages.length > 250) {
-          combatLogMessages.removeRange(0, combatLogMessages.length - 200);
-        }
       }
     }
 
@@ -119,14 +113,11 @@ extension GameStateStanceExt on GameState {
         final dmgSign = dmgPct >= 0 ? '+' : '';
         final takenSign = takenPct >= 0 ? '+' : '';
 
-        combatLogMessages.add(CombatLogEntry(
+        addCombatLog(CombatLogEntry(
           source: stance.name,
           action: '${stance.name}: Power surges! ($dmgSign$dmgPct% damage, $takenSign$takenPct% damage taken)',
           type: CombatLogType.ability,
         ));
-        if (combatLogMessages.length > 250) {
-          combatLogMessages.removeRange(0, combatLogMessages.length - 200);
-        }
 
         // Trigger visual pulse for UI overlay
         drunkenRerollPulseTimer = 0.4;
@@ -310,16 +301,13 @@ extension GameStateStanceExt on GameState {
     }
 
     // Combat log entry
-    combatLogMessages.add(CombatLogEntry(
+    addCombatLog(CombatLogEntry(
       source: label,
       action: '$label (${effect.type.name})',
       type: CombatLogType.damage,
       amount: effect.damagePerTick,
       target: target,
     ));
-    if (combatLogMessages.length > 250) {
-      combatLogMessages.removeRange(0, combatLogMessages.length - 200);
-    }
   }
 
   /// Cycle active character forward (] key)

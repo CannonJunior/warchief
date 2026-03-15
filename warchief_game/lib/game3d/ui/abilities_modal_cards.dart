@@ -162,8 +162,8 @@ extension _AbilitiesModalCards on _AbilitiesModalState {
                           _buildStat('DUR', '${effective.duration.toStringAsFixed(1)}s', Colors.purple.shade300),
                         if (effective.aoeRadius > 0)
                           _buildStat('AOE', effective.aoeRadius.toStringAsFixed(0), Colors.yellow.shade300),
-                        if (effective.statusEffect != StatusEffect.none)
-                          _buildStat('FX', effective.statusEffect.toString().split('.').last.toUpperCase(), Colors.pink.shade300),
+                        ...effective.allStatusEffects.map((fx) =>
+                          _buildStat('FX', fx.type.name.toUpperCase(), Colors.pink.shade300)),
                         if (effective.requiresMana)
                           _buildManaStat(effective.manaColor, effective.manaCost),
                         if (effective.requiresDualMana)

@@ -26,10 +26,7 @@ extension _AbilityEditorPanelSections on _AbilityEditorPanelState {
       secondaryManaCost: double.tryParse(_secondaryManaCostCtrl.text) ?? 0.0,
       color: Vector3(1, 1, 1),
       impactColor: Vector3(1, 1, 1),
-      statusEffect: StatusEffect.values.firstWhere(
-        (s) => s.name == _selectedStatusEffect, orElse: () => StatusEffect.none),
-      statusDuration: double.tryParse(_statusDurationCtrl.text) ?? 0.0,
-      statusStrength: double.tryParse(_statusStrengthCtrl.text) ?? 0.0,
+      statusEffects: _statusEffects.map((e) => e.toAbilityStatusEffect()).toList(),
       aoeRadius: double.tryParse(_aoeRadiusCtrl.text) ?? 0.0,
       maxTargets: int.tryParse(_maxTargetsCtrl.text) ?? 1,
       dotTicks: int.tryParse(_dotTicksCtrl.text) ?? 0,
@@ -254,19 +251,112 @@ extension _AbilityEditorPanelSections on _AbilityEditorPanelState {
   }
 
   Widget _buildStatusEffectSection() {
-    return _buildSection('STATUS EFFECT', Colors.pink.shade300, [
-      _buildDropdownWithAddNew(
-        label: 'Effect',
-        tooltipKey: 'effect',
-        builtInValues: StatusEffect.values.map((s) => s.name).toList(),
-        customKey: 'statusEffect',
-        selectedValue: _selectedStatusEffect,
-        onChanged: (v) => setState(() => _selectedStatusEffect = v),
+    return _buildSection('STATUS EFFECTS', Colors.pink.shade300, [
+      // Description
+      const Padding(
+        padding: EdgeInsets.only(bottom: 6),
+        child: Text(
+          'knockback: push (strength = world units)  •  grip: pull (strength = 0–1 fraction)  •  knockdown: stun + interrupt',
+          style: TextStyle(color: Colors.white38, fontSize: 8),
+        ),
+      ),
+      // One row per effect entry
+      ..._statusEffects.asMap().entries.map((entry) =>
+        _buildEffectEntryRow(entry.key, entry.value)),
+      // "Add Effect" button
+      Align(
+        alignment: Alignment.centerLeft,
+        child: GestureDetector(
+          onTap: () => setState(() => _statusEffects.add(_EffectEntry(
+            selectedType: StatusEffect.stun.name,
+            duration: '2.0',
+            strength: '1.0',
+          ))),
+          child: Container(
+            margin: const EdgeInsets.only(top: 4, bottom: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.pink.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.pink.shade300, width: 1),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, size: 11, color: Colors.pink.shade300),
+                const SizedBox(width: 4),
+                Text('Add Effect',
+                  style: TextStyle(color: Colors.pink.shade300, fontSize: 9,
+                    fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        ),
       ),
       _buildTextField('Effect Desc', _effectDescCtrl, 'effectDesc', multiline: true),
-      _buildNumericRow('Duration', _statusDurationCtrl, 'statusDuration'),
-      _buildNumericRow('Strength', _statusStrengthCtrl, 'statusStrength'),
     ]);
+  }
+
+  /// One collapsible effect entry: type dropdown + duration + strength + remove button.
+  Widget _buildEffectEntryRow(int idx, _EffectEntry fx) {
+    // These effects are instantaneous — no meaningful duration
+    final isInstant = fx.selectedType == StatusEffect.knockback.name ||
+        fx.selectedType == StatusEffect.grip.name;
+    final allEffectNames = StatusEffect.values
+        .where((s) => s != StatusEffect.none)
+        .map((s) => s.name)
+        .toList();
+    final currentType = allEffectNames.contains(fx.selectedType)
+        ? fx.selectedType : allEffectNames.first;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black26,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.pink.shade900, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // Type dropdown
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: currentType,
+                    style: const TextStyle(color: Colors.white, fontSize: 10),
+                    dropdownColor: const Color(0xFF1a1a2e),
+                    items: allEffectNames.map((n) => DropdownMenuItem(
+                      value: n,
+                      child: Text(n, style: const TextStyle(fontSize: 10, color: Colors.white)),
+                    )).toList(),
+                    onChanged: (v) => setState(() => fx.selectedType = v!),
+                  ),
+                ),
+              ),
+              // Remove button
+              GestureDetector(
+                onTap: () => setState(() {
+                  _statusEffects[idx].dispose();
+                  _statusEffects.removeAt(idx);
+                }),
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: Icon(Icons.close, size: 13, color: Colors.redAccent),
+                ),
+              ),
+            ],
+          ),
+          if (!isInstant)
+            _buildNumericRow('Duration', fx.durationCtrl, 'statusDuration'),
+          _buildNumericRow('Strength', fx.strengthCtrl, 'statusStrength'),
+        ],
+      ),
+    );
   }
 
   Widget _buildAoeTargetingSection() {

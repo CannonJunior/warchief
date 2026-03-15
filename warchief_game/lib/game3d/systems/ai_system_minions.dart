@@ -13,24 +13,26 @@ class _MinionAI {
     for (final minion in gameState.aliveMinions) {
       // Move toward target position if set
       if (minion.targetPosition != null) {
-        final toTarget = minion.targetPosition! - minion.transform.position;
-        toTarget.y = 0; // Horizontal movement only
-        final distance = toTarget.length;
+        // Reason: compute dx/dz directly to avoid the Vector3 subtraction and
+        // normalized() allocations — both create heap objects on every frame per minion.
+        final dx = minion.targetPosition!.x - minion.transform.position.x;
+        final dz = minion.targetPosition!.z - minion.transform.position.z;
+        final distance = math.sqrt(dx * dx + dz * dz);
 
         if (distance > 0.5) {
-          // Move toward target with wind modifier
-          final direction = toTarget.normalized();
+          final nx = dx / distance;
+          final nz = dz / distance;
           double minionSpeed = minion.definition.moveSpeed;
           if (globalWindState != null) {
-            final windMod = globalWindState!.getMovementModifier(direction.x, direction.z);
+            final windMod = globalWindState!.getMovementModifier(nx, nz);
             minionSpeed *= windMod;
           }
           final moveAmount = minionSpeed * dt;
-          minion.transform.position.x += direction.x * moveAmount;
-          minion.transform.position.z += direction.z * moveAmount;
+          minion.transform.position.x += nx * moveAmount;
+          minion.transform.position.z += nz * moveAmount;
 
           // Update rotation to face movement direction
-          minion.rotation = math.atan2(-direction.x, -direction.z) * (180 / math.pi);
+          minion.rotation = math.atan2(-nx, -nz) * (180 / math.pi);
           if (minion.directionIndicatorTransform != null) {
             minion.directionIndicatorTransform!.rotation.y = minion.rotation + 180;
           }
@@ -191,16 +193,29 @@ class _MinionAI {
     // Priority 3: Stay at medium range
     else {
       minion.aiState = MonsterAIState.supporting;
+      // Reason: compare squared distances to avoid sqrt; inline normalization
+      // avoids Vector3 allocation from operator- and normalized() calls.
       const optimalRange = 7.0;
-      final distanceToPlayer = math.sqrt(distSqToPlayer);
-      if (distanceToPlayer < optimalRange - 1) {
-        // Too close - back up
-        final awayFromPlayer = (minion.transform.position - playerPos).normalized();
-        minion.targetPosition = minion.transform.position + awayFromPlayer * 2.0;
-      } else if (distanceToPlayer > optimalRange + 1) {
-        // Too far - move closer
-        final toPlayer = (playerPos - minion.transform.position).normalized();
-        minion.targetPosition = minion.transform.position + toPlayer * 2.0;
+      const tooCloseSq  = (optimalRange - 1) * (optimalRange - 1); // 36
+      const tooFarSq    = (optimalRange + 1) * (optimalRange + 1); // 64
+      if (distSqToPlayer < tooCloseSq) {
+        final d = math.sqrt(distSqToPlayer);
+        final nx = (minion.transform.position.x - playerPos.x) / d;
+        final nz = (minion.transform.position.z - playerPos.z) / d;
+        minion.targetPosition = Vector3(
+          minion.transform.position.x + nx * 2.0,
+          minion.transform.position.y,
+          minion.transform.position.z + nz * 2.0,
+        );
+      } else if (distSqToPlayer > tooFarSq) {
+        final d = math.sqrt(distSqToPlayer);
+        final nx = (playerPos.x - minion.transform.position.x) / d;
+        final nz = (playerPos.z - minion.transform.position.z) / d;
+        minion.targetPosition = Vector3(
+          minion.transform.position.x + nx * 2.0,
+          minion.transform.position.y,
+          minion.transform.position.z + nz * 2.0,
+        );
       }
     }
   }
@@ -277,9 +292,15 @@ class _MinionAI {
       minion.targetId = 'none'; // No target while retreating
       const safeRange = 10.0;
       if (distSqToPlayer < safeRange * safeRange) {
-        // Too close - run away
-        final awayFromPlayer = (minion.transform.position - playerPos).normalized();
-        minion.targetPosition = minion.transform.position + awayFromPlayer * 3.0;
+        // Reason: inline normalization avoids Vector3 operator- and normalized() allocs.
+        final d = math.sqrt(distSqToPlayer);
+        final nx = (minion.transform.position.x - playerPos.x) / d;
+        final nz = (minion.transform.position.z - playerPos.z) / d;
+        minion.targetPosition = Vector3(
+          minion.transform.position.x + nx * 3.0,
+          minion.transform.position.y,
+          minion.transform.position.z + nz * 3.0,
+        );
       }
     }
   }
@@ -326,8 +347,16 @@ class _MinionAI {
   static void _executeFleeAI(Monster minion, GameState gameState, Vector3 playerPos) {
     minion.aiState = MonsterAIState.fleeing;
     minion.targetId = 'none'; // No target while fleeing
-    final awayFromPlayer = (minion.transform.position - playerPos).normalized();
-    minion.targetPosition = minion.transform.position + awayFromPlayer * 5.0;
+    final dx = minion.transform.position.x - playerPos.x;
+    final dz = minion.transform.position.z - playerPos.z;
+    final dist = math.sqrt(dx * dx + dz * dz);
+    if (dist > 0.01) {
+      minion.targetPosition = Vector3(
+        minion.transform.position.x + (dx / dist) * 5.0,
+        minion.transform.position.y,
+        minion.transform.position.z + (dz / dist) * 5.0,
+      );
+    }
   }
 
   /// Execute minion attack
@@ -339,8 +368,12 @@ class _MinionAI {
     minion.useAbility(abilityIndex);
 
     if (ability.isProjectile) {
-      // Create projectile
-      final direction = (targetPos - minion.transform.position).normalized();
+      // Reason: inline dx/dy/dz to avoid Vector3 subtraction and normalized() allocs.
+      final pdx = targetPos.x - minion.transform.position.x;
+      final pdy = targetPos.y - minion.transform.position.y;
+      final pdz = targetPos.z - minion.transform.position.z;
+      final plen = math.sqrt(pdx * pdx + pdy * pdy + pdz * pdz);
+      final spd = ability.projectileSpeed ?? 8.0;
       final projectileMesh = Mesh.cube(
         size: 0.3,
         color: Vector3(
@@ -350,14 +383,17 @@ class _MinionAI {
         ),
       );
       final projectileTransform = Transform3d(
-        position: minion.transform.position.clone() + Vector3(0, 0.5, 0),
+        position: Vector3(minion.transform.position.x,
+            minion.transform.position.y + 0.5, minion.transform.position.z),
         scale: Vector3(1, 1, 1),
       );
 
       minion.projectiles.add(Projectile(
         mesh: projectileMesh,
         transform: projectileTransform,
-        velocity: direction * (ability.projectileSpeed ?? 8.0),
+        velocity: plen > 0.01
+            ? Vector3(pdx / plen * spd, pdy / plen * spd, pdz / plen * spd)
+            : Vector3(0, 0, spd),
         lifetime: 5.0,
       ));
     } else {

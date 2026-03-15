@@ -228,10 +228,32 @@ class MageAbilities {
     enablesComboChain: true,
   );
 
+  /// Arcane Empowerment — Mage aura amplifying spell damage for nearby allies
+  static final arcaneEmpowerment = AbilityData(
+    name: 'Arcane Empowerment',
+    description: 'Channel arcane energy into a sustained field of power that '
+        'amplifies the spellcasting of all nearby allies.',
+    type: AbilityType.buff,
+    cooldown: 5.0,
+    duration: 3600.0,
+    color: Vector3(0.6, 0.3, 0.9),
+    impactColor: Vector3(0.7, 0.4, 1.0),
+    impactSize: 1.4,
+    statusEffect: StatusEffect.strength,
+    statusStrength: 0.25,
+    manaColor: ManaColor.blue,
+    manaCost: 30.0,
+    category: 'mage',
+    damageSchool: DamageSchool.arcane,
+    isAura: true,
+    auraRange: 10.0,
+  );
+
   /// All mage abilities as a list
   static List<AbilityData> get all => [
     frostBolt, blizzard, lightningBolt, chainLightning,
     meteor, arcaneShield, teleport,
     arcanePulse, riftBlade, arcaneBreach, arcaneFocus, counterspell,
+    arcaneEmpowerment,
   ];
 }

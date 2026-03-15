@@ -11,6 +11,37 @@ import '../state/custom_ability_manager.dart';
 part 'ability_editor_panel_sections.dart';
 part 'ability_editor_panel_fields.dart';
 
+// ==================== EFFECT ENTRY ====================
+
+/// Mutable editor state for one entry in the multi-effect list.
+/// Each entry owns its own controllers so they are disposed individually.
+class _EffectEntry {
+  String selectedType;
+  final TextEditingController durationCtrl;
+  final TextEditingController strengthCtrl;
+
+  _EffectEntry({
+    required this.selectedType,
+    required String duration,
+    required String strength,
+  })  : durationCtrl = TextEditingController(text: duration),
+        strengthCtrl = TextEditingController(text: strength);
+
+  void dispose() {
+    durationCtrl.dispose();
+    strengthCtrl.dispose();
+  }
+
+  AbilityStatusEffect toAbilityStatusEffect() => AbilityStatusEffect(
+        type: StatusEffect.values.firstWhere(
+          (s) => s.name == selectedType,
+          orElse: () => StatusEffect.none,
+        ),
+        duration: double.tryParse(durationCtrl.text) ?? 0.0,
+        strength: double.tryParse(strengthCtrl.text) ?? 1.0,
+      );
+}
+
 // ==================== SHARED CONSTANTS ====================
 // Reason: top-level so extension methods in part files can access them directly
 // (static class members require qualified access from extension methods)
@@ -104,8 +135,6 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
   late TextEditingController _impactColorGCtrl;
   late TextEditingController _impactColorBCtrl;
   late TextEditingController _effectDescCtrl;
-  late TextEditingController _statusDurationCtrl;
-  late TextEditingController _statusStrengthCtrl;
   late TextEditingController _aoeRadiusCtrl;
   late TextEditingController _maxTargetsCtrl;
   late TextEditingController _dotTicksCtrl;
@@ -119,12 +148,13 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
   late String _selectedType;
   late String _selectedManaColor;
   late String _selectedSecondaryManaColor;
-  late String _selectedStatusEffect;
   late String _selectedCategory;
   late bool _piercing;
   late bool _requiresStationary;
   late String _selectedChannelEffect;
   late List<String> _comboPrimes;
+  // Multi-status-effect list (replaces single _selectedStatusEffect/_statusDurationCtrl/_statusStrengthCtrl)
+  List<_EffectEntry> _statusEffects = [];
   /// Sorted list of all known ability names, excluding the ability being edited.
   /// Computed once per ability load — abilities don't change while the editor is open.
   late List<String> _allAbilityNames;
@@ -170,8 +200,6 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
     _impactColorRCtrl = TextEditingController(text: effective.impactColor.x.toStringAsFixed(2));
     _impactColorGCtrl = TextEditingController(text: effective.impactColor.y.toStringAsFixed(2));
     _impactColorBCtrl = TextEditingController(text: effective.impactColor.z.toStringAsFixed(2));
-    _statusDurationCtrl = TextEditingController(text: effective.statusDuration.toString());
-    _statusStrengthCtrl = TextEditingController(text: effective.statusStrength.toString());
     _aoeRadiusCtrl = TextEditingController(text: effective.aoeRadius.toString());
     _maxTargetsCtrl = TextEditingController(text: effective.maxTargets.toString());
     _dotTicksCtrl = TextEditingController(text: effective.dotTicks.toString());
@@ -190,8 +218,14 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
     _selectedType = effective.type.name;
     _selectedManaColor = effective.manaColor.name;
     _selectedSecondaryManaColor = effective.secondaryManaColor.name;
-    _selectedStatusEffect = effective.statusEffect.name;
     _selectedCategory = effective.category;
+    // Multi-effect list: dispose old entries first to avoid controller leaks
+    for (final e in _statusEffects) e.dispose();
+    _statusEffects = effective.allStatusEffects.map((e) => _EffectEntry(
+      selectedType: e.type.name,
+      duration: e.duration.toString(),
+      strength: e.strength.toString(),
+    )).toList();
     _piercing = effective.piercing;
     _requiresStationary = effective.requiresStationary;
     _selectedChannelEffect = effective.channelEffect.name;
@@ -217,7 +251,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
   /// Controllers whose values affect the balance score.
   List<TextEditingController> get _balanceRelevantControllers => [
     _damageCtrl, _cooldownCtrl, _rangeCtrl, _healAmountCtrl,
-    _manaCostCtrl, _secondaryManaCostCtrl, _statusDurationCtrl,
+    _manaCostCtrl, _secondaryManaCostCtrl,
     _aoeRadiusCtrl, _maxTargetsCtrl, _dotTicksCtrl,
     _knockbackForceCtrl, _castTimeCtrl, _windupTimeCtrl,
     _windupMovementSpeedCtrl,
@@ -252,8 +286,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
     _impactColorGCtrl.dispose();
     _impactColorBCtrl.dispose();
     _effectDescCtrl.dispose();
-    _statusDurationCtrl.dispose();
-    _statusStrengthCtrl.dispose();
+    for (final e in _statusEffects) e.dispose();
     _aoeRadiusCtrl.dispose();
     _maxTargetsCtrl.dispose();
     _dotTicksCtrl.dispose();
@@ -329,9 +362,11 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
       overrides['impactColor'] = [ir, ig, ib];
     }
 
-    final fxEnum = StatusEffect.values.where((s) => s.name == _selectedStatusEffect);
-    if (fxEnum.isNotEmpty && fxEnum.first != original.statusEffect) {
-      overrides['statusEffect'] = fxEnum.first.index;
+    // Multi-effect list
+    final newEffects = _statusEffects.map((e) => e.toAbilityStatusEffect().toJson()).toList();
+    final origEffects = original.allStatusEffects.map((e) => e.toJson()).toList();
+    if (newEffects.toString() != origEffects.toString()) {
+      overrides['statusEffects'] = newEffects;
     }
 
     // Effect description override
@@ -340,8 +375,6 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
       overrides['effectDescription'] = _effectDescCtrl.text;
     }
 
-    checkDbl('statusDuration', _statusDurationCtrl.text, original.statusDuration);
-    checkDbl('statusStrength', _statusStrengthCtrl.text, original.statusStrength);
     checkDbl('aoeRadius', _aoeRadiusCtrl.text, original.aoeRadius);
     checkInt('maxTargets', _maxTargetsCtrl.text, original.maxTargets);
     checkInt('dotTicks', _dotTicksCtrl.text, original.dotTicks);
@@ -426,9 +459,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
         double.tryParse(_impactColorGCtrl.text) ?? 1.0,
         double.tryParse(_impactColorBCtrl.text) ?? 1.0,
       ),
-      statusEffect: StatusEffect.values.firstWhere((s) => s.name == _selectedStatusEffect, orElse: () => StatusEffect.none),
-      statusDuration: double.tryParse(_statusDurationCtrl.text) ?? 0.0,
-      statusStrength: double.tryParse(_statusStrengthCtrl.text) ?? 0.0,
+      statusEffects: _statusEffects.map((e) => e.toAbilityStatusEffect()).toList(),
       aoeRadius: double.tryParse(_aoeRadiusCtrl.text) ?? 0.0,
       maxTargets: int.tryParse(_maxTargetsCtrl.text) ?? 1,
       dotTicks: int.tryParse(_dotTicksCtrl.text) ?? 0,

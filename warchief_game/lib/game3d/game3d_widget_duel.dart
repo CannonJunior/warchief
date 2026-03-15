@@ -99,8 +99,9 @@ mixin _WidgetDuelMixin on _GameStateBase {
       // Reason: initialize GCD + combo-window timers to zero for every combatant
       // so DuelSystem.update() has valid indices from the first frame.
       final totalCombatants = chalSize + enemySize;
-      mgr.combatantGcds         = List.filled(totalCombatants, 0.0, growable: true);
-      mgr.combatantComboWindows = List.filled(totalCombatants, 0.0, growable: true);
+      mgr.combatantGcds            = List.filled(totalCombatants, 0.0, growable: true);
+      mgr.combatantComboWindows    = List.filled(totalCombatants, 0.0, growable: true);
+      mgr.combatantPrimedAbilities = List.generate(totalCombatants, (_) => <String>{}, growable: true);
       mgr.combatantCcRemaining      = List.filled(totalCombatants, 0.0, growable: true);
       mgr.combatantSlowRemaining    = List.filled(totalCombatants, 0.0, growable: true);
       mgr.combatantSlowFactor       = List.filled(totalCombatants, 1.0, growable: true);
@@ -124,6 +125,9 @@ mixin _WidgetDuelMixin on _GameStateBase {
       for (int i = 0; i < mgr.combatantGcds.length; i++) {
         mgr.combatantGcds[i]         = 0.0;
         mgr.combatantComboWindows[i] = 0.0;
+        if (i < mgr.combatantPrimedAbilities.length) {
+          mgr.combatantPrimedAbilities[i].clear();
+        }
       }
     }
   }

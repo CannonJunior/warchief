@@ -71,6 +71,7 @@ mixin _WidgetUIMixin on _GameStateBase {
             // Queued/executing ability names below the active unit
             QueuedAbilityLabelOverlay(
               executingLabel: gameState.executingAbilityLabel,
+              exitingLabels:  gameState.exitingQueueLabels,
               queuedEntries: gameState.abilityQueue.map((e) => QueuedDisplayEntry(
                 e.abilityName,
                 isOnCooldown: AbilitySystem.getCooldownForSlot(e.slotIndex, gameState) > 0,

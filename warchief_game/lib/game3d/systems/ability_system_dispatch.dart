@@ -286,7 +286,9 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
   }
 
   gameState.addConsoleLog('$abilityName executed (slot $slotIndex)');
-  gameState.executingAbilityLabel = QueuedAbilityLabel(abilityName);
+  // Reason: queue-fired abilities show a fading yellow entry in the queue line;
+  // only direct hotkey presses use the separate floating dissolve label.
+  if (!_isDrainingQueue) gameState.executingAbilityLabel = QueuedAbilityLabel(abilityName);
 
   // Trigger GCD — 1.0s base, reduced by haste and stance
   {
@@ -406,6 +408,21 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
     case 'Silent Mind': _executeSilentMind(slotIndex, gameState); break;
     case 'Windshear': _executeWindshear(slotIndex, gameState); break;
     case 'Wind Warp': _executeWindWarp(slotIndex, gameState); break;
+
+    // ==================== CLASS LONG BUFFS ====================
+    case 'Battle Presence': _executeBattlePresence(slotIndex, gameState); break;
+    case 'Arcane Empowerment': _executeArcaneEmpowerment(slotIndex, gameState); break;
+    case 'Shadow Form': _executeShadowForm(slotIndex, gameState); break;
+    case 'Blessing of Kings': _executeBlessingOfKings(slotIndex, gameState); break;
+    case 'Aether Flow': _executeAetherFlow(slotIndex, gameState); break;
+    case 'Gale Stride': _executeGaleStride(slotIndex, gameState); break;
+    case 'Storm Hardened': _executeStormHardened(slotIndex, gameState); break;
+    case 'Nature\'s Resilience': _executeNaturesResilience(slotIndex, gameState); break;
+    case 'Living Web': _executeLivingWeb(slotIndex, gameState); break;
+    case 'Spirit Bond': _executeSpiritBond(slotIndex, gameState); break;
+    case 'Death Shroud': _executeDeathShroud(slotIndex, gameState); break;
+    case 'Void Resonance': _executeVoidResonance(slotIndex, gameState); break;
+    case 'Elemental Attunement': _executeElementalAttunement(slotIndex, gameState); break;
 
     default:
       // Generic data-driven execution for all other abilities (custom, class combos, etc.)

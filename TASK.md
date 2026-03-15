@@ -2,6 +2,56 @@
 
 ## Current Tasks
 
+### ✅ Completed - 2026-03-15
+
+#### Class Self-Buffs, Party Buffs, and Aura System
+- ✅ **`ability_types.dart`**: Added `isAura` (bool), `auraRange` (double, default 10.0), `isPartyBuff` (bool) to `AbilityData` with full serialization (constructor, copyWith, toJson, fromJson, applyOverrides).
+- ✅ **`active_effect.dart`**: Fixed `isDoT` to use `damagePerTick.abs() > 0` so HoT (healing-over-time with negative damagePerTick) also ticks.
+- ✅ **`gameplay_aura_system.dart`** (new, 134 lines): `GameplayAuraSystem.update()` runs every second; finds all units with aura effects, applies/refreshes a 3s pulse buff to all friendlies within `auraRange`. Registered in game loop.
+- ✅ **`ability_system_interactions.dart`**: Added `_activeStrengthMult()` helper; applied to melee and AoE damage so strength buffs affect outgoing damage.
+- ✅ **`ability_system_implementations.dart`**: Added `_executeBuffSelf`, `_executePartyBuff`, `_executeAuraActivate` helpers + 13 concrete dispatch functions.
+- ✅ **13 new 60-min buff abilities** added (one per class):
+  - Warrior: "Battle Presence" — RED AURA, `strength +25%`, 10 yd range
+  - Mage: "Arcane Empowerment" — BLUE AURA, `strength +25%`, 10 yd range
+  - Windwalker: "Gale Stride" — WHITE AURA, `haste +20%`, 10 yd range
+  - Greenseer: "Living Web" — GREEN AURA, `regen 4/2s`, 10 yd range
+  - Starbreaker: "Void Resonance" — BLACK AURA, `shield 25`, 10 yd range
+  - Rogue: "Shadow Form" — self-buff, `haste +25%`
+  - Stormheart: "Storm Hardened" — self-buff, `regen 3/2s`
+  - Nature: "Nature's Resilience" — self-buff, `regen 3/2s`
+  - Spiritkin: "Spirit Bond" — self-buff, `strength +20%`
+  - Necromancer: "Death Shroud" — self-buff, `shield 30`
+  - Elemental: "Elemental Attunement" — self-buff, `strength +20%`
+  - Leyweaver: "Blessing of Kings" — PARTY BUFF (all friendlies), `strength +15%`
+  - Aethermancer: "Aether Flow" — PARTY BUFF (all friendlies), `haste +20%`
+- ✅ **`ability_system_dispatch.dart`**: 13 new dispatch cases added.
+- ✅ Build verified: `flutter analyze --no-pub` — 0 errors (21 pre-existing infos unchanged).
+
+### ✅ Completed - 2026-03-14
+
+#### Duel AI Combo Awareness
+- ✅ **`lib/game3d/state/duel_manager.dart`**: Added `combatantPrimedAbilities: List<Set<String>>` field.
+- ✅ **`lib/game3d/game3d_widget_duel.dart`**: Initialize and clear `combatantPrimedAbilities` at duel start/reset.
+- ✅ **`lib/game3d/systems/duel_system.dart`**: Track primed abilities after each fired ability; clear on combo window expiry. `_runAI` reads primed set and prioritizes follow-up abilities.
+- ✅ **`lib/game3d/systems/duel_ai_helpers.dart`**: `_abilityPriority` accepts `primedNames` set; primed abilities get priority score 200 (highest).
+
+#### Duel Arena Randomize + Seed System
+- ✅ **`lib/game3d/ui/duel/duel_panel.dart`**: Added `TextEditingController` for challenger and enemy seeds; `dispose()` cleanup.
+- ✅ **`lib/game3d/ui/duel/duel_panel_setup.dart`**: Added `_randomizeRow` (Rnd button, seed TextField, ↵ button). Added `_randomizeSide`, `_computeSeed`, `_applySeed` helpers. Seeds encode partySize + per-slot classIndex×5+gearTier using stable `allCombatantTypes` index.
+
+#### Ability Queue Exit Animation
+- ✅ **`lib/game3d/state/gameplay_settings.dart`**: Added `queueExitDuration` (double, default 1.0s) with SharedPreferences persistence.
+- ✅ **`lib/game3d/ui/damage_indicators.dart`**: Added `ExitingQueueLabel` class (age/maxAge/opacity). Updated `QueuedAbilityLabelOverlay` to accept and render exiting labels inline in yellow at front of queue, fading out.
+- ✅ **`lib/game3d/state/game_state.dart`**: Added `exitingQueueLabels: List<ExitingQueueLabel>`.
+- ✅ **`lib/game3d/systems/ability_system_updates.dart`**: Added `_updateExitingQueueLabels(dt, gs)`; `_drainAbilityQueue` creates `ExitingQueueLabel` before executing.
+- ✅ **`lib/game3d/systems/ability_system.dart`**: Added `globalGameplaySettings` import; added `_updateExitingQueueLabels` call in update loop.
+- ✅ **`lib/game3d/systems/ability_system_core.dart`** + **`_dispatch.dart`**: Wrapped `executingAbilityLabel` assignments with `if (!_isDrainingQueue)` guard.
+- ✅ **`lib/game3d/game3d_widget_ui.dart`**: Passed `exitingLabels: gameState.exitingQueueLabels` to `QueuedAbilityLabelOverlay`.
+- ✅ **`lib/game3d/ui/settings/typography_tab.dart`**: Added "Exit Fade" duration slider (0.0–3.0s) in Queue section.
+
+#### Ley Lines Terrain Drape Fix
+- ✅ **`lib/game3d/systems/render_system.dart`** (`_createLeyLineMesh`): Per-corner terrain height sampling (4 outer corners + 2 centerline per sub-quad). Cross-slope quads now tilt correctly. `subdivStep` 6.0→3.0, `maxSteps` 40→80.
+
 ### ✅ Completed - 2026-03-04
 
 #### Code Quality & Performance Optimization (Multi-Session)

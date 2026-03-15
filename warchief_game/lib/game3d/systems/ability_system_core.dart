@@ -64,17 +64,16 @@ void _updateCastingState(double dt, GameState gameState) {
     gameState.castingSlotIndex = null;
     gameState.castingAbilityName = '';
 
-    gameState.combatLogMessages.add(CombatLogEntry(
+    gameState.addCombatLog(CombatLogEntry(
       source: 'Player',
       action: '$abilityName cast (${configuredTime.toStringAsFixed(2)}s)',
       type: CombatLogType.ability,
     ));
-    if (gameState.combatLogMessages.length > 250) {
-      gameState.combatLogMessages.removeRange(0, gameState.combatLogMessages.length - 200);
-    }
 
     debugPrint('[CAST] $abilityName cast complete! (${configuredTime.toStringAsFixed(2)}s)');
-    gameState.executingAbilityLabel = QueuedAbilityLabel(abilityName);
+    // Reason: queue-fired abilities already show a fading entry in the queue
+    // line; only direct hotkey presses create the separate floating label.
+    if (!_isDrainingQueue) gameState.executingAbilityLabel = QueuedAbilityLabel(abilityName);
     if (slotIndex != null) {
       _finishCastTimeAbility(slotIndex, gameState);
     }
@@ -102,17 +101,14 @@ void _updateWindupState(double dt, GameState gameState) {
     gameState.windupAbilityName = '';
     gameState.windupMovementSpeedModifier = 1.0;
 
-    gameState.combatLogMessages.add(CombatLogEntry(
+    gameState.addCombatLog(CombatLogEntry(
       source: 'Player',
       action: '$abilityName windup (${configuredTime.toStringAsFixed(2)}s)',
       type: CombatLogType.ability,
     ));
-    if (gameState.combatLogMessages.length > 250) {
-      gameState.combatLogMessages.removeRange(0, gameState.combatLogMessages.length - 200);
-    }
 
     debugPrint('[WINDUP] $abilityName windup complete! (${configuredTime.toStringAsFixed(2)}s)');
-    gameState.executingAbilityLabel = QueuedAbilityLabel(abilityName);
+    if (!_isDrainingQueue) gameState.executingAbilityLabel = QueuedAbilityLabel(abilityName);
     if (slotIndex != null) {
       _finishWindupAbility(slotIndex, gameState);
     }

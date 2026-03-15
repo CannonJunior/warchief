@@ -24,6 +24,12 @@ extension _DuelPanelSetup on _DuelPanelState {
         _enemyTypes.sublist(0, _enemyPartySize).every((e) => e != null) &&
         widget.manager.phase != DuelPhase.active;
 
+    // Sync seed fields whenever layout rebuilds.
+    final chalSeed = _computeSeed(isChallenger: true);
+    final enemSeed = _computeSeed(isChallenger: false);
+    if (_chalSeedCtrl.text != chalSeed)  _chalSeedCtrl.text = chalSeed;
+    if (_enemySeedCtrl.text != enemSeed) _enemySeedCtrl.text = enemSeed;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -42,6 +48,14 @@ extension _DuelPanelSetup on _DuelPanelState {
             Expanded(child: _partySizeRow(true)),
             const SizedBox(width: 10),
             Expanded(child: _partySizeRow(false)),
+          ]),
+          const SizedBox(height: 6),
+
+          // ── Randomize + seed ──────────────────────────────────────────────
+          Row(children: [
+            Expanded(child: _randomizeRow(true)),
+            const SizedBox(width: 10),
+            Expanded(child: _randomizeRow(false)),
           ]),
           const SizedBox(height: 6),
 
@@ -244,6 +258,16 @@ extension _DuelPanelSetup on _DuelPanelState {
     final selectedClass = isChallenger ? _chalClasses[index] : _enemyTypes[index];
     final gearTier      = isChallenger ? _chalGearTiers[index] : _enemyGearTiers[index];
 
+    // Reason: filter available types to match the Abilities Codex mode so the
+    // Duel Arena only offers classes that are enabled in the current scenario config.
+    final codexMode = globalScenarioConfig?.abilitiesCodexMode ?? 'expanded';
+    final availableTypes = DuelDefinitions.availableCombatantTypes(codexMode);
+
+    // Reason: if the previously-selected class is no longer in the filtered list
+    // (e.g. mode switched from expanded to development), treat the slot as unset
+    // to prevent a Flutter assertion from a DropdownButton value not in its items.
+    final validSelection = availableTypes.contains(selectedClass) ? selectedClass : null;
+
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
@@ -257,8 +281,8 @@ extension _DuelPanelSetup on _DuelPanelState {
                 fontWeight: FontWeight.bold, letterSpacing: 0.8)),
         const SizedBox(height: 4),
         _compactDropdown(
-          value: selectedClass,
-          items: DuelDefinitions.allCombatantTypes,
+          value: validSelection,
+          items: availableTypes,
           displayNames: DuelDefinitions.allDisplayNames,
           onChanged: (v) => setState(() {
             if (isChallenger) {
@@ -339,6 +363,162 @@ extension _DuelPanelSetup on _DuelPanelState {
         onChanged: onChanged,
       ),
     );
+  }
+
+  // ── Randomize + seed helpers ───────────────────────────────────────────────
+
+  /// Row containing [Randomize] button, seed input field, and [Enter] button.
+  Widget _randomizeRow(bool isChallenger) {
+    final ctrl  = isChallenger ? _chalSeedCtrl : _enemySeedCtrl;
+    return Row(children: [
+      // Randomize button
+      SizedBox(
+        height: 26,
+        child: ElevatedButton(
+          onPressed: () => _randomizeSide(isChallenger),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isChallenger
+                ? Colors.blueAccent.withValues(alpha: 0.25)
+                : const Color(0xFFef5350).withValues(alpha: 0.25),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            minimumSize: Size.zero,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+            side: BorderSide(
+                color: isChallenger
+                    ? Colors.blueAccent.withValues(alpha: 0.5)
+                    : const Color(0xFFef5350).withValues(alpha: 0.5)),
+          ),
+          child: const Text('Rnd', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+        ),
+      ),
+      const SizedBox(width: 4),
+      // Seed input field
+      Expanded(
+        child: SizedBox(
+          height: 26,
+          child: TextField(
+            controller: ctrl,
+            style: const TextStyle(color: Color(0xFFe0e0e0), fontSize: 10),
+            decoration: InputDecoration(
+              hintText: 'seed',
+              hintStyle: const TextStyle(color: Color(0xFF9e9e9e), fontSize: 10),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              filled: true,
+              fillColor: const Color(0xFF16213e),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(3),
+                  borderSide: const BorderSide(color: Colors.white12)),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(3),
+                  borderSide: const BorderSide(color: Colors.white12)),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(3),
+                  borderSide: const BorderSide(color: Color(0xFF533483))),
+            ),
+            keyboardType: TextInputType.number,
+          ),
+        ),
+      ),
+      const SizedBox(width: 4),
+      // Enter (apply seed) button
+      SizedBox(
+        height: 26,
+        child: ElevatedButton(
+          onPressed: () => _applySeed(isChallenger, ctrl.text.trim()),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF533483),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            minimumSize: Size.zero,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+          ),
+          child: const Text('↵', style: TextStyle(fontSize: 12)),
+        ),
+      ),
+    ]);
+  }
+
+  /// Fill all slots on [isChallenger] side with random valid classes.
+  void _randomizeSide(bool isChallenger) {
+    final codexMode   = globalScenarioConfig?.abilitiesCodexMode ?? 'expanded';
+    final available   = DuelDefinitions.availableCombatantTypes(codexMode);
+    final rng         = Random();
+    final partySize   = isChallenger ? _chalPartySize : _enemyPartySize;
+    setState(() {
+      for (int i = 0; i < partySize; i++) {
+        final picked = available[rng.nextInt(available.length)];
+        if (isChallenger) {
+          while (_chalClasses.length <= i) { _chalClasses.add(null); }
+          _chalClasses[i] = picked;
+        } else {
+          while (_enemyTypes.length <= i) { _enemyTypes.add(null); }
+          _enemyTypes[i] = picked;
+        }
+      }
+    });
+  }
+
+  /// Encode the current slot selections into a numeric seed string.
+  ///
+  /// Format: `partySize` (1 digit) + 2 zero-padded digits per slot where
+  /// `slotVal = classIndex * 5 + gearTier`.  Returns empty string when any
+  /// slot is unset.
+  String _computeSeed({required bool isChallenger}) {
+    final classes   = isChallenger ? _chalClasses   : _enemyTypes;
+    final gears     = isChallenger ? _chalGearTiers : _enemyGearTiers;
+    final partySize = isChallenger ? _chalPartySize  : _enemyPartySize;
+    final allTypes  = DuelDefinitions.allCombatantTypes;
+    final buf = StringBuffer()..write(partySize);
+    for (int i = 0; i < partySize; i++) {
+      final type = i < classes.length ? classes[i] : null;
+      if (type == null) return '';
+      final classIdx = allTypes.indexOf(type);
+      if (classIdx < 0) return '';
+      final gear     = i < gears.length ? gears[i] : 0;
+      buf.write((classIdx * 5 + gear).toString().padLeft(2, '0'));
+    }
+    return buf.toString();
+  }
+
+  /// Decode a seed string and apply the resulting classes + gear tiers to the
+  /// specified side.  Silently ignores invalid seeds.
+  void _applySeed(bool isChallenger, String seed) {
+    if (seed.isEmpty) return;
+    final partyDigit = int.tryParse(seed[0]);
+    if (partyDigit == null || partyDigit < 1 || partyDigit > 5) return;
+    final expected = 1 + partyDigit * 2;
+    if (seed.length != expected) return;
+    final allTypes = DuelDefinitions.allCombatantTypes;
+    final classes  = <String>[];
+    final gears    = <int>[];
+    for (int i = 0; i < partyDigit; i++) {
+      final part = seed.substring(1 + i * 2, 3 + i * 2);
+      final slotVal = int.tryParse(part);
+      if (slotVal == null) return;
+      final classIdx = slotVal ~/ 5;
+      final gear     = slotVal % 5;
+      if (classIdx >= allTypes.length) return;
+      classes.add(allTypes[classIdx]);
+      gears.add(gear);
+    }
+    // All slots decoded successfully — apply and resize party.
+    setState(() {
+      _setPartySize(isChallenger, partyDigit);
+      for (int i = 0; i < partyDigit; i++) {
+        if (isChallenger) {
+          while (_chalClasses.length <= i)   { _chalClasses.add(null); }
+          while (_chalGearTiers.length <= i) { _chalGearTiers.add(0); }
+          _chalClasses[i]   = classes[i];
+          _chalGearTiers[i] = gears[i];
+        } else {
+          while (_enemyTypes.length <= i)     { _enemyTypes.add(null); }
+          while (_enemyGearTiers.length <= i) { _enemyGearTiers.add(0); }
+          _enemyTypes[i]    = classes[i];
+          _enemyGearTiers[i] = gears[i];
+        }
+      }
+    });
   }
 
   // ── Start-duel callback ────────────────────────────────────────────────────

@@ -70,6 +70,9 @@ enum StatusEffect {
   vulnerableArcane,     // Increased arcane damage taken
   vulnerableHoly,       // Increased holy damage taken
   interrupt,            // Spell lockout — cannot cast spell-type abilities for duration
+  knockback,            // Instant push in caster-facing direction; strength = world units displaced
+  grip,                 // Instant pull toward caster; strength = fraction of gap closed (0.0–1.0)
+  knockdown,            // Composite stun + interrupt; duration = stun/lockout seconds
 }
 
 /// Maps a DamageSchool to its corresponding vulnerability StatusEffect.
@@ -117,6 +120,41 @@ enum ManaColor {
   black,  // Void/comet energy — regenerated from comet proximity and meteor impacts
   // Future mana colors:
   // gold,   // Divine/holy energy
+}
+
+/// A single status effect entry within an ability's multi-effect list.
+///
+/// Used in [AbilityData.statusEffects]. The [strength] field's meaning is
+/// effect-type-specific: world units for knockback, pull fraction (0–1) for
+/// grip, and generic intensity/multiplier for timed effects.
+class AbilityStatusEffect {
+  final StatusEffect type;
+
+  /// Duration in seconds; 0 = instant/one-shot (knockback, grip).
+  final double duration;
+
+  /// Type-specific magnitude (push force, pull fraction, effect intensity).
+  final double strength;
+
+  const AbilityStatusEffect({
+    required this.type,
+    this.duration = 0.0,
+    this.strength = 1.0,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'type': type.index,
+    'duration': duration,
+    'strength': strength,
+  };
+
+  factory AbilityStatusEffect.fromJson(Map<String, dynamic> json) =>
+      AbilityStatusEffect(
+        type: StatusEffect.values[
+            (json['type'] as int? ?? 0).clamp(0, StatusEffect.values.length - 1)],
+        duration: (json['duration'] as num?)?.toDouble() ?? 0.0,
+        strength: (json['strength'] as num?)?.toDouble() ?? 1.0,
+      );
 }
 
 /// Ability data class containing all parameters for an ability
@@ -194,6 +232,20 @@ class AbilityData {
   /// yellow to signal the combo window.
   final List<String> comboPrimes;
 
+  /// Multi-effect list. When non-empty, takes precedence over the legacy
+  /// single-effect fields (statusEffect / statusDuration / statusStrength).
+  final List<AbilityStatusEffect> statusEffects;
+
+  /// Marks this ability as a persistent aura that pulses buffs to nearby units.
+  /// [GameplayAuraSystem] spreads the effect to friendlies within [auraRange].
+  final bool isAura;
+
+  /// Range in world units for aura effect pulsing (used when [isAura] is true).
+  final double auraRange;
+
+  /// Marks this ability as a utility party buff applied to all friendlies, not just self.
+  final bool isPartyBuff;
+
   const AbilityData({
     required this.name,
     required this.description,
@@ -230,6 +282,10 @@ class AbilityData {
     this.appliesPermanentVulnerability = false,
     this.enablesComboChain = false,
     this.comboPrimes = const [],
+    this.statusEffects = const [],
+    this.isAura = false,
+    this.auraRange = 10.0,
+    this.isPartyBuff = false,
     // Mana cost defaults
     this.manaColor = ManaColor.none,
     this.manaCost = 0.0,
@@ -286,6 +342,19 @@ class AbilityData {
   /// Whether this is an instant ability (no cast or windup)
   bool get isInstant => castTime <= 0 && windupTime <= 0;
 
+  /// Returns the canonical list of effects to apply on hit.
+  /// Uses [statusEffects] when non-empty; otherwise falls back to the legacy
+  /// single-effect fields for backward compatibility.
+  List<AbilityStatusEffect> get allStatusEffects {
+    if (statusEffects.isNotEmpty) return statusEffects;
+    if (statusEffect == StatusEffect.none) return const [];
+    return [AbilityStatusEffect(
+      type: statusEffect,
+      duration: statusDuration,
+      strength: statusStrength > 0 ? statusStrength : 1.0,
+    )];
+  }
+
   /// Whether this ability targets self (never range-checked)
   bool get isSelfCast =>
       type == AbilityType.heal ||
@@ -331,6 +400,10 @@ class AbilityData {
     bool? appliesPermanentVulnerability,
     bool? enablesComboChain,
     List<String>? comboPrimes,
+    List<AbilityStatusEffect>? statusEffects,
+    bool? isAura,
+    double? auraRange,
+    bool? isPartyBuff,
   }) {
     return AbilityData(
       name: name ?? this.name,
@@ -369,6 +442,10 @@ class AbilityData {
       appliesPermanentVulnerability: appliesPermanentVulnerability ?? this.appliesPermanentVulnerability,
       enablesComboChain: enablesComboChain ?? this.enablesComboChain,
       comboPrimes: comboPrimes ?? this.comboPrimes,
+      statusEffects: statusEffects ?? this.statusEffects,
+      isAura: isAura ?? this.isAura,
+      auraRange: auraRange ?? this.auraRange,
+      isPartyBuff: isPartyBuff ?? this.isPartyBuff,
     );
   }
 
@@ -410,6 +487,11 @@ class AbilityData {
       'damageSchool': damageSchool.index,
       'appliesPermanentVulnerability': appliesPermanentVulnerability,
       if (comboPrimes.isNotEmpty) 'comboPrimes': comboPrimes,
+      if (statusEffects.isNotEmpty)
+        'statusEffects': statusEffects.map((e) => e.toJson()).toList(),
+      if (isAura) 'isAura': isAura,
+      if (auraRange != 10.0) 'auraRange': auraRange,
+      if (isPartyBuff) 'isPartyBuff': isPartyBuff,
     };
   }
 
@@ -463,6 +545,13 @@ class AbilityData {
       damageSchool: DamageSchool.values[(json['damageSchool'] as int? ?? 0).clamp(0, DamageSchool.values.length - 1)],
       appliesPermanentVulnerability: json['appliesPermanentVulnerability'] as bool? ?? false,
       comboPrimes: (json['comboPrimes'] as List<dynamic>?)?.cast<String>() ?? const [],
+      statusEffects: (json['statusEffects'] as List<dynamic>?)
+              ?.map((e) => AbilityStatusEffect.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      isAura: json['isAura'] as bool? ?? false,
+      auraRange: (json['auraRange'] as num?)?.toDouble() ?? 10.0,
+      isPartyBuff: json['isPartyBuff'] as bool? ?? false,
     );
   }
 
@@ -516,6 +605,12 @@ class AbilityData {
       damageSchool: overrides['damageSchool'] != null ? DamageSchool.values[overrides['damageSchool'] as int] : null,
       appliesPermanentVulnerability: overrides['appliesPermanentVulnerability'] as bool?,
       comboPrimes: (overrides['comboPrimes'] as List<dynamic>?)?.cast<String>(),
+      statusEffects: (overrides['statusEffects'] as List<dynamic>?)
+          ?.map((e) => AbilityStatusEffect.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      isAura: overrides['isAura'] as bool?,
+      auraRange: (overrides['auraRange'] as num?)?.toDouble(),
+      isPartyBuff: overrides['isPartyBuff'] as bool?,
     );
   }
 }

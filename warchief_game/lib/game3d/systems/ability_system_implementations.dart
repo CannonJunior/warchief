@@ -311,3 +311,104 @@ void _executeBattleShout(int slotIndex, GameState gameState) {
   _setCooldownForSlot(slotIndex, _effective(UtilityAbilities.battleShout).cooldown, gameState);
   gameState.addConsoleLog('Battle Shout: STUB — cooldown set but no ally buff applied', level: ConsoleLogLevel.error);
 }
+
+// ==================== BUFF HELPERS ====================
+
+/// Apply a self-only 60-minute buff. Removes any existing buff with same name
+/// before re-applying so recasting refreshes cleanly.
+void _executeBuffSelf(int slotIndex, GameState gameState, AbilityData ability) {
+  _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+  final effects = gameState.activeCharacterActiveEffects;
+  effects.removeWhere((e) => e.sourceName == ability.name);
+  effects.add(ActiveEffect(
+    type: ability.statusEffect,
+    remainingDuration: ability.duration,
+    totalDuration: ability.duration,
+    strength: ability.statusStrength,
+    sourceName: ability.name,
+    // Reason: regen buffs heal over time using negative damagePerTick trick
+    damagePerTick: ability.statusEffect == StatusEffect.regen ? -ability.statusStrength : 0.0,
+    tickInterval: ability.statusEffect == StatusEffect.regen ? 2.0 : 0.0,
+  ));
+  gameState.addConsoleLog('${ability.name} active (60 min).');
+}
+
+/// Apply a party-wide buff to all friendly characters (player + all allies).
+void _executePartyBuff(int slotIndex, GameState gameState, AbilityData ability) {
+  _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+
+  void applyTo(List<ActiveEffect> effects) {
+    effects.removeWhere((e) => e.sourceName == ability.name);
+    effects.add(ActiveEffect(
+      type: ability.statusEffect,
+      remainingDuration: ability.duration,
+      totalDuration: ability.duration,
+      strength: ability.statusStrength,
+      sourceName: ability.name,
+      damagePerTick: ability.statusEffect == StatusEffect.regen ? -ability.statusStrength : 0.0,
+      tickInterval: ability.statusEffect == StatusEffect.regen ? 2.0 : 0.0,
+    ));
+  }
+
+  applyTo(gameState.playerActiveEffects);
+  for (final ally in gameState.allies) {
+    if (ally.health > 0) applyTo(ally.activeEffects);
+  }
+  gameState.addConsoleLog('${ability.name} applied to party (60 min).');
+}
+
+/// Activate an aura buff on self. GameplayAuraSystem handles spreading to nearby allies.
+void _executeAuraActivate(int slotIndex, GameState gameState, AbilityData ability) {
+  _setCooldownForSlot(slotIndex, ability.cooldown, gameState);
+  final effects = gameState.activeCharacterActiveEffects;
+  effects.removeWhere((e) => e.sourceName == ability.name);
+  effects.add(ActiveEffect(
+    type: ability.statusEffect,
+    remainingDuration: ability.duration,
+    totalDuration: ability.duration,
+    strength: ability.statusStrength,
+    sourceName: ability.name,
+  ));
+  gameState.addConsoleLog('${ability.name} aura activated (60 min, ${ability.auraRange.toStringAsFixed(0)} yd range).');
+}
+
+// ==================== CLASS LONG BUFFS ====================
+
+void _executeBattlePresence(int slotIndex, GameState gameState) =>
+    _executeAuraActivate(slotIndex, gameState, _effective(WarriorAbilities.battlePresence));
+
+void _executeArcaneEmpowerment(int slotIndex, GameState gameState) =>
+    _executeAuraActivate(slotIndex, gameState, _effective(MageAbilities.arcaneEmpowerment));
+
+void _executeShadowForm(int slotIndex, GameState gameState) =>
+    _executeBuffSelf(slotIndex, gameState, _effective(RogueAbilities.shadowForm));
+
+void _executeBlessingOfKings(int slotIndex, GameState gameState) =>
+    _executePartyBuff(slotIndex, gameState, _effective(LeyweaverAbilities.blessingOfKings));
+
+void _executeAetherFlow(int slotIndex, GameState gameState) =>
+    _executePartyBuff(slotIndex, gameState, _effective(AethermancerAbilities.aetherFlow));
+
+void _executeGaleStride(int slotIndex, GameState gameState) =>
+    _executeAuraActivate(slotIndex, gameState, _effective(WindWalkerAbilities.galeStride));
+
+void _executeStormHardened(int slotIndex, GameState gameState) =>
+    _executeBuffSelf(slotIndex, gameState, _effective(StormheartAbilities.stormHardened));
+
+void _executeNaturesResilience(int slotIndex, GameState gameState) =>
+    _executeBuffSelf(slotIndex, gameState, _effective(NatureAbilities.naturesResilience));
+
+void _executeLivingWeb(int slotIndex, GameState gameState) =>
+    _executeAuraActivate(slotIndex, gameState, _effective(GreenseerAbilities.livingWeb));
+
+void _executeSpiritBond(int slotIndex, GameState gameState) =>
+    _executeBuffSelf(slotIndex, gameState, _effective(SpiritkinAbilities.spiritBond));
+
+void _executeDeathShroud(int slotIndex, GameState gameState) =>
+    _executeBuffSelf(slotIndex, gameState, _effective(NecromancerAbilities.deathShroud));
+
+void _executeVoidResonance(int slotIndex, GameState gameState) =>
+    _executeAuraActivate(slotIndex, gameState, _effective(StarbreakerAbilities.voidResonance));
+
+void _executeElementalAttunement(int slotIndex, GameState gameState) =>
+    _executeBuffSelf(slotIndex, gameState, _effective(ElementalAbilities.elementalAttunement));

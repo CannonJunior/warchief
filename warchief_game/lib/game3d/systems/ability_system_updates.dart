@@ -135,7 +135,7 @@ void _updateAbility2(double dt, GameState gameState) {
 
       if (hitRegistered) {
         _applyLifesteal(gameState, projectile.damage * gameState.activeStance.damageMultiplier);
-        if (projectile.dotTicks > 0 && projectile.statusDuration > 0) {
+        if (projectile.dotTicks > 0 && projectile.statusEffects.isNotEmpty) {
           _applyDoTFromProjectile(gameState, 'boss', projectile);
         }
         remove = true;
@@ -279,6 +279,17 @@ void _updateExecutingLabel(double dt, GameState gameState) {
   if (label.isExpired) gameState.executingAbilityLabel = null;
 }
 
+/// Advance exit-animation timers for queue entries that have finished
+/// executing; remove any that have fully faded out.
+void _updateExitingQueueLabels(double dt, GameState gameState) {
+  final list = gameState.exitingQueueLabels;
+  if (list.isEmpty) return;
+  for (int i = list.length - 1; i >= 0; i--) {
+    list[i].age += dt;
+    if (list[i].isExpired) list.removeAt(i);
+  }
+}
+
 // ==================== ABILITY QUEUE DRAIN ====================
 
 /// Fire the next queued ability once all blocking conditions have cleared.
@@ -308,6 +319,12 @@ void _drainAbilityQueue(GameState gameState) {
   }
 
   // All conditions met — execute.
+  // Reason: create the exiting label before removing the entry so its display
+  // name is taken from the queue data, not the ability config lookup.
+  final exitDur = globalGameplaySettings?.queueExitDuration ?? 1.0;
+  gameState.exitingQueueLabels.add(
+    ExitingQueueLabel(entry.abilityName, maxAge: exitDur),
+  );
   _isDrainingQueue = true;
   gameState.abilityQueue.removeAt(0);
   _refreshQueuePrimedSlots(gameState);

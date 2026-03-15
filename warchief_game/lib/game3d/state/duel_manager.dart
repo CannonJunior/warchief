@@ -114,6 +114,12 @@ class DuelManager {
   /// combo-primer ability and the next ability may bypass the GCD.
   List<double> combatantComboWindows = [];
 
+  /// Ability names primed by the last [comboPrimes] ability that fired.
+  /// Cleared when the combo window expires or a non-combo ability is used.
+  /// Reason: lets the AI prioritise named follow-up abilities the same way
+  /// a skilled player would chain them deliberately.
+  List<Set<String>> combatantPrimedAbilities = [];
+
   // ── CC state (same flat index scheme as combatantGcds) ────────────────────
 
   /// Hard CC remaining (stun / root / fear / silence): seconds.
@@ -312,6 +318,7 @@ class DuelManager {
     enemyDamageMults         = const [];
     combatantGcds            = [];
     combatantComboWindows    = [];
+    combatantPrimedAbilities = [];
     combatantCcRemaining       = [];
     combatantSlowRemaining     = [];
     combatantSlowFactor        = [];

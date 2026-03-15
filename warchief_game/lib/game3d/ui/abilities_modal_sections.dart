@@ -97,9 +97,10 @@ extension _AbilitiesModalSections on _AbilitiesModalState {
           ],
         ),
         // Reason: ReorderableListView needs a bounded height; we calculate it
-        // from item count. Each card is ~100px tall (content + margin).
+        // from item count. Each card is ~145px tall (12+12px padding, ~22px name,
+        // ~32px description, ~20px stats, ~8px balance indicator, ~8px margin).
         SizedBox(
-          height: filtered.length * 100.0,
+          height: filtered.length * 145.0,
           child: ReorderableListView.builder(
             shrinkWrap: true,
             physics: NeverScrollableScrollPhysics(),

@@ -163,9 +163,28 @@ class ElementalAbilities {
     enablesComboChain: true,
   );
 
+  /// Elemental Attunement — Elemental self-buff channeling elemental forces into damage
+  static final elementalAttunement = AbilityData(
+    name: 'Elemental Attunement',
+    description: 'Attune to the raw elemental forces within you, channeling '
+        'their power to amplify all your attacks.',
+    type: AbilityType.buff,
+    cooldown: 5.0,
+    duration: 3600.0,
+    color: Vector3(1.0, 0.5, 0.1),
+    impactColor: Vector3(1.0, 0.6, 0.2),
+    impactSize: 1.2,
+    statusEffect: StatusEffect.strength,
+    statusStrength: 0.20,
+    manaColor: ManaColor.red,
+    manaCost: 25.0,
+    category: 'elemental',
+  );
+
   /// All elemental abilities as a list
   static List<AbilityData> get all => [
     iceLance, flameWave, earthquake,
     frostbiteSlash, magmaStrike, elementalRend, elementalChain, magneticDisrupt,
+    elementalAttunement,
   ];
 }

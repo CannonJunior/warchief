@@ -71,7 +71,12 @@ class TacticalPositioning {
     FormationType formation,
   ) {
     final positions = <Ally, TacticalPosition>{};
-    final allies = gameState.allies.where((a) => a.health > 0).toList();
+    // Reason: build alive-ally list with a single pass rather than where().toList()
+    // so we allocate one list instead of two (the lazy Iterable + the materialized list).
+    final allies = <Ally>[];
+    for (final a in gameState.allies) {
+      if (a.health > 0) allies.add(a);
+    }
 
     if (allies.isEmpty) return positions;
 
@@ -347,10 +352,15 @@ class TacticalPositioning {
     final toPlayer = playerPos - monsterPos;
     final playerAngle = math.atan2(toPlayer.x, toPlayer.z);
 
-    // Count melee allies to spread them out
-    final meleeAllies = allies.where((a) => getAllyRole(a) == CombatRole.melee).toList();
-    final meleeIndex = meleeAllies.indexOf(ally);
-    final meleeCount = meleeAllies.length;
+    // Reason: single pass to count melee allies and find this ally's index
+    // avoids the where().toList() allocation and a second indexOf() scan.
+    int meleeCount = 0;
+    int meleeIndex = 0;
+    for (final a in allies) {
+      if (getAllyRole(a) != CombatRole.melee) continue;
+      if (identical(a, ally)) meleeIndex = meleeCount;
+      meleeCount++;
+    }
 
     // Spread melee allies around the flank (90-180 degrees from player)
     double flankAngle;
@@ -382,10 +392,14 @@ class TacticalPositioning {
     final toMonster = monsterPos - playerPos;
     final toMonsterNorm = toMonster.normalized();
 
-    // Count ranged allies to spread them
-    final rangedAllies = allies.where((a) => getAllyRole(a) == CombatRole.ranged).toList();
-    final rangedIndex = rangedAllies.indexOf(ally);
-    final rangedCount = rangedAllies.length;
+    // Reason: single-pass count/index avoids where().toList() + indexOf() allocs.
+    int rangedCount = 0;
+    int rangedIndex = 0;
+    for (final a in allies) {
+      if (getAllyRole(a) != CombatRole.ranged) continue;
+      if (identical(a, ally)) rangedIndex = rangedCount;
+      rangedCount++;
+    }
 
     // Perpendicular spread
     final right = Vector3(-toMonsterNorm.z, 0, toMonsterNorm.x);
@@ -412,9 +426,13 @@ class TacticalPositioning {
     // Position slightly behind and to the side of player
     final right = Vector3(-toMonster.z, 0, toMonster.x);
 
-    // Count support allies
-    final supportAllies = allies.where((a) => getAllyRole(a) == CombatRole.support).toList();
-    final supportIndex = supportAllies.indexOf(ally);
+    // Reason: single-pass avoids where().toList() + indexOf() allocs.
+    int supportIndex = 0;
+    for (final a in allies) {
+      if (getAllyRole(a) != CombatRole.support) continue;
+      if (identical(a, ally)) break;
+      supportIndex++;
+    }
     final spread = (supportIndex % 2 == 0) ? 2.0 : -2.0;
 
     return playerPos - toMonster * followDistance + right * spread;

@@ -39,7 +39,8 @@ class ActiveEffect {
   });
 
   /// Whether this effect deals periodic damage
-  bool get isDoT => damagePerTick > 0 && tickInterval > 0;
+  // Reason: negative damagePerTick is a healing tick (HoT); positive is damage tick (DoT)
+  bool get isDoT => damagePerTick.abs() > 0 && tickInterval > 0;
 
   /// Whether this effect has expired.
   bool get isExpired => !isPermanent && remainingDuration <= 0;
@@ -107,6 +108,12 @@ class ActiveEffect {
         return Icons.shield_outlined;
       case StatusEffect.interrupt:
         return Icons.block;
+      case StatusEffect.knockback:
+        return Icons.arrow_outward;
+      case StatusEffect.grip:
+        return Icons.compress;
+      case StatusEffect.knockdown:
+        return Icons.accessibility_new;
       case StatusEffect.none:
         return Icons.circle;
     }
@@ -163,6 +170,12 @@ class ActiveEffect {
         return const Color(0xFFFFFF99);
       case StatusEffect.interrupt:
         return const Color(0xFFCC4444);
+      case StatusEffect.knockback:
+        return const Color(0xFFCC8844);
+      case StatusEffect.grip:
+        return const Color(0xFF44AACC);
+      case StatusEffect.knockdown:
+        return const Color(0xFFBB6622);
       case StatusEffect.none:
         return const Color(0xFF666666);
     }

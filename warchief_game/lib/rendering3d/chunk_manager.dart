@@ -83,10 +83,10 @@ class ChunkManager {
     _updateChunkDistances(playerPosition);
   }
 
-  /// Get all currently loaded chunks
-  List<TerrainChunk> getLoadedChunks() {
-    return _chunks.values.toList();
-  }
+  /// Get all currently loaded chunks.
+  /// Reason: returns the live Iterable directly — avoids allocating a new List
+  /// every render frame when the caller only needs to iterate.
+  Iterable<TerrainChunk> getLoadedChunks() => _chunks.values;
 
   /// Get chunk at specific chunk coordinates
   TerrainChunk? getChunk(int chunkX, int chunkZ) {

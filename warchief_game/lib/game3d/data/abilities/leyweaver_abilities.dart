@@ -161,9 +161,30 @@ class LeyweaverAbilities {
     enablesComboChain: true,
   );
 
+  /// Blessing of Kings — Party-wide strength buff for all friendly units
+  static final blessingOfKings = AbilityData(
+    name: 'Blessing of Kings',
+    description: 'Bestow divine favor upon all allies, increasing their combat'
+        ' power for a full hour.',
+    type: AbilityType.buff,
+    cooldown: 5.0,
+    duration: 3600.0,
+    range: 100.0,
+    color: Vector3(1.0, 0.85, 0.3),
+    impactColor: Vector3(1.0, 0.9, 0.5),
+    impactSize: 1.6,
+    statusEffect: StatusEffect.strength,
+    statusStrength: 0.15,
+    manaColor: ManaColor.blue,
+    manaCost: 40.0,
+    category: 'leyweaver',
+    damageSchool: DamageSchool.holy,
+    isPartyBuff: true,
+  );
+
   /// All Leyweaver abilities as a list
   static List<AbilityData> get all => [
     holyLight, rejuvenation, circleOfHealing, blessingOfStrength, purify,
-    holySmite, judgmentHammer, judgmentMark, battleBlessing,
+    holySmite, judgmentHammer, judgmentMark, battleBlessing, blessingOfKings,
   ];
 }

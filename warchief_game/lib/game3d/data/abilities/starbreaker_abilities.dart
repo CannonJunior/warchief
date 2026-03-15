@@ -360,6 +360,27 @@ class StarbreakerAbilities {
 
   // ==================== REGISTRY ====================
 
+  /// Void Resonance — Starbreaker aura granting void shielding to nearby allies
+  static final voidResonance = AbilityData(
+    name: 'Void Resonance',
+    description: 'Project void energy in a resonant field that shields all nearby '
+        'allies with a protective barrier of shadow.',
+    type: AbilityType.buff,
+    cooldown: 5.0,
+    duration: 3600.0,
+    color: Vector3(0.5, 0.0, 0.8),
+    impactColor: Vector3(0.6, 0.1, 0.9),
+    impactSize: 1.4,
+    statusEffect: StatusEffect.shield,
+    statusStrength: 25.0,
+    manaColor: ManaColor.black,
+    manaCost: 30.0,
+    category: 'starbreaker',
+    damageSchool: DamageSchool.shadow,
+    isAura: true,
+    auraRange: 10.0,
+  );
+
   static List<AbilityData> get all => [
         voidStrike,
         soulRend,
@@ -376,5 +397,6 @@ class StarbreakerAbilities {
         stellarCollapse,
         voidCascade,
         voidFracture,
+        voidResonance,
       ];
 }

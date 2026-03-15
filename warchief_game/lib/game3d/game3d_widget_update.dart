@@ -121,6 +121,9 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     // Update duel arena system (automated combatant AI + win detection)
     DuelSystem.update(dt, gameState);
 
+    // Pulse aura buffs from casters to nearby friendly units
+    GameplayAuraSystem.update(dt, gameState);
+
     // Animate duel arena banner (drop, flutter, victory flag)
     gameState.duelBannerState?.update(dt, globalWindState);
 

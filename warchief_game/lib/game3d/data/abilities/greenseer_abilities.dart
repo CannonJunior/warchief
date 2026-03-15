@@ -314,6 +314,27 @@ class GreenseerAbilities {
     enablesComboChain: true,
   );
 
+  /// Living Web — Greenseer aura granting health regeneration to nearby allies
+  static final livingWeb = AbilityData(
+    name: 'Living Web',
+    description: 'Weave a web of living green energy that connects nearby allies '
+        'to nature\'s endless healing power.',
+    type: AbilityType.buff,
+    cooldown: 5.0,
+    duration: 3600.0,
+    color: Vector3(0.2, 1.0, 0.5),
+    impactColor: Vector3(0.3, 1.0, 0.6),
+    impactSize: 1.4,
+    statusEffect: StatusEffect.regen,
+    statusStrength: 4.0,
+    manaColor: ManaColor.green,
+    manaCost: 30.0,
+    category: 'greenseer',
+    damageSchool: DamageSchool.nature,
+    isAura: true,
+    auraRange: 10.0,
+  );
+
   /// All greenseer abilities as a list
   static List<AbilityData> get all => [
     lifeThread,
@@ -332,5 +353,6 @@ class GreenseerAbilities {
     barkFist,
     verdantCurse,
     earthBond,
+    livingWeb,
   ];
 }

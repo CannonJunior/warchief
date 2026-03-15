@@ -245,10 +245,30 @@ class WarriorAbilities {
     comboPrimes: ['Shield Bash'],
   );
 
+  /// Battle Presence — Warrior aura granting +25% damage to all nearby allies
+  static final battlePresence = AbilityData(
+    name: 'Battle Presence',
+    description: 'The warrior\'s fighting spirit radiates outward, granting nearby '
+        'allies increased combat damage for as long as the warrior stands strong.',
+    type: AbilityType.buff,
+    cooldown: 5.0,
+    duration: 3600.0,
+    color: Vector3(0.9, 0.2, 0.2),
+    impactColor: Vector3(1.0, 0.3, 0.3),
+    impactSize: 1.2,
+    statusEffect: StatusEffect.strength,
+    statusStrength: 0.25,
+    manaColor: ManaColor.red,
+    manaCost: 30.0,
+    category: 'warrior',
+    isAura: true,
+    auraRange: 10.0,
+  );
+
   /// All warrior abilities as a list
   static List<AbilityData> get all => [
     shieldBash, whirlwind, charge, taunt, fortify,
     gauntletJab, ironSweep, rendingChains, warcryUppercut, executionStrike,
-    sunderArmor, ironMomentum, pummel,
+    sunderArmor, ironMomentum, pummel, battlePresence,
   ];
 }

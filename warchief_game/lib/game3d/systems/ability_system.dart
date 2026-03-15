@@ -7,6 +7,7 @@ import '../state/game_state.dart';
 import '../state/game_config.dart';
 import '../state/abilities_config.dart';
 import '../state/action_bar_config.dart' show globalActionBarConfig;
+import '../state/gameplay_settings.dart' show globalGameplaySettings;
 import '../state/ability_override_manager.dart';
 import '../state/wind_state.dart';
 import '../../rendering3d/mesh.dart';
@@ -56,6 +57,7 @@ class AbilitySystem {
     _updateAbility4(dt, gameState);
     _updateImpactEffects(dt, gameState);
     _updateExecutingLabel(dt, gameState);
+    _updateExitingQueueLabels(dt, gameState);
     _drainAbilityQueue(gameState);
   }
 

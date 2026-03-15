@@ -171,6 +171,12 @@ class _TypographyTabState extends State<TypographyTab> {
               _queueColors,
               (v) => setState(() { _s!.queueTextColor = v; _save(); }),
             ),
+            const SizedBox(height: 14),
+            _buildDurationRow(
+              'Exit Fade',
+              _s!.queueExitDuration,
+              (v) => setState(() { _s!.queueExitDuration = v; _save(); }),
+            ),
           ]),
           const SizedBox(height: 20),
         ],
@@ -324,6 +330,46 @@ class _TypographyTabState extends State<TypographyTab> {
         ),
       ],
     );
+  }
+
+  /// Slider for a time duration value (0.0 – 3.0 s).
+  Widget _buildDurationRow(String label, double value, ValueChanged<double> onChanged) {
+    return Row(children: [
+      SizedBox(
+        width: 80,
+        child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+      ),
+      Expanded(
+        child: SliderTheme(
+          data: SliderThemeData(
+            activeTrackColor: const Color(0xFF4cc9f0),
+            inactiveTrackColor: const Color(0xFF4cc9f0).withValues(alpha: 0.2),
+            thumbColor: const Color(0xFF4cc9f0),
+            overlayColor: const Color(0xFF4cc9f0).withValues(alpha: 0.1),
+            trackHeight: 4,
+          ),
+          child: Slider(
+            value: value.clamp(0.0, 3.0),
+            min: 0.0,
+            max: 3.0,
+            divisions: 30,
+            onChanged: onChanged,
+          ),
+        ),
+      ),
+      SizedBox(
+        width: 44,
+        child: Text(
+          '${value.toStringAsFixed(1)}s',
+          textAlign: TextAlign.right,
+          style: const TextStyle(
+            color: Color(0xFF4cc9f0),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    ]);
   }
 
   Widget _buildColorRow(

@@ -243,10 +243,28 @@ class RogueAbilities {
     comboPrimes: ['Backstab', 'Shiv'],
   );
 
+  /// Shadow Form — Rogue self-buff granting heightened speed and reflexes
+  static final shadowForm = AbilityData(
+    name: 'Shadow Form',
+    description: 'Embrace the shadow, moving with supernatural speed and'
+        ' agility for the duration of this stance.',
+    type: AbilityType.buff,
+    cooldown: 5.0,
+    duration: 3600.0,
+    color: Vector3(0.3, 0.3, 0.35),
+    impactColor: Vector3(0.4, 0.4, 0.5),
+    impactSize: 1.2,
+    statusEffect: StatusEffect.haste,
+    statusStrength: 0.25,
+    manaColor: ManaColor.red,
+    manaCost: 25.0,
+    category: 'rogue',
+  );
+
   /// All rogue abilities as a list
   static List<AbilityData> get all => [
     backstab, poisonBlade, smokeBomb, fanOfKnives, shadowStep,
     shiv, shadowfangRake, shadowSpike, umbralLunge, deathMark,
-    exposeWeakness, shadowChain, gouge,
+    exposeWeakness, shadowChain, gouge, shadowForm,
   ];
 }

@@ -394,6 +394,24 @@ class StormheartAbilities {
     damageSchool: DamageSchool.lightning,
   );
 
+  /// Storm Hardened — Stormheart self-buff granting health regeneration
+  static final stormHardened = AbilityData(
+    name: 'Storm Hardened',
+    description: 'Temper yourself against the storm, gaining sustained'
+        ' health regeneration from its relentless power.',
+    type: AbilityType.buff,
+    cooldown: 5.0,
+    duration: 3600.0,
+    color: Vector3(0.6, 0.7, 1.0),
+    impactColor: Vector3(0.7, 0.8, 1.0),
+    impactSize: 1.2,
+    statusEffect: StatusEffect.regen,
+    statusStrength: 3.0,
+    manaColor: ManaColor.white,
+    manaCost: 25.0,
+    category: 'stormheart',
+  );
+
   /// All stormheart abilities as a list
   static List<AbilityData> get all => [
     thunderStrike,
@@ -415,5 +433,6 @@ class StormheartAbilities {
     lightningBrand,
     thunderstormStrike,
     staticDischarge,
+    stormHardened,
   ];
 }

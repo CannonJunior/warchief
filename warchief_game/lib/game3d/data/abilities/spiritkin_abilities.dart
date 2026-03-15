@@ -458,6 +458,24 @@ class SpiritkinAbilities {
     category: 'spiritkin',
   );
 
+  /// Spirit Bond — Spiritkin self-buff channeling spirit energy into combat power
+  static final spiritBond = AbilityData(
+    name: 'Spirit Bond',
+    description: 'Bond with your spirit companion to channel their power into '
+        'your strikes, increasing your combat effectiveness.',
+    type: AbilityType.buff,
+    cooldown: 5.0,
+    duration: 3600.0,
+    color: Vector3(0.5, 0.9, 0.3),
+    impactColor: Vector3(0.6, 1.0, 0.4),
+    impactSize: 1.2,
+    statusEffect: StatusEffect.strength,
+    statusStrength: 0.20,
+    manaColor: ManaColor.green,
+    manaCost: 25.0,
+    category: 'spiritkin',
+  );
+
   /// All Spiritkin abilities as a flat list (used by the codex and action bar).
   static List<AbilityData> get all => [
     // Group 1: Basic melee
@@ -485,5 +503,7 @@ class SpiritkinAbilities {
     spiritRush,
     // Interrupt
     spiritSever,
+    // Long buff
+    spiritBond,
   ];
 }
