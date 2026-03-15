@@ -56,12 +56,16 @@ class _CharacterPanelHostState extends State<CharacterPanelHost> {
 
   /// Resolve AbilityRegistry category string from carousel index.
   String get _currentCategory {
-    if (_currentIndex == 0) return 'player';
+    if (_currentIndex == 0) {
+      // Reason: the Warchief's loaded class (e.g. 'warrior') is the correct
+      // category for combo lookups; 'player' only holds basic starter abilities.
+      return widget.gameState.playerAbilityCategory;
+    }
     final allies = widget.gameState.allies;
     if (_currentIndex - 1 < allies.length) {
       return allyIndexToCategory(allies[_currentIndex - 1].abilityIndex);
     }
-    return 'player';
+    return widget.gameState.playerAbilityCategory;
   }
 
   void _onDragDelta(Offset delta, Size screenSize) {

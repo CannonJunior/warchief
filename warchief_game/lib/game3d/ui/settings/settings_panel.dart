@@ -7,6 +7,7 @@ import 'tuning_tab.dart';
 import 'scenario_tab.dart';
 import 'ollama_tab.dart';
 import 'typography_tab.dart';
+import 'targeting_tab.dart';
 import '../../state/gameplay_settings.dart';
 
 /// Settings panel with tabs for General, Interfaces, Source Code, and About
@@ -37,6 +38,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     _TabItem(id: 'tuning', label: 'Tuning', icon: Icons.tune),
     _TabItem(id: 'interfaces', label: 'Interfaces', icon: Icons.dashboard),
     _TabItem(id: 'typography', label: 'Typography', icon: Icons.text_fields),
+    _TabItem(id: 'targeting', label: 'Targeting', icon: Icons.my_location),
     _TabItem(id: 'ai', label: 'AI', icon: Icons.smart_toy_outlined),
     _TabItem(id: 'source', label: 'Source Code', icon: Icons.folder_open),
     _TabItem(id: 'about', label: 'About', icon: Icons.info_outline),
@@ -250,6 +252,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
         return _buildInterfacesTab();
       case 'typography':
         return const TypographyTab();
+      case 'targeting':
+        return const TargetingTab();
       case 'ai':
         return const OllamaTab();
       case 'source':

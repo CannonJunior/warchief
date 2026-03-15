@@ -107,6 +107,11 @@ class GameState {
 
   // ==================== STANCE STATE ====================
 
+  /// The AbilityRegistry category currently loaded for the Warchief's action bar
+  /// (e.g. 'warrior', 'mage'). Set when a class is loaded from the Abilities Codex.
+  /// Defaults to 'warrior' — the starter class.
+  String playerAbilityCategory = 'warrior';
+
   /// Current stance for the Warchief.
   StanceId playerStance = StanceId.none;
 
@@ -616,8 +621,10 @@ class GameState {
   /// Target indicator mesh (dashed rectangle)
   Mesh? targetIndicatorMesh;
   Transform3d? targetIndicatorTransform;
-  double lastTargetIndicatorSize = 0.0; // Track size for recreation
-  String? lastTargetIndicatorId; // Track target for color change detection
+  double lastTargetIndicatorSize = 0.0;
+  String? lastTargetIndicatorId;
+  /// Packed ARGB of the last-built indicator mesh — triggers rebuild on color change.
+  int lastTargetIndicatorColorValue = 0;
 
   /// World position the indicator occupied when the last target-switch began.
   /// Null means no slide animation is in progress.
@@ -1027,6 +1034,14 @@ class GameState {
   /// Cleared to 0.0 when the GCD expires. Slots with a non-zero bonus show
   /// their cooldown clock in yellow to signal the combo window.
   final List<double> abilityComboGcdBonuses = List<double>.filled(10, 0.0);
+
+  /// Per-slot preview highlight driven by the ability queue.
+  ///
+  /// Slot i is true when the last entry in [abilityQueue] has a comboPrimes
+  /// list that includes the ability assigned to slot i. Cleared when the queue
+  /// empties. Used by the action bar to show the yellow combo-ready tint before
+  /// the queued ability has actually fired.
+  final List<bool> abilityQueuePrimedSlots = List<bool>.filled(10, false);
 
   /// Number of combo-primed abilities fired in the current chain (0, 1, or 2).
   ///

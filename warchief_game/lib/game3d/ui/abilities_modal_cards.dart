@@ -426,7 +426,7 @@ extension _AbilitiesModalCards on _AbilitiesModalState {
       case 'mage':
         return Colors.blue;
       case 'rogue':
-        return Colors.grey;
+        return const Color(0xFF9966CC); // amethyst/shadow purple
       case 'leyweaver':
       case 'aethermancer':
         return Colors.green;

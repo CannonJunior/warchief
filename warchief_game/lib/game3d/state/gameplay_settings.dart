@@ -25,11 +25,18 @@ class GameplaySettings {
   static const String _keyQueueFontFamily    = 'gameplay_queue_font_family';
   static const String _keyUiFontScale        = 'gameplay_ui_font_scale';
   static const String _keyQueueFontScale     = 'gameplay_queue_font_scale';
-  static const String _keyCombatDamageColor  = 'gameplay_combat_damage_color';
-  static const String _keyCombatHealColor    = 'gameplay_combat_heal_color';
-  static const String _keyCombatKillColor    = 'gameplay_combat_kill_color';
-  static const String _keyCombatShadow       = 'gameplay_combat_shadow';
-  static const String _keyQueueTextColor     = 'gameplay_queue_text_color';
+  static const String _keyCombatDamageColor       = 'gameplay_combat_damage_color';
+  static const String _keyCombatHealColor         = 'gameplay_combat_heal_color';
+  static const String _keyCombatKillColor         = 'gameplay_combat_kill_color';
+  static const String _keyCombatShadow            = 'gameplay_combat_shadow';
+  static const String _keyQueueTextColor          = 'gameplay_queue_text_color';
+  static const String _keyTargetEnemyColor        = 'gameplay_target_enemy_color';
+  static const String _keyTargetAllyColor         = 'gameplay_target_ally_color';
+  static const String _keyTargetAcquiredColor     = 'gameplay_target_acquired_color';
+  static const String _keyTargetLineWidth         = 'gameplay_target_line_width';
+  static const String _keyTargetSizeScale         = 'gameplay_target_size_scale';
+  static const String _keyTargetAcquiredScale     = 'gameplay_target_acquired_scale';
+  static const String _keyTargetAcquiredDuration  = 'gameplay_target_acquired_duration';
 
   /// When true, characters must equip a Talisman that attunes them to a
   /// mana color before they can regenerate, spend, or see that mana pool.
@@ -93,6 +100,27 @@ class GameplaySettings {
   /// ARGB color value for ability queue text when not on cooldown.
   int queueTextColor;
 
+  /// ARGB color for the enemy/hostile target rectangle (default red).
+  int targetEnemyColor;
+
+  /// ARGB color for the ally target rectangle (default green).
+  int targetAllyColor;
+
+  /// ARGB color for the "target acquired" flash rectangle (default yellow).
+  int targetAcquiredColor;
+
+  /// Line thickness of target indicator rectangles (world units, default 0.10).
+  double targetLineWidth;
+
+  /// Multiplier applied to the base entity size when sizing indicators (default 1.0).
+  double targetSizeScale;
+
+  /// Multiplier for the acquired-flash rectangle relative to the main indicator (default 1.3).
+  double targetAcquiredScale;
+
+  /// How long the acquired-flash rectangle stays visible in seconds (default 2.0).
+  double targetAcquiredDuration;
+
   GameplaySettings({
     this.attunementRequired = true,
     this.manaSourceVisibilityGated = false,
@@ -108,11 +136,18 @@ class GameplaySettings {
     this.queueFontFamily   = 'Bangers',
     this.uiFontScale       = 1.0,
     this.queueFontScale    = 1.0,
-    this.combatDamageColor = 0xFFFFDD00,
-    this.combatHealColor   = 0xFF44FF44,
-    this.combatKillColor   = 0xFFFF2222,
-    this.combatShadow      = true,
-    this.queueTextColor    = 0xFFFFFFFF,
+    this.combatDamageColor       = 0xFFFFDD00,
+    this.combatHealColor         = 0xFF44FF44,
+    this.combatKillColor         = 0xFFFF2222,
+    this.combatShadow            = true,
+    this.queueTextColor          = 0xFFFFFFFF,
+    this.targetEnemyColor        = 0xFFFF3333,
+    this.targetAllyColor         = 0xFF33FF44,
+    this.targetAcquiredColor     = 0xFFFFF200,
+    this.targetLineWidth         = 0.10,
+    this.targetSizeScale         = 1.0,
+    this.targetAcquiredScale     = 1.3,
+    this.targetAcquiredDuration  = 2.0,
   });
 
   /// Load saved settings from persistent storage.
@@ -133,11 +168,18 @@ class GameplaySettings {
       queueFontFamily    = prefs.getString(_keyQueueFontFamily)      ?? 'Bangers';
       uiFontScale        = prefs.getDouble(_keyUiFontScale)          ?? 1.0;
       queueFontScale     = prefs.getDouble(_keyQueueFontScale)       ?? 1.0;
-      combatDamageColor  = prefs.getInt(_keyCombatDamageColor)       ?? 0xFFFFDD00;
-      combatHealColor    = prefs.getInt(_keyCombatHealColor)         ?? 0xFF44FF44;
-      combatKillColor    = prefs.getInt(_keyCombatKillColor)         ?? 0xFFFF2222;
-      combatShadow       = prefs.getBool(_keyCombatShadow)           ?? true;
-      queueTextColor     = prefs.getInt(_keyQueueTextColor)          ?? 0xFFFFFFFF;
+      combatDamageColor       = prefs.getInt(_keyCombatDamageColor)       ?? 0xFFFFDD00;
+      combatHealColor         = prefs.getInt(_keyCombatHealColor)         ?? 0xFF44FF44;
+      combatKillColor         = prefs.getInt(_keyCombatKillColor)         ?? 0xFFFF2222;
+      combatShadow            = prefs.getBool(_keyCombatShadow)           ?? true;
+      queueTextColor          = prefs.getInt(_keyQueueTextColor)          ?? 0xFFFFFFFF;
+      targetEnemyColor        = prefs.getInt(_keyTargetEnemyColor)        ?? 0xFFFF3333;
+      targetAllyColor         = prefs.getInt(_keyTargetAllyColor)         ?? 0xFF33FF44;
+      targetAcquiredColor     = prefs.getInt(_keyTargetAcquiredColor)     ?? 0xFFFFF200;
+      targetLineWidth         = prefs.getDouble(_keyTargetLineWidth)      ?? 0.10;
+      targetSizeScale         = prefs.getDouble(_keyTargetSizeScale)      ?? 1.0;
+      targetAcquiredScale     = prefs.getDouble(_keyTargetAcquiredScale)  ?? 1.3;
+      targetAcquiredDuration  = prefs.getDouble(_keyTargetAcquiredDuration) ?? 2.0;
       debugPrint('[GameplaySettings] Loaded: attunementRequired=$attunementRequired, '
           'manaSourceVisibilityGated=$manaSourceVisibilityGated, '
           'showDamageNumbers=$showDamageNumbers, showHealNumbers=$showHealNumbers, '
@@ -166,11 +208,18 @@ class GameplaySettings {
       await prefs.setString(_keyQueueFontFamily,    queueFontFamily);
       await prefs.setDouble(_keyUiFontScale,        uiFontScale);
       await prefs.setDouble(_keyQueueFontScale,     queueFontScale);
-      await prefs.setInt(_keyCombatDamageColor,     combatDamageColor);
-      await prefs.setInt(_keyCombatHealColor,       combatHealColor);
-      await prefs.setInt(_keyCombatKillColor,       combatKillColor);
-      await prefs.setBool(_keyCombatShadow,         combatShadow);
-      await prefs.setInt(_keyQueueTextColor,        queueTextColor);
+      await prefs.setInt(_keyCombatDamageColor,          combatDamageColor);
+      await prefs.setInt(_keyCombatHealColor,            combatHealColor);
+      await prefs.setInt(_keyCombatKillColor,            combatKillColor);
+      await prefs.setBool(_keyCombatShadow,              combatShadow);
+      await prefs.setInt(_keyQueueTextColor,             queueTextColor);
+      await prefs.setInt(_keyTargetEnemyColor,           targetEnemyColor);
+      await prefs.setInt(_keyTargetAllyColor,            targetAllyColor);
+      await prefs.setInt(_keyTargetAcquiredColor,        targetAcquiredColor);
+      await prefs.setDouble(_keyTargetLineWidth,         targetLineWidth);
+      await prefs.setDouble(_keyTargetSizeScale,         targetSizeScale);
+      await prefs.setDouble(_keyTargetAcquiredScale,     targetAcquiredScale);
+      await prefs.setDouble(_keyTargetAcquiredDuration,  targetAcquiredDuration);
       debugPrint('[GameplaySettings] Saved');
     } catch (e) {
       debugPrint('[GameplaySettings] Error saving: $e');

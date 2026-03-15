@@ -70,6 +70,12 @@ class AbilitySystem {
     return cds[slotIndex];
   }
 
+  /// Recompute [GameState.abilityQueuePrimedSlots] from the current queue tail.
+  /// Public so widget-layer ESC-dequeue can trigger the refresh without importing
+  /// the internal dispatch file.
+  static void refreshQueuePrimedSlots(GameState gameState) =>
+      _refreshQueuePrimedSlots(gameState);
+
   // ==================== INPUT HANDLERS ====================
 
   // Reason: tracks which slots have a key currently held so that the per-frame

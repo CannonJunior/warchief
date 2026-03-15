@@ -298,6 +298,7 @@ void _drainAbilityQueue(GameState gameState) {
     // Reason: target was cleared after queuing — drop rather than fire blind.
     if (gameState.currentTargetId == null) {
       gameState.abilityQueue.removeAt(0);
+      _refreshQueuePrimedSlots(gameState);
       return;
     }
     // Still out of range — keep waiting.
@@ -309,6 +310,7 @@ void _drainAbilityQueue(GameState gameState) {
   // All conditions met — execute.
   _isDrainingQueue = true;
   gameState.abilityQueue.removeAt(0);
+  _refreshQueuePrimedSlots(gameState);
   _executeSlotAbility(entry.slotIndex, gameState);
   _isDrainingQueue = false;
 }

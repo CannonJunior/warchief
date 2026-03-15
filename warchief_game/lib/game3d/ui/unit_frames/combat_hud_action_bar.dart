@@ -32,6 +32,7 @@ extension _CombatHUDActionBar on CombatHUD {
     final gcdRemaining = gameState?.activeGcdRemaining ?? 0.0;
     final gcdMax = gameState?.activeGcdMax ?? 1.0;
     final comboGcdBonuses = gameState?.activeAbilityComboGcdBonuses;
+    final queuePrimed = gameState?.abilityQueuePrimedSlots;
 
     ({String label, double cooldown, double maxCooldown, bool isComboReady, VoidCallback? onPressed}) makeSlot(
       String label, int i, VoidCallback? onPressed,
@@ -45,8 +46,10 @@ extension _CombatHUDActionBar on CombatHUD {
       // When the slot's own cooldown is longer, it takes precedence.
       final cd = math.max(slotCd, effectiveGcd);
       final max = slotCd >= effectiveGcd ? slotMax : gcdMax;
-      // Flag yellow tint when a combo bonus is active for this slot.
-      final isComboReady = comboBonus > 0.0 && gcdRemaining > 0.0;
+      // Yellow tint when: a fired combo bonus is active OR the queued ability
+      // would prime this slot (preview highlight before the ability fires).
+      final isComboReady = (comboBonus > 0.0 && gcdRemaining > 0.0)
+          || (queuePrimed?[i] ?? false);
       return (label: label, cooldown: cd, maxCooldown: max, isComboReady: isComboReady, onPressed: onPressed);
     }
 

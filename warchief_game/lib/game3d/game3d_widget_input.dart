@@ -306,7 +306,10 @@ mixin _WidgetInputMixin on _GameStateBase {
       }
       // Pop last queued ability (each ESC press removes one entry)
       if (gameState.abilityQueue.isNotEmpty) {
-        setState(() { gameState.abilityQueue.removeLast(); });
+        setState(() {
+          gameState.abilityQueue.removeLast();
+          AbilitySystem.refreshQueuePrimedSlots(gameState);
+        });
         return;
       }
       // Clear target if no modal is open
@@ -529,6 +532,7 @@ mixin _WidgetInputMixin on _GameStateBase {
   void _handleClassLoaded(String category) {
     final color = AuraSystem.getCategoryColorVec3(category);
     if (gameState.isWarchiefActive) {
+      gameState.playerAbilityCategory = category;
       gameState.playerMesh = PlayerMesh.createSimpleCharacter(bodyColor: color);
     } else {
       final ally = gameState.activeAlly;

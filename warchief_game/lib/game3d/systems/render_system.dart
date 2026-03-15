@@ -421,47 +421,56 @@ class RenderSystem {
   ) {
     if (gameState.currentTargetId == null) return;
 
-    // Get target position, size, and indicator color
+    // Read configurable indicator settings.
+    final cfg = globalGameplaySettings;
+    final sizeScale   = cfg?.targetSizeScale       ?? 1.0;
+    final lineWidth   = cfg?.targetLineWidth        ?? 0.10;
+    final acqScale    = cfg?.targetAcquiredScale    ?? 1.3;
+    final acqDuration = cfg?.targetAcquiredDuration ?? 2.0;
+
+    // Helper: convert ARGB int to normalised Vector3 RGB.
+    Vector3 colorFromArgb(int argb) => Vector3(
+      ((argb >> 16) & 0xFF) / 255.0,
+      ((argb >>  8) & 0xFF) / 255.0,
+      ( argb        & 0xFF) / 255.0,
+    );
+
+    // Get target position, size, and indicator color.
     Vector3? targetPosition;
-    double targetSize = 1.5; // Default size
-    Vector3 indicatorColor = Vector3(1.0, 0.2, 0.2); // Red default (enemies)
+    double targetSize = 1.5;
+    int indicatorArgb = cfg?.targetEnemyColor ?? 0xFFFF3333; // red default
 
     if (gameState.currentTargetId == 'boss') {
       if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
         targetPosition = gameState.monsterTransform!.position;
-        targetSize = 1.8; // Boss is larger
+        targetSize = 1.8;
       }
     } else if (gameState.currentTargetId == 'target_dummy') {
-      // Target dummy for DPS testing
       if (gameState.targetDummy != null && gameState.targetDummy!.isSpawned) {
         targetPosition = gameState.targetDummy!.position;
-        targetSize = 1.5 * 1.5; // Dummy size * indicator scale
+        targetSize = 1.5 * 1.5;
       }
     } else if (gameState.currentTargetId!.startsWith('ally_')) {
-      // Ally target - green indicator
       final index = int.tryParse(gameState.currentTargetId!.substring(5));
       if (index != null && index < gameState.allies.length && gameState.allies[index].health > 0) {
         targetPosition = gameState.allies[index].transform.position;
         targetSize = GameConfig.allySize * 1.5;
-        indicatorColor = Vector3(0.2, 1.0, 0.2); // Green for allies
+        indicatorArgb = cfg?.targetAllyColor ?? 0xFF33FF44; // green for allies
       }
     } else if (gameState.currentTargetId!.startsWith('duel_')) {
-      // Duel combatant — blue for challengers, red for enemies
+      // Duel combatant — blue for challengers, red for enemies (hardcoded, not user-configurable).
       final index = int.tryParse(gameState.currentTargetId!.substring(5));
       if (index != null && index < gameState.duelCombatants.length) {
         final combatant = gameState.duelCombatants[index];
         if (combatant.health > 0) {
           targetPosition = combatant.transform.position;
-          targetSize = 0.8 * 1.5; // cube size × indicator scale
+          targetSize = 0.8 * 1.5;
           final mgr = gameState.duelManager;
           final isChallenger = mgr != null && index < mgr.challengerPartySize;
-          indicatorColor = isChallenger
-              ? Vector3(0.25, 0.55, 1.0)  // blue side
-              : Vector3(1.0, 0.25, 0.25); // red side
+          indicatorArgb = isChallenger ? 0xFF4488FF : (cfg?.targetEnemyColor ?? 0xFFFF3333);
         }
       }
     } else {
-      // O(1) minion lookup via pre-built instance ID index
       final minion = gameState.minionById(gameState.currentTargetId!);
       if (minion != null) {
         targetPosition = minion.transform.position;
@@ -471,15 +480,14 @@ class RenderSystem {
 
     if (targetPosition == null) return;
 
-    // Recreate mesh when target changes size or ID (color may differ)
-    // Reason: Ally targets use green, enemies use red, so we must regenerate
-    // when switching between entity types, not just sizes.
-    final needsNewMesh = gameState.targetIndicatorMesh == null ||
-        gameState.lastTargetIndicatorSize != targetSize ||
-        gameState.lastTargetIndicatorId != gameState.currentTargetId;
+    final scaledSize = targetSize * sizeScale;
 
-    // Detect target ID change to start the slide animation.
+    // Recreate mesh when target, size, or color changes.
     final targetChanged = gameState.lastTargetIndicatorId != gameState.currentTargetId;
+    final needsNewMesh = gameState.targetIndicatorMesh == null ||
+        gameState.lastTargetIndicatorSize != scaledSize ||
+        gameState.lastTargetIndicatorId != gameState.currentTargetId ||
+        gameState.lastTargetIndicatorColorValue != indicatorArgb;
 
     if (needsNewMesh) {
       // Reason: capture previous indicator world position BEFORE updating the
@@ -491,20 +499,22 @@ class RenderSystem {
       }
 
       gameState.targetIndicatorMesh = Mesh.targetIndicator(
-        size: targetSize,
-        lineWidth: 0.10,
-        color: indicatorColor,
+        size: scaledSize,
+        lineWidth: lineWidth,
+        color: colorFromArgb(indicatorArgb),
       );
-      gameState.lastTargetIndicatorSize = targetSize;
-      gameState.lastTargetIndicatorId = gameState.currentTargetId;
+      gameState.lastTargetIndicatorSize  = scaledSize;
+      gameState.lastTargetIndicatorId    = gameState.currentTargetId;
+      gameState.lastTargetIndicatorColorValue = indicatorArgb;
     }
 
-    // Yellow "target acquired" flash — created on each target change, shown for 2 s.
+    // "Target acquired" flash — recreated on target change, visible for acqDuration.
+    final acqArgb = cfg?.targetAcquiredColor ?? 0xFFFFF200;
     if (targetChanged) {
       gameState.targetAcquiredMesh = Mesh.targetIndicator(
-        size: targetSize * 1.3,
-        lineWidth: 0.13,
-        color: Vector3(1.0, 0.95, 0.0), // bright yellow
+        size: scaledSize * acqScale,
+        lineWidth: lineWidth * 1.3,
+        color: colorFromArgb(acqArgb),
       );
       gameState.targetAcquiredStartTime = gameState.gameTimeSec;
     }
@@ -512,9 +522,9 @@ class RenderSystem {
         gameState.targetAcquiredStartTime >= 0) {
       final acquiredAge =
           gameState.gameTimeSec - gameState.targetAcquiredStartTime;
-      if (acquiredAge < GameState.targetAcquiredDuration) {
+      if (acquiredAge < acqDuration) { // acqDuration read from settings above
         gameState.targetAcquiredTransform ??= Transform3d();
-        // Reason: yellow flash tracks the target's live position (may be moving).
+        // Reason: acquired flash tracks the target's live position (may be moving).
         gameState.targetAcquiredTransform!.position = targetPosition;
         renderer.render(
           gameState.targetAcquiredMesh!,

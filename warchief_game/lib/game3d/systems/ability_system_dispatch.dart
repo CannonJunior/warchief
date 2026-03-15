@@ -24,6 +24,38 @@ void _tryEnqueue(int slotIndex, GameState gameState) {
     }
   }
   gameState.abilityQueue.add(AbilityQueueEntry(slotIndex, abilityName));
+  _refreshQueuePrimedSlots(gameState);
+}
+
+/// Recomputes [GameState.abilityQueuePrimedSlots] from the last queued entry.
+///
+/// Called after every mutation of [abilityQueue] so the action bar's yellow
+/// combo tint always reflects the current queue tail.
+void _refreshQueuePrimedSlots(GameState gameState) {
+  final slots = gameState.abilityQueuePrimedSlots;
+  // Clear all first.
+  for (int i = 0; i < slots.length; i++) slots[i] = false;
+
+  if (gameState.abilityQueue.isEmpty) return;
+
+  // Only the Warchief action bar is supported (same constraint as combo bonuses).
+  if (!gameState.isWarchiefActive) return;
+
+  final config = globalActionBarConfig;
+  if (config == null) return;
+
+  // Resolve the last queued ability's comboPrimes.
+  final lastEntry = gameState.abilityQueue.last;
+  final lastData = config.getSlotAbilityData(lastEntry.slotIndex);
+  final primes = lastData.comboPrimes;
+  if (primes.isEmpty) return;
+
+  // Mark each action-bar slot whose assigned ability appears in primes.
+  final assignments = config.slotAssignments;
+  final primesSet = Set<String>.from(primes);
+  for (int i = 0; i < assignments.length; i++) {
+    if (primesSet.contains(assignments[i])) slots[i] = true;
+  }
 }
 
 // ==================== COOLDOWN MANAGEMENT ====================
