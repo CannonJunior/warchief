@@ -263,7 +263,22 @@ extension GameStateWorldExt on GameState {
     // main terrain spawn at ground level (~0-3 units), not the floating island
     // surface (~104 units). The effective ground height would snap them up to
     // the island since playerY defaults to 1000 (above everything).
-    final y = terrainManager?.getTerrainHeight(worldX, worldZ) ?? groundLevel;
+    //
+    // Sample all 4 corners + centre and use the maximum so the building never
+    // sinks into the terrain on sloped ground (the highest point under the
+    // footprint determines where the foundation must sit).
+    final fPart = tierDef.getPart('foundation');
+    final hw = ((fPart?['width']  as num?)?.toDouble() ?? 6.0) / 2;
+    final hd = ((fPart?['depth']  as num?)?.toDouble() ?? 8.0) / 2;
+    double sampleH(double sx, double sz) =>
+        terrainManager?.getTerrainHeight(sx, sz) ?? groundLevel;
+    final y = [
+      sampleH(worldX,      worldZ),
+      sampleH(worldX - hw, worldZ - hd),
+      sampleH(worldX + hw, worldZ - hd),
+      sampleH(worldX - hw, worldZ + hd),
+      sampleH(worldX + hw, worldZ + hd),
+    ].reduce(math.max);
     final transform = Transform3d(
       position: Vector3(worldX, y, worldZ),
     );

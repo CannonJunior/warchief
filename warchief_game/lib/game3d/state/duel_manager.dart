@@ -238,6 +238,18 @@ class DuelManager {
     }
   }
 
+  /// Clear all duel history from memory and SharedPreferences.
+  Future<void> clearHistory() async {
+    history.clear();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_storageKey);
+      debugPrint('[DuelManager] History cleared');
+    } catch (e) {
+      debugPrint('[DuelManager] Failed to clear history: $e');
+    }
+  }
+
   // ==================== EVENT RECORDING ====================
 
   void recordEvent(DuelEvent event) {

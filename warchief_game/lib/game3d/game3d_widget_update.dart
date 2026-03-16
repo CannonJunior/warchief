@@ -136,6 +136,9 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     // Apply wind drift to allies and monster (normal units have no wind resistance)
     _applyWindDrift(dt);
 
+    // Resolve tower wall collisions for all entities after all movement this frame
+    _resolveTowerWallCollisions();
+
     // Update dust devil swirls: move columns, apply unit lift
     _updateDustDevils(dt);
 
@@ -301,6 +304,39 @@ mixin _WidgetUpdateMixin on _GameStateBase {
         gameState.mapState.selectedFloor = floorIndex;
       }
     }
+  }
+
+  // ==================== WALL COLLISION ====================
+
+  /// Push entities out of tower and building walls after all movement each frame.
+  ///
+  /// Runs after InputSystem, PhysicsSystem, and AISystem so it catches positions
+  /// from every movement source in a single pass. Applies to the active character,
+  /// all allies, all alive minions, and the boss monster.
+  void _resolveTowerWallCollisions() {
+    void resolve(Transform3d? t) {
+      if (t == null) return;
+      // Tower exterior walls
+      final (tx, tz) = TowerMesh.resolveWallCollision(
+        t.position.x, t.position.z, t.position.y,
+      );
+      t.position.x = tx;
+      t.position.z = tz;
+      // Building rectangular walls
+      for (final building in gameState.buildings) {
+        if (!building.isPlaced) continue;
+        final (bx, bz) = building.resolveWallCollision(
+          t.position.x, t.position.z, t.position.y,
+        );
+        t.position.x = bx;
+        t.position.z = bz;
+      }
+    }
+
+    resolve(gameState.playerTransform);
+    for (final ally in gameState.allies) { resolve(ally.transform); }
+    for (final minion in gameState.aliveMinions) { resolve(minion.transform); }
+    if (gameState.monsterHealth > 0) resolve(gameState.monsterTransform);
   }
 
   /// Apply passive wind drift to non-player units during strong derechos.

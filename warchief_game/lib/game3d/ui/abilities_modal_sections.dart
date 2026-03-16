@@ -341,7 +341,7 @@ extension _AbilitiesModalSections on _AbilitiesModalState {
     );
   }
 
-  /// Load the first 10 abilities from a class into the 10 action bar slots
+  /// Load the first 15 abilities from a class into the 15 action bar slots
   void _loadClassToActionBar(String category) {
     final config = globalActionBarConfig;
     if (config == null) return;
@@ -354,14 +354,14 @@ extension _AbilitiesModalSections on _AbilitiesModalState {
         ];
     if (abilities.isEmpty) return;
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 15; i++) {
       if (i < abilities.length) {
         config.setSlotAbility(i, abilities[i].name);
       }
     }
 
     debugPrint('[CODEX] Loaded $category class abilities to action bar '
-        '(${abilities.length > 10 ? 10 : abilities.length} abilities)');
+        '(${abilities.length > 15 ? 15 : abilities.length} abilities)');
 
     // Notify parent to update character mesh color
     widget.onClassLoaded?.call(category);

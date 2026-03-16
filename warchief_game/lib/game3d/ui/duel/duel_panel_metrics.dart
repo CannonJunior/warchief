@@ -57,7 +57,38 @@ extension _DuelPanelMetrics on _DuelPanelState {
           filtered.isEmpty
               ? _emptyTableRow('No ability data for selected filter')
               : Column(children: filtered.map(_abilityRow).toList()),
+          const SizedBox(height: 16),
+          _buildClearHistoryButton(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildClearHistoryButton() {
+    return GestureDetector(
+      onTap: () async {
+        await widget.manager.clearHistory();
+        setState(() {});
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xFF3a0d0d),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: const Color(0xFF7a2020), width: 1),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.delete_outline, color: Color(0xFFef5350), size: 13),
+            SizedBox(width: 5),
+            Text('Clear All History',
+                style: TextStyle(
+                    color: Color(0xFFef5350),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }

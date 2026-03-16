@@ -199,4 +199,44 @@ class Building {
 
   /// Whether this building can be upgraded to a higher tier.
   bool get canUpgrade => currentTier < definition.tiers.length - 1;
+
+  /// Resolve XZ position against this building's rectangular walls.
+  ///
+  /// Units inside the footprint are pushed to the nearest exterior wall face.
+  /// The door opening on the front (+Z) face exempts units aligned with the
+  /// door width so they can enter and exit freely.
+  ///
+  /// [playerY] skips collision for units flying above the building roof.
+  (double, double) resolveWallCollision(double wx, double wz, double playerY) {
+    // Units above the roof are flying over the building — no XZ collision.
+    if (playerY > wallTopY + 1.0) return (wx, wz);
+
+    final pos = transform.position;
+    final f = tierDef.getPart('foundation');
+    final halfW = ((f?['width']  as num?)?.toDouble() ?? 6.0) / 2;
+    final halfD = ((f?['depth']  as num?)?.toDouble() ?? 8.0) / 2;
+
+    final lx = wx - pos.x;
+    final lz = wz - pos.z;
+
+    // Outside the footprint rectangle — no collision.
+    if (lx.abs() >= halfW || lz.abs() >= halfD) return (wx, wz);
+
+    // Door exception: the door opening is on the front (+Z) face, centred at lx=0.
+    // Units in the front half of the footprint within door width pass freely.
+    final dPart = tierDef.getPart('door');
+    final halfDoorW = ((dPart?['width'] as num?)?.toDouble() ?? 1.2) / 2;
+    if (lz > 0 && lx.abs() < halfDoorW) return (wx, wz);
+
+    // Push out along the axis of minimum penetration (shortest path to exterior).
+    final overlapX = halfW - lx.abs();
+    final overlapZ = halfD - lz.abs();
+    if (overlapX <= overlapZ) {
+      final sign = lx >= 0 ? 1.0 : -1.0;
+      return (pos.x + sign * halfW, wz);
+    } else {
+      final sign = lz >= 0 ? 1.0 : -1.0;
+      return (wx, pos.z + sign * halfD);
+    }
+  }
 }

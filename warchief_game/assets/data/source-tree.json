@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-03-15T18:48:12.928144",
+  "generated_at": "2026-03-15T20:39:33.031040",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
     "files": 336,
     "directories": 42,
-    "lines": 90749,
-    "size": 3327527
+    "lines": 90920,
+    "size": 3334238
   },
   "tree": {
     "name": "warchief_game",
@@ -153,10 +153,10 @@
                 "name": "source-tree.json",
                 "type": "file",
                 "path": "warchief_game/assets/data/source-tree.json",
-                "size": 124177,
+                "size": 124447,
                 "extension": ".json",
                 "icon": "📋",
-                "lines": 3310
+                "lines": 3319
               },
               {
                 "name": "stance_config.json",
@@ -1088,10 +1088,10 @@
                     "name": "tower_mesh.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/rendering/tower_mesh.dart",
-                    "size": 9417,
+                    "size": 10744,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 248
+                    "lines": 276
                   },
                   {
                     "name": "wind_particles.dart",
@@ -1230,10 +1230,10 @@
                     "name": "duel_manager.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/duel_manager.dart",
-                    "size": 12958,
+                    "size": 13332,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 329
+                    "lines": 341
                   },
                   {
                     "name": "game_config.dart",
@@ -1284,10 +1284,10 @@
                     "name": "game_state_world.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state_world.dart",
-                    "size": 21519,
+                    "size": 22196,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 620
+                    "lines": 635
                   },
                   {
                     "name": "gameplay_settings.dart",
@@ -1726,10 +1726,10 @@
                         "name": "duel_panel_metrics.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/duel/duel_panel_metrics.dart",
-                        "size": 10282,
+                        "size": 11278,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 288
+                        "lines": 319
                       },
                       {
                         "name": "duel_panel_recents.dart",
@@ -2683,10 +2683,10 @@
                 "name": "game3d_widget_update.dart",
                 "type": "file",
                 "path": "warchief_game/lib/game3d/game3d_widget_update.dart",
-                "size": 13628,
+                "size": 15009,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 325
+                "lines": 361
               }
             ]
           },
@@ -2726,10 +2726,10 @@
                 "name": "building.dart",
                 "type": "file",
                 "path": "warchief_game/lib/models/building.dart",
-                "size": 6543,
+                "size": 8229,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 202
+                "lines": 242
               },
               {
                 "name": "combat_log_entry.dart",

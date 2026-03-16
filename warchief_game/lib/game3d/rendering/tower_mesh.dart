@@ -18,8 +18,8 @@ class TowerMesh {
 
   static const int floorCount = 7;
   static const double floorHeight = 8.0;
-  static const double exteriorRadius = 12.0;
-  static const double interiorRadius = 10.0;
+  static const double exteriorRadius = 48.0;
+  static const double interiorRadius = 40.0;
   static const double totalHeight = floorCount * floorHeight; // 56.0
   static const int _octSides = 8;
 
@@ -84,8 +84,8 @@ class TowerMesh {
   /// and returns the highest one below the player.
   static double? rampGroundAt(double wx, double wz, double playerY) {
     const rampInner   = exteriorRadius;
-    const rampOuter   = exteriorRadius + 2.5;
-    const rampTol     = 0.7; // radial tolerance beyond ramp edge
+    const rampOuter   = exteriorRadius + 10.0;
+    const rampTol     = 2.8; // radial tolerance beyond ramp edge
     const totalAngle  = floorCount * math.pi / 2.0;
 
     final dx   = wx - centerX;
@@ -109,6 +109,34 @@ class TowerMesh {
       }
     }
     return bestH;
+  }
+
+  /// Resolve XZ position against tower exterior walls to prevent pass-through.
+  ///
+  /// Units are in the "wall zone" when interiorRadius ≤ dist < exteriorRadius.
+  /// The door opening on face i=4 (angle π–5π/4) is exempt so units can enter.
+  /// Units fully inside the interior (dist < interiorRadius) are not affected.
+  /// Only active at island/tower altitude (playerY > islandBaseY - 1.0).
+  static (double, double) resolveWallCollision(double wx, double wz, double playerY) {
+    if (playerY < islandBaseY - 1.0) return (wx, wz);
+
+    final dx = wx - centerX;
+    final dz = wz - centerZ;
+    final distSq = dx * dx + dz * dz;
+
+    // Outside exterior wall or inside interior — no wall to push against.
+    if (distSq >= exteriorRadius * exteriorRadius) return (wx, wz);
+    if (distSq < interiorRadius * interiorRadius) return (wx, wz);
+
+    // Unit is in the wall zone. Check door exception (face i=4: angle π to 5π/4).
+    final alpha  = math.atan2(dz, dx);
+    final alphaN = alpha < 0 ? alpha + 2 * math.pi : alpha;
+    if (alphaN >= math.pi && alphaN <= 5 * math.pi / 4) return (wx, wz);
+
+    // Push outward to exterior surface.
+    final dist = math.sqrt(distSq);
+    if (dist < 0.01) return (wx, wz);
+    return (centerX + dx * exteriorRadius / dist, centerZ + dz * exteriorRadius / dist);
   }
 
   // ==================== GEOMETRY HELPERS ====================
@@ -194,7 +222,7 @@ class TowerMesh {
   static void _addSpiralRamp(List<double> v, List<int> idx) {
     const steps      = 56;
     const rampInner  = exteriorRadius;
-    const rampOuter  = exteriorRadius + 2.5;
+    const rampOuter  = exteriorRadius + 10.0;
     const totalAngle = floorCount * math.pi / 2.0; // 1/4 turn × 7 floors
 
     for (int s = 0; s < steps; s++) {
@@ -221,15 +249,15 @@ class TowerMesh {
   /// Even-numbered octagon faces get a raised merlon block.
   static void _addBattlements(List<double> v, List<int> idx) {
     const yBase   = totalHeight;
-    const merlonH = 1.8;
+    const merlonH = 2.5;
 
     for (int i = 0; i < _octSides; i++) {
       if (i % 2 != 0) continue; // Reason: alternating merlons = crenellation pattern
 
-      final (x1, z1) = _oct(i, exteriorRadius - 1.0);
-      final (x2, z2) = _oct((i + 1) % _octSides, exteriorRadius - 1.0);
-      final (xo1, zo1) = _oct(i, exteriorRadius + 0.5);
-      final (xo2, zo2) = _oct((i + 1) % _octSides, exteriorRadius + 0.5);
+      final (x1, z1) = _oct(i, exteriorRadius - 4.0);
+      final (x2, z2) = _oct((i + 1) % _octSides, exteriorRadius - 4.0);
+      final (xo1, zo1) = _oct(i, exteriorRadius + 2.0);
+      final (xo2, zo2) = _oct((i + 1) % _octSides, exteriorRadius + 2.0);
 
       // Top face of merlon
       _quad(v, idx,
