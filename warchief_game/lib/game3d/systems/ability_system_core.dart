@@ -149,8 +149,12 @@ void _applyChannelTick(GameState gameState) {
   final duration = effective.duration > 0 ? effective.duration : 1.0;
   final ticks = duration.round();
 
+  // Reason: channelEffectScale is reduced by 0.25/channelDuration per combo hit
+  // on the caster; full-effect = 1.0, fully suppressed = 0.0.
+  final effectScale = gameState.channelEffectScale;
+
   if (effective.damage > 0) {
-    final tickDmg = effective.damage / ticks;
+    final tickDmg = (effective.damage / ticks) * effectScale;
     _autoHitCurrentTarget(
       gameState,
       damage: tickDmg,
@@ -160,7 +164,7 @@ void _applyChannelTick(GameState gameState) {
     );
   }
   if (effective.healAmount > 0) {
-    final tickHeal = effective.healAmount / ticks;
+    final tickHeal = (effective.healAmount / ticks) * effectScale;
     final oldHealth = gameState.activeHealth;
     gameState.activeHealth = math.min(gameState.activeMaxHealth, gameState.activeHealth + tickHeal);
     final healed = gameState.activeHealth - oldHealth;
@@ -184,6 +188,7 @@ void _startChanneledAbility(AbilityData ability, int slotIndex, GameState gameSt
   gameState.channelDuration = ability.duration;
   gameState.channelingAbilityName = ability.name;
   gameState.channelingSlotIndex = slotIndex;
+  gameState.channelEffectScale = 1.0;
   _channelTickAccum = 0.0;
   gameState.addConsoleLog('Channeling ${ability.name} (${ability.duration.toStringAsFixed(0)}s)');
 }

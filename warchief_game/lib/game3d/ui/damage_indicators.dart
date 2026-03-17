@@ -317,10 +317,20 @@ void updateDamageIndicators(List<DamageIndicator> indicators, double dt) {
 /// Tracks the dissolving label shown when a queued ability executes.
 class QueuedAbilityLabel {
   final String name;
+
+  /// Number of consecutive combo abilities fired when this label was created.
+  /// When ≥ 1, an Nx badge is rendered above the ability text.
+  final int comboStreak;
+
+  /// When false the ability name text is suppressed — the label was created by a
+  /// queue-drain execution where the exiting-queue animation already shows the name.
+  /// Only the combo badge is rendered in that case.
+  final bool showName;
+
   double age = 0.0;
   static const double maxAge = 1.0;
 
-  QueuedAbilityLabel(this.name);
+  QueuedAbilityLabel(this.name, {this.comboStreak = 0, this.showName = true});
 
   bool get isExpired => age >= maxAge;
   double get progress => (age / maxAge).clamp(0.0, 1.0);
@@ -425,22 +435,48 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
     if (executingLabel != null) {
       final p       = executingLabel!.progress;
       final opacity = (1.0 - p).clamp(0.0, 1.0);
-      // Reason: start 24px above queue line so it's never visually merged with it,
-      // then drift another 18px upward as it dissolves.
-      children.add(_buildText(
-        text:    executingLabel!.name,
-        color:   const Color(0xFFFFDD00),
-        opacity: opacity,
-        x: x,
-        y: y - 24.0 - p * 18.0,
-        shadow: true,
-      ));
+
+      if (executingLabel!.showName) {
+        // Direct hotkey: floating dissolve label + badge above its first character.
+        final labelY = y - 24.0 - p * 18.0;
+        children.add(_buildText(
+          text:    executingLabel!.name,
+          color:   const Color(0xFFFFDD00),
+          opacity: opacity,
+          x: x,
+          y: labelY,
+          shadow: true,
+        ));
+        if (executingLabel!.comboStreak >= 1) {
+          children.add(_buildBadge(
+            text:        '${executingLabel!.comboStreak}x',
+            opacity:     opacity,
+            x:           x,
+            y:           labelY - _badgeFontSize - 2,
+            abilityName: executingLabel!.name,
+          ));
+        }
+      } else if (executingLabel!.comboStreak >= 1) {
+        // Queue-fired: the exiting-queue animation already shows the ability name.
+        // Render only the badge, positioned just above the queue line text and
+        // aligned over the first character of the ability name.
+        children.add(_buildBadge(
+          text:        '${executingLabel!.comboStreak}x',
+          opacity:     opacity,
+          x:           x,
+          y:           y - _badgeFontSize - 4,
+          abilityName: executingLabel!.name,
+        ));
+      }
     }
 
     return SizedBox.expand(
       child: Stack(clipBehavior: Clip.none, children: children),
     );
   }
+
+  /// Font size for the Nx combo badge rendered above the executing ability text.
+  static const double _badgeFontSize = 16.0;
 
   /// Renders "x{n} COMBO" in gold above the queue line while a combo chain
   /// is active (streak ≥ 2).  Positioned [_comboTrackerOffset]px above the
@@ -576,6 +612,56 @@ class QueuedAbilityLabelOverlay extends StatelessWidget {
               ),
               children: spans,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Renders the Nx combo badge left-aligned above the first character of
+  /// [abilityName].
+  ///
+  /// Reason: the queue text is right-aligned within a [_width]-wide box ending
+  /// at [x]. The first character of [abilityName] sits at approximately
+  /// x − (name.length × scaledFontSize × charWidthFactor). Positioning the
+  /// badge there makes it sit visually above the start of the word rather than
+  /// above the trailing edge.
+  Widget _buildBadge({
+    required String text,
+    required double opacity,
+    required double x,
+    required double y,
+    required String abilityName,
+  }) {
+    final s          = globalGameplaySettings;
+    final fontFamily = (s?.queueFontFamily ?? 'Bangers') == 'Default'
+        ? null
+        : (s?.queueFontFamily ?? 'Bangers');
+    final scaledFont = _baseFontSize * (s?.queueFontScale ?? 1.0);
+    // Reason: Bangers is a condensed display font; 0.55 approximates its
+    // per-character advance width as a fraction of the point size.
+    const charWidthFactor = 0.55;
+    final approxNameWidth = abilityName.length * scaledFont * charWidthFactor;
+
+    return Positioned(
+      // Left-align the badge starting at the estimated first-character position.
+      left: x - approxNameWidth,
+      top:  y,
+      child: IgnorePointer(
+        child: Text(
+          text,
+          style: TextStyle(
+            color:      const Color(0xFFFFAA00).withValues(alpha: opacity),
+            fontSize:   _badgeFontSize,
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.bold,
+            shadows: [
+              Shadow(
+                color:      Colors.black.withValues(alpha: opacity * 0.9),
+                blurRadius: 3,
+                offset:     const Offset(1, 1),
+              ),
+            ],
           ),
         ),
       ),

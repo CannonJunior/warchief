@@ -1038,6 +1038,11 @@ class GameState {
   /// Center position for AoE channeled abilities (stored at channel start)
   Vector3? channelAoeCenter;
 
+  /// Effect scale for the active channel (1.0 = full, reduced by combo hits on the caster).
+  /// Damage/heal tick values are multiplied by this when applied.
+  /// Reason: combo pushback reduces channel effectiveness proportional to 0.25s / total duration.
+  double channelEffectScale = 1.0;
+
 
   /// Get channel progress as percentage (1.0 = just started, 0.0 = about to finish)
   /// Reason: Channeling bar drains from full to empty, opposite of cast bar

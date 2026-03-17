@@ -288,7 +288,28 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
   gameState.addConsoleLog('$abilityName executed (slot $slotIndex)');
   // Reason: queue-fired abilities show a fading yellow entry in the queue line;
   // only direct hotkey presses use the separate floating dissolve label.
-  if (!_isDrainingQueue) gameState.executingAbilityLabel = QueuedAbilityLabel(abilityName);
+  // Compute executing streak for the Nx badge:
+  //   0 = not part of a combo (no badge)
+  //   1 = this ability primes a follow-up (primer fires first in the chain)
+  //   2+ = follow-up inside an active combo window
+  // Reason: primers have comboPrimes but _wasComboFired=false; follow-ups have
+  // _wasComboFired=true because their slot held a GCD bonus granted by the primer.
+  final executingStreak = _wasComboFired
+      ? gameState.comboStreak + 1
+      : (abilityData != null && abilityData.comboPrimes.isNotEmpty ? 1 : 0);
+  // Reason: combo follow-ups nearly always fire from the queue drain (GCD forces
+  // queuing even on direct keypress), so _isDrainingQueue is true when they execute.
+  // Always create executingAbilityLabel for combo abilities so the Nx badge is visible.
+  // showName=false suppresses the duplicate floating name for queue-fired abilities
+  // since the exiting-queue animation already shows it; only the badge is rendered.
+  // Non-combo queue-fired abilities keep the original behaviour (exiting label only).
+  if (executingStreak > 0 || !_isDrainingQueue) {
+    gameState.executingAbilityLabel = QueuedAbilityLabel(
+      abilityName,
+      comboStreak: executingStreak,
+      showName: !_isDrainingQueue,
+    );
+  }
 
   // Trigger GCD — 1.0s base, reduced by haste and stance
   {
@@ -433,5 +454,45 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
         gameState.addConsoleLog('Unknown ability: $abilityName (no data found)', level: ConsoleLogLevel.error);
         _executeDefaultSlotAbility(slotIndex, gameState);
       }
+  }
+
+  // Apply combo-hit pushback to the current target's cast/channel state.
+  if (_wasComboFired) _applyComboHitPushback(gameState);
+}
+
+/// Push back or reduce the target's in-progress cast, windup, or channel when a
+/// combo ability fires.
+///
+/// Reason: currently only the player (GameState) carries explicit cast/channel state;
+/// when enemy combatants gain cast bars this check should be extended to cover them.
+/// For now the effect fires when [currentTargetId] is null (e.g. self-cast AoE) or
+/// matches the player's own entity — which covers the duel case where another
+/// combatant hits the player with a combo while the player is casting.
+void _applyComboHitPushback(GameState gameState) {
+  // Cast / windup pushback: extend the time the caster must wait before firing.
+  if (gameState.isCasting && gameState.castPushbackCount < 3) {
+    gameState.castProgress = (gameState.castProgress - 0.25).clamp(0.0, gameState.currentCastTime);
+    gameState.castPushbackCount++;
+    assert(() {
+      debugPrint('[COMBO PUSHBACK] Cast pushed back 0.25s (${gameState.castPushbackCount}/3)');
+      return true;
+    }());
+  } else if (gameState.isWindingUp) {
+    gameState.windupProgress = (gameState.windupProgress - 0.25).clamp(0.0, gameState.currentWindupTime);
+    assert(() {
+      debugPrint('[COMBO PUSHBACK] Windup pushed back 0.25s');
+      return true;
+    }());
+  }
+
+  // Channel effect reduction: reduce output scale proportional to the 0.25s fraction.
+  // Reason: a 4s channel hit by combo loses 0.25/4 = 6.25% effectiveness per hit.
+  if (gameState.isChanneling && gameState.channelDuration > 0) {
+    final reduction = 0.25 / gameState.channelDuration;
+    gameState.channelEffectScale = (gameState.channelEffectScale - reduction).clamp(0.0, 1.0);
+    assert(() {
+      debugPrint('[COMBO PUSHBACK] Channel effect reduced by ${(reduction * 100).toStringAsFixed(1)}%');
+      return true;
+    }());
   }
 }

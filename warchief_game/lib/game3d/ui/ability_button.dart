@@ -31,7 +31,10 @@ class AbilityButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isOnCooldown = cooldown > 0;
-    final isDisabled = isOnCooldown || (isOutOfRange && !isOnCooldown);
+    // Reason: never disable the tap — let the ability system decide to execute
+    // or enqueue, exactly as keyboard input does. Visual-only dimming still
+    // communicates cooldown/range state without blocking queue entry.
+    final isDisabled = false;
     final progress = isOnCooldown ? (1.0 - (cooldown / maxCooldown)) : 1.0;
     final fontSize = size > 50 ? 24.0 : (size > 35 ? 16.0 : 12.0);
     final cooldownFontSize = size > 50 ? 10.0 : 8.0;

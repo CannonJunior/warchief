@@ -377,6 +377,7 @@ extension GameStateStanceExt on GameState {
       channelingSlotIndex = null;
       channelingAbilityName = '';
       channelAoeCenter = null;
+      channelEffectScale = 1.0;
     }
   }
 

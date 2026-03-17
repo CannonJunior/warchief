@@ -134,7 +134,7 @@ class DuelDefinitions {
       case 'warrior':
         return [WarriorAbilities.gauntletJab, WarriorAbilities.shieldBash,
                 WarriorAbilities.charge, WarriorAbilities.whirlwind,
-                WarriorAbilities.pummel];
+                WarriorAbilities.shockwave];
       case 'rogue':
         return [RogueAbilities.backstab, RogueAbilities.poisonBlade,
                 RogueAbilities.smokeBomb, RogueAbilities.fanOfKnives,

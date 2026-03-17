@@ -186,21 +186,24 @@ class WarriorAbilities {
     // Finisher — no further primes.
   );
 
-  /// Sunder Armor — Crushing strike that permanently exposes physical weakness
-  static final sunderArmor = AbilityData(
-    name: 'Sunder Armor',
-    description: 'A crushing strike that permanently exposes the target\'s weakness to physical damage.',
-    type: AbilityType.melee,
-    damage: 10.0,
-    cooldown: 12.0,
-    range: 2.5,
-    color: Vector3(0.7, 0.5, 0.3),
-    impactColor: Vector3(0.8, 0.6, 0.4),
-    impactSize: 0.6,
+  /// Shockwave — Ground slam sending a shockwave through all nearby enemies
+  static final shockwave = AbilityData(
+    name: 'Shockwave',
+    description: 'Drives weapon into the ground with both hands, unleashing a shockwave that stuns and heavily damages all enemies in range.',
+    type: AbilityType.aoe,
+    damage: 65.0,
+    cooldown: 30.0,
+    range: 2.0,
+    aoeRadius: 5.0,
+    maxTargets: 8,
+    color: Vector3(0.85, 0.7, 0.3),
+    impactColor: Vector3(1.0, 0.85, 0.4),
+    impactSize: 1.1,
+    statusEffect: StatusEffect.stun,
+    statusDuration: 2.0,
     category: 'warrior',
-    appliesPermanentVulnerability: true,
-    // Exposed armor invites the highest-damage finisher.
-    comboPrimes: ['Execution Strike'],
+    // Stunned crowd is perfect for whirlwind or a heavy finisher.
+    comboPrimes: ['Whirlwind', 'Execution Strike'],
   );
 
   // ==================== CHAIN COMBO PRIMER ====================
@@ -226,23 +229,46 @@ class WarriorAbilities {
     comboPrimes: ['Gauntlet Jab', 'Whirlwind'],
   );
 
-  /// Pummel — Shield punch that interrupts spellcasting
-  static final pummel = AbilityData(
-    name: 'Pummel',
-    description: 'Drive your shield into the caster\'s jaw, interrupting their spellcasting for 3 seconds',
-    type: AbilityType.melee,
-    damage: 12.0,
-    cooldown: 12.0,
-    range: 2.0,
-    color: Vector3(0.6, 0.6, 0.7),
-    impactColor: Vector3(0.9, 0.85, 0.6),
-    impactSize: 0.5,
-    statusEffect: StatusEffect.interrupt,
-    statusDuration: 3.0,
+  /// Avatar of War — Warrior becomes a living embodiment of battle for 10 seconds
+  static final avatarOfWar = AbilityData(
+    name: 'Avatar of War',
+    description: 'Channels the fury of a thousand battles, becoming an unstoppable Avatar of War. '
+        'Grants +50% damage, immunity to stuns and roots, and 30% damage reduction for 10 seconds.',
+    type: AbilityType.buff,
+    cooldown: 60.0,
+    duration: 10.0,
+    color: Vector3(0.9, 0.3, 0.1),
+    impactColor: Vector3(1.0, 0.4, 0.2),
+    impactSize: 1.5,
+    statusEffect: StatusEffect.strength,
+    statusStrength: 0.5,
+    manaColor: ManaColor.red,
+    manaCost: 40.0,
     category: 'warrior',
-    damageSchool: DamageSchool.physical,
-    // Interrupting a cast puts the enemy off-balance for a bash.
-    comboPrimes: ['Shield Bash'],
+  );
+
+  /// Thunderclap — Cataclysmic two-handed smash that devastates an entire battlefield
+  static final thunderclap = AbilityData(
+    name: 'Thunderclap',
+    description: 'Raises weapon skyward and brings it down with the force of a thunderstrike, '
+        'sending a massive shockwave that obliterates everything nearby.',
+    type: AbilityType.aoe,
+    damage: 280.0,
+    cooldown: 120.0,
+    range: 2.0,
+    aoeRadius: 12.0,
+    maxTargets: 20,
+    color: Vector3(1.0, 0.85, 0.2),
+    impactColor: Vector3(1.0, 0.95, 0.5),
+    impactSize: 2.0,
+    knockbackForce: 12.0,
+    statusEffect: StatusEffect.stun,
+    statusDuration: 3.0,
+    windupTime: 1.5,
+    windupMovementSpeed: 0.0,
+    manaColor: ManaColor.red,
+    manaCost: 60.0,
+    category: 'warrior',
   );
 
   /// Battle Presence — Warrior aura granting +25% damage to all nearby allies
@@ -266,21 +292,22 @@ class WarriorAbilities {
   );
 
   /// All warrior abilities as a list
-  /// Ordered short→long cooldown; slots 11-14 hold the longest cooldowns.
+  /// Ordered short→long cooldown; slots 13-15 hold the long cooldowns.
   static List<AbilityData> get all => [
-    gauntletJab,      //  1  1.0s  combo starter
-    ironSweep,        //  2  1.0s  combo 2 slow
-    battlePresence,   //  3  5.0s  damage aura
-    shieldBash,       //  4  6.0s  CC stun
-    rendingChains,    //  5  6.0s  combo 3 bleed
-    warcryUppercut,   //  6  7.0s  combo 4 stun + knockback
-    whirlwind,        //  7  8.0s  AoE
-    executionStrike,  //  8 10.0s  combo finisher
-    ironMomentum,     //  9 10.0s  chain combo primer
-    charge,           // 10 10.0s  gap closer knockback
-    sunderArmor,      // 11 12.0s  permanent vulnerability
-    pummel,           // 12 12.0s  interrupt
-    taunt,            // 13 12.0s  CC aggro debuff
-    fortify,          // 14 15.0s  buff shield
+    gauntletJab,      //  1   1.0s  combo starter
+    ironSweep,        //  2   1.0s  combo 2 slow
+    battlePresence,   //  3   5.0s  damage aura
+    shieldBash,       //  4   6.0s  CC stun
+    rendingChains,    //  5   6.0s  combo 3 bleed
+    warcryUppercut,   //  6   7.0s  combo 4 stun + knockback
+    whirlwind,        //  7   8.0s  AoE
+    executionStrike,  //  8  10.0s  combo finisher
+    ironMomentum,     //  9  10.0s  chain combo primer
+    charge,           // 10  10.0s  gap closer knockback
+    taunt,            // 11  12.0s  CC aggro debuff
+    fortify,          // 12  15.0s  buff shield
+    shockwave,        // 13  30.0s  AoE stun ground slam
+    avatarOfWar,      // 14  60.0s  damage + CC immunity buff
+    thunderclap,      // 15 120.0s  cataclysmic AoE windup
   ];
 }

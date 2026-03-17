@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-03-15T20:39:33.031040",
+  "generated_at": "2026-03-16T23:00:38.495036",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
     "files": 336,
     "directories": 42,
-    "lines": 90920,
-    "size": 3334238
+    "lines": 91035,
+    "size": 3339641
   },
   "tree": {
     "name": "warchief_game",
@@ -153,7 +153,7 @@
                 "name": "source-tree.json",
                 "type": "file",
                 "path": "warchief_game/assets/data/source-tree.json",
-                "size": 124447,
+                "size": 124448,
                 "extension": ".json",
                 "icon": "📋",
                 "lines": 3319
@@ -880,10 +880,10 @@
                         "name": "warrior_abilities.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/abilities/warrior_abilities.dart",
-                        "size": 9419,
+                        "size": 10406,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 286
+                        "lines": 313
                       },
                       {
                         "name": "windwalker_abilities.dart",
@@ -905,7 +905,7 @@
                         "name": "duel_definitions.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/data/duel/duel_definitions.dart",
-                        "size": 14784,
+                        "size": 14787,
                         "extension": ".dart",
                         "icon": "🎯",
                         "lines": 351
@@ -1248,10 +1248,10 @@
                     "name": "game_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state.dart",
-                    "size": 44503,
+                    "size": 44798,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 1211
+                    "lines": 1216
                   },
                   {
                     "name": "game_state_mana.dart",
@@ -1266,10 +1266,10 @@
                     "name": "game_state_stance.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/game_state_stance.dart",
-                    "size": 14186,
+                    "size": 14218,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 396
+                    "lines": 397
                   },
                   {
                     "name": "game_state_targeting.dart",
@@ -1453,19 +1453,19 @@
                     "name": "ability_system_core.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/ability_system_core.dart",
-                    "size": 12844,
+                    "size": 13111,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 347
+                    "lines": 352
                   },
                   {
                     "name": "ability_system_dispatch.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/ability_system_dispatch.dart",
-                    "size": 19512,
+                    "size": 22375,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 437
+                    "lines": 492
                   },
                   {
                     "name": "ability_system_implementations.dart",
@@ -2134,10 +2134,10 @@
                     "name": "ability_button.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/ability_button.dart",
-                    "size": 4803,
+                    "size": 4991,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 144
+                    "lines": 147
                   },
                   {
                     "name": "ability_editor_panel.dart",
@@ -2341,10 +2341,10 @@
                     "name": "damage_indicators.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/damage_indicators.dart",
-                    "size": 20833,
+                    "size": 21600,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 641
+                    "lines": 660
                   },
                   {
                     "name": "dps_panel.dart",
