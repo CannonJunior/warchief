@@ -1,1 +1,37 @@
 ruminations.txt
+
+# Flutter / Dart build output
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Generated Dart files
+*.g.dart
+*.freezed.dart
+
+# Flutter IDE state (regenerated automatically)
+**/.metadata
+
+# Xcode (iOS builds)
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Runner/GeneratedPluginRegistrant.*
+xcuserdata/
+DerivedData/
+*.moved-aside
+
+# Android
+**/android/.gradle/
+**/android/local.properties
+**/android/key.properties
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.iml
