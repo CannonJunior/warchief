@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-03-16T23:00:38.495036",
+  "generated_at": "2026-03-29T10:31:45.130121",
   "project_name": "warchief_game",
   "root": "/home/junior/src/warchief/warchief_game",
   "totals": {
     "files": 336,
     "directories": 42,
-    "lines": 91035,
-    "size": 3339641
+    "lines": 91108,
+    "size": 3342424
   },
   "tree": {
     "name": "warchief_game",
@@ -1462,10 +1462,10 @@
                     "name": "ability_system_dispatch.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/ability_system_dispatch.dart",
-                    "size": 22375,
+                    "size": 22602,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 492
+                    "lines": 498
                   },
                   {
                     "name": "ability_system_implementations.dart",
@@ -2341,10 +2341,10 @@
                     "name": "damage_indicators.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/ui/damage_indicators.dart",
-                    "size": 21600,
+                    "size": 24156,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 660
+                    "lines": 727
                   },
                   {
                     "name": "dps_panel.dart",
