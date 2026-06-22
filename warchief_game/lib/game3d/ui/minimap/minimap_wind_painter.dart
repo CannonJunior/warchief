@@ -354,7 +354,7 @@ class MinimapWindPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(MinimapWindPainter oldDelegate) {
-    // Reason: particles advance every frame, always repaint when visible
-    return true;
+    // Reason: throttle to ~30 fps — particles don't need 60 fps visual fidelity
+    return (elapsedTime - oldDelegate.elapsedTime).abs() > 0.033;
   }
 }

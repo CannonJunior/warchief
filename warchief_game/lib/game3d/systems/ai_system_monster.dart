@@ -99,13 +99,10 @@ class _MonsterAI {
         return;
       }
 
-      // Create AI context
-      final context = _createMonsterAIContext(gameState);
-
-      // Fast tactical assessment (every frame for immediate threats)
-      final threatResponse = MCPTools.assessThreat(context);
-      if (threatResponse.action == 'RETREAT_URGENT' && threatResponse.confidence > 0.8) {
-        // Emergency retreat - create immediate escape path
+      // Reason: inline health/distance check avoids _createMonsterAIContext()
+      // allocation every frame. Only create the full context on interval.
+      final healthPct = gameState.monsterHealth / gameState.monsterMaxHealth;
+      if (healthPct < 0.3) {
         final awayFromPlayer = (gameState.monsterTransform!.position - gameState.playerTransform!.position).normalized();
         final escapeTarget = gameState.monsterTransform!.position + awayFromPlayer * 5.0;
         gameState.monsterCurrentPath = BezierPath.interception(
@@ -121,6 +118,7 @@ class _MonsterAI {
       if (gameState.monsterAiTimer >= gameState.monsterAiInterval) {
         gameState.monsterAiTimer = 0.0;
 
+        final context = _createMonsterAIContext(gameState);
         final distanceToPlayer = context.distanceToPlayer;
 
         // Log AI input

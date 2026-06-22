@@ -33,6 +33,10 @@ class GreenManaSparkleSystem {
   Mesh? _mesh;
   final Transform3d _transform = Transform3d(position: Vector3(0, 0, 0));
 
+  /// Reusable vertex/index buffers to avoid per-frame list allocation
+  final List<double> _vertices = [];
+  final List<int> _indices = [];
+
   bool get isInitialized => _initialized;
 
   void init() {
@@ -147,8 +151,8 @@ class GreenManaSparkleSystem {
       return;
     }
 
-    final vertices = <double>[];
-    final indices = <int>[];
+    _vertices.clear();
+    _indices.clear();
     int vertexCount = 0;
 
     for (int i = 0; i < _activeCount; i++) {
@@ -189,7 +193,7 @@ class GreenManaSparkleSystem {
       final b = (0.4 + coreBlend * 0.6) * a;
 
       // Build quad (4 vertices) centered at (px, py, pz)
-      vertices.addAll([
+      _vertices.addAll([
         px - size, py - size, pz, r, g, b,
         px + size, py - size, pz, r, g, b,
         px + size, py + size, pz, r, g, b,
@@ -197,19 +201,19 @@ class GreenManaSparkleSystem {
       ]);
 
       final base = vertexCount;
-      indices.addAll([base, base + 1, base + 2]);
-      indices.addAll([base, base + 2, base + 3]);
+      _indices.addAll([base, base + 1, base + 2]);
+      _indices.addAll([base, base + 2, base + 3]);
       vertexCount += 4;
     }
 
-    if (vertices.isEmpty) {
+    if (_vertices.isEmpty) {
       _mesh = null;
       return;
     }
 
     _mesh = Mesh.fromVerticesAndIndices(
-      vertices: vertices,
-      indices: indices,
+      vertices: _vertices,
+      indices: _indices,
       vertexStride: 6,
     );
   }

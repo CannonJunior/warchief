@@ -71,7 +71,7 @@ void _updateCastingState(double dt, GameState gameState) {
       type: CombatLogType.ability,
     ));
 
-    debugPrint('[CAST] $abilityName cast complete! (${configuredTime.toStringAsFixed(2)}s)');
+    devLog(() => '[CAST] $abilityName cast complete! (${configuredTime.toStringAsFixed(2)}s)');
     // Reason: queue-fired abilities already show a fading entry in the queue
     // line; only direct hotkey presses create the separate floating label.
     if (!_isDrainingQueue) gameState.executingAbilityLabel = QueuedAbilityLabel(abilityName);
@@ -108,7 +108,7 @@ void _updateWindupState(double dt, GameState gameState) {
       type: CombatLogType.ability,
     ));
 
-    debugPrint('[WINDUP] $abilityName windup complete! (${configuredTime.toStringAsFixed(2)}s)');
+    devLog(() => '[WINDUP] $abilityName windup complete! (${configuredTime.toStringAsFixed(2)}s)');
     if (!_isDrainingQueue) gameState.executingAbilityLabel = QueuedAbilityLabel(abilityName);
     if (slotIndex != null) {
       _finishWindupAbility(slotIndex, gameState);
@@ -330,7 +330,7 @@ void _startCastTimeAbility(AbilityData abilityData, int slotIndex, GameState gam
   gameState.castingSlotIndex = slotIndex;
   gameState.castingAbilityName = abilityData.name;
 
-  debugPrint('[CAST] Starting ${abilityData.name} (${castTime.toStringAsFixed(2)}s cast time${haste > 0 ? ', $haste% haste' : ''})');
+  devLog(() => '[CAST] Starting ${abilityData.name} (${castTime.toStringAsFixed(2)}s cast time${haste > 0 ? ', $haste% haste' : ''})');
 }
 
 /// Begin a windup melee ability (applies Haste and stance cast time multiplier).
@@ -348,5 +348,5 @@ void _startWindupAbility(AbilityData abilityData, int slotIndex, GameState gameS
   gameState.windupAbilityName = abilityData.name;
   gameState.windupMovementSpeedModifier = abilityData.windupMovementSpeed;
 
-  debugPrint('[WINDUP] Starting ${abilityData.name} (${windupTime.toStringAsFixed(2)}s windup${haste > 0 ? ', $haste% haste' : ''}, ${(abilityData.windupMovementSpeed * 100).toInt()}% movement)');
+  devLog(() => '[WINDUP] Starting ${abilityData.name} (${windupTime.toStringAsFixed(2)}s windup${haste > 0 ? ', $haste% haste' : ''}, ${(abilityData.windupMovementSpeed * 100).toInt()}% movement)');
 }

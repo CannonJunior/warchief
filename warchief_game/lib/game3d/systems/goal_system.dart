@@ -53,6 +53,7 @@ class GoalSystem {
       if (goal.isComplete && goal.status == GoalStatus.active) {
         goal.status = GoalStatus.completed;
         goal.completedAt = DateTime.now();
+        gameState.invalidateGoalCaches();
         _onGoalCompleted(gameState, goal);
       }
     }
@@ -108,8 +109,9 @@ class GoalSystem {
   }
 
   /// Abandon a goal (player chose to drop it).
-  static void abandonGoal(Goal goal) {
+  static void abandonGoal(Goal goal, {GameState? gameState}) {
     goal.status = GoalStatus.abandoned;
+    gameState?.invalidateGoalCaches();
     debugPrint('[GOAL] Abandoned: ${goal.definition.name}');
   }
 }

@@ -464,6 +464,7 @@ mixin _WidgetUIMixin on _GameStateBase {
                 pendingGoal: gameState.pendingSpiritGoal,
                 onAcceptGoal: (def) => setState(() {
                   gameState.goals.add(GoalSystem.acceptGoal(def));
+                  gameState.invalidateGoalCaches();
                   gameState.pendingSpiritGoal = null;
                 }),
                 onDeclineGoal: () => setState(() {

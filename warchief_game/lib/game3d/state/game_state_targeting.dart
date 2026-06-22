@@ -255,7 +255,7 @@ extension GameStateTargetingExt on GameState {
   ///
   /// Enemies beyond _tabTargetMaxRange are excluded entirely.
   List<String> getTargetableEnemies(double playerX, double playerZ, double playerRotation) {
-    final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
+    final now = gameTimeSec;
 
     // Cache for 0.1 seconds (fast refresh for responsive melee targeting)
     if (_targetableEnemyIds.isNotEmpty && now - _targetListCacheTime < 0.1) {

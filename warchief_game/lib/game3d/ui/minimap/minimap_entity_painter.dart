@@ -71,9 +71,10 @@ class MinimapEntityPainter extends CustomPainter {
         final tierDef = building.tierDef;
         final bColor = _colorFromList(tierDef.minimapColor);
         final bSize = tierDef.minimapSize;
+        _entityPaint.color = bColor;
         canvas.drawRect(
           Rect.fromCenter(center: pos, width: bSize, height: bSize),
-          Paint()..color = bColor,
+          _entityPaint,
         );
       }
     }

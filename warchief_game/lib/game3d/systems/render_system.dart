@@ -580,9 +580,10 @@ class RenderSystem {
     );
   }
 
-  /// Cached Ley Line meshes to avoid regenerating every frame
-  static final Map<int, Mesh> _leyLineMeshCache = {};
-  static int _lastLeyLineHash = 0;
+  /// Cached Ley Line mesh to avoid regenerating every frame
+  static Mesh? _leyLineMeshCached;
+  static int _lastLeyLineSegmentHash = 0;
+  static int _lastLeyLineChunkCount = 0;
 
   /// Render Ley Lines on the terrain
   static void _renderLeyLines(
@@ -610,26 +611,27 @@ class RenderSystem {
 
     if (segments.isEmpty) return;
 
-    // Hash based on segment positions + loaded chunk count.
-    // Including the chunk count ensures the mesh is regenerated as terrain
-    // chunks stream in, so subdivided Y samples stay current.
-    int hash = segments.length;
-    hash = hash * 31 + (gameState.infiniteTerrainManager?.loadedChunkCount ?? 0);
+    // Reason: separate segment hash from chunk count so ley line mesh is only
+    // rebuilt when visible segments change OR new terrain chunks load (Y samples
+    // update). Avoids clearing cache on every chunk load.
+    int segHash = segments.length;
     for (final seg in segments) {
-      hash = hash * 31 + seg.x1.hashCode;
-      hash = hash * 31 + seg.z1.hashCode;
-      hash = hash * 31 + seg.x2.hashCode;
-      hash = hash * 31 + seg.z2.hashCode;
+      segHash = segHash * 31 + seg.x1.hashCode;
+      segHash = segHash * 31 + seg.z1.hashCode;
+      segHash = segHash * 31 + seg.x2.hashCode;
+      segHash = segHash * 31 + seg.z2.hashCode;
+    }
+    final chunkCount = gameState.infiniteTerrainManager?.loadedChunkCount ?? 0;
+
+    if (_leyLineMeshCached == null ||
+        segHash != _lastLeyLineSegmentHash ||
+        chunkCount != _lastLeyLineChunkCount) {
+      _leyLineMeshCached = _createLeyLineMesh(segments, gameState);
+      _lastLeyLineSegmentHash = segHash;
+      _lastLeyLineChunkCount = chunkCount;
     }
 
-    // Regenerate mesh if segments changed
-    if (hash != _lastLeyLineHash || !_leyLineMeshCache.containsKey(hash)) {
-      _leyLineMeshCache.clear();
-      _leyLineMeshCache[hash] = _createLeyLineMesh(segments, gameState);
-      _lastLeyLineHash = hash;
-    }
-
-    final mesh = _leyLineMeshCache[hash];
+    final mesh = _leyLineMeshCached;
     if (mesh == null) return;
 
     // Render at world origin (positions are absolute)

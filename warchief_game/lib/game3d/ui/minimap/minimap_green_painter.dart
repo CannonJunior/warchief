@@ -28,6 +28,18 @@ class MinimapGreenPainter extends CustomPainter {
   late final Paint _fillPaint = Paint()..style = PaintingStyle.fill;
   late final Paint _strokePaint = Paint()..style = PaintingStyle.stroke;
 
+  /// Cached grass zone grid: each entry stores grass weight (0.0–1.0).
+  /// Re-sampled only when player moves > _grassCacheThreshold world units.
+  static List<double>? _cachedGrassWeights;
+  static double _cachedGrassPlayerX = double.nan;
+  static double _cachedGrassPlayerZ = double.nan;
+  static int _cachedGrassStepsX = 0;
+  static int _cachedGrassStepsY = 0;
+  static bool _cachedGrassRotating = false;
+  static double _cachedGrassRotation = 0.0;
+  static double _cachedGrassViewRadius = 0.0;
+  static const double _grassCacheThreshold = 3.0;
+
   MinimapGreenPainter({
     required this.gameState,
     required this.viewRadius,
@@ -63,52 +75,80 @@ class MinimapGreenPainter extends CustomPainter {
     final playerX = gameState.playerTransform?.position.x ?? 0.0;
     final playerZ = gameState.playerTransform?.position.z ?? 0.0;
 
-    // Reason: coarse grid (every 4 pixels) keeps paint fast while giving a
-    // readable heat-map feel; finer grids cause frame drops.
     const step = 4.0;
+    final stepsX = (size.width / step).ceil();
+    final stepsY = (size.height / step).ceil();
 
-    // Precompute rotation values outside the double-loop (rotating mode only).
-    double cosR = 1.0, sinR = 0.0;
-    if (isRotatingMode) {
-      final rotRad = playerRotation * math.pi / 180.0;
-      cosR = math.cos(rotRad);
-      sinR = math.sin(rotRad);
+    // Rebuild grass weight cache if player moved significantly or params changed
+    final dx = playerX - _cachedGrassPlayerX;
+    final dz = playerZ - _cachedGrassPlayerZ;
+    final needsRebuild = _cachedGrassWeights == null ||
+        dx * dx + dz * dz > _grassCacheThreshold * _grassCacheThreshold ||
+        stepsX != _cachedGrassStepsX || stepsY != _cachedGrassStepsY ||
+        isRotatingMode != _cachedGrassRotating ||
+        (isRotatingMode && (playerRotation - _cachedGrassRotation).abs() > 5.0) ||
+        viewRadius != _cachedGrassViewRadius;
+
+    if (needsRebuild) {
+      _cachedGrassPlayerX = playerX;
+      _cachedGrassPlayerZ = playerZ;
+      _cachedGrassStepsX = stepsX;
+      _cachedGrassStepsY = stepsY;
+      _cachedGrassRotating = isRotatingMode;
+      _cachedGrassRotation = playerRotation;
+      _cachedGrassViewRadius = viewRadius;
+
+      final weights = List<double>.filled(stepsX * stepsY, 0.0);
+
+      double cosR = 1.0, sinR = 0.0;
+      if (isRotatingMode) {
+        final rotRad = playerRotation * math.pi / 180.0;
+        cosR = math.cos(rotRad);
+        sinR = math.sin(rotRad);
+      }
+
+      for (int iy = 0; iy < stepsY; iy++) {
+        final py = iy * step;
+        for (int ix = 0; ix < stepsX; ix++) {
+          final px = ix * step;
+          final rdx2 = px - half;
+          final rdy2 = py - half;
+          if (rdx2 * rdx2 + rdy2 * rdy2 > half * half) continue;
+
+          double worldX, worldZ;
+          if (isRotatingMode) {
+            final ndx = (px - half) / half;
+            final ndy = -(py - half) / half;
+            final rightComp = ndx * viewRadius;
+            final fwdComp = ndy * viewRadius;
+            worldX = playerX + rightComp * cosR - fwdComp * sinR;
+            worldZ = playerZ - rightComp * sinR - fwdComp * cosR;
+          } else {
+            worldX = playerX - ((px - half) / half) * viewRadius;
+            worldZ = playerZ - ((py - half) / half) * viewRadius;
+          }
+
+          final height =
+              gameState.infiniteTerrainManager!.getTerrainHeight(worldX, worldZ);
+          final normalizedHeight = ((height + 10.0) / 40.0).clamp(0.0, 1.0);
+          if (normalizedHeight > 0.15 && normalizedHeight < 0.65) {
+            weights[iy * stepsX + ix] =
+                1.0 - ((normalizedHeight - 0.4).abs() * 3.0).clamp(0.0, 1.0);
+          }
+        }
+      }
+      _cachedGrassWeights = weights;
     }
 
-    for (double py = 0; py < size.height; py += step) {
-      for (double px = 0; px < size.width; px += step) {
-        // Check circular bounds
-        final rdx = px - half;
-        final rdy = py - half;
-        if (rdx * rdx + rdy * rdy > half * half) continue;
-
-        // Convert minimap pixel to world coordinate
-        double worldX, worldZ;
-        if (isRotatingMode) {
-          final ndx = (px - half) / half;
-          final ndy = -(py - half) / half;
-          final rightComp = ndx * viewRadius;
-          final fwdComp = ndy * viewRadius;
-          worldX = playerX + rightComp * cosR - fwdComp * sinR;
-          worldZ = playerZ - rightComp * sinR - fwdComp * cosR;
-        } else {
-          worldX = playerX - ((px - half) / half) * viewRadius;
-          worldZ = playerZ - ((py - half) / half) * viewRadius;
-        }
-
-        // Compute grass weight (same formula as game_state.dart)
-        final height =
-            gameState.infiniteTerrainManager!.getTerrainHeight(worldX, worldZ);
-        final normalizedHeight = ((height + 10.0) / 40.0).clamp(0.0, 1.0);
-        double grassWeight = 0.0;
-        if (normalizedHeight > 0.15 && normalizedHeight < 0.65) {
-          grassWeight =
-              1.0 - ((normalizedHeight - 0.4).abs() * 3.0).clamp(0.0, 1.0);
-        }
-
-        if (grassWeight > 0.05) {
-          _fillPaint.color = Color.fromRGBO(60, 200, 60, grassWeight * 0.18);
-          canvas.drawRect(Rect.fromLTWH(px, py, step, step), _fillPaint);
+    // Draw from cached weights
+    final weights = _cachedGrassWeights!;
+    for (int iy = 0; iy < stepsY; iy++) {
+      final py = iy * step;
+      for (int ix = 0; ix < stepsX; ix++) {
+        final w = weights[iy * stepsX + ix];
+        if (w > 0.05) {
+          _fillPaint.color = Color.fromRGBO(60, 200, 60, w * 0.18);
+          canvas.drawRect(Rect.fromLTWH(ix * step, py, step, step), _fillPaint);
         }
       }
     }

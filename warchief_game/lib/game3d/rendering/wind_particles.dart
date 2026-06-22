@@ -44,6 +44,10 @@ class WindParticleSystem {
     position: Vector3(0, 0, 0),
   );
 
+  /// Reusable vertex/index buffers to avoid per-frame list allocation
+  final List<double> _vertices = [];
+  final List<int> _indices = [];
+
   /// Initialize particle pool sized for derecho max capacity.
   void init() {
     if (_initialized) return;
@@ -140,8 +144,8 @@ class WindParticleSystem {
   /// and derecho intensity.
   void _rebuildMesh(
       Vector3 playerPos, double fadeDistance, WindState windState) {
-    final vertices = <double>[];
-    final indices = <int>[];
+    _vertices.clear();
+    _indices.clear();
     var vertexCount = 0;
 
     final config = globalWindConfig;
@@ -251,7 +255,7 @@ class WindParticleSystem {
       // v4,v5 = tail (upwind, historical wind direction)
       // Reason: a flat 4-vertex parallelogram looks like a rotated line even
       // with 20°+ skew. Two joined segments with a visible elbow read as curved.
-      vertices.addAll([
+      _vertices.addAll([
         // v0: head right
         p.x + dirX     * halfLen + perpX     * halfWid, p.y,
         p.z + dirZ     * halfLen + perpZ     * halfWid, r, g, b,
@@ -274,22 +278,22 @@ class WindParticleSystem {
 
       final base = vertexCount;
       // Front segment: head → elbow
-      indices.addAll([base,     base + 1, base + 3]);
-      indices.addAll([base,     base + 3, base + 2]);
+      _indices.addAll([base,     base + 1, base + 3]);
+      _indices.addAll([base,     base + 3, base + 2]);
       // Back segment: elbow → tail
-      indices.addAll([base + 2, base + 3, base + 5]);
-      indices.addAll([base + 2, base + 5, base + 4]);
+      _indices.addAll([base + 2, base + 3, base + 5]);
+      _indices.addAll([base + 2, base + 5, base + 4]);
       vertexCount += 6;
     }
 
-    if (vertices.isEmpty) {
+    if (_vertices.isEmpty) {
       _mesh = null;
       return;
     }
 
     _mesh = Mesh.fromVerticesAndIndices(
-      vertices: vertices,
-      indices: indices,
+      vertices: _vertices,
+      indices: _indices,
       vertexStride: 6,
     );
   }

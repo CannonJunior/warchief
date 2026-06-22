@@ -7,7 +7,7 @@ extension GameStateStanceExt on GameState {
   /// Respects switch cooldown (cannot switch during cooldown).
   void switchStance(StanceId newStance) {
     if (stanceSwitchCooldown > 0) {
-      debugPrint('[STANCE] Cannot switch yet — ${stanceSwitchCooldown.toStringAsFixed(1)}s remaining');
+      devLog(() => '[STANCE] Cannot switch yet — ${stanceSwitchCooldown.toStringAsFixed(1)}s remaining');
       return;
     }
 
@@ -17,6 +17,7 @@ extension GameStateStanceExt on GameState {
     } else if (activeAlly != null) {
       activeAlly!.currentStance = newStance;
     }
+    invalidateActiveStanceCache();
     final newMaxHealth = activeMaxHealth;
 
     // Proportionally scale current HP so switching doesn't instakill or overheal
@@ -107,6 +108,7 @@ extension GameStateStanceExt on GameState {
         drunkenDamageRoll = stance.rerollDamageMin + _stanceRng.nextDouble() * range;
         final takenRange = stance.rerollDamageTakenMax - stance.rerollDamageTakenMin;
         drunkenDamageTakenRoll = stance.rerollDamageTakenMin + _stanceRng.nextDouble() * takenRange;
+        invalidateActiveStanceCache();
 
         final dmgPct = ((drunkenDamageRoll - 1.0) * 100).round();
         final takenPct = ((drunkenDamageTakenRoll - 1.0) * 100).round();
@@ -162,7 +164,7 @@ extension GameStateStanceExt on GameState {
         activeAlly!.whiteMana = (activeAlly!.whiteMana + manaAmount).clamp(0.0, activeAlly!.maxWhiteMana);
       }
     }
-    debugPrint('[TIDE] Converted damage to ${manaAmount.toStringAsFixed(1)} mana');
+    devLog(() => '[TIDE] Converted damage to ${manaAmount.toStringAsFixed(1)} mana');
   }
 
   /// Save current stance selections to SharedPreferences.
@@ -193,6 +195,7 @@ extension GameStateStanceExt on GameState {
       } else {
         playerStance = fallback;
       }
+      invalidateActiveStanceCache();
       for (int i = 0; i < allies.length; i++) {
         final allyStanceName = prefs.getString('stance_ally_$i');
         if (allyStanceName != null) {
@@ -209,6 +212,7 @@ extension GameStateStanceExt on GameState {
       for (final ally in allies) {
         ally.currentStance = fallback;
       }
+      invalidateActiveStanceCache();
     }
   }
 
@@ -314,6 +318,7 @@ extension GameStateStanceExt on GameState {
   void cycleActiveCharacterNext() {
     final total = 1 + allies.length;
     activeCharacterIndex = (activeCharacterIndex + 1) % total;
+    invalidateActiveStanceCache();
     _resetPhysicsForSwitch();
   }
 
@@ -321,6 +326,7 @@ extension GameStateStanceExt on GameState {
   void cycleActiveCharacterPrev() {
     final total = 1 + allies.length;
     activeCharacterIndex = (activeCharacterIndex - 1 + total) % total;
+    invalidateActiveStanceCache();
     _resetPhysicsForSwitch();
   }
 
@@ -343,7 +349,7 @@ extension GameStateStanceExt on GameState {
   /// Cancel any active cast (called when player moves during stationary cast)
   void cancelCast() {
     if (isCasting) {
-      debugPrint('[CAST] $castingAbilityName cast cancelled — mana and cooldown preserved');
+      devLog(() => '[CAST] $castingAbilityName cast cancelled — mana and cooldown preserved');
       isCasting = false;
       castProgress = 0.0;
       currentCastTime = 0.0;
@@ -356,7 +362,7 @@ extension GameStateStanceExt on GameState {
   /// Cancel any active windup
   void cancelWindup() {
     if (isWindingUp) {
-      debugPrint('[WINDUP] $windupAbilityName windup cancelled — mana and cooldown preserved');
+      devLog(() => '[WINDUP] $windupAbilityName windup cancelled — mana and cooldown preserved');
       isWindingUp = false;
       windupProgress = 0.0;
       currentWindupTime = 0.0;
@@ -370,7 +376,7 @@ extension GameStateStanceExt on GameState {
   /// Cancel any active channel
   void cancelChannel() {
     if (isChanneling) {
-      debugPrint('[CHANNEL] $channelingAbilityName channel cancelled');
+      devLog(() => '[CHANNEL] $channelingAbilityName channel cancelled');
       isChanneling = false;
       channelProgress = 0.0;
       channelDuration = 0.0;

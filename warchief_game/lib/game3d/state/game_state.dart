@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show debugPrint;
+import '../utils/dev_log.dart';
 import 'package:vector_math/vector_math.dart' hide Colors;
 import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
@@ -174,12 +175,24 @@ class GameState {
   /// Whether the stance selector UI is expanded.
   bool stanceSelectorOpen = false;
 
+  /// Cached active stance to avoid per-access registry lookup + override merge + copyWith.
+  StanceData? _cachedActiveStance;
+
+  /// Invalidate the cached active stance. Call when stance, character, overrides,
+  /// or drunken re-rolls change.
+  void invalidateActiveStanceCache() {
+    _cachedActiveStance = null;
+  }
+
   /// Get the [StanceData] for the currently active character.
   ///
   /// For the Warchief, reads [playerStance]. For allies, reads their
   /// [Ally.currentStance]. If the stance registry is not loaded yet,
   /// returns the neutral [StanceData.none].
+  /// Cached until invalidated by stance switch, character switch, or re-roll.
   StanceData get activeStance {
+    if (_cachedActiveStance != null) return _cachedActiveStance!;
+
     final registry = globalStanceRegistry;
     if (registry == null) return StanceData.none;
     final id = isWarchiefActive ? playerStance : (activeAlly?.currentStance ?? StanceId.none);
@@ -194,12 +207,14 @@ class GameState {
     // Reason: Drunken Master overrides damageMultiplier and damageTakenMultiplier
     // with independently re-rolled random values. We return a modified copy.
     if (base.hasRandomModifiers) {
-      return base.copyWith(
+      _cachedActiveStance = base.copyWith(
         damageMultiplier: drunkenDamageRoll,
         damageTakenMultiplier: drunkenDamageTakenRoll,
       );
+    } else {
+      _cachedActiveStance = base;
     }
-    return base;
+    return _cachedActiveStance!;
   }
 
   // ==================== PLAYER MANA ====================
@@ -732,13 +747,23 @@ class GameState {
   /// All goals (active, completed, abandoned).
   List<Goal> goals = [];
 
-  /// Convenience: only active goals.
-  List<Goal> get activeGoals =>
-      goals.where((g) => g.status == GoalStatus.active).toList();
+  /// Cached filtered goal lists, rebuilt on [invalidateGoalCaches].
+  List<Goal>? _cachedActiveGoals;
+  List<Goal>? _cachedCompletedGoals;
 
-  /// Convenience: completed goals awaiting reflection.
+  /// Call when goals list changes or any goal status changes.
+  void invalidateGoalCaches() {
+    _cachedActiveGoals = null;
+    _cachedCompletedGoals = null;
+  }
+
+  /// Convenience: only active goals (cached).
+  List<Goal> get activeGoals =>
+      _cachedActiveGoals ??= goals.where((g) => g.status == GoalStatus.active).toList();
+
+  /// Convenience: completed goals awaiting reflection (cached).
   List<Goal> get completedGoals =>
-      goals.where((g) => g.status == GoalStatus.completed).toList();
+      _cachedCompletedGoals ??= goals.where((g) => g.status == GoalStatus.completed).toList();
 
   /// Warrior Spirit chat messages.
   List<AIChatMessage> warriorSpiritMessages = [];

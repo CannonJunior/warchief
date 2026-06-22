@@ -289,14 +289,16 @@ class DuelSystem {
     // Reason: kiting retreats from the physically closest enemy, not just the
     // chosen damage target, so healers/ranged correctly escape melee divers.
     Ally? nearestThreat;
-    double nearestThreatDist = double.infinity;
+    double nearestThreatDistSq = double.infinity;
     for (final e in enemies) {
       if (e.health <= 0) continue;
       final ex = e.transform.position.x - self.transform.position.x;
       final ez = e.transform.position.z - self.transform.position.z;
-      final d  = math.sqrt(ex * ex + ez * ez);
-      if (d < nearestThreatDist) { nearestThreatDist = d; nearestThreat = e; }
+      final dSq = ex * ex + ez * ez;
+      if (dSq < nearestThreatDistSq) { nearestThreatDistSq = dSq; nearestThreat = e; }
     }
+    final nearestThreatDist = nearestThreatDistSq < double.infinity
+        ? math.sqrt(nearestThreatDistSq) : double.infinity;
 
     // ── Movement: role-aware via helper (kite / approach / strafe) ───────────
     _handleMovement(dt, self, target, nearestThreat, nearestThreatDist,

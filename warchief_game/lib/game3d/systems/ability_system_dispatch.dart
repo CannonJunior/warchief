@@ -209,7 +209,7 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
 
   // Silent Mind: next white mana ability is free
   if (gameState.silentMindActive && manaType == _ManaType.white && manaCost > 0) {
-    debugPrint('[SILENT MIND] $abilityName mana cost overridden to 0 (was $manaCost)');
+    devLog(() => '[SILENT MIND] $abilityName mana cost overridden to 0 (was $manaCost)');
     manaCost = 0;
   }
 
@@ -231,7 +231,7 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
   // Cast-time abilities: defer mana until cast completes
   if (abilityData != null && abilityData.hasCastTime) {
     if (gameState.silentMindActive && manaType == _ManaType.white) {
-      debugPrint('[SILENT MIND] $abilityName cast time skipped — instant cast!');
+      devLog(() => '[SILENT MIND] $abilityName cast time skipped — instant cast!');
       // Fall through to instant execution
     } else {
       gameState.pendingManaCost = manaCost;
@@ -271,7 +271,7 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
   if (stance.usesHpForMana && manaCost > 0) {
     final hpCost = manaCost * stance.hpForManaRatio;
     gameState.activeHealth = (gameState.activeHealth - hpCost).clamp(1.0, gameState.activeMaxHealth);
-    debugPrint('[BLOOD WEAVE] $abilityName spent ${hpCost.toStringAsFixed(1)} HP instead of mana');
+    devLog(() => '[BLOOD WEAVE] $abilityName spent ${hpCost.toStringAsFixed(1)} HP instead of mana');
   } else {
     _spendManaByType(gameState, manaType, manaCost, abilityName);
   }
@@ -282,7 +282,7 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
   // Consume Silent Mind buff after white mana ability
   if (gameState.silentMindActive && manaType == _ManaType.white) {
     gameState.silentMindActive = false;
-    debugPrint('[SILENT MIND] Buff consumed by $abilityName');
+    devLog(() => '[SILENT MIND] Buff consumed by $abilityName');
   }
 
   gameState.addConsoleLog('$abilityName executed (slot $slotIndex)');
@@ -474,13 +474,13 @@ void _applyComboHitPushback(GameState gameState) {
     gameState.castProgress = (gameState.castProgress - 0.25).clamp(0.0, gameState.currentCastTime);
     gameState.castPushbackCount++;
     assert(() {
-      debugPrint('[COMBO PUSHBACK] Cast pushed back 0.25s (${gameState.castPushbackCount}/3)');
+      devLog(() => '[COMBO PUSHBACK] Cast pushed back 0.25s (${gameState.castPushbackCount}/3)');
       return true;
     }());
   } else if (gameState.isWindingUp) {
     gameState.windupProgress = (gameState.windupProgress - 0.25).clamp(0.0, gameState.currentWindupTime);
     assert(() {
-      debugPrint('[COMBO PUSHBACK] Windup pushed back 0.25s');
+      devLog(() => '[COMBO PUSHBACK] Windup pushed back 0.25s');
       return true;
     }());
   }
@@ -491,7 +491,7 @@ void _applyComboHitPushback(GameState gameState) {
     final reduction = 0.25 / gameState.channelDuration;
     gameState.channelEffectScale = (gameState.channelEffectScale - reduction).clamp(0.0, 1.0);
     assert(() {
-      debugPrint('[COMBO PUSHBACK] Channel effect reduced by ${(reduction * 100).toStringAsFixed(1)}%');
+      devLog(() => '[COMBO PUSHBACK] Channel effect reduced by ${(reduction * 100).toStringAsFixed(1)}%');
       return true;
     }());
   }

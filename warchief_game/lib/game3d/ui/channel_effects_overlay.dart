@@ -163,15 +163,13 @@ class _ChannelEffectPainter extends CustomPainter {
 
       // Reason: Fade opacity based on arc index for depth variation
       final opacity = (0.4 + 0.3 * math.sin(t * 2.0 + i)).clamp(0.2, 0.7);
-      paint.color = Color.fromRGBO(180, 50, 200, opacity);
+      paint.color = Color.fromARGB((opacity * 255).round(), 180, 50, 200);
       canvas.drawPath(path, paint);
     }
 
     // Reason: Bright center particle stream for emphasis
-    final centerPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..color = Color.fromRGBO(200, 80, 255, 0.5);
+    paint.strokeWidth = 3.0;
+    paint.color = const Color.fromARGB(128, 200, 80, 255);
 
     final centerPath = Path();
     final centerSteps = 15;
@@ -191,7 +189,7 @@ class _ChannelEffectPainter extends CustomPainter {
         centerPath.lineTo(px, py);
       }
     }
-    canvas.drawPath(centerPath, centerPaint);
+    canvas.drawPath(centerPath, paint);
   }
 
   // ==================== BLIZZARD ====================
@@ -230,7 +228,7 @@ class _ChannelEffectPainter extends CustomPainter {
 
       // Ice blue color with variation
       final b = 200 + (rng.nextDouble() * 55).round();
-      paint.color = Color.fromRGBO(180, 220, b, opacity);
+      paint.color = Color.fromARGB((opacity * 255).round(), 180, 220, b);
 
       // Reason: Draw diamond shape for ice crystal
       final cx = screenPos.dx;
@@ -284,7 +282,7 @@ class _ChannelEffectPainter extends CustomPainter {
       final r = 140 + (rng.nextDouble() * 60).round();
       final g = 90 + (rng.nextDouble() * 40).round();
       final b2 = 40 + (rng.nextDouble() * 30).round();
-      paint.color = Color.fromRGBO(r, g, b2, opacity);
+      paint.color = Color.fromARGB((opacity * 255).round(), r, g, b2);
 
       // Reason: Irregular rock shapes via slightly offset rectangles
       canvas.drawRRect(
@@ -363,7 +361,7 @@ class _ChannelEffectPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = thickness
       ..strokeCap = StrokeCap.round
-      ..color = Color.fromRGBO(170, 190, 255, opacity);
+      ..color = Color.fromARGB((opacity * 255).round(), 170, 190, 255);
 
     final path = Path()..moveTo(from.dx, from.dy);
     final segments = 12;
@@ -384,12 +382,9 @@ class _ChannelEffectPainter extends CustomPainter {
 
     // Reason: Bright white core for primary bolt
     if (thickness > 2.0) {
-      final corePaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0
-        ..strokeCap = StrokeCap.round
-        ..color = Color.fromRGBO(220, 230, 255, opacity * 0.7);
-      canvas.drawPath(path, corePaint);
+      paint.strokeWidth = 1.0;
+      paint.color = Color.fromARGB((opacity * 0.7 * 255).round(), 220, 230, 255);
+      canvas.drawPath(path, paint);
     }
   }
 

@@ -39,6 +39,10 @@ class MeteorParticleSystem {
   Mesh? _mesh;
   final Transform3d _transform = Transform3d(position: Vector3(0, 0, 0));
 
+  /// Reusable vertex/index buffers to avoid per-frame list allocation
+  final List<double> _vertices = [];
+  final List<int> _indices = [];
+
   bool _initialized = false;
   bool get isInitialized => _initialized;
 
@@ -195,8 +199,8 @@ class MeteorParticleSystem {
     final tailC = config?.meteorTailColor ?? [0.10, 0.00, 0.20];
     final trailLen = config?.meteorTrailLength ?? 4.0;
 
-    final vertices = <double>[];
-    final indices = <int>[];
+    _vertices.clear();
+    _indices.clear();
     int vertexCount = 0;
 
     for (final p in _particles) {
@@ -210,12 +214,12 @@ class MeteorParticleSystem {
         final fg = headC[1] * alpha * 0.8;
         final fb = headC[2] * alpha;
         // Flat ground quad for flash
-        vertices.addAll([p.flashX - fSize, 0.3, p.flashZ - fSize, fr, fg, fb]);
-        vertices.addAll([p.flashX + fSize, 0.3, p.flashZ - fSize, fr, fg, fb]);
-        vertices.addAll([p.flashX + fSize, 0.3, p.flashZ + fSize, fr, fg, fb]);
-        vertices.addAll([p.flashX - fSize, 0.3, p.flashZ + fSize, fr, fg, fb]);
-        indices.addAll([vertexCount, vertexCount + 1, vertexCount + 2]);
-        indices.addAll([vertexCount, vertexCount + 2, vertexCount + 3]);
+        _vertices.addAll([p.flashX - fSize, 0.3, p.flashZ - fSize, fr, fg, fb]);
+        _vertices.addAll([p.flashX + fSize, 0.3, p.flashZ - fSize, fr, fg, fb]);
+        _vertices.addAll([p.flashX + fSize, 0.3, p.flashZ + fSize, fr, fg, fb]);
+        _vertices.addAll([p.flashX - fSize, 0.3, p.flashZ + fSize, fr, fg, fb]);
+        _indices.addAll([vertexCount, vertexCount + 1, vertexCount + 2]);
+        _indices.addAll([vertexCount, vertexCount + 2, vertexCount + 3]);
         vertexCount += 4;
       }
 
@@ -272,28 +276,28 @@ class MeteorParticleSystem {
       final tb = tailC[2];
 
       // 4 vertices: trail as a quad (head wide, tail narrow)
-      vertices.addAll([
+      _vertices.addAll([
         hx + perpX * trailWidth, hy, hz + perpZ * trailWidth, hr, hg, hb
       ]);
-      vertices.addAll([
+      _vertices.addAll([
         hx - perpX * trailWidth, hy, hz - perpZ * trailWidth, hr, hg, hb
       ]);
-      vertices.addAll([tx, ty, tz, tr2, tg, tb]);
-      vertices.addAll([tx, ty, tz, tr2, tg, tb]);
+      _vertices.addAll([tx, ty, tz, tr2, tg, tb]);
+      _vertices.addAll([tx, ty, tz, tr2, tg, tb]);
 
-      indices.addAll([vertexCount, vertexCount + 1, vertexCount + 2]);
-      indices.addAll([vertexCount + 1, vertexCount + 3, vertexCount + 2]);
+      _indices.addAll([vertexCount, vertexCount + 1, vertexCount + 2]);
+      _indices.addAll([vertexCount + 1, vertexCount + 3, vertexCount + 2]);
       vertexCount += 4;
     }
 
-    if (vertices.isEmpty) {
+    if (_vertices.isEmpty) {
       _mesh = null;
       return;
     }
 
     _mesh = Mesh.fromVerticesAndIndices(
-      vertices: vertices,
-      indices: indices,
+      vertices: _vertices,
+      indices: _indices,
       vertexStride: 6, // x, y, z, r, g, b
     );
   }
