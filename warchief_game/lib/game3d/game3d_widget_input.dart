@@ -200,6 +200,18 @@ mixin _WidgetInputMixin on _GameStateBase {
       return;
     }
 
+    // Handle Z key — GM: trigger zephyr wind storm
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyZ) {
+      if (globalGameplaySettings?.gmZephyrKey == true) {
+        final wind = globalWindState;
+        if (wind != null && !wind.isDerechoActive) {
+          wind.forceDerecho();
+          gameState.addConsoleLog('[GM] Zephyr triggered');
+        }
+      }
+      return;
+    }
+
     // Handle Tab/Shift+Tab for target cycling (WoW-style)
     // Shift+Tab = cycle friendly targets, Tab = cycle enemy targets
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.tab) {

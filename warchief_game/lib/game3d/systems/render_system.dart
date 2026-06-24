@@ -18,6 +18,7 @@ import '../rendering/green_mana_sparkles.dart';
 import '../rendering/meteor_particles.dart';
 import '../rendering/meteor_crater_renderer.dart';
 import '../rendering/sky_renderer.dart';
+import '../rendering/cloud_system.dart';
 import '../state/gameplay_settings.dart';
 import '../state/comet_state.dart' show globalCometState;
 import '../data/abilities/ability_types.dart' show ManaColor;
@@ -75,20 +76,19 @@ class RenderSystem {
     GameState gameState,
     double dt,
   ) {
-    // Tint clearColor toward void-purple during comet flyby
-    // Reason: the sky mesh quad is outside the isometric camera frustum; clearColor
-    // is the most reliable way to show the comet's influence on the sky background.
+    // Reason: clearColor matches the sky horizon so any area beyond the sky
+    // quad is the same blue. Tints toward void-purple during comet flyby.
     final cometState = globalCometState;
     final cometI = cometState?.cometIntensity ?? 0.0;
     if (cometI > 0.01) {
       renderer.gl.clearColor(
-        0.10 - cometI * 0.06, // R: neutral gray → darker (0.04 at peak)
-        0.10 - cometI * 0.09, // G: neutral gray → near-black (0.01 at peak)
-        0.10 + cometI * 0.05, // B: neutral gray → void-blue tint (0.15 at peak)
+        0.55 - cometI * 0.45,
+        0.72 - cometI * 0.65,
+        0.92 - cometI * 0.45,
         1.0,
       );
     } else {
-      renderer.gl.clearColor(0.10, 0.10, 0.10, 1.0);
+      renderer.gl.clearColor(0.55, 0.72, 0.92, 1.0);
     }
 
     // Clear screen
@@ -98,6 +98,11 @@ class RenderSystem {
     if (cometState != null) {
       _skyRenderer.update(cometState, dt);
       _skyRenderer.renderSky(renderer, camera, cometState);
+    }
+
+    // Render clouds (after sky, before terrain — blended so comet shows through)
+    if (globalCloudSystem != null && globalCloudSystem!.isGenerated) {
+      globalCloudSystem!.render(renderer, camera);
     }
 
     // Render infinite terrain chunks with LOD and texture splatting

@@ -30,6 +30,7 @@ import 'systems/ability_system.dart';
 import 'systems/ai_system.dart';
 import 'systems/input_system.dart';
 import 'systems/render_system.dart';
+import 'systems/unit_collision_system.dart';
 import 'ui/instructions_overlay.dart';
 import 'ui/ai_chat_panel.dart';
 import 'ui/ally_commands_panel.dart';
@@ -59,6 +60,7 @@ import 'state/wind_state.dart';
 import 'state/wind_swirl_state.dart';
 import 'state/comet_config.dart';
 import 'state/comet_state.dart';
+import 'rendering/cloud_system.dart';
 import 'state/minimap_config.dart';
 import 'state/minimap_state.dart';
 import 'state/building_config.dart';
@@ -281,6 +283,9 @@ class _Game3DState extends _GameStateBase
 
     // Initialize comet system (orbital state + black mana config)
     _initializeCometSystem();
+
+    // Initialize cloud system (cumulus billboard clusters)
+    _initializeCloudSystem();
 
     // Initialize minimap config (JSON defaults for minimap display)
     _initializeMinimapConfig();

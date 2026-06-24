@@ -11,8 +11,10 @@ part 'minion_frame_widgets.dart';
 class MinionFrames extends StatelessWidget {
   final List<Monster> minions;
   final int? selectedIndex;
-  final String? targetedMinionId; // Currently targeted minion (yellow border)
+  final String? targetedMinionId;
   final void Function(int index)? onMinionSelected;
+  /// Display mode: 'list' (full rows), 'compact' (narrow rows), 'grid' (square icons).
+  final String displayMode;
 
   const MinionFrames({
     super.key,
@@ -20,6 +22,7 @@ class MinionFrames extends StatelessWidget {
     this.selectedIndex,
     this.targetedMinionId,
     this.onMinionSelected,
+    this.displayMode = 'list',
   });
 
   @override
@@ -28,13 +31,10 @@ class MinionFrames extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    // Group minions by archetype for organized display
-    final groupedMinions = _groupByArchetype(minions);
-
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: const Color(0xFF2e1a1a).withValues(alpha: 0.8), // Darker red tint
+        color: const Color(0xFF2e1a1a).withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: const Color(0xFF422525),
@@ -42,48 +42,153 @@ class MinionFrames extends StatelessWidget {
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end, // Align to right for symmetry
+        crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,
         children: [
           // Header
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          _buildHeader(),
+          // Body switches on display mode
+          if (displayMode == 'grid')
+            _buildGrid()
+          else
+            ..._buildList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    final aliveCount = minions.where((m) => m.isAlive).length;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'MINIONS',
+            style: TextStyle(
+              color: Color(0xFFFF6B6B),
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF6B6B).withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              '$aliveCount/${minions.length}',
+              style: const TextStyle(
+                color: Color(0xFFFF6B6B),
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildList() {
+    final isCompact = displayMode == 'compact';
+    final groupedMinions = _groupByArchetype(minions);
+    return groupedMinions.entries.map((entry) {
+      return _buildArchetypeGroup(entry.key, entry.value, compact: isCompact);
+    }).toList();
+  }
+
+  // ==================== GRID VIEW ====================
+
+  Widget _buildGrid() {
+    return SizedBox(
+      width: 150,
+      child: Wrap(
+        spacing: 3,
+        runSpacing: 3,
+        alignment: WrapAlignment.end,
+        children: [
+          for (int i = 0; i < minions.length; i++)
+            _buildGridIcon(minions[i], i),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGridIcon(Monster monster, int index) {
+    final isTargeted = targetedMinionId == monster.instanceId;
+    final isDead = !monster.isAlive;
+    final archetypeColor = _getArchetypeColor(monster.definition.archetype);
+    final archetypeIcon = _getArchetypeIcon(monster.definition.archetype);
+    final healthFrac = (monster.health / monster.maxHealth).clamp(0.0, 1.0);
+
+    Color borderColor;
+    double borderWidth;
+    if (isTargeted) {
+      borderColor = const Color(0xFFFFD700);
+      borderWidth = 2;
+    } else {
+      borderColor = const Color(0xFF403030);
+      borderWidth = 1;
+    }
+
+    return Tooltip(
+      message: '${monster.definition.name}\n'
+          'HP: ${monster.health.toStringAsFixed(0)} / ${monster.maxHealth.toStringAsFixed(0)}\n'
+          '${monster.definition.archetype.name.toUpperCase()}',
+      waitDuration: const Duration(milliseconds: 200),
+      child: GestureDetector(
+        onTap: () => onMinionSelected?.call(index),
+        child: Opacity(
+          opacity: isDead ? 0.35 : 1.0,
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: isTargeted
+                  ? const Color(0xFF3D3D00).withValues(alpha: 0.4)
+                  : const Color(0xFF2a2020),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: borderColor, width: borderWidth),
+            ),
+            child: Stack(
               children: [
-                Text(
-                  'MINIONS',
-                  style: TextStyle(
-                    color: Color(0xFFFF6B6B),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
+                // Health fill from bottom
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 28 * healthFrac,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: (healthFrac > 0.5
+                              ? archetypeColor
+                              : healthFrac > 0.25
+                                  ? const Color(0xFFFFA726)
+                                  : const Color(0xFFEF5350))
+                          .withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF6B6B).withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    '${minions.where((m) => m.isAlive).length}/${minions.length}',
-                    style: const TextStyle(
-                      color: Color(0xFFFF6B6B),
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                    ),
+                // Archetype icon centered
+                Center(
+                  child: Icon(
+                    isDead ? Icons.close : archetypeIcon,
+                    color: isDead
+                        ? Colors.grey
+                        : archetypeColor.withValues(alpha: 0.9),
+                    size: 14,
                   ),
                 ),
               ],
             ),
           ),
-          // Minion frames grouped by archetype
-          ...groupedMinions.entries.map((entry) {
-            return _buildArchetypeGroup(entry.key, entry.value);
-          }),
-        ],
+        ),
       ),
     );
   }
@@ -121,7 +226,7 @@ class MinionFrames extends StatelessWidget {
     }
   }
 
-  Widget _buildArchetypeGroup(MonsterArchetype archetype, List<_IndexedMonster> monsters) {
+  Widget _buildArchetypeGroup(MonsterArchetype archetype, List<_IndexedMonster> monsters, {bool compact = false}) {
     final archetypeColor = _getArchetypeColor(archetype);
     final archetypeIcon = _getArchetypeIcon(archetype);
 
@@ -129,7 +234,7 @@ class MinionFrames extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Archetype header (compact)
+        // Archetype header
         Padding(
           padding: const EdgeInsets.only(bottom: 4, top: 4),
           child: Row(
@@ -158,8 +263,102 @@ class MinionFrames extends StatelessWidget {
           ),
         ),
         // Minion frames
-        ...monsters.map((indexed) => _buildMinionFrame(indexed.monster, indexed.index)),
+        ...monsters.map((indexed) => compact
+            ? _buildCompactMinionFrame(indexed.monster, indexed.index)
+            : _buildMinionFrame(indexed.monster, indexed.index)),
       ],
+    );
+  }
+
+  Widget _buildCompactMinionFrame(Monster monster, int index) {
+    final isTargeted = targetedMinionId == monster.instanceId;
+    final isDead = !monster.isAlive;
+    final archetypeColor = _getArchetypeColor(monster.definition.archetype);
+    final healthFrac = (monster.health / monster.maxHealth).clamp(0.0, 1.0);
+
+    Color borderColor;
+    double borderWidth;
+    if (isTargeted) {
+      borderColor = const Color(0xFFFFD700);
+      borderWidth = 2;
+    } else {
+      borderColor = const Color(0xFF403030);
+      borderWidth = 1;
+    }
+
+    final Color barColor;
+    if (healthFrac > 0.5) {
+      barColor = archetypeColor;
+    } else if (healthFrac > 0.25) {
+      barColor = const Color(0xFFFFA726);
+    } else {
+      barColor = const Color(0xFFEF5350);
+    }
+
+    return GestureDetector(
+      onTap: () => onMinionSelected?.call(index),
+      child: Opacity(
+        opacity: isDead ? 0.4 : 1.0,
+        child: Container(
+          width: 120,
+          height: 16,
+          margin: const EdgeInsets.only(bottom: 2),
+          decoration: BoxDecoration(
+            color: isTargeted
+                ? const Color(0xFF3D3D00).withValues(alpha: 0.3)
+                : const Color(0xFF2a2020).withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(color: borderColor, width: borderWidth),
+          ),
+          child: Row(
+            children: [
+              // Archetype color bar
+              Container(
+                width: 3,
+                decoration: BoxDecoration(
+                  color: isDead ? Colors.grey : archetypeColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(2),
+                    bottomLeft: Radius.circular(2),
+                  ),
+                ),
+              ),
+              // Health fill + name overlay
+              Expanded(
+                child: Stack(
+                  children: [
+                    FractionallySizedBox(
+                      widthFactor: healthFrac,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: barColor.withValues(alpha: 0.35),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(2),
+                            bottomRight: Radius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        monster.definition.name,
+                        style: TextStyle(
+                          color: isDead ? Colors.grey : Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -67,6 +67,13 @@ mixin _WidgetInitMixin on _GameStateBase {
     globalCometState ??= CometState();
   }
 
+  void _initializeCloudSystem() {
+    globalCloudSystem ??= CloudSystem();
+    if (!globalCloudSystem!.isGenerated) {
+      globalCloudSystem!.generate();
+    }
+  }
+
   /// Initialize the global minimap configuration (JSON defaults)
   void _initializeMinimapConfig() {
     globalMinimapConfig ??= MinimapConfig();

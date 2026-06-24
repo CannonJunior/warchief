@@ -202,6 +202,7 @@ mixin _WidgetUIMixin on _GameStateBase {
                                 padding: const EdgeInsets.only(right: 12),
                                 child: PartyFrames(
                                   allies: gameState.allies,
+                                  displayMode: globalGameplaySettings?.partyFrameDisplayMode ?? 'list',
                                   onAllySelected: (index) {
                                     debugPrint('Ally $index selected');
                                   },
@@ -228,6 +229,7 @@ mixin _WidgetUIMixin on _GameStateBase {
                                 padding: const EdgeInsets.only(left: 12),
                                 child: MinionFrames(
                                   minions: gameState.minions,
+                                  displayMode: globalGameplaySettings?.minionFrameDisplayMode ?? 'list',
                                   targetedMinionId: gameState.currentTargetId,
                                   onMinionSelected: (index) {
                                     // Set the clicked minion as current target

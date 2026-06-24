@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'dart:math' as math;
 import 'wind_config.dart';
+import 'gameplay_settings.dart';
 
 /// Core wind simulation with gradual drift via layered sine waves.
 ///
@@ -176,6 +177,18 @@ class WindState {
     }
   }
 
+  /// Force a derecho (zephyr) storm from an external trigger (e.g. GM key).
+  void forceDerecho({double? duration}) {
+    if (isDerechoActive) return;
+    final config = globalWindConfig;
+    final minDur = config?.derechoDurationMin ?? 30.0;
+    final maxDur = config?.derechoDurationMax ?? 60.0;
+    _derechoDuration = duration ?? (minDur + _derechoRng.nextDouble() * (maxDur - minDur));
+    _derechoTimer = _derechoDuration;
+    isDerechoActive = true;
+    derechoIntensity = 0.0;
+  }
+
   /// Start a derecho storm with random duration.
   void _triggerDerecho() {
     final config = globalWindConfig;
@@ -254,22 +267,28 @@ class WindState {
     }
   }
 
-  /// Passive position drift this frame for ground units in strong winds.
+  /// Passive position drift this frame for all ground units.
   ///
-  /// Returns [dx, dz]. Zero when effective wind is below drift threshold.
+  /// Returns [dx, dz]. Scales from negligible at low wind to strong push at
+  /// derecho. The curve is quadratic so normal wind barely nudges but strong
+  /// gusts shove noticeably.
+  ///
   /// [resistance]: 0.0 = fully affected, 1.0 = immune to wind drift.
   List<double> getWindDrift(double dt, {double resistance = 0.0}) {
-    final config = globalWindConfig;
-    final threshold = config?.windDriftThreshold ?? 2.0;
-    final maxDrift  = config?.windDriftMaxSpeed  ?? 0.6;
-    final effStr    = effectiveWindStrength;
-    if (effStr < threshold) return [0.0, 0.0];
+    final driftMult = globalGameplaySettings?.windDriftMultiplier ?? 5.0;
+    if (driftMult <= 0.0) return [0.0, 0.0];
 
-    // Reason: scale linearly from threshold to full derecho cap so drift
-    // builds gradually rather than snapping on at full force.
-    final maxEff  = (config?.derechoStrengthMultiplier ?? 10.0) * (config?.maxStrength ?? 1.0);
-    final frac    = ((effStr - threshold) / (maxEff - threshold)).clamp(0.0, 1.0);
-    final speed   = maxDrift * frac * (1.0 - resistance);
+    final config = globalWindConfig;
+    final maxDrift  = config?.windDriftMaxSpeed  ?? 1.0;
+    final effStr    = effectiveWindStrength;
+    if (effStr < 0.01) return [0.0, 0.0];
+
+    // Reason: quadratic curve keeps drift negligible at low wind (0.3² = 0.09)
+    // while ramping aggressively at derecho strengths (3² = 9 → clamped to 1).
+    final maxEff = (config?.derechoStrengthMultiplier ?? 10.0) * (config?.maxStrength ?? 1.0);
+    final normStr = (effStr / maxEff).clamp(0.0, 1.0);
+    final frac = normStr * normStr;
+    final speed = maxDrift * frac * (1.0 - resistance) * driftMult;
     return [math.cos(windAngle) * speed * dt, math.sin(windAngle) * speed * dt];
   }
 

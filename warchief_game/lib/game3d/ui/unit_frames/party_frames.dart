@@ -8,6 +8,8 @@ class PartyFrames extends StatelessWidget {
   final int? selectedIndex;
   final void Function(int index)? onAllySelected;
   final void Function(Ally ally)? onAllyAbilityActivate;
+  /// Display mode: 'list' (full rows), 'compact' (narrow rows), 'grid' (square icons).
+  final String displayMode;
 
   const PartyFrames({
     super.key,
@@ -15,6 +17,7 @@ class PartyFrames extends StatelessWidget {
     this.selectedIndex,
     this.onAllySelected,
     this.onAllyAbilityActivate,
+    this.displayMode = 'list',
   });
 
   @override
@@ -37,35 +40,37 @@ class PartyFrames extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '\u{1F46A}', // family emoji
-                  style: TextStyle(fontSize: 12),
-                ),
-                SizedBox(width: 6),
-                Text(
-                  'PARTY',
-                  style: TextStyle(
-                    color: Color(0xFF4cc9f0),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ],
+          _buildHeader(),
+          if (displayMode == 'grid')
+            _buildGrid()
+          else
+            ...allies.asMap().entries.map((entry) {
+              return displayMode == 'compact'
+                  ? _buildCompactAllyFrame(entry.value, entry.key)
+                  : _buildAllyFrame(entry.value, entry.key);
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return const Padding(
+      padding: EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('\u{1F46A}', style: TextStyle(fontSize: 12)),
+          SizedBox(width: 6),
+          Text(
+            'PARTY',
+            style: TextStyle(
+              color: Color(0xFF4cc9f0),
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
             ),
           ),
-          // Ally frames
-          ...allies.asMap().entries.map((entry) {
-            final index = entry.key;
-            final ally = entry.value;
-            return _buildAllyFrame(ally, index);
-          }),
         ],
       ),
     );
@@ -278,5 +283,205 @@ class PartyFrames extends StatelessWidget {
       ),
       child: Icon(icon, color: color, size: 12),
     );
+  }
+
+  // ==================== COMPACT VIEW ====================
+
+  Widget _buildCompactAllyFrame(Ally ally, int index) {
+    final isSelected = selectedIndex == index;
+    final classColor = _classColor(ally);
+    final healthFrac = (ally.health / ally.maxHealth).clamp(0.0, 1.0);
+    final isDead = ally.health <= 0;
+
+    final Color barColor;
+    if (healthFrac > 0.5) {
+      barColor = const Color(0xFF4CAF50);
+    } else if (healthFrac > 0.25) {
+      barColor = const Color(0xFFFFA726);
+    } else {
+      barColor = const Color(0xFFEF5350);
+    }
+
+    return GestureDetector(
+      onTap: () => onAllySelected?.call(index),
+      onDoubleTap: () => onAllyAbilityActivate?.call(ally),
+      child: Opacity(
+        opacity: isDead ? 0.4 : 1.0,
+        child: Container(
+          width: 130,
+          height: 16,
+          margin: const EdgeInsets.only(bottom: 2),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? const Color(0xFF4cc9f0).withValues(alpha: 0.15)
+                : const Color(0xFF252542).withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(
+              color: isSelected ? const Color(0xFF4cc9f0) : const Color(0xFF404060),
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 3,
+                decoration: BoxDecoration(
+                  color: isDead ? Colors.grey : classColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(2),
+                    bottomLeft: Radius.circular(2),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Stack(
+                  children: [
+                    FractionallySizedBox(
+                      widthFactor: healthFrac,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: barColor.withValues(alpha: 0.3),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(2),
+                            bottomRight: Radius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        ally.name.isNotEmpty ? ally.name : 'Ally ${index + 1}',
+                        style: TextStyle(
+                          color: isDead ? Colors.grey : Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==================== GRID VIEW ====================
+
+  Widget _buildGrid() {
+    return SizedBox(
+      width: 160,
+      child: Wrap(
+        spacing: 3,
+        runSpacing: 3,
+        children: [
+          for (int i = 0; i < allies.length; i++)
+            _buildGridIcon(allies[i], i),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGridIcon(Ally ally, int index) {
+    final isSelected = selectedIndex == index;
+    final classColor = _classColor(ally);
+    final healthFrac = (ally.health / ally.maxHealth).clamp(0.0, 1.0);
+    final isDead = ally.health <= 0;
+    final classIcon = _classIcon(ally);
+
+    Color borderColor;
+    double borderWidth;
+    if (isSelected) {
+      borderColor = const Color(0xFF4cc9f0);
+      borderWidth = 2;
+    } else {
+      borderColor = const Color(0xFF404060);
+      borderWidth = 1;
+    }
+
+    final label = ally.name.isNotEmpty ? ally.name : 'Ally ${index + 1}';
+
+    return Tooltip(
+      message: '$label\n'
+          'HP: ${ally.health.toStringAsFixed(0)} / ${ally.maxHealth.toStringAsFixed(0)}',
+      waitDuration: const Duration(milliseconds: 200),
+      child: GestureDetector(
+        onTap: () => onAllySelected?.call(index),
+        onDoubleTap: () => onAllyAbilityActivate?.call(ally),
+        child: Opacity(
+          opacity: isDead ? 0.35 : 1.0,
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? const Color(0xFF4cc9f0).withValues(alpha: 0.15)
+                  : const Color(0xFF252542),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: borderColor, width: borderWidth),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 28 * healthFrac,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: (healthFrac > 0.5
+                              ? const Color(0xFF4CAF50)
+                              : healthFrac > 0.25
+                                  ? const Color(0xFFFFA726)
+                                  : const Color(0xFFEF5350))
+                          .withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ),
+                Center(
+                  child: Icon(
+                    isDead ? Icons.close : classIcon,
+                    color: isDead
+                        ? Colors.grey
+                        : classColor.withValues(alpha: 0.9),
+                    size: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==================== SHARED HELPERS ====================
+
+  Color _classColor(Ally ally) {
+    const classColors = [
+      Color(0xFFC79C6E), // Warrior (brown/tan)
+      Color(0xFF3FC7EB), // Mage (light blue)
+      Color(0xFFFF7C0A), // Druid/Healer (orange)
+    ];
+    return ally.abilityIndex < classColors.length
+        ? classColors[ally.abilityIndex]
+        : Colors.grey;
+  }
+
+  IconData _classIcon(Ally ally) {
+    const classIcons = [
+      Icons.shield,           // Warrior
+      Icons.auto_fix_high,    // Mage
+      Icons.favorite,         // Healer
+    ];
+    return ally.abilityIndex < classIcons.length
+        ? classIcons[ally.abilityIndex]
+        : Icons.person;
   }
 }

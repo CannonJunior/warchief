@@ -38,6 +38,14 @@ class GameplaySettings {
   static const String _keyTargetAcquiredScale     = 'gameplay_target_acquired_scale';
   static const String _keyTargetAcquiredDuration  = 'gameplay_target_acquired_duration';
   static const String _keyQueueExitDuration        = 'gameplay_queue_exit_duration';
+  static const String _keyMinionFrameDisplayMode  = 'gameplay_minion_frame_display_mode';
+  static const String _keyPartyFrameDisplayMode   = 'gameplay_party_frame_display_mode';
+
+  static const String _keyUnitCollisionEnabled    = 'gameplay_unit_collision_enabled';
+  static const String _keyWindDriftMultiplier     = 'gameplay_wind_drift_multiplier';
+
+  // GM (Game Master) test keys
+  static const String _keyGmZephyrKey            = 'gameplay_gm_zephyr_key';
 
   /// When true, characters must equip a Talisman that attunes them to a
   /// mana color before they can regenerate, spend, or see that mana pool.
@@ -126,6 +134,23 @@ class GameplaySettings {
   /// finished executing, in seconds (default 1.0).
   double queueExitDuration;
 
+  /// Display mode for minion frames: 'list' (full rows), 'compact' (narrow rows), 'grid' (square icons).
+  String minionFrameDisplayMode;
+
+  /// Display mode for party frames: 'list' (full rows), 'compact' (narrow rows), 'grid' (square icons).
+  String partyFrameDisplayMode;
+
+  /// When true, overlapping units are gently pushed apart each frame.
+  bool unitCollisionEnabled;
+
+  /// Multiplier for wind drift force on units. 0 = no drift, 1 = baseline, 10 = extreme.
+  double windDriftMultiplier;
+
+  // ==================== GM (GAME MASTER) TEST TOGGLES ====================
+
+  /// When true, pressing Z forces a zephyr/derecho wind event.
+  bool gmZephyrKey;
+
   GameplaySettings({
     this.attunementRequired = true,
     this.manaSourceVisibilityGated = false,
@@ -154,6 +179,11 @@ class GameplaySettings {
     this.targetAcquiredScale     = 1.3,
     this.targetAcquiredDuration  = 2.0,
     this.queueExitDuration       = 1.0,
+    this.minionFrameDisplayMode  = 'list',
+    this.partyFrameDisplayMode   = 'list',
+    this.unitCollisionEnabled    = true,
+    this.windDriftMultiplier     = 5.0,
+    this.gmZephyrKey             = false,
   });
 
   /// Load saved settings from persistent storage.
@@ -187,6 +217,11 @@ class GameplaySettings {
       targetAcquiredScale     = prefs.getDouble(_keyTargetAcquiredScale)  ?? 1.3;
       targetAcquiredDuration  = prefs.getDouble(_keyTargetAcquiredDuration) ?? 2.0;
       queueExitDuration       = prefs.getDouble(_keyQueueExitDuration)      ?? 1.0;
+      minionFrameDisplayMode  = prefs.getString(_keyMinionFrameDisplayMode)  ?? 'list';
+      partyFrameDisplayMode   = prefs.getString(_keyPartyFrameDisplayMode)   ?? 'list';
+      unitCollisionEnabled    = prefs.getBool(_keyUnitCollisionEnabled)        ?? true;
+      windDriftMultiplier     = prefs.getDouble(_keyWindDriftMultiplier)      ?? 5.0;
+      gmZephyrKey             = prefs.getBool(_keyGmZephyrKey)               ?? false;
       debugPrint('[GameplaySettings] Loaded: attunementRequired=$attunementRequired, '
           'manaSourceVisibilityGated=$manaSourceVisibilityGated, '
           'showDamageNumbers=$showDamageNumbers, showHealNumbers=$showHealNumbers, '
@@ -228,6 +263,11 @@ class GameplaySettings {
       await prefs.setDouble(_keyTargetAcquiredScale,     targetAcquiredScale);
       await prefs.setDouble(_keyTargetAcquiredDuration,  targetAcquiredDuration);
       await prefs.setDouble(_keyQueueExitDuration,        queueExitDuration);
+      await prefs.setString(_keyMinionFrameDisplayMode,  minionFrameDisplayMode);
+      await prefs.setString(_keyPartyFrameDisplayMode,   partyFrameDisplayMode);
+      await prefs.setBool(_keyUnitCollisionEnabled,        unitCollisionEnabled);
+      await prefs.setDouble(_keyWindDriftMultiplier,      windDriftMultiplier);
+      await prefs.setBool(_keyGmZephyrKey,               gmZephyrKey);
       debugPrint('[GameplaySettings] Saved');
     } catch (e) {
       debugPrint('[GameplaySettings] Error saving: $e');

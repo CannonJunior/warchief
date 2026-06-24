@@ -8,6 +8,7 @@ import 'scenario_tab.dart';
 import 'ollama_tab.dart';
 import 'typography_tab.dart';
 import 'targeting_tab.dart';
+import 'gm_tab.dart';
 import '../../state/gameplay_settings.dart';
 
 /// Settings panel with tabs for General, Interfaces, Source Code, and About
@@ -40,6 +41,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     _TabItem(id: 'typography', label: 'Typography', icon: Icons.text_fields),
     _TabItem(id: 'targeting', label: 'Targeting', icon: Icons.my_location),
     _TabItem(id: 'ai', label: 'AI', icon: Icons.smart_toy_outlined),
+    _TabItem(id: 'gm', label: 'GM', icon: Icons.admin_panel_settings),
     _TabItem(id: 'source', label: 'Source Code', icon: Icons.folder_open),
     _TabItem(id: 'about', label: 'About', icon: Icons.info_outline),
   ];
@@ -256,6 +258,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
         return const TargetingTab();
       case 'ai':
         return const OllamaTab();
+      case 'gm':
+        return const GmTab();
       case 'source':
         return _buildSourceTab();
       case 'about':
@@ -348,6 +352,36 @@ class _SettingsPanelState extends State<SettingsPanel> {
             (value) {
               setState(() {
                 settings?.showAbilityRanges = value;
+                settings?.save();
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+          _buildSectionHeader('Wind', Icons.air),
+          const SizedBox(height: 12),
+          _buildSettingSlider(
+            'Wind Push Strength',
+            'How strongly wind pushes units. 0 = off, 5 = default, 10 = extreme.',
+            settings?.windDriftMultiplier ?? 5.0,
+            0.0, 10.0,
+            (value) {
+              setState(() {
+                settings?.windDriftMultiplier = double.parse(value.toStringAsFixed(1));
+                settings?.save();
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+          _buildSectionHeader('Physics', Icons.sports_martial_arts),
+          const SizedBox(height: 12),
+          _buildSettingToggle(
+            'Unit Collision',
+            'Units push each other apart instead of overlapping. '
+            'Dash abilities ignore collision to punch through crowds.',
+            settings?.unitCollisionEnabled ?? true,
+            (value) {
+              setState(() {
+                settings?.unitCollisionEnabled = value;
                 settings?.save();
               });
             },
@@ -446,6 +480,82 @@ class _SettingsPanelState extends State<SettingsPanel> {
     );
   }
 
+
+  Widget _buildSettingSlider(
+    String label,
+    String hint,
+    double value,
+    double min,
+    double max,
+    ValueChanged<double> onChanged,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF252542),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1a1a2e),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  value.toStringAsFixed(1),
+                  style: const TextStyle(
+                    color: Color(0xFF4cc9f0),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            hint,
+            style: const TextStyle(color: Colors.white54, fontSize: 11),
+          ),
+          const SizedBox(height: 8),
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: const Color(0xFF4cc9f0),
+              inactiveTrackColor: const Color(0xFF4cc9f0).withValues(alpha: 0.2),
+              thumbColor: const Color(0xFF4cc9f0),
+              overlayColor: const Color(0xFF4cc9f0).withValues(alpha: 0.1),
+              trackHeight: 3,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+            ),
+            child: Slider(
+              value: value.clamp(min, max),
+              min: min,
+              max: max,
+              divisions: ((max - min) * 10).round(),
+              onChanged: onChanged,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildSourceTab() {
     if (_isLoadingSourceTree) {

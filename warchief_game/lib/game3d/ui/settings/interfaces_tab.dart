@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'interface_config.dart';
+import '../../state/gameplay_settings.dart';
 
 /// Interfaces tab showing categorized UI panel visibility controls
 ///
@@ -9,11 +10,13 @@ import 'interface_config.dart';
 class InterfacesTab extends StatefulWidget {
   final InterfaceConfigManager interfaceConfig;
   final void Function(String id, bool visible)? onVisibilityChanged;
+  final VoidCallback? onSettingsChanged;
 
   const InterfacesTab({
     super.key,
     required this.interfaceConfig,
     this.onVisibilityChanged,
+    this.onSettingsChanged,
   });
 
   @override
@@ -239,6 +242,30 @@ class _InterfacesTabState extends State<InterfacesTab> {
                       fontSize: 11,
                     ),
                   ),
+                  if (iface.id == 'party_frames') ...[
+                    const SizedBox(height: 12),
+                    _buildFrameDisplayModeSelector(
+                      current: globalGameplaySettings?.partyFrameDisplayMode ?? 'list',
+                      onChanged: (value) {
+                        final settings = globalGameplaySettings;
+                        if (settings == null) return;
+                        settings.partyFrameDisplayMode = value;
+                        settings.save();
+                      },
+                    ),
+                  ],
+                  if (iface.id == 'minion_frames') ...[
+                    const SizedBox(height: 12),
+                    _buildFrameDisplayModeSelector(
+                      current: globalGameplaySettings?.minionFrameDisplayMode ?? 'list',
+                      onChanged: (value) {
+                        final settings = globalGameplaySettings;
+                        if (settings == null) return;
+                        settings.minionFrameDisplayMode = value;
+                        settings.save();
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -294,6 +321,82 @@ class _InterfacesTabState extends State<InterfacesTab> {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFrameDisplayModeSelector({
+    required String current,
+    required void Function(String value) onChanged,
+  }) {
+    const modes = [
+      ('list', 'List', Icons.view_list),
+      ('compact', 'Compact', Icons.density_small),
+      ('grid', 'Grid', Icons.grid_view),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Display Mode',
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            for (final (value, label, icon) in modes) ...[
+              if (value != 'list') const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () {
+                  onChanged(value);
+                  setState(() {});
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: current == value
+                        ? const Color(0xFF4cc9f0).withValues(alpha: 0.2)
+                        : const Color(0xFF1a1a2e),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: current == value
+                          ? const Color(0xFF4cc9f0)
+                          : Colors.white.withValues(alpha: 0.1),
+                      width: current == value ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon,
+                          color: current == value
+                              ? const Color(0xFF4cc9f0)
+                              : Colors.white54,
+                          size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: current == value
+                              ? const Color(0xFF4cc9f0)
+                              : Colors.white54,
+                          fontSize: 11,
+                          fontWeight: current == value
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
     );
   }
 

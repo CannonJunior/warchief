@@ -133,11 +133,22 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     // Animate duel arena banner (drop, flutter, victory flag)
     gameState.duelBannerState?.update(dt, globalWindState);
 
-    // Apply wind drift to allies and monster (normal units have no wind resistance)
+    // Drift cloud clusters with wind
+    final wind = globalWindState;
+    if (wind != null && globalCloudSystem != null) {
+      globalCloudSystem!.update(dt, wind.windAngle, wind.windStrength);
+    }
+
+    // Apply wind drift to all ground units
     _applyWindDrift(dt);
 
     // Resolve tower wall collisions for all entities after all movement this frame
     _resolveTowerWallCollisions();
+
+    // Soft separation: push overlapping units apart
+    if (globalGameplaySettings?.unitCollisionEnabled ?? true) {
+      UnitCollisionSystem.resolve(gameState);
+    }
 
     // Update dust devil swirls: move columns, apply unit lift
     _updateDustDevils(dt);
@@ -339,14 +350,14 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     if (gameState.monsterHealth > 0) resolve(gameState.monsterTransform);
   }
 
-  /// Apply passive wind drift to non-player units during strong derechos.
+  /// Apply passive wind drift to all non-player ground units.
   ///
   /// Player drift is handled in input_system.dart (respects active stance resistance).
-  /// Normal units — allies and monster — have no wind resistance and are always fully pushed.
+  /// AI units have no wind resistance and are fully pushed.
   void _applyWindDrift(double dt) {
     final wind = globalWindState;
     if (wind == null) return;
-    final drift = wind.getWindDrift(dt); // resistance defaults to 0.0 for normal units
+    final drift = wind.getWindDrift(dt);
     if (drift[0] == 0.0 && drift[1] == 0.0) return;
 
     for (final ally in gameState.allies) {
@@ -356,6 +367,16 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
       gameState.monsterTransform!.position.x += drift[0];
       gameState.monsterTransform!.position.z += drift[1];
+    }
+    for (final minion in gameState.aliveMinions) {
+      minion.transform.position.x += drift[0];
+      minion.transform.position.z += drift[1];
+    }
+    for (final combatant in gameState.duelCombatants) {
+      if (combatant.health > 0) {
+        combatant.transform.position.x += drift[0];
+        combatant.transform.position.z += drift[1];
+      }
     }
   }
 }

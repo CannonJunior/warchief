@@ -24,7 +24,12 @@ class _MonsterAI {
 
     // Follow current path if one exists
     if (gameState.monsterCurrentPath != null) {
-      final distance = gameState.monsterMoveSpeed * slowMult * dt;
+      double monsterSpeed = gameState.monsterMoveSpeed * slowMult;
+      if (globalWindState != null && gameState.monsterCurrentPath!.progress < 1.0) {
+        final tangent = gameState.monsterCurrentPath!.getTangentAt(gameState.monsterCurrentPath!.progress);
+        monsterSpeed *= globalWindState!.getMovementModifier(tangent.x, tangent.z);
+      }
+      final distance = monsterSpeed * dt;
       final newPos = gameState.monsterCurrentPath!.advance(distance);
 
       if (newPos != null) {

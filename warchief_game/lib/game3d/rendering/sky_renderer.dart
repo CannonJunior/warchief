@@ -117,24 +117,24 @@ class SkyRenderer {
     final config = globalCometConfig;
     final intensity = cometState.cometIntensity;
 
-    // Base horizon color lerped toward comet tint during flyby
     final tintStrength = (config?.cometTintStrength ?? 0.6) * intensity;
 
-    final zen = config?.zenithColor ?? [0.05, 0.01, 0.10];
-    final hor = config?.horizonColorDay ?? [0.12, 0.06, 0.04];
+    final zen = config?.zenithColor ?? [0.22, 0.45, 0.85];
+    final hor = config?.horizonColorDay ?? [0.55, 0.72, 0.92];
 
-    // During comet flyby, horizon shifts toward deep purple void
+    // Reason: during comet flyby, sky darkens toward void-purple so the bright
+    // comet coma and tails remain clearly visible against the tinted background.
     final comaC = config?.comaColor ?? [0.85, 0.70, 1.00];
-    final zr = _lerp(zen[0], comaC[0] * 0.1, tintStrength * 0.5);
-    final zg = _lerp(zen[1], comaC[1] * 0.05, tintStrength * 0.5);
-    final zb = _lerp(zen[2], comaC[2] * 0.15, tintStrength * 0.5);
-    final hr = _lerp(hor[0], comaC[0] * 0.05, tintStrength * 0.3);
-    final hg = _lerp(hor[1], comaC[1] * 0.02, tintStrength * 0.3);
-    final hb = _lerp(hor[2], comaC[2] * 0.08, tintStrength * 0.3);
+    final zr = _lerp(zen[0], comaC[0] * 0.15, tintStrength);
+    final zg = _lerp(zen[1], comaC[1] * 0.08, tintStrength);
+    final zb = _lerp(zen[2], comaC[2] * 0.25, tintStrength);
+    final hr = _lerp(hor[0], comaC[0] * 0.10, tintStrength * 0.5);
+    final hg = _lerp(hor[1], comaC[1] * 0.06, tintStrength * 0.5);
+    final hb = _lerp(hor[2], comaC[2] * 0.15, tintStrength * 0.5);
 
-    // Sky: large flat quad, 2000x2000, center at Y=120.
-    // Centre vertex = zenith color; corners = horizon color.
-    const half = 1000.0;
+    // Reason: quad must be large enough that edges are never visible from any
+    // camera angle. 10000 units covers well beyond the far clip plane.
+    const half = 5000.0;
     final vertices = <double>[
       // Centre (zenith)
       0,   0, 0,    zr, zg, zb,

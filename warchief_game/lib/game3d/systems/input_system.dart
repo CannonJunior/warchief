@@ -217,15 +217,17 @@ class InputSystem {
       gameState.activeTransform!.position += right * effectiveSpeed * dt;
     }
 
-    // Passive wind drift — pushes ground units in high derecho conditions.
-    // Reason: applied last so drift doesn't compound with the stance speed multiplier.
-    // No flying guard needed — _handleFlightMovement already early-returns above this block.
-    final drift = globalWindState?.getWindDrift(
-      dt, resistance: gameState.activeStance.windResistance,
-    ) ?? const [0.0, 0.0];
-    if (drift[0] != 0.0 || drift[1] != 0.0) {
-      gameState.activeTransform!.position.x += drift[0];
-      gameState.activeTransform!.position.z += drift[1];
+    // Passive wind drift — pushes all ground units along wind direction.
+    // Reason: movement abilities (dash, charge) override wind so players
+    // can use them to push through strong gusts.
+    if (!gameState.ability4Active) {
+      final drift = globalWindState?.getWindDrift(
+        dt, resistance: gameState.activeStance.windResistance,
+      ) ?? const [0.0, 0.0];
+      if (drift[0] != 0.0 || drift[1] != 0.0) {
+        gameState.activeTransform!.position.x += drift[0];
+        gameState.activeTransform!.position.z += drift[1];
+      }
     }
   }
 
