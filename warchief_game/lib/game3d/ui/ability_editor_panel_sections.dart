@@ -37,6 +37,7 @@ extension _AbilityEditorPanelSections on _AbilityEditorPanelState {
       hitRadius: double.tryParse(_hitRadiusCtrl.text),
       piercing: _piercing,
       requiresStationary: _requiresStationary,
+      cleansesCC: _cleansesCC,
       category: _selectedCategory,
       channelEffect: ChannelEffect.values.firstWhere((c) => c.name == _selectedChannelEffect, orElse: () => ChannelEffect.none),
     );
@@ -377,6 +378,8 @@ extension _AbilityEditorPanelSections on _AbilityEditorPanelState {
       _buildSwitchRow('Piercing', _piercing, (v) => setState(() => _piercing = v), 'piercing'),
       _buildSwitchRow('Req. Stationary', _requiresStationary,
           (v) => setState(() => _requiresStationary = v), 'stationary'),
+      _buildSwitchRow('Cleanses CC', _cleansesCC,
+          (v) => setState(() => _cleansesCC = v), 'cleansesCC'),
       _buildDropdownWithAddNew(
         label: 'Channel Effect',
         tooltipKey: 'channelEffect',

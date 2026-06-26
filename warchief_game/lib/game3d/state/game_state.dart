@@ -14,6 +14,7 @@ import '../../models/ally.dart';
 import '../../models/ai_chat_message.dart';
 import '../../models/monster.dart';
 import '../../models/monster_ontology.dart';
+import '../../models/item.dart' show ArmorCategory, WeaponCategory, WeaponType, EquipmentSlot;
 import '../../models/inventory.dart';
 import '../rendering/equipment_visual.dart';
 import '../rendering/equipment_renderer.dart'
@@ -46,6 +47,7 @@ import '../ai/tactical_positioning.dart';
 import '../data/monsters/minion_definitions.dart';
 import '../data/abilities/ability_types.dart' show ManaColor, AbilityData, StatusEffect;
 import '../data/stances/stances.dart';
+import 'stance_runtime_state.dart';
 import 'gameplay_settings.dart';
 import 'action_bar_config.dart' show globalActionBarConfigManager;
 import 'map_state.dart';
@@ -171,6 +173,9 @@ class GameState {
 
   /// Drunken Master: visual pulse timer (counts down from ~0.4s on each re-roll).
   double drunkenRerollPulseTimer = 0.0;
+
+  /// Runtime state for advanced stance mechanics (Cadence, Tempest, etc.).
+  final StanceRuntimeState stanceRuntime = StanceRuntimeState();
 
   /// Whether the stance selector UI is expanded.
   bool stanceSelectorOpen = false;
@@ -419,9 +424,10 @@ class GameState {
   Transform3d? monsterDirectionIndicatorTransform;
   double monsterRotation = 180.0; // Face toward player initially
 
-  // Monster health and abilities
+  // Monster health, abilities, and armor
   double monsterHealth = GameConfig.monsterMaxHealth;
   final double monsterMaxHealth = GameConfig.monsterMaxHealth;
+  ArmorCategory monsterArmorCategory = ArmorCategory.plate;
   double monsterAbility1Cooldown = 0.0;
   final double monsterAbility1CooldownMax = GameConfig.monsterAbility1CooldownMax;
   double monsterAbility2Cooldown = 0.0;
@@ -602,6 +608,29 @@ class GameState {
     final ally = activeAlly;
     if (ally != null && ally.blackMana >= amount) { ally.blackMana -= amount; return true; }
     return false;
+  }
+
+  // ==================== MANA REFUND HELPERS ====================
+
+  void activeRefundBlueMana(double amount) {
+    if (isWarchiefActive) { blueMana = (blueMana + amount).clamp(0.0, maxBlueMana); }
+    else if (activeAlly != null) { activeAlly!.blueMana = (activeAlly!.blueMana + amount).clamp(0.0, activeAlly!.maxBlueMana); }
+  }
+  void activeRefundRedMana(double amount) {
+    if (isWarchiefActive) { redMana = (redMana + amount).clamp(0.0, maxRedMana); }
+    else if (activeAlly != null) { activeAlly!.redMana = (activeAlly!.redMana + amount).clamp(0.0, activeAlly!.maxRedMana); }
+  }
+  void activeRefundWhiteMana(double amount) {
+    if (isWarchiefActive) { whiteMana = (whiteMana + amount).clamp(0.0, maxWhiteMana); }
+    else if (activeAlly != null) { activeAlly!.whiteMana = (activeAlly!.whiteMana + amount).clamp(0.0, activeAlly!.maxWhiteMana); }
+  }
+  void activeRefundGreenMana(double amount) {
+    if (isWarchiefActive) { greenMana = (greenMana + amount).clamp(0.0, maxGreenMana); }
+    else if (activeAlly != null) { activeAlly!.greenMana = (activeAlly!.greenMana + amount).clamp(0.0, activeAlly!.maxGreenMana); }
+  }
+  void activeRefundBlackMana(double amount) {
+    if (isWarchiefActive) { blackMana = (blackMana + amount).clamp(0.0, maxBlackMana); }
+    else if (activeAlly != null) { activeAlly!.blackMana = (activeAlly!.blackMana + amount).clamp(0.0, activeAlly!.maxBlackMana); }
   }
 
   /// Set active character's white mana (for Silent Mind restore)
@@ -1025,14 +1054,18 @@ class GameState {
   /// Get the effective movement speed considering windup modifier, stance, and active effects.
   double get effectivePlayerSpeed {
     double hasteBonus = 1.0;
+    double slowMult = 1.0;
     for (final e in playerActiveEffects) {
+      if (e.isExpired) continue;
       if (e.type == StatusEffect.haste) {
-        // Reason: additive bonus so a 0.35 strength haste gives 35% speed increase
         hasteBonus += e.strength.clamp(0.0, 1.0);
-        break;
+      } else if (e.type == StatusEffect.slow) {
+        slowMult *= (1.0 - e.strength.clamp(0.0, 0.9));
+      } else if (e.type == StatusEffect.daze) {
+        slowMult *= 0.5;
       }
     }
-    return playerSpeed * windupMovementSpeedModifier * activeStance.movementSpeedMultiplier * hasteBonus;
+    return playerSpeed * windupMovementSpeedModifier * activeStance.movementSpeedMultiplier * hasteBonus * slowMult;
   }
 
 
@@ -1074,7 +1107,7 @@ class GameState {
   double get channelPercentage => channelDuration > 0 ? (1.0 - channelProgress / channelDuration).clamp(0.0, 1.0) : 0.0;
 
   /// Check if player is performing any cast/windup/channel action
-  bool get isPerformingAction => isCasting || isWindingUp || isChanneling;
+  bool get isPerformingAction => isCasting || isWindingUp || isChanneling || isAirborne;
 
   /// Get cast progress as percentage (0.0 to 1.0)
   double get castPercentage => currentCastTime > 0 ? castProgress / currentCastTime : 0.0;
@@ -1179,6 +1212,14 @@ class GameState {
   final double ability3Duration = 1.0; // Heal effect duration
   Mesh? healEffectMesh;
   Transform3d? healEffectTransform;
+
+  // ==================== AIRBORNE DISPLACEMENT ====================
+
+  double airborneHeight = 0.0;
+  double airborneVelocityY = 0.0;
+  double airborneSourceHeight = 0.0;
+  double juggleWindowTimer = 0.0;
+  bool get isAirborne => airborneHeight > 0.1;
 
   // ==================== ABILITY 4: DASH ATTACK ====================
 

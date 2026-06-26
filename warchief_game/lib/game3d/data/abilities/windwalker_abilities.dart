@@ -429,6 +429,48 @@ class WindWalkerAbilities {
     auraRange: 10.0,
   );
 
+  // ==================== CC ABILITIES ====================
+
+  /// Tempest Lift — Launch target airborne with an uppercut gust.
+  static final tempestLift = AbilityData(
+    name: 'Tempest Lift',
+    description: 'Blast the target skyward with a gust uppercut.',
+    type: AbilityType.melee,
+    damage: 20.0, cooldown: 16.0, range: 4.0,
+    color: Vector3(0.9, 0.95, 1.0),
+    impactColor: Vector3(0.85, 0.9, 1.0), impactSize: 0.7,
+    statusEffect: StatusEffect.airborne, statusStrength: 5.0, statusDuration: 1.5,
+    manaColor: ManaColor.white, manaCost: 20.0, category: 'windwalker',
+  );
+
+  /// Gale Scatter — Self-centered AoE knockback that dazes.
+  static final galeScatter = AbilityData(
+    name: 'Gale Scatter',
+    description: 'Erupt a radial gale, scattering and dazing nearby foes.',
+    type: AbilityType.aoe,
+    damage: 15.0, cooldown: 22.0,
+    color: Vector3(0.85, 0.92, 1.0),
+    impactColor: Vector3(0.8, 0.88, 1.0), impactSize: 1.0,
+    aoeRadius: 6.0, knockbackForce: 5.0,
+    statusEffect: StatusEffect.daze, statusDuration: 2.0,
+    manaColor: ManaColor.white, manaCost: 25.0, category: 'windwalker',
+  );
+
+  /// Vertigo Vortex — Ranged AoE that disorients targets.
+  static final vertigoVortex = AbilityData(
+    name: 'Vertigo Vortex',
+    description: 'Hurl a spiraling vortex that disorients all caught within.',
+    type: AbilityType.ranged,
+    damage: 10.0, cooldown: 28.0, range: 12.0, castTime: 0.8,
+    color: Vector3(0.75, 0.85, 1.0),
+    impactColor: Vector3(0.7, 0.8, 1.0), impactSize: 0.9,
+    aoeRadius: 5.0,
+    statusEffect: StatusEffect.disorient, statusDuration: 4.0,
+    manaColor: ManaColor.white, manaCost: 20.0,
+    secondaryManaColor: ManaColor.blue, secondaryManaCost: 15.0,
+    category: 'windwalker',
+  );
+
   /// All Wind Walker abilities as a list.
   /// Ordered short→long cooldown; slots 11-15 hold the longest cooldowns.
   /// Cut: zephyrPalm, tempestCharge, healingGale, windWarp, stormfistBarrage,
@@ -447,7 +489,10 @@ class WindWalkerAbilities {
     aerialPursuit,       // 11 10.0s  juggle mid
     flyingSerpentStrike, // 12 10.0s  piercing dash
     tempestCrash,        // 13 12.0s  juggle finisher AoE
-    windWall,            // 14 20.0s  projectile block
-    sovereignOfTheSky,   // 15 90.0s  ultimate buff
+    tempestLift,         // 14 16.0s  CC airborne launcher
+    windWall,            // 15 20.0s  projectile block
+    galeScatter,         // 16 22.0s  CC AoE knockback + daze
+    vertigoVortex,       // 17 28.0s  CC ranged AoE disorient
+    sovereignOfTheSky,   // 18 90.0s  ultimate buff
   ];
 }

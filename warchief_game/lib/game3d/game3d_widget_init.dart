@@ -68,10 +68,17 @@ mixin _WidgetInitMixin on _GameStateBase {
   }
 
   void _initializeCloudSystem() {
+    globalCloudConfig ??= CloudConfig();
+    globalCloudConfig!.initialize();
     globalCloudSystem ??= CloudSystem();
     if (!globalCloudSystem!.isGenerated) {
       globalCloudSystem!.generate();
     }
+  }
+
+  void _initializeCcConfig() {
+    globalCcConfig ??= CcConfig();
+    globalCcConfig!.initialize();
   }
 
   /// Initialize the global minimap configuration (JSON defaults)
@@ -164,6 +171,12 @@ mixin _WidgetInitMixin on _GameStateBase {
   void _initializeDuelConfig() {
     globalDuelConfig ??= DuelConfig();
     globalDuelConfig!.initialize();
+  }
+
+  /// Initialize the global weapon system configuration
+  void _initializeWeaponConfig() {
+    globalWeaponConfig ??= WeaponConfig();
+    globalWeaponConfig!.initialize();
   }
 
   /// Initialize the global equipment visual config (slot attachment offsets, mesh sizes)

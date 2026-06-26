@@ -259,8 +259,69 @@ class MageAbilities {
     auraRange: 10.0,
   );
 
+  /// Deep Freeze — Ranged frost bolt that freezes the target solid
+  static final deepFreeze = AbilityData(
+    name: 'Deep Freeze',
+    description: 'Encases the target in ice, freezing them solid.',
+    type: AbilityType.ranged,
+    damage: 15.0,
+    cooldown: 20.0,
+    range: 15.0,
+    color: Vector3(0.4, 0.7, 1.0),
+    impactColor: Vector3(0.6, 0.85, 1.0),
+    impactSize: 0.6,
+    manaColor: ManaColor.blue,
+    manaCost: 25.0,
+    statusEffect: StatusEffect.freeze,
+    statusDuration: 3.0,
+    category: 'mage',
+    damageSchool: DamageSchool.frost,
+  );
+
+  /// Gravity Flux — AoE gravity well that pulls enemies toward its center
+  static final gravityFlux = AbilityData(
+    name: 'Gravity Flux',
+    description: 'Warps gravity in an area, pulling enemies inward.',
+    type: AbilityType.aoe,
+    damage: 0.0,
+    cooldown: 25.0,
+    range: 15.0,
+    color: Vector3(0.3, 0.1, 0.5),
+    impactColor: Vector3(0.4, 0.2, 0.6),
+    impactSize: 1.5,
+    aoeRadius: 8.0,
+    castTime: 1.0,
+    manaColor: ManaColor.blue,
+    manaCost: 30.0,
+    secondaryManaColor: ManaColor.black,
+    secondaryManaCost: 15.0,
+    statusEffect: StatusEffect.gravityWell,
+    statusDuration: 6.0,
+    category: 'mage',
+  );
+
+  /// Arcane Polymorph — Transforms enemy into a harmless critter
+  static final arcanePolymorph = AbilityData(
+    name: 'Arcane Polymorph',
+    description: 'Transforms the target into a helpless critter.',
+    type: AbilityType.ranged,
+    damage: 0.0,
+    cooldown: 30.0,
+    range: 20.0,
+    color: Vector3(0.7, 0.4, 0.9),
+    impactColor: Vector3(0.8, 0.5, 1.0),
+    impactSize: 0.7,
+    castTime: 1.5,
+    manaColor: ManaColor.blue,
+    manaCost: 35.0,
+    statusEffect: StatusEffect.polymorph,
+    statusDuration: 6.0,
+    category: 'mage',
+    damageSchool: DamageSchool.arcane,
+  );
+
   /// All mage abilities as a list
-  /// Ordered short→long cooldown; slots 11-13 hold the longest cooldowns.
+  /// Ordered short→long cooldown; slots 11-16 hold the longest cooldowns.
   static List<AbilityData> get all => [
     arcanePulse,       //  1  1.0s  combo opener melee
     frostBolt,         //  2  2.5s  ranged slow
@@ -272,8 +333,11 @@ class MageAbilities {
     arcaneBreach,      //  8 12.0s  permanent vulnerability
     teleport,          //  9 15.0s  utility blink
     counterspell,      // 10 20.0s  interrupt ranged
-    blizzard,          // 11 20.0s  channeled AoE slow
-    arcaneShield,      // 12 25.0s  buff shield
-    meteor,            // 13 30.0s  AoE burn nuke
+    deepFreeze,        // 11 20.0s  CC freeze
+    blizzard,          // 12 20.0s  channeled AoE slow
+    arcaneShield,      // 13 25.0s  buff shield
+    gravityFlux,       // 14 25.0s  AoE gravity well
+    meteor,            // 15 30.0s  AoE burn nuke
+    arcanePolymorph,   // 16 30.0s  CC polymorph
   ];
 }

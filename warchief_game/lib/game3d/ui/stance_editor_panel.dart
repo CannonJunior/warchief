@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/stances/stances.dart';
 
 part 'stance_editor_panel_fields.dart';
+part 'stance_editor_panel_mechanics.dart';
 
 /// Side-panel editor for modifying stance stats.
 ///
@@ -72,6 +73,9 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
   late TextEditingController _colorRCtrl;
   late TextEditingController _colorGCtrl;
   late TextEditingController _colorBCtrl;
+
+  // Mechanics (only populated for stances with StanceMechanics)
+  Map<String, TextEditingController>? _mechanicsControllers;
 
   static const _bg = Color(0xFF1a1a2e);
   static const _sectionBg = Color(0xFF252542);
@@ -167,6 +171,18 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
     _usesHpForMana = effective.usesHpForMana;
     _convertsManaRegenToHeal = effective.convertsManaRegenToHeal;
     _hasRandomModifiers = effective.hasRandomModifiers;
+
+    // Mechanics controllers
+    final m = effective.mechanics;
+    if (m != null) {
+      if (_mechanicsControllers == null) {
+        _mechanicsControllers = _StanceEditorMechanics.createMechanicsControllers(m);
+      } else {
+        _StanceEditorMechanics.updateMechanicsControllers(_mechanicsControllers!, m);
+      }
+    } else {
+      _mechanicsControllers = null;
+    }
   }
 
   @override
@@ -200,6 +216,7 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
     _colorRCtrl.dispose();
     _colorGCtrl.dispose();
     _colorBCtrl.dispose();
+    _mechanicsControllers?.values.forEach((c) => c.dispose());
     super.dispose();
   }
 
@@ -265,6 +282,16 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
       overrides['color'] = [r, g, b];
     }
 
+    // Mechanics overrides
+    if (_mechanicsControllers != null && original.mechanics != null) {
+      final mechOverrides = _StanceEditorMechanics.buildMechanicsOverrides(
+        _mechanicsControllers!, original.mechanics!,
+      );
+      if (mechOverrides.isNotEmpty) {
+        overrides['mechanics'] = mechOverrides;
+      }
+    }
+
     return overrides;
   }
 
@@ -307,6 +334,8 @@ class _StanceEditorPanelState extends State<StanceEditorPanel> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildIdentitySection(),
+                  if (_mechanicsControllers != null)
+                    buildMechanicsSection(_mechanicsControllers!, widget.stance.id),
                   _buildMultipliersSection(),
                   _buildCombatInteractionsSection(),
                   _buildPassivesSection(),

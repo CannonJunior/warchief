@@ -1,0 +1,240 @@
+{
+  "weaponTypes": {
+    "armingSword": {
+      "category": "sword",
+      "name": "Arming Sword",
+      "hands": 1,
+      "cooldownMultiplier": 1.0,
+      "damageMultiplier": 1.0,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "none",
+      "description": "Versatile one-handed sword. Balanced cut and thrust."
+    },
+    "longsword": {
+      "category": "sword",
+      "name": "Longsword",
+      "hands": 2,
+      "cooldownMultiplier": 0.95,
+      "damageMultiplier": 1.10,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.5,
+      "specialMechanic": "halfSwording",
+      "halfSwordingConfig": {
+        "vsPlateBonus": 0.20,
+        "consecutiveHitsRequired": 3
+      },
+      "description": "Two-handed sword with half-sword technique for armor gaps."
+    },
+    "falchion": {
+      "category": "sword",
+      "name": "Falchion",
+      "hands": 1,
+      "cooldownMultiplier": 1.05,
+      "damageMultiplier": 1.15,
+      "comboThresholdModifier": -1,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "none",
+      "description": "Heavy chopping blade. Devastating against flesh, poor against plate."
+    },
+    "beardedAxe": {
+      "category": "axe",
+      "name": "Bearded Axe",
+      "hands": 1,
+      "cooldownMultiplier": 1.0,
+      "damageMultiplier": 1.05,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "hookShield",
+      "hookShieldConfig": {
+        "armorBypassPercent": 0.30
+      },
+      "description": "Extended lower blade hooks shields and limbs."
+    },
+    "daneAxe": {
+      "category": "axe",
+      "name": "Dane Axe",
+      "hands": 2,
+      "cooldownMultiplier": 1.15,
+      "damageMultiplier": 1.25,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "cleave",
+      "cleaveConfig": {
+        "bonusMaxTargets": 1
+      },
+      "description": "Long-hafted battle axe with devastating cleave power."
+    },
+    "pollaxe": {
+      "category": "axe",
+      "name": "Pollaxe",
+      "hands": 2,
+      "cooldownMultiplier": 1.25,
+      "damageMultiplier": 1.35,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "versatileStrike",
+      "versatileStrikeConfig": {
+        "cycleLength": 3,
+        "bonusDamageOnCycle": 0.15
+      },
+      "description": "Axe blade, hammer head, and spike. The premier tournament weapon."
+    },
+    "flangedMace": {
+      "category": "hammer",
+      "name": "Flanged Mace",
+      "hands": 1,
+      "cooldownMultiplier": 1.05,
+      "damageMultiplier": 1.0,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "concussiveForce",
+      "concussiveForceConfig": {
+        "stunDurationBonus": 0.3
+      },
+      "description": "Flanges concentrate impact force. Extends stun duration."
+    },
+    "warhammer": {
+      "category": "hammer",
+      "name": "Warhammer",
+      "hands": 1,
+      "cooldownMultiplier": 1.05,
+      "damageMultiplier": 1.05,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "armorPierce",
+      "armorPierceConfig": {
+        "armorIgnorePercent": 0.20
+      },
+      "description": "Hammer face with back-spike. Punches through plate armor."
+    },
+    "maul": {
+      "category": "hammer",
+      "name": "Maul",
+      "hands": 2,
+      "cooldownMultiplier": 1.30,
+      "damageMultiplier": 1.45,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "shieldBreaker",
+      "shieldBreakerConfig": {
+        "shieldEffectivenessReduction": 0.50
+      },
+      "description": "Devastating two-handed hammer. Shatters shields and plate."
+    },
+    "militaryFlail": {
+      "category": "chain",
+      "name": "Military Flail",
+      "hands": 1,
+      "cooldownMultiplier": 1.0,
+      "damageMultiplier": 0.95,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "parryBypass",
+      "parryBypassConfig": {
+        "dodgeReduction": 1.0
+      },
+      "description": "Chain-linked head arcs around shields and parrying weapons."
+    },
+    "kettenkugel": {
+      "category": "chain",
+      "name": "Kettenkugel",
+      "hands": 1,
+      "cooldownMultiplier": 1.10,
+      "damageMultiplier": 1.05,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "wrapAround",
+      "wrapAroundConfig": {
+        "targetDodgeReduction": 0.50,
+        "debuffDuration": 3.0
+      },
+      "description": "Heavy spiked ball on long chain. Wraps around defenses."
+    },
+    "meteorHammer": {
+      "category": "chain",
+      "name": "Meteor Hammer",
+      "hands": 2,
+      "cooldownMultiplier": 1.0,
+      "damageMultiplier": 1.15,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "unpredictable",
+      "unpredictableConfig": {
+        "damageVarianceMin": 0.80,
+        "damageVarianceMax": 1.20
+      },
+      "description": "Weighted ends on long chain. Maximum reach, maximum unpredictability."
+    },
+    "halberd": {
+      "category": "polearm",
+      "name": "Halberd",
+      "hands": 2,
+      "cooldownMultiplier": 1.05,
+      "damageMultiplier": 1.15,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "hookPull",
+      "hookPullConfig": {
+        "gripForce": 3.0
+      },
+      "description": "Axe blade, hook, and spike on a pole. Can hook and pull enemies."
+    },
+    "glaive": {
+      "category": "polearm",
+      "name": "Glaive",
+      "hands": 2,
+      "cooldownMultiplier": 0.95,
+      "damageMultiplier": 1.0,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "sweepingBlow",
+      "sweepingBlowConfig": {
+        "bonusMaxTargets": 2
+      },
+      "description": "Curved blade on a pole. Sweeping cuts hit multiple enemies."
+    },
+    "pike": {
+      "category": "polearm",
+      "name": "Pike",
+      "hands": 2,
+      "cooldownMultiplier": 0.85,
+      "damageMultiplier": 0.90,
+      "comboThresholdModifier": 0,
+      "comboWindowBonus": 0.0,
+      "specialMechanic": "firstStrike",
+      "firstStrikeConfig": {
+        "openerDamageBonus": 0.40,
+        "minRange": 4.0
+      },
+      "description": "Maximum reach. Fast thrusts. Devastating opener from range."
+    }
+  },
+  "armorEffectiveness": {
+    "sword":   { "unarmored": 1.20, "leather": 1.10, "mail": 0.80, "plate": 0.60 },
+    "axe":     { "unarmored": 1.15, "leather": 1.10, "mail": 1.05, "plate": 0.85 },
+    "hammer":  { "unarmored": 1.00, "leather": 1.00, "mail": 1.15, "plate": 1.30 },
+    "chain":   { "unarmored": 1.00, "leather": 0.95, "mail": 0.95, "plate": 1.05 },
+    "polearm": { "unarmored": 1.10, "leather": 1.05, "mail": 0.95, "plate": 0.90 }
+  },
+  "stanceSynergies": {
+    "sword_cadence":    { "cooldownBonus": -0.10, "grooveStackBonus": 1 },
+    "sword_tempest":    { "cancelChainDamageBonus": 0.05 },
+    "axe_momentum":     { "damagePerStack": 0.02, "maxStackBonus": 2 },
+    "axe_warden":       { "backwardKnockbackBonus": 0.15 },
+    "hammer_pressure":  { "pressurePerHit": 0.05, "breakDamageBonus": 0.20 },
+    "hammer_crucible":  { "heatReduction": 1, "coolDownPayoffBonus": 0.10 },
+    "chain_flux":       { "switchCooldownReduction": 0.3, "transitionDamageBonus": 0.15 },
+    "chain_cadence":    { "beatWindowBonus": 0.05 },
+    "polearm_warden":   { "rangeBonus": 0.20, "forwardDamageBonus": 0.10, "predatorDamageBonus": 0.15 },
+    "polearm_momentum": { "splashRadiusBonus": 1.0 }
+  },
+  "comboModifiers": {
+    "sword":   { "thresholdMod": 0,  "windowBonus": 0.0,  "chainThresholdMod": 0 },
+    "axe":     { "thresholdMod": 0,  "windowBonus": -0.5, "chainThresholdMod": 0,  "chainBonusKnockback": 2.0 },
+    "hammer":  { "thresholdMod": 1,  "windowBonus": 0.5,  "chainThresholdMod": 1,  "chainBonusStunDuration": 1.0 },
+    "chain":   { "thresholdMod": -1, "windowBonus": 0.0,  "chainThresholdMod": -1, "chainBypassParry": true },
+    "polearm": { "thresholdMod": 0,  "windowBonus": 1.0,  "chainThresholdMod": 0,  "chainBonusGrip": true }
+  },
+  "spellModifierRatio": 0.30
+}

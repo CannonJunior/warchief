@@ -73,6 +73,18 @@ enum StatusEffect {
   knockback,            // Instant push in caster-facing direction; strength = world units displaced
   grip,                 // Instant pull toward caster; strength = fraction of gap closed (0.0–1.0)
   knockdown,            // Composite stun + interrupt; duration = stun/lockout seconds
+  daze,                 // 50% slow + damage interrupts casts + resets melee combo chain
+  airborne,             // Launched upward, cannot act, enables juggle follow-ups
+  sleep,                // Long hard CC, breaks on ANY damage; target regens, caster gains mana regen
+  charm,                // Forced walk toward caster; nearby allies slowed ("heartbreak" ripple)
+  polymorph,            // Critter form, movement only, breaks on damage; leaves spirit trail
+  taunt,                // Forced basic-attack on taunter; damage to taunter reduced
+  disorient,            // WASD remapped randomly, camera sway, ability input delayed
+  grounded,             // Blocks movement abilities/dashes/flight; +nature damage taken
+  suppress,             // Mutual hard CC on caster and target; uncleansable; damage to caster breaks
+  nearsight,            // Minimap dark, fog-of-war shrinks, nameplates hidden; hides CC overlay
+  banish,               // Phased out: invulnerable + untargetable + cannot act; cooldowns tick 3x
+  gravityWell,          // Pulled toward anchor point; movement speed reduced; bends projectiles
 }
 
 /// Maps a DamageSchool to its corresponding vulnerability StatusEffect.
@@ -246,6 +258,12 @@ class AbilityData {
   /// Marks this ability as a utility party buff applied to all friendlies, not just self.
   final bool isPartyBuff;
 
+  /// Whether this ability cleanses CC effects from the target/self.
+  final bool cleansesCC;
+
+  /// Specific CC types this ability can cleanse. Empty = cleanse all non-suppress debuffs.
+  final List<StatusEffect> cleansesTypes;
+
   const AbilityData({
     required this.name,
     required this.description,
@@ -286,6 +304,8 @@ class AbilityData {
     this.isAura = false,
     this.auraRange = 10.0,
     this.isPartyBuff = false,
+    this.cleansesCC = false,
+    this.cleansesTypes = const [],
     // Mana cost defaults
     this.manaColor = ManaColor.none,
     this.manaCost = 0.0,
@@ -404,6 +424,8 @@ class AbilityData {
     bool? isAura,
     double? auraRange,
     bool? isPartyBuff,
+    bool? cleansesCC,
+    List<StatusEffect>? cleansesTypes,
   }) {
     return AbilityData(
       name: name ?? this.name,
@@ -446,6 +468,8 @@ class AbilityData {
       isAura: isAura ?? this.isAura,
       auraRange: auraRange ?? this.auraRange,
       isPartyBuff: isPartyBuff ?? this.isPartyBuff,
+      cleansesCC: cleansesCC ?? this.cleansesCC,
+      cleansesTypes: cleansesTypes ?? this.cleansesTypes,
     );
   }
 
@@ -492,6 +516,8 @@ class AbilityData {
       if (isAura) 'isAura': isAura,
       if (auraRange != 10.0) 'auraRange': auraRange,
       if (isPartyBuff) 'isPartyBuff': isPartyBuff,
+      if (cleansesCC) 'cleansesCC': cleansesCC,
+      if (cleansesTypes.isNotEmpty) 'cleansesTypes': cleansesTypes.map((e) => e.name).toList(),
     };
   }
 
@@ -552,6 +578,11 @@ class AbilityData {
       isAura: json['isAura'] as bool? ?? false,
       auraRange: (json['auraRange'] as num?)?.toDouble() ?? 10.0,
       isPartyBuff: json['isPartyBuff'] as bool? ?? false,
+      cleansesCC: json['cleansesCC'] as bool? ?? false,
+      cleansesTypes: (json['cleansesTypes'] as List<dynamic>?)
+          ?.map((e) => StatusEffect.values.firstWhere((v) => v.name == e, orElse: () => StatusEffect.none))
+          .where((e) => e != StatusEffect.none)
+          .toList() ?? const [],
     );
   }
 
@@ -611,6 +642,7 @@ class AbilityData {
       isAura: overrides['isAura'] as bool?,
       auraRange: (overrides['auraRange'] as num?)?.toDouble(),
       isPartyBuff: overrides['isPartyBuff'] as bool?,
+      cleansesCC: overrides['cleansesCC'] as bool?,
     );
   }
 }

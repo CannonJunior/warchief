@@ -257,3 +257,22 @@ double _getAbilityCooldown(String abilityName) {
   }
 }
 
+/// Refund mana to the active character (used by Cadence on-beat, Flux free cast).
+void _refundManaByType(GameState gameState, _ManaType type, double amount, String abilityName) {
+  if (amount <= 0) return;
+  switch (type) {
+    case _ManaType.blue:
+      gameState.activeRefundBlueMana(amount);
+    case _ManaType.red:
+      gameState.activeRefundRedMana(amount);
+    case _ManaType.white:
+      gameState.activeRefundWhiteMana(amount);
+    case _ManaType.green:
+      gameState.activeRefundGreenMana(amount);
+    case _ManaType.black:
+      gameState.activeRefundBlackMana(amount);
+    case _ManaType.none:
+      break;
+  }
+  devLog(() => '[STANCE] Refunded ${amount.toStringAsFixed(1)} ${type.name} mana for $abilityName');
+}

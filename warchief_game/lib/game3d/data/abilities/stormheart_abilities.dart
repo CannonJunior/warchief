@@ -397,6 +397,55 @@ class StormheartAbilities {
     category: 'stormheart',
   );
 
+  // ==================== CC ABILITIES ====================
+
+  /// Storm Clap — Melee AoE thunderclap that dazes.
+  static final thunderClap2 = AbilityData(
+    name: 'Storm Clap',
+    description: 'Slam the ground with storm force, dazing nearby enemies.',
+    type: AbilityType.aoe,
+    damage: 25.0, cooldown: 14.0,
+    color: Vector3(0.65, 0.75, 1.0),
+    impactColor: Vector3(0.75, 0.85, 1.0), impactSize: 1.0,
+    aoeRadius: 5.0,
+    statusEffect: StatusEffect.daze, statusDuration: 3.0,
+    manaColor: ManaColor.white, manaCost: 15.0,
+    secondaryManaColor: ManaColor.red, secondaryManaCost: 10.0,
+    category: 'stormheart', damageSchool: DamageSchool.lightning,
+  );
+
+  /// Magnetic Grip — Pull and ground a distant target.
+  static final magneticGrip = AbilityData(
+    name: 'Magnetic Grip',
+    description: 'Magnetically pull a target toward you and ground them.',
+    type: AbilityType.ranged,
+    damage: 15.0, cooldown: 18.0, range: 15.0,
+    color: Vector3(0.6, 0.7, 1.0),
+    impactColor: Vector3(0.7, 0.8, 1.0), impactSize: 0.6,
+    manaColor: ManaColor.white, manaCost: 20.0,
+    category: 'stormheart', damageSchool: DamageSchool.lightning,
+    // Reason: grip pulls the target in, grounded prevents escape via dashes/flight
+    statusEffects: [
+      AbilityStatusEffect(type: StatusEffect.grip, strength: 0.8),
+      AbilityStatusEffect(type: StatusEffect.grounded, duration: 4.0),
+    ],
+  );
+
+  /// Ball Lightning — Slow-moving projectile that charms on contact.
+  static final ballLightning = AbilityData(
+    name: 'Ball Lightning',
+    description: 'Launch a slow ball of lightning that charms the target.',
+    type: AbilityType.ranged,
+    damage: 20.0, cooldown: 25.0, range: 15.0, castTime: 0.5,
+    color: Vector3(0.5, 0.6, 1.0),
+    impactColor: Vector3(0.6, 0.7, 1.0), impactSize: 0.7,
+    projectileSpeed: 5.0,
+    statusEffect: StatusEffect.charm, statusDuration: 2.5,
+    manaColor: ManaColor.white, manaCost: 25.0,
+    secondaryManaColor: ManaColor.blue, secondaryManaCost: 15.0,
+    category: 'stormheart', damageSchool: DamageSchool.lightning,
+  );
+
   /// All stormheart abilities as a list.
   /// Ordered short→long cooldown; slots 11-15 hold the longest cooldowns.
   /// Cut: thunderStrike, thunderclap, conduit, lightningBrand (redundant/overlapping).
@@ -413,8 +462,11 @@ class StormheartAbilities {
     thundergodFist,      // 10 10.0s  combo finisher, stun + knockback
     thunderstormStrike,  // 11 10.0s  chain combo primer
     staticDischarge,     // 12 12.0s  interrupt
-    bloodThunder,        // 13 18.0s  CC AoE stun
-    eyeOfTheStorm,       // 14 35.0s  damage immunity buff
-    avatarOfStorms,      // 15 120.0s ultimate transform
+    thunderClap2,        // 13 14.0s  CC AoE daze
+    magneticGrip,        // 14 18.0s  CC grip + grounded
+    bloodThunder,        // 15 18.0s  CC AoE stun
+    ballLightning,       // 16 25.0s  CC charm projectile
+    eyeOfTheStorm,       // 17 35.0s  damage immunity buff
+    avatarOfStorms,      // 18 120.0s ultimate transform
   ];
 }

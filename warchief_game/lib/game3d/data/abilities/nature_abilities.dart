@@ -201,6 +201,72 @@ class NatureAbilities {
     damageSchool: DamageSchool.nature,
   );
 
+  // ==================== CC ABILITIES ====================
+
+  /// Living Vines — Root and ground a target with entangling vines.
+  static final livingVines = AbilityData(
+    name: 'Living Vines',
+    description: 'Entangle a distant target in living vines, rooting them and '
+        'preventing dashes or flight.',
+    type: AbilityType.ranged,
+    cooldown: 20.0,
+    range: 15.0,
+    castTime: 1.0,
+    color: Vector3(0.3, 0.65, 0.2),
+    impactColor: Vector3(0.4, 0.75, 0.3),
+    impactSize: 0.7,
+    manaColor: ManaColor.green,
+    manaCost: 25.0,
+    category: 'nature',
+    damageSchool: DamageSchool.nature,
+    // Reason: root holds in place while grounded blocks escape dashes/flight
+    statusEffects: [
+      AbilityStatusEffect(type: StatusEffect.root, duration: 4.0),
+      AbilityStatusEffect(type: StatusEffect.grounded, duration: 6.0),
+    ],
+  );
+
+  /// Hibernate — Put a distant target into a deep sleep.
+  static final hibernate = AbilityData(
+    name: 'Hibernate',
+    description: 'Lull a distant target into deep hibernation. Any damage breaks the effect.',
+    type: AbilityType.ranged,
+    cooldown: 35.0,
+    range: 18.0,
+    castTime: 2.0,
+    color: Vector3(0.35, 0.7, 0.35),
+    impactColor: Vector3(0.45, 0.8, 0.45),
+    impactSize: 0.9,
+    statusEffect: StatusEffect.sleep,
+    statusDuration: 8.0,
+    manaColor: ManaColor.green,
+    manaCost: 30.0,
+    category: 'nature',
+    damageSchool: DamageSchool.nature,
+  );
+
+  /// Erupting Thorns — AoE ground eruption that launches targets airborne.
+  static final eruptingThorns = AbilityData(
+    name: 'Erupting Thorns',
+    description: 'Cause thorns to erupt from the ground, dealing damage and '
+        'launching enemies airborne.',
+    type: AbilityType.aoe,
+    damage: 30.0,
+    cooldown: 22.0,
+    range: 12.0,
+    color: Vector3(0.4, 0.55, 0.2),
+    impactColor: Vector3(0.5, 0.65, 0.3),
+    impactSize: 1.0,
+    aoeRadius: 6.0,
+    statusEffect: StatusEffect.airborne,
+    statusStrength: 3.0,
+    statusDuration: 1.0,
+    manaColor: ManaColor.green,
+    manaCost: 20.0,
+    category: 'nature',
+    damageSchool: DamageSchool.nature,
+  );
+
   /// All nature abilities as a list.
   /// Ordered short→long cooldown; slots 8-10 hold the longest cooldowns.
   static List<AbilityData> get all => [
@@ -213,6 +279,9 @@ class NatureAbilities {
     thornbindMark,    //  7 12.0s  permanent vulnerability
     naturesWrath,     //  8 14.0s  AoE
     silencingVine,    //  9 18.0s  interrupt ranged
-    thorns,           // 10 30.0s  buff damage reflect
+    livingVines,      // 10 20.0s  CC root + grounded
+    eruptingThorns,   // 11 22.0s  CC AoE airborne
+    thorns,           // 12 30.0s  buff damage reflect
+    hibernate,        // 13 35.0s  CC long sleep
   ];
 }

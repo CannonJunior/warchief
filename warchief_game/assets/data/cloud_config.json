@@ -1,0 +1,13 @@
+{
+  "clouds": {
+    "count": 18,
+    "spawnRadius": 300.0,
+    "altitudeMin": 55.0,
+    "altitudeMax": 90.0,
+    "puffsPerCloudMin": 5,
+    "puffsPerCloudMax": 12,
+    "puffSizeMin": 8.0,
+    "puffSizeMax": 22.0,
+    "driftSpeed": 0.4
+  }
+}

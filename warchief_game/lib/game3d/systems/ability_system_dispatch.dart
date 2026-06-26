@@ -60,6 +60,14 @@ void _refreshQueuePrimedSlots(GameState gameState) {
 
 // ==================== COOLDOWN MANAGEMENT ====================
 
+/// Transient stance cooldown modifier set by [_executeAbilityByName]
+/// before any cooldown-setting call for the current ability dispatch.
+double _activeStanceCooldownMod = 1.0;
+
+/// Transient stance damage modifier set by [_executeAbilityByName].
+/// Applied in [_autoHitCurrentTarget] to scale outgoing damage.
+double _activeStanceDamageMod = 1.0;
+
 /// Set cooldown for a slot, applying Melt reduction and stance cooldown multiplier.
 void _setCooldownForSlot(int slotIndex, double cooldown, GameState gameState) {
   final cds = gameState.activeAbilityCooldowns;
@@ -68,6 +76,8 @@ void _setCooldownForSlot(int slotIndex, double cooldown, GameState gameState) {
   final melt = gameState.activeMelt;
   if (melt > 0) cooldown = cooldown / (1 + melt / 100.0);
   cooldown *= gameState.activeStance.cooldownMultiplier;
+  cooldown *= _activeStanceCooldownMod;
+  cooldown *= WeaponSystem.getActiveModifiers(gameState).cooldownMultiplier;
   cds[slotIndex] = cooldown;
   // Reason: keep max in sync with actual cooldown so the ring animation sweeps
   // the full arc correctly (ring progress = remaining / max).
@@ -207,6 +217,17 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
     secondaryManaCost *= stance.manaCostMultiplier;
   }
 
+  // Advanced stance mechanics — compute all mods upfront
+  final stanceMods = _computeStanceMods(gameState, abilityData, abilityName, slotIndex, manaCost);
+  if (stanceMods.silenced) {
+    gameState.addConsoleLog('$abilityName blocked: Crucible Overheat!', level: ConsoleLogLevel.warn);
+    return;
+  }
+  if (stanceMods.manaCostMultiplier != 1.0) {
+    manaCost *= stanceMods.manaCostMultiplier;
+    secondaryManaCost *= stanceMods.manaCostMultiplier;
+  }
+
   // Silent Mind: next white mana ability is free
   if (gameState.silentMindActive && manaType == _ManaType.white && manaCost > 0) {
     devLog(() => '[SILENT MIND] $abilityName mana cost overridden to 0 (was $manaCost)');
@@ -230,7 +251,10 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
 
   // Cast-time abilities: defer mana until cast completes
   if (abilityData != null && abilityData.hasCastTime) {
-    if (gameState.silentMindActive && manaType == _ManaType.white) {
+    if (stanceMods.forceInstant) {
+      devLog(() => '[STANCE] $abilityName forced instant by stance mechanic');
+      // Fall through to instant execution
+    } else if (gameState.silentMindActive && manaType == _ManaType.white) {
       devLog(() => '[SILENT MIND] $abilityName cast time skipped — instant cast!');
       // Fall through to instant execution
     } else {
@@ -312,8 +336,9 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
   }
 
   // Trigger GCD — 1.0s base, reduced by haste and stance
-  {
-    final haste = gameState.activeHaste;
+  // Tempest cancel-chain: skip GCD entirely for chained abilities.
+  if (!stanceMods.skipGcd) {
+    final haste = gameState.activeHaste + stanceMods.bonusHaste;
     double gcd = 1.0 / (1 + haste / 100.0);
     gcd *= gameState.activeStance.cooldownMultiplier;
     if (gameState.isWarchiefActive) {
@@ -323,6 +348,18 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
       gameState.activeAlly!.gcdRemaining = gcd;
       gameState.activeAlly!.gcdMax = gcd;
     }
+  }
+
+  // Notify stance system of ability cast (Crucible heat, etc.)
+  final overheated = _notifyStanceOnCast(gameState);
+  if (overheated) {
+    final silenceDur = gameState.activeStance.mechanics?.overheatSilenceDuration ?? 3.0;
+    _applyCrucibleOverheat(gameState, silenceDur);
+  }
+
+  // Stance mana refund (Cadence on-beat, Flux transition free cast)
+  if (stanceMods.manaRefund > 0 && manaType != _ManaType.none) {
+    _refundManaByType(gameState, manaType, stanceMods.manaRefund, abilityName);
   }
 
   // Consume this slot's combo bonus now that the ability has fired.
@@ -349,6 +386,22 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
   // Apply combo GCD bonuses to primed follow-up slots.
   if (abilityData != null && abilityData.comboPrimes.isNotEmpty) {
     _applyComboGcdBonuses(abilityData.comboPrimes, gameState);
+  }
+
+  // Set transient stance modifiers for this dispatch cycle
+  _activeStanceCooldownMod = stanceMods.cooldownMultiplier;
+  _activeStanceDamageMod = stanceMods.damageMultiplier;
+
+  // Track last-fired ability for stance hit notifications
+  _lastFiredAbilityData = abilityData;
+
+  // Apply Momentum Kinetic Overflow cross-domain bonus
+  if (stanceMods.kineticOverflowBonus > 0 && abilityData != null) {
+    final overflow = _computeKineticOverflow(stanceMods, abilityData.type);
+    if (overflow > 1.0) {
+      stanceMods.damageMultiplier *= overflow;
+      gameState.addConsoleLog('Kinetic Overflow! +${((stanceMods.kineticOverflowBonus) * 100).round()}%');
+    }
   }
 
   // ---- Named ability dispatch ----
@@ -455,6 +508,13 @@ void _executeAbilityByName(String abilityName, int slotIndex, GameState gameStat
         _executeDefaultSlotAbility(slotIndex, gameState);
       }
   }
+
+  // Reset transient stance modifiers
+  _activeStanceCooldownMod = 1.0;
+  _activeStanceDamageMod = 1.0;
+
+  // Apply stance post-fire effects
+  if (stanceMods.applyExposed) _applyWardenExposed(gameState, stanceMods);
 
   // Apply combo-hit pushback to the current target's cast/channel state.
   if (_wasComboFired) _applyComboHitPushback(gameState);

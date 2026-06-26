@@ -72,8 +72,19 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     // Tick and expire active status effects on all entities
     gameState.updateActiveEffects(dt);
 
+    // Per-frame CC behaviors (sleep regen, banish cooldown accel, suppress pairs)
+    CcBehaviorSystem.update(dt, gameState);
+
     // Update stance timers (Fury drain, Drunken re-rolls, switch cooldown)
     gameState.updateStanceTimers(dt);
+
+    // Update advanced stance mechanics (Cadence beats, Tempest chains, etc.)
+    StanceRuntimeSystem.update(
+      dt,
+      gameState.playerStance,
+      gameState.activeStance,
+      gameState.stanceRuntime,
+    );
 
     // Apply building aura effects (health + mana regen near buildings)
     BuildingSystem.applyBuildingAuras(gameState, dt);
@@ -133,10 +144,11 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     // Animate duel arena banner (drop, flutter, victory flag)
     gameState.duelBannerState?.update(dt, globalWindState);
 
-    // Drift cloud clusters with wind
+    // Drift cloud clusters with wind (use effectiveWindStrength so clouds
+    // accelerate during derecho storms, matching ground-unit drift visuals)
     final wind = globalWindState;
     if (wind != null && globalCloudSystem != null) {
-      globalCloudSystem!.update(dt, wind.windAngle, wind.windStrength);
+      globalCloudSystem!.update(dt, wind.windAngle, wind.effectiveWindStrength);
     }
 
     // Apply wind drift to all ground units
@@ -149,6 +161,16 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     if (globalGameplaySettings?.unitCollisionEnabled ?? true) {
       UnitCollisionSystem.resolve(gameState);
     }
+
+    // Re-check wall collisions after unit separation — cross-faction pushes
+    // can shove units through walls that were resolved in the first pass.
+    _resolveTowerWallCollisions();
+
+    // Pull units toward active gravity wells
+    GravityWellSystem.update(dt, gameState);
+
+    // Tick airborne physics (gravity, landing, fall damage, Y offset)
+    AirborneSystem.update(dt, gameState);
 
     // Update dust devil swirls: move columns, apply unit lift
     _updateDustDevils(dt);
@@ -361,6 +383,10 @@ mixin _WidgetUpdateMixin on _GameStateBase {
     if (drift[0] == 0.0 && drift[1] == 0.0) return;
 
     for (final ally in gameState.allies) {
+      if (ally.health <= 0) continue;
+      // Reason: the player-controlled ally already gets drift in input_system
+      // with stance resistance; applying it again here would double the effect.
+      if (!gameState.isWarchiefActive && ally == gameState.activeAlly) continue;
       ally.transform.position.x += drift[0];
       ally.transform.position.z += drift[1];
     }

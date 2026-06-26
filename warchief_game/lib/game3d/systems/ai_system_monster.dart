@@ -75,14 +75,34 @@ class _MonsterAI {
         gameState.monsterTransform != null &&
         gameState.playerTransform != null) {
 
-      // Single pass to check stun + fear (avoids two separate .any() scans)
-      bool isStunned = false;
+      // Single pass to check hard CC + fear (avoids multiple .any() scans)
+      bool isHardCCd = false;
       bool isFeared = false;
       for (final e in gameState.monsterActiveEffects) {
-        if (e.type == StatusEffect.stun) { isStunned = true; break; }
-        if (e.type == StatusEffect.fear) { isFeared = true; }
+        if (e.isExpired) continue;
+        switch (e.type) {
+          case StatusEffect.stun:
+          case StatusEffect.sleep:
+          case StatusEffect.suppress:
+          case StatusEffect.banish:
+          case StatusEffect.airborne:
+          case StatusEffect.freeze:
+          case StatusEffect.knockdown:
+            isHardCCd = true;
+            break;
+          case StatusEffect.charm:
+          case StatusEffect.polymorph:
+            isHardCCd = true;
+            break;
+          case StatusEffect.fear:
+            isFeared = true;
+            break;
+          default:
+            break;
+        }
+        if (isHardCCd) break;
       }
-      if (isStunned) {
+      if (isHardCCd) {
         gameState.monsterCurrentPath = null;
         return;
       }

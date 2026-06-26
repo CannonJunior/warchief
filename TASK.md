@@ -2,6 +2,546 @@
 
 ## Current Tasks
 
+### In Progress — Historically-Accurate Weapon System
+
+5 weapon categories × 3 types = 15 weapons with historically-faithful combat mechanics. Weapons modify ability cooldowns, combo mechanics, damage-vs-armor effectiveness, and stance synergies.
+
+#### Phase 1: Data Foundation
+- ✅ **1a. New enums** — `WeaponCategory` (6 values), `WeaponType` (16 values), `ArmorCategory` (4 values) + display extensions in `lib/models/item.dart`
+- ✅ **1b. Item fields** — `weaponCategory`, `weaponType`, `armorCategory` nullable fields on `Item` with full serialization
+- ✅ **1c. Monster armor** — `armorCategory` field on `MonsterDefinition` in `lib/models/monster_ontology.dart`
+- ✅ **1d. Weapon config JSON** — `assets/data/weapon_config.json` with 15 weapon type definitions, armor effectiveness matrix, 10 stance synergies, 5 combo modifiers
+- ✅ **1e. Config loader** — `lib/game3d/state/weapon_config.dart` singleton following ComboConfig pattern
+- ✅ **1f. Init** — `_initializeWeaponConfig()` in `game3d_widget_init.dart`, called from `game3d_widget.dart`
+- ✅ **1g. Items** — 15 new weapon items in `items.json`, existing weapons/armor classified with categories
+
+#### Phase 2: Combat Integration
+- ✅ **2a. Data classes** — `lib/game3d/data/weapon_types.dart`: `WeaponModifiers`, `WeaponStanceSynergy`
+- ✅ **2b. Weapon system** — `lib/game3d/systems/weapon_system.dart`: modifier lookup, armor effectiveness, special mechanics (halfSwording, hookShield, cleave, concussiveForce, armorPierce, shieldBreaker, parryBypass, wrapAround, unpredictable, hookPull, sweepingBlow, firstStrike, versatileStrike)
+- ✅ **2c. Cooldown hook** — `ability_system_dispatch.dart`: weapon cooldown multiplier in `_setCooldownForSlot`
+- ✅ **2d. Damage hook** — `ability_system_interactions.dart`: weapon damage + armor effectiveness + special mechanics in `_autoHitCurrentTarget`
+- ✅ **2e. Game state** — `monsterArmorCategory` field, `ArmorCategory` import
+
+#### Phase 3: Combo Integration
+- ✅ **3a. Threshold/window mods** — `melee_combo_system.dart`: weapon category modifies combo threshold (+1 hammers, -1 chains) and window duration
+- ✅ **3b. Chain bonuses** — `_applyWeaponChainBonus`: hammers add stun, axes add knockback, polearms add grip on chain finishers
+
+#### Phase 4: Stance Synergies
+- ⬜ **4a. Stance hooks** — `ability_system_stance_hooks.dart`: weapon-stance synergy lookups per stance function
+
+#### Phase 5: UI Updates
+- ⬜ **5a. Character panel** — weapon type tooltip on mainHand slot
+- ⬜ **5b. Bag panel** — effectiveness hints on weapon tooltips
+- ⬜ **5c. Combat HUD** — target armor category indicator
+
+#### Build Status
+- ✅ `flutter analyze --no-pub` — 0 errors (50 pre-existing info/warning issues)
+
+---
+
+### ✅ Completed - 2026-06-24
+
+#### Stance Revamp — 7 Playstyle-Altering Stances
+Replaced the stat-multiplier-only stance paradigm with 7 new stances that alter playstyle, tactics, and ability interactions. Research-informed by Nioh, Sekiro, DMC, Ghost of Tsushima, Crimson Desert, Replaced, 007 First Light, and LEGO Batman. See `STANCE_REVAMP.md` for full design docs.
+
+- ✅ **Data layer**: `StanceMechanics` class (65 configurable properties), `StanceData.mechanics` field, 7 new `StanceId` enum values, JSON config with all stance definitions
+  - `stance_mechanics.dart` (new, 326 lines), `stance_types.dart` (updated), `stance_definitions.dart` (updated), `stance_config.json` (updated)
+- ✅ **Runtime state**: `StanceRuntimeState` class tracking beat timers, groove stacks, chain depth, heat, momentum stacks, pressure gauges per target with damage school tracking, flux transition/memory/weave/stagnation timers
+  - `stance_runtime_state.dart` (new, 165 lines)
+- ✅ **Runtime system**: Per-frame update + event handlers for all 7 stances
+  - `stance_runtime_system.dart` (new, 430 lines)
+- ✅ **Ability pipeline hooks**: Pre-execution mods, on-hit notifications, on-cast notifications
+  - `ability_system_stance_hooks.dart` (new, 497 lines)
+  - **Cadence**: beat timing + Groove stacks + on-beat damage/CD/mana bonuses
+  - **Tempest**: windup/cast reduction + cancel-chain GCD skip + escalating damage + channel tick speed
+  - **Warden**: directional input recording + per-direction ability modifiers + Predator's Eye stealth first-strike
+  - **Crucible**: half-cooldowns + heat accumulation + overheat silence (interrupts casts) + 0-Heat payoff + crit heat reduction
+  - **Momentum**: per-stack bonuses + stack decay + max-stack splash damage to nearby enemies + Kinetic Overflow cross-domain bonus
+  - **Pressure**: gauge building per target + damage school tracking + elemental Break variants (Shatter/Ignition/Deep Freeze/Overload/Void Collapse) + stun + damage amp + cooldown reset
+  - **Flux**: transition bonus (instant/free/+50%) + Memory cooldown reset on return + Weave State heal-per-switch + stagnation penalty
+- ✅ **Effect application**: Pressure Break (stun + vulnerability + CD reset), Crucible Overheat (silence + cast interrupt), Warden Exposed (vulnerability debuff), Momentum splash (AoE damage), Kinetic Overflow, Flux Memory/Weave heal
+- ✅ **Input integration**: Warden WASD directional recording in `input_system.dart`
+- ✅ **Stance switch hooks**: `onStanceEnter`/`onStanceLeave` in `game_state_stance.dart` with Flux Memory CD reset and Weave heal
+- ✅ **Mana refund pipeline**: `activeRefund{Blue,Red,White,Green,Black}Mana` helpers on GameState
+- ✅ **UI**: `StanceMechanicHud` widget (401 lines) — per-stance indicators: Cadence beat pulse arc + Groove dots, Tempest chain counter, Warden directional arrow + Predator badge, Crucible heat gauge bars, Momentum stack dots + splash indicator, Pressure target gauge bar, Flux transition/weave/stagnation status badges
+- ✅ Build verified: `flutter analyze --no-pub` — 0 errors (46 pre-existing info/warning issues)
+
+### Pending — Displacement & Crowd Control Ability System
+
+A comprehensive CC and displacement ability system expanding beyond the existing stun/freeze/root/silence/fear/blind/knockback/grip/knockdown effects. Adds new status effect types, airborne physics, per-class CC abilities with unique twists on familiar MMO/fighting-game archetypes, and a config-driven diminishing returns system.
+
+**Existing CC infrastructure** (already implemented):
+- `StatusEffect` enum: stun, freeze, slow, root, fear, blind, silence, knockback, grip, knockdown, interrupt, weakness, + vulnerability types
+- `AbilityStatusEffect` multi-effect list on `AbilityData`
+- `ActiveEffect` with duration/strength tracking, icons, colors
+- `CcIndicatorOverlay` world-space badges for stun/freeze/root/silence/fear/blind/slow/interrupt
+- `_applyStatusEffects()` in `ability_system_interactions.dart` handling displacement + timed effects
+- `UnitCollisionSystem` for unit separation physics
+
+---
+
+#### Phase 1: New StatusEffect Types + CC Engine Expansion
+
+Expand the `StatusEffect` enum and wire each new type through the full stack: `ActiveEffect` (icon, color, isBuff/isDebuff), `CcIndicatorOverlay` badge set, `ability_system_interactions.dart` application logic, and AI awareness in `duel_system.dart` / `ai_system.dart`.
+
+- ✅ **1a. Add new StatusEffect enum values** — `ability_types.dart`
+  Add 12 new values to the `StatusEffect` enum:
+  - `daze` — Soft CC: 50% movement slow + any damage taken interrupts current cast/channel/windup. **Twist**: also resets the target's melee combo chain count, punishing aggressive overextension.
+  - `airborne` — Hard CC: unit is launched upward on the Y-axis, cannot act, enables juggle follow-ups from allies. **Twist**: airborne duration extends with ambient wind strength (Windwalker synergy), and landing deals fall damage proportional to launch height.
+  - `sleep` — Hard CC: long duration (4–8s), breaks on ANY damage including DoTs. **Twist**: sleeping targets passively regenerate 1% max HP/s (tactical dilemma — you CC them but they heal), and the caster gains +50% mana regen while their sleep target is asleep ("dream siphon").
+  - `charm` — Hard CC: target involuntarily walks toward the caster at 60% speed, cannot use abilities. **Twist**: if charmed target passes through allied units, those allies are briefly slowed (the "heartbreak" ripple — a charm so strong it disrupts nearby friends).
+  - `polymorph` — Hard CC: transformed into a critter, movement only at 70% speed, breaks on damage. **Twist**: polymorphed targets leave a faintly glowing "spirit trail" on the ground that persists 3s, granting the caster minimap vision along the path. Different classes transform into different critters (frog for nature, sheep for arcane, scarab for shadow).
+  - `taunt` — Forced to basic-attack the taunter for duration. Cannot switch targets or use non-melee abilities. **Twist**: taunted targets deal 25% reduced damage to the taunter ("frustration"), but if taunt is cleansed or expires while the taunter is still in range, the victim gains a 2s "Indignation" haste buff.
+  - `disorient` — Soft CC: WASD movement directions are remapped (e.g., W=strafe-left, A=backward). Camera slowly sways ±15°. **Twist**: the remapping rotates every 1.5s so the victim can't simply adapt. Spellcasting is allowed but ability queue inputs have a 0.3s random delay applied.
+  - `grounded` — Soft CC: prevents all movement abilities (charges, dashes, teleports, flight launch). Normal walking and spellcasting unaffected. **Twist**: grounded targets take +20% damage from `DamageSchool.nature` (rooted to the earth = vulnerable to telluric forces). Visually, thorny vines wrap the target's feet.
+  - `suppress` — Hard CC: cannot act, cannot be cleansed by allies, bypasses CC-break abilities. **Twist**: suppression is always a mutual channel — the caster is also locked in place and cannot act, creating a 2-person lockdown that allies on either side must capitalize on or rescue from. Damage to the caster breaks suppression.
+  - `nearsight` — Soft CC: minimap goes fully dark, fog-of-war radius shrinks to 8 units (from normal ~50), allied nameplates/health bars hidden beyond 10 units. **Twist**: nearsighted targets also lose their CC indicator overlay badges, so they can't tell what other debuffs are on them (information denial).
+  - `banish` — Unique: target is phased out of combat — invulnerable, untargetable, but cannot act or move. **Twist**: while banished, all of the target's ability cooldowns tick down at 3x speed (a "strategic timeout" — enemies use it to remove a threat, but the threat comes back with everything ready).
+  - `gravityWell` — Unique positional CC: target is slowly pulled toward a fixed world-space anchor point at 2 units/s. Can resist by walking away but at 40% reduced speed. **Twist**: the gravity well also bends nearby non-homing projectiles toward its center, creating a "spell magnet" zone.
+
+- ✅ **1b. ActiveEffect support for new types** — `active_effect.dart`
+  Add icon and color entries for all 12 new StatusEffect values:
+  - `daze`: Icons.blur_on, Color(0xFFDDAA33) (amber)
+  - `airborne`: Icons.flight, Color(0xFFAADDFF) (sky blue)
+  - `sleep`: Icons.bedtime, Color(0xFF9966CC) (lavender)
+  - `charm`: Icons.favorite_border, Color(0xFFFF66AA) (pink)
+  - `polymorph`: Icons.pets, Color(0xFF77CC44) (lime)
+  - `taunt`: Icons.record_voice_over, Color(0xFFFF4444) (red)
+  - `disorient`: Icons.explore_off, Color(0xFFCCAA00) (gold)
+  - `grounded`: Icons.downloading, Color(0xFF886633) (earth brown)
+  - `suppress`: Icons.lock, Color(0xFF660066) (deep purple)
+  - `nearsight`: Icons.visibility_off (reuse blind icon), Color(0xFF444466) (dark indigo)
+  - `banish`: Icons.remove_circle_outline, Color(0xFF333366) (void blue)
+  - `gravityWell`: Icons.trip_origin, Color(0xFF6600CC) (violet)
+  Update `isBuff`/`isDebuff` classification — all 12 are debuffs.
+
+- ✅ **1c. CC Indicator Overlay expansion** — `cc_indicator_overlay.dart`
+  Add all 12 new types to the `_ccTypes` set. Ensure world-space badges render correctly for each. Special handling:
+  - `airborne`: badge should track the unit's actual elevated Y position (floats above normal head height)
+  - `banish`: badge renders with 50% opacity ghost effect (unit is phased out)
+  - `suppress`: badge renders on BOTH the caster and the target (mutual lockdown)
+  - `gravityWell`: badge includes a small arrow pointing toward the gravity anchor
+
+- ✅ **1d. CC config JSON** — `assets/data/cc_config.json` (new file)
+  Configuration-driven values for the CC system:
+  ```
+  {
+    "diminishingReturns": {
+      "enabled": true,
+      "window": 18.0,
+      "reductions": [1.0, 0.5, 0.25, 0.0],
+      "categories": {
+        "stun": ["stun", "knockdown", "airborne"],
+        "incapacitate": ["sleep", "polymorph", "banish", "charm"],
+        "root": ["root", "grounded"],
+        "silence": ["silence", "suppress"],
+        "disorient": ["fear", "disorient", "daze"]
+      }
+    },
+    "airborne": {
+      "launchHeightBase": 4.0,
+      "gravityAccel": 12.0,
+      "windDurationBonus": 0.3,
+      "fallDamagePerUnit": 5.0,
+      "juggleWindowAfterLand": 0.5
+    },
+    "sleep": {
+      "regenPerSecondPercent": 1.0,
+      "casterManaRegenBonus": 0.5
+    },
+    "charm": {
+      "walkSpeedPercent": 0.6,
+      "allySlowRadius": 3.0,
+      "allySlowDuration": 1.0,
+      "allySlowStrength": 0.3
+    },
+    "polymorph": {
+      "moveSpeedPercent": 0.7,
+      "trailDuration": 3.0,
+      "trailVisibilityRadius": 15.0
+    },
+    "taunt": {
+      "damageReduction": 0.25,
+      "indignationDuration": 2.0,
+      "indignationHaste": 0.3
+    },
+    "disorient": {
+      "remapRotateInterval": 1.5,
+      "cameraSway": 15.0,
+      "inputDelay": 0.3
+    },
+    "grounded": {
+      "natureDamageBonus": 0.2
+    },
+    "suppress": {
+      "casterBreakOnDamage": true
+    },
+    "nearsight": {
+      "fogRadius": 8.0,
+      "nameplateRadius": 10.0,
+      "hidesCcOverlay": true
+    },
+    "banish": {
+      "cooldownTickRate": 3.0
+    },
+    "gravityWell": {
+      "pullSpeed": 2.0,
+      "moveSpeedReduction": 0.4,
+      "projectileBendRadius": 8.0,
+      "projectileBendStrength": 0.5
+    }
+  }
+  ```
+  Create `lib/game3d/state/cc_config.dart` following the ManaConfig pattern with dot-notation getters and override persistence.
+
+- ✅ **1e. Diminishing Returns (DR) system** — `lib/game3d/systems/cc_diminishing_returns.dart` (new file)
+  Track recent CC applications per target per DR category. Within the DR window (default 18s), successive CC of the same category has reduced duration: 100% → 50% → 25% → immune. DR counter resets after the window expires with no new application. Categories share DR across their member effects (stun/knockdown/airborne all share the "stun" DR, so you can't chain stun→knockdown→launch for full duration). Wire into `_applyStatusEffects()` to modify duration before applying.
+
+- ✅ **1f. CC break / cleanse ability support** — `ability_types.dart` + `ability_system_implementations.dart`
+  Add `cleansesCC: bool` and `cleansesTypes: List<StatusEffect>` fields to `AbilityData`. When a cleanse ability is used:
+  - If `cleansesTypes` is empty, remove ALL non-suppress debuffs
+  - If `cleansesTypes` is specified, remove only matching types
+  - Cannot cleanse `suppress` (by design — only damage to the caster breaks it)
+  - Cannot cleanse `airborne` (must wait for gravity)
+  Existing cleanse abilities (Arcane Cleanse from Aethermancer) should get `cleansesCC: true`.
+
+- ✅ **1g. Stance-CC interaction rules** — `ability_system_interactions.dart` + `cc_config.dart`
+  Each of the 7 new stances (STANCE_REVAMP.md) modifies how CC is applied and received. Rules are kept to 2–3 per stance for intuitive play. All multipliers belong in `cc_config.json` under a `"stanceInteractions"` block. Wire into `_applyStatusEffects()` (duration modification) and the per-stance runtime update (defensive triggers).
+
+  **CADENCE** — *Rhythm extends everything, losing rhythm costs everything*
+  - Offensive: CC abilities cast within the on-beat window get the same `rhythmDamageBonus` as duration bonus (+25% CC duration). A perfectly timed Polymorph lasts 7.5s instead of 6s.
+  - Defensive: Being hard-CC'd (stun/sleep/charm/polymorph/suppress/banish/airborne) resets Groove stacks to 0. The rhythm breaks completely — you must rebuild from scratch after recovering.
+  - Net effect: Cadence players are the best at applying long-duration CC but are devastated by receiving it. Encourages trading CC carefully.
+
+  **TEMPEST** — *Too fast to lock down, too rushed to commit*
+  - Offensive: CC abilities fired as part of a cancel chain (chainDepth ≥ 1) have normal duration. CC abilities outside a cancel chain have 15% reduced duration (rushed, uncommitted).
+  - Defensive: All incoming hard CC durations are reduced by 20% (the target is moving too fast to fully lock down). Soft CC (daze/slow/disorient/grounded) is unaffected.
+  - Net effect: Weave CC into rapid combos for full effect. Getting stunned for 2.4s instead of 3s creates small but crucial windows to recover. Tempest players should chain a damage ability → CC ability for best results.
+
+  **WARDEN** — *Preparation is everything, losing mobility is catastrophic*
+  - Offensive: CC abilities from Predator's Eye (first strike after `predatorActivationTime` of stillness) have +40% duration. Directional modifiers apply to CC: forward = +range, backward = +knockback force, stationary = +AoE radius on CC. A Predator's Eye sleep from stealth lasts 7s instead of 5s.
+  - Defensive: While pressing strafe keys (A/D), incoming soft CC (daze/slow/disorient/grounded) has a 15% chance to be fully resisted (the strafe dodge bonus extends to CC avoidance).
+  - Drawback: `grounded` effect on a Warden also disables ALL directional bonuses for its duration (movement IS the Warden's identity — ground them and they lose everything).
+
+  **CRUCIBLE** — *CC is expensive heat, but massive at zero*
+  - Offensive: CC abilities generate 2 Heat per cast instead of 1 (locking someone down is "hot" work). The Cool Down Payoff (first ability at 0 Heat) grants +50% CC duration if that ability applies CC. A 0-Heat stun lasts 4.5s instead of 3s.
+  - Defensive: Being CC'd pauses the Heat decay timer (you can't cool off while locked down). If CC'd at 8+ Heat, you're trapped near Overheat with no way to decay — extremely dangerous.
+  - Net effect: Strategic CC timing is critical. Dump damage to build Heat, let it decay, then open with a massive CC at 0 Heat. Getting CC'd at high Heat is a death sentence.
+
+  **MOMENTUM** — *Force scales with speed, but lockdowns bleed momentum*
+  - Offensive: Displacement CC (knockback, launch/airborne, grip, scatter) force scales with +5% per Momentum stack (up to +40% at 8 stacks). At max stacks, hitting an already-airborne target extends their air time by 0.5s (juggle extension).
+  - Defensive: Being hard-CC'd causes Momentum stacks to decay at 3x the normal rate (each 2.5s decay tick happens every 0.83s). A 3s stun at 6 stacks leaves you at ~2 stacks when it ends.
+  - Net effect: Momentum players are the kings of displacement combos — knockbacks hit like trucks at high stacks, and juggle chains extend airborne enemies. But getting stunned yourself bleeds everything you built.
+
+  **PRESSURE** — *CC builds the break gauge, but displacement resets it*
+  - Offensive: CC abilities applied to your current pressure target build +50% bonus pressure (e.g., a melee CC adds 22.5% instead of 15%). During Break state (after gauge reaches 100%), CC applied ignores diminishing returns entirely — the target is broken, pile it on.
+  - Defensive: Being CC'd causes pressure on your current target to decay at 3x rate (you lose focus while locked down).
+  - Drawback: Displacement CC (knockback/grip/launch) that physically MOVES your pressure target resets their pressure gauge to 50% (you're breaking contact with the target you've been working). Timed CC (stun/root/sleep) is safe for pressure — displacement is a gamble.
+
+  **FLUX** — *Switching cleanses CC, stagnation invites it*
+  - Offensive: CC applied during the transition bonus window (first 1.5s after switching INTO Flux) gets +30% duration. Stance-switch → immediate CC is the Flux player's signature move.
+  - Defensive: Each stance switch cleanses one random active soft CC effect (daze, slow, disorient, or grounded). If you're dazed and slowed, switching stances removes one of them. Costs a switch, but Flux has `fluxSwitchCooldown` of 0.5s.
+  - Drawback: The stagnation penalty (5s+ in Flux without switching) increases incoming CC duration by +25%. A Flux player who stops switching becomes the easiest CC target on the field.
+
+  Add these values to `cc_config.json`:
+  ```
+  "stanceInteractions": {
+    "cadence": { "onBeatCcDurationBonus": 0.25, "ccResetsGroove": true },
+    "tempest": { "nonChainCcDurationPenalty": 0.15, "incomingHardCcReduction": 0.20 },
+    "warden": { "predatorCcDurationBonus": 0.40, "strafeCcResistChance": 0.15, "groundedDisablesDirectional": true },
+    "crucible": { "ccHeatCost": 2, "zeroheatCcDurationBonus": 0.50, "ccPausesHeatDecay": true },
+    "momentum": { "displacementForcePerStack": 0.05, "maxStackAirborneExtension": 0.5, "ccMomentumDecayMultiplier": 3.0 },
+    "pressure": { "ccPressureBuildBonus": 0.50, "breakIgnoresDR": true, "ccPressureDecayMultiplier": 3.0, "displacementPressureReset": 0.50 },
+    "flux": { "transitionCcDurationBonus": 0.30, "switchCleansesSoftCc": true, "stagnationCcDurationPenalty": 0.25 }
+  }
+  ```
+
+---
+
+#### Phase 2: Displacement & Airborne Physics
+
+Build the vertical displacement (launch/airborne) system and enhance existing knockback with terrain interaction.
+
+- ✅ **2a. Airborne state tracking** — `game_state.dart` + `ally.dart` + `monster.dart`
+  Add fields for airborne physics on player and ally models:
+  - `airborneHeight: double` — current Y offset above ground (0 = grounded)
+  - `airborneVelocityY: double` — vertical velocity (positive = up)
+  - `isAirborne: bool` getter — true when `airborneHeight > 0.1`
+  - `airborneSourceHeight: double` — peak height reached (for fall damage calc)
+  Wire `isAirborne` into `isPerformingAction` and input blocking — airborne units can't move, cast, or use abilities.
+
+- ✅ **2b. Airborne physics update loop** — `lib/game3d/systems/airborne_system.dart` (new file)
+  Each frame for every unit with `airborneHeight > 0`:
+  1. Apply gravity: `velocityY -= gravityAccel * dt`
+  2. Update height: `airborneHeight += velocityY * dt`
+  3. Track peak: `sourceHeight = max(sourceHeight, airborneHeight)`
+  4. On landing (`airborneHeight <= 0`):
+     - Clamp to 0, zero velocity
+     - Apply fall damage: `(sourceHeight - launchHeightBase) * fallDamagePerUnit` (only if sourceHeight > base threshold)
+     - Start juggle window timer (0.5s where relaunches have bonus height)
+     - Apply "Grounded" micro-stagger: 0.3s where unit can't act (landing recovery)
+  5. Wind bonus: if `globalWindState.effectiveStrength > 1.0`, multiply remaining airborne duration by `1 + windStrength * windDurationBonus`
+  Call from `game3d_widget_update.dart` after ability system, before render.
+
+- ✅ **2c. Launch displacement implementation** — `ability_system_interactions.dart`
+  When applying `StatusEffect.airborne`:
+  - Set `airborneVelocityY = sqrt(2 * gravity * launchHeight)` where `launchHeight = strength` from the AbilityStatusEffect
+  - If target is already airborne (juggle), add velocity rather than replacing (combo juggle extends height)
+  - If within juggle window (just landed), grant +30% bonus launch height
+  - Play launch sound + upward particle burst
+  Rendering: offset the unit mesh's Y position by `airborneHeight` in `render_system.dart`. Shadow stays on ground.
+
+- ✅ **2d. Enhanced knockback — terrain collision** — `ability_system_interactions.dart`
+  When knockback displaces a unit, check terrain along the displacement path:
+  - If displacement path crosses a steep terrain rise (Δheight > 2.0 within 1 unit), treat as wall collision
+  - Wall collision: stop displacement, deal bonus damage = `knockbackForce * 0.5`, apply 1s stun ("wall slam")
+  - If knockback pushes unit off a cliff edge (Δheight < -3.0), convert to airborne state with horizontal momentum preserved
+  - Tower walls (indoor zones) count as wall collisions
+
+- ✅ **2e. Gravity Well positional system** — `lib/game3d/systems/gravity_well_system.dart` (new file)
+  Track active gravity wells as `{anchorX, anchorZ, radius, pullSpeed, duration, remainingDuration, casterId}`.
+  Each frame:
+  1. For all units within radius, apply pull vector toward anchor: `pullDir * pullSpeed * dt * (1 - distanceRatio)`
+  2. Units actively moving away can resist but at `moveSpeedReduction` penalty
+  3. Non-homing projectiles within `projectileBendRadius` have their velocity vector bent toward the anchor by `projectileBendStrength`
+  4. Visual: swirling particle vortex at anchor point (purple/black for Starbreaker, green for Nature)
+  Register gravity wells from ability execution; remove on expiry.
+
+- ✅ **2f. Scatter (AoE knockback)** — ability execution helper
+  Add `_executeScatter()` helper for abilities that knockback all units in an AoE from a center point (not from the caster). Each target is pushed radially outward from the AoE center. Strength falls off with distance from center. Used by abilities like Thunderclap, Shockwave, Eruption.
+
+---
+
+#### Phase 3: Hard CC Ability Behaviors
+
+Implement the behavioral logic for each new hard CC type. These are the "big" effects that fully remove agency.
+
+- ✅ **3a. Sleep behavior** — `cc_behavior_system.dart` + `game3d_widget_update.dart`
+  When `sleep` ActiveEffect is present on a unit:
+  - Block all input/AI actions (same as stun)
+  - On ANY damage tick (including DoTs, even 1 damage), immediately remove sleep effect
+  - Apply passive regen: `maxHealth * regenPerSecondPercent / 100 * dt` each frame
+  - Track sleep source caster; grant that caster `+manaRegenBonus` to all mana types while sleep persists
+  - Visual: Z-Z-Z particle bubbles floating up from unit, soft blue-purple tint overlay
+  - AI awareness: AI should prioritize NOT attacking sleeping targets (to maintain CC), except when explicitly told to burst
+
+- ✅ **3b. Charm behavior** — `cc_behavior_system.dart` + `ai_system_monster.dart` + `duel_system.dart`
+  When `charm` ActiveEffect is present:
+  - Override movement: unit walks toward the charm caster's current position at `walkSpeedPercent` speed
+  - Block all ability usage and manual movement input
+  - "Heartbreak ripple": when charmed unit passes within `allySlowRadius` of a friendly unit, apply `allySlowDuration`/`allySlowStrength` slow to that ally (once per ally per charm instance)
+  - If the charm caster moves, the charmed unit re-pathing follows
+  - Visual: pink heart particles trailing behind, dreamy screen-edge vignette on charmed player
+  - Charm break: standard duration expiry or cleanse (not damage-break like sleep)
+
+- ✅ **3c. Polymorph behavior** — `cc_behavior_system.dart` (damage-break + query helpers)
+  When `polymorph` ActiveEffect is present:
+  - Replace unit mesh with critter mesh (small cube recolored: green=frog, white=sheep, dark=scarab based on `damageSchool` of the ability that applied it)
+  - Allow movement at `moveSpeedPercent` but block all abilities, casting, and combat
+  - Break on any damage (even 1 point)
+  - "Spirit trail": record position every 0.5s; render fading glow dots at those positions for `trailDuration` seconds; caster's minimap shows these dots
+  - On expiry/break: restore original mesh with a small "poof" particle burst
+  - AI handling: polymorphed AI units wander randomly (not toward combat)
+
+- ✅ **3d. Taunt behavior** — `cc_behavior_system.dart` (query helper) + `ai_system_monster.dart` + `duel_system.dart`
+  When `taunt` ActiveEffect is present:
+  - Force target acquisition on the taunter (override current target)
+  - Block target switching and non-melee ability usage
+  - Auto-attack the taunter (AI: path to taunter and basic-attack; Player: ability buttons except melee are grayed)
+  - Apply `damageReduction` to damage dealt to the taunter specifically
+  - On taunt expiry (not cleanse) while taunter is within 10 units: apply "Indignation" buff to the victim (haste for `indignationDuration`)
+  - Visual: red chain link particle between taunter and target, pulsing
+
+- ✅ **3e. Suppress behavior** — `cc_behavior_system.dart` (pair tracking, damage-break, mutual stagger)
+  When `suppress` ActiveEffect is present:
+  - Target: full hard CC (no actions, no cleanse, no CC-break abilities)
+  - Caster: also locked in place, cannot act (mutual channel)
+  - Track suppress pairs: `{casterId, targetId, remainingDuration}`
+  - If caster takes damage exceeding 10% of their max HP in a single hit, break suppression on both
+  - On break: both caster and target get a 0.5s "Disoriented" micro-stagger
+  - Visual: dark purple chains connecting caster and target, both have suppression badge
+  - AI: allies should prioritize attacking the enemy caster to break suppression on their friend
+
+- ✅ **3f. Banish behavior** — `cc_behavior_system.dart` (cooldown acceleration + untargetable query)
+  When `banish` ActiveEffect is present:
+  - Unit becomes untargetable and invulnerable (skip in all target iteration loops)
+  - Unit cannot act, move, or be interacted with
+  - All ability cooldowns tick at `cooldownTickRate` multiplier (default 3x)
+  - Visual: unit mesh rendered at 30% opacity with a dark blue-purple shimmer
+  - On expiry: unit reappears with a "phase-in" flash, 0.5s grace period where they can't be damaged
+  - Self-banish variant possible: some classes could banish themselves as a defensive cooldown (Ice Block / Divine Shield archetype with the cooldown acceleration twist)
+
+---
+
+#### Phase 4: Soft CC & Debuff Behaviors
+
+Implement behavioral logic for each new soft CC. These restrict but don't fully remove agency.
+
+- ✅ **4a. Daze behavior** — `game_state.dart` (speed calc) + `cc_behavior_system.dart` (damage interrupt + combo reset)
+  When `daze` ActiveEffect is present:
+  - Apply 50% movement speed reduction (stacks multiplicatively with slow, not additively)
+  - On taking damage: if currently casting/channeling/winding up, cancel that action (spell interrupt without the school lockout of `interrupt`)
+  - Reset `meleeChainCount` to 0 and clear `meleeChainModeActive` (combo chain disruption)
+  - Does NOT prevent ability usage (key difference from stun — you can still fight, just badly)
+  - Visual: amber stars circling above head (classic "seeing stars"), slight screen blur if player is dazed
+
+- ✅ **4b. Disorient behavior** — `input_system.dart` (WASD remap + rotation timer) + `cc_behavior_system.dart` (query)
+  When `disorient` ActiveEffect is present:
+  - Player: remap WASD bindings randomly. Generate a permutation of {forward, backward, left, right} and apply. Rotate the permutation every `remapRotateInterval` seconds (default 1.5s)
+  - Camera: apply sinusoidal sway of `±cameraSway` degrees to yaw
+  - Ability queue: add random delay of 0–`inputDelay` seconds to each ability input
+  - AI units: movement directions are randomized each AI tick, but they can still use abilities (with random delay)
+  - Visual: wavy screen distortion effect, swirling yellow particles around head
+  - Unlike fear (which forces fleeing), disoriented units TRY to act normally but everything is scrambled
+
+- ✅ **4c. Grounded behavior** — `input_system.dart` (flight block) + `cc_behavior_system.dart` (query) + `game_state.dart` (nature damage bonus via config)
+  When `grounded` ActiveEffect is present:
+  - Block execution of abilities with `range >= 4.0` that use the dash system (gap closers)
+  - Block flight launch (Spacebar in flight zones)
+  - Block teleport-type abilities
+  - Normal WASD movement and all non-movement abilities work fine
+  - Bonus damage taken from `DamageSchool.nature`: multiply incoming nature damage by `1 + natureDamageBonus`
+  - Visual: thorny green vines wrapped around feet (small particle effect at unit base), cracking earth texture under unit
+
+- ✅ **4d. Nearsight behavior** — `cc_indicator_overlay.dart` (overlay suppression) + `cc_behavior_system.dart` (query)
+  When `nearsight` ActiveEffect is present on the PLAYER:
+  - Minimap: fill with dark fog overlay, only show terrain within `fogRadius` of player
+  - Nameplates/health bars: hide for all units beyond `nameplateRadius` (both ally and enemy)
+  - CC indicator overlay: if `hidesCcOverlay` is true, suppress rendering of all CC badges on all units (the player can't read debuff states)
+  - Unit meshes beyond fog radius: render at 50% opacity or don't render (configurable)
+  - Does NOT affect ability targeting range (you can still hit things you can't see if you know where they are)
+  - AI handling: nearsighted AI units only consider targets within fog radius
+  - Visual: dark vignette closing in on screen edges, flickering shadow at periphery
+
+---
+
+#### Phase 5: Per-Class CC Abilities (2–3 per class, each with unique twist)
+
+Each class gets 2–3 new abilities that leverage the new CC/displacement types. Abilities should feel thematically consistent with the class fantasy and synergize with existing combos. All values belong in the ability data definitions, not hardcoded.
+
+**Stance synergy notes** are included per-ability where a stance interaction is particularly strong or creates an interesting decision. These reference the rules from task 1g — the interactions are engine-level, but calling them out here helps ability designers see the combos.
+
+- ✅ **5a. Warrior CC Abilities** — `warrior_abilities.dart`
+  1. **Concussive Slam** — Melee AoE, 14s CD, Red 20 mana. Deals 30 damage + applies `daze` (4s) to all enemies within 4 units. **Twist**: if target is already dazed, upgrades to 2s `stun` instead (double-daze punish). **Stance synergy**: In PRESSURE, daze builds +50% bonus pressure on the target — double-daze→stun chains build the Break gauge rapidly. In MOMENTUM, the AoE hitting 3+ targets grants double Momentum stacks.
+  2. **Thunderous Charge** — Dash 12-range, 18s CD, Red 25 mana. Charges to target, deals 35 damage + `knockback` (6 units). If target hits a wall during knockback, bonus 20 damage + 1.5s `stun` (wall slam). **Stance synergy**: In MOMENTUM, knockback force scales +5% per stack — at 8 stacks the 6-unit push becomes 8.4 units, making wall slams far more likely. In PRESSURE, the knockback resets pressure to 50% (displacement penalty) — use this as an opener, not mid-pressure-build. **Stance drawback**: WARDEN players are immune to the dash component if `grounded` (blocks charges).
+  3. **Iron Maiden** — Melee 3-range, 30s CD, Red 30 mana. Applies `taunt` (4s) to target. While taunt is active, 15% of damage the taunted target deals is reflected back to them. **Twist**: the reflection uses `DamageSchool.physical` so it's affected by armor/vulnerability. **Stance synergy**: In CRUCIBLE at 0 Heat (Cool Down Payoff), taunt duration becomes 6s (+50%) — long enough to force 2 full GCD cycles of forced melee from the victim. In CADENCE, on-beat Iron Maiden lasts 5s.
+
+- ✅ **5b. Rogue CC Abilities** — `rogue_abilities.dart`
+  1. **Blackout Strike** — Melee 3-range, 20s CD, Red 15 mana. Deals 25 damage + applies `sleep` (5s). Must be used from behind the target (check facing angle > 120° from target's forward). If used from front, applies 2s `daze` instead. **Twist**: "Ambush sleep" — only works from behind, making positioning matter. **Stance synergy**: WARDEN is the natural home — Predator's Eye (stand still 2s before engaging) gives +40% CC duration, making the ambush sleep 7s. The rear-attack requirement aligns perfectly with Warden's observation→first-strike loop. In CADENCE, on-beat sleep lasts 6.25s.
+  2. **Hallucinogenic Blade** — Melee 3-range, 24s CD, Red 15 + Green 10 mana. Deals 20 damage + applies `disorient` (4s). **Twist**: while target is disoriented, Rogue's next ability against them has +30% crit damage (exploit confusion). **Stance synergy**: In TEMPEST, follow Hallucinogenic Blade with a cancel-chain burst ability to capitalize on the +30% crit within the cancel window. In FLUX, apply disorient during transition bonus window for 5.2s duration — longer confusion = wider crit window.
+  3. **Smoke Shroud** — Self-centered AoE 6-radius, 35s CD, Red 20 mana. Applies `nearsight` (5s) to all enemies in radius. Also applies 3s `slow` (30%). **Twist**: the Rogue gains `haste` (20%, 5s) while inside the smoke (hunter becomes the predator in the fog). **Stance synergy**: In WARDEN, Smoke Shroud → stand still 2s inside smoke → enter Predator's Eye while enemies are blinded → Calculated Strike with all bonuses. The smoke buys the preparation time Warden needs. **Stance drawback**: CRUCIBLE Rogues pay 2 Heat for the CC — using it solely for setup when Heat is high is risky.
+
+- ✅ **5c. Mage CC Abilities** — `mage_abilities.dart`
+  1. **Arcane Polymorph** — Ranged 20-range, 30s CD, Blue 35 mana, 1.5s cast. Applies `polymorph` (6s) to target — transforms into a sheep. Breaks on damage. **Twist**: when polymorph breaks, the target takes `DamageSchool.arcane` burst damage equal to 10% of their max HP ("shatter shock"). Spirit trail gives minimap vision. **Stance synergy**: In CADENCE, on-beat polymorph lasts 7.5s — an eternity of CC. In CRUCIBLE at 0 Heat, 9s polymorph (6 × 1.5). Both stances reward saving this ability for the right moment. **Stance drawback**: TEMPEST polymorph outside a cancel chain is only 5.1s (15% penalty) — Tempest Mages should weave it after a damage ability, not lead with it.
+  2. **Gravity Flux** — Ranged AoE targeted ground, 25s CD, Blue 30 + Black 15 mana, 1.0s cast. Creates a `gravityWell` (8-unit radius, 6s duration) at target location. Pulls all enemies toward center. **Twist**: projectiles passing through the well are accelerated, gaining +25% damage (spell synergy — cast a Fireball through your own gravity well for bonus damage). **Stance synergy**: In MOMENTUM, the gravity well groups enemies for AoE follow-ups, which grant double Momentum stacks when hitting 3+ targets. In PRESSURE, the well doesn't displace your pressure target (it pulls, not pushes) so pressure gauge is safe — use it to pin your target while building pressure.
+  3. **Deep Freeze** — Ranged 15-range, 20s CD, Blue 25 mana. Deals 15 damage + applies `freeze` (3s). If target is already `slow`ed, instead applies `banish` (2.5s) — frozen so completely they phase out of reality. **Twist**: combo enabler — slow first, then Deep Freeze for the banish, giving you time to set up burst while their cooldowns accelerate. **Stance synergy**: In PRESSURE, the slow→freeze combo builds pressure safely (timed CC, no displacement), and the 3s freeze locks the target in place for more hits. The banish variant resets pressure (target becomes untargetable) — a deliberate tradeoff between more pressure time vs. removing the target.
+
+- ✅ **5d. Windwalker CC Abilities** — `windwalker_abilities.dart`
+  1. **Tempest Lift** — Melee 4-range, 16s CD, White 20 mana. Deals 20 damage + launches target `airborne` (strength 5.0 = high launch). **Twist**: launch height scales with current wind strength — during derechos, this ability sends targets significantly higher, dealing more fall damage. Wind-themed juggle starter. **Stance synergy**: MOMENTUM is the premier juggle stance — at 8 stacks, Tempest Lift launches 40% harder AND extends the target's air time by 0.5s, giving allies a massive juggle window. In TEMPEST stance, use Tempest Lift inside a cancel chain → immediate follow-up air combo. **Stance drawback**: In PRESSURE, the launch (displacement) resets pressure to 50% — use it to start a fight, not mid-pressure-build.
+  2. **Gale Scatter** — Self-centered AoE 6-radius, 22s CD, White 25 mana. AoE knockback (scatter, 5 units) to all enemies around caster + applies 2s `daze`. **Twist**: knockback distance scales with wind strength (wind at your back amplifies the push). If used while airborne, the Windwalker hovers briefly instead of being knocked down. **Stance synergy**: In MOMENTUM, scatter force scales +40% at max stacks AND hitting 3+ targets grants double stacks. A derecho-powered, max-Momentum Gale Scatter is devastating. In FLUX, the daze can be self-cleansed if caught in your own AoE (stance switch removes one soft CC).
+  3. **Vertigo Vortex** — Ranged 12-range, 28s CD, White 20 + Blue 15 mana, 0.8s cast. Creates a 5-unit radius wind vortex at target location for 4s. Enemies inside are `disorient`ed and slowly pulled toward center (mini gravity well). **Twist**: the vortex also deflects incoming ranged projectiles that pass through it (wind shield zone). **Stance synergy**: In WARDEN, casting this while stationary gives +10% AoE radius (5.5 units). In CADENCE, on-beat vortex disorientation lasts 5s instead of 4s.
+
+- ✅ **5e. Stormheart CC Abilities** — `stormheart_abilities.dart`
+  1. **Thunder Clap** — Melee AoE 5-radius, 14s CD, White 15 + Red 10 mana. Deals 25 damage to all enemies in radius + applies `daze` (3s) + `interrupt`. **Twist**: if used during a melee combo chain, the AoE radius increases by 50% (riding the chain momentum into a bigger shockwave). **Stance synergy**: In TEMPEST, use Thunder Clap as a cancel-chain finisher — the daze gets full duration (inside chain) and the chain-expanded radius catches more targets. In PRESSURE, daze builds +50% bonus pressure on your target AND the interrupt stops their cast, keeping you in control. **Stance drawback**: In CRUCIBLE, costs 2 Heat for the CC component — repeated Thunder Claps build Heat fast.
+  2. **Magnetic Grip** — Ranged 15-range, 18s CD, White 20 mana. Pulls target toward caster (grip, 80% of distance) + applies `grounded` (4s). **Twist**: the pull arcs through the air (target briefly goes airborne during the pull trajectory) and arrives stunned for 1s at the caster's feet — a combination pull + mini-launch + stun. **Stance synergy**: In MOMENTUM, the grip displacement force scales with stacks — at 8 stacks, 80% becomes effectively 100% (pulled all the way). The grounded follow-up traps them at your feet for melee combos. **Stance drawback**: In PRESSURE, this grip (displacement) resets pressure to 50% — best used to START an engagement, not mid-pressure-build. In WARDEN, pulling a target toward you sets up melee range for directional combos.
+  3. **Ball Lightning** — Ranged AoE projectile, 25s CD, White 25 + Blue 15 mana, 0.5s cast. Fires a slow-moving lightning orb (projectile speed 5.0) that applies `charm` (2.5s) to the first enemy hit — target walks toward the orb's current position as it travels. **Twist**: the orb continues moving after charming, dragging the victim along with it toward wherever the orb is heading (directional charm — you aim where they end up). **Stance synergy**: In CADENCE, on-beat charm lasts 3.1s — long enough for the orb to drag the target significantly further. In FLUX, charm applied during transition window lasts 3.25s and can reposition an enemy into your allies' kill zone.
+
+- ✅ **5f. Nature CC Abilities** — `nature_abilities.dart`
+  1. **Living Vines** — Ranged 15-range, 20s CD, Green 25 mana, 1.0s cast. Applies `root` (4s) + `grounded` (6s) to target. **Twist**: "Creeping root" — after 2s, the root spreads to one additional enemy within 5 units of the original target (prioritizes closest). The spread target gets half-duration root (2s). **Stance synergy**: In PRESSURE, root is timed CC (not displacement) so pressure gauge is safe — the 4s root is a free pressure-building window. The creeping spread can catch a second target you're not focused on, softening them up. **Stance drawback**: Against WARDEN enemies, grounded disables their directional bonuses — Nature's vines are a direct counter to Warden's movement-based playstyle.
+  2. **Hibernate** — Ranged 18-range, 35s CD, Green 30 mana, 2.0s cast. Applies `sleep` (8s) — the longest sleep in the game. **Twist**: the sleep is nature-themed "hibernation" — the regen rate is doubled (2% max HP/s instead of 1%), and the caster gains green mana regen bonus instead of generic. Forces a strategic choice: long CC but significant enemy healing. **Stance synergy**: In CADENCE, on-beat Hibernate lasts 10s (8 × 1.25) — the longest CC in the game, but the target heals 20% of max HP during that time. In CRUCIBLE at 0 Heat, 12s sleep (8 × 1.5). Both are astronomical CC durations with enormous healing drawbacks — true strategic dilemmas. **Stance drawback**: In TEMPEST without a cancel chain, Hibernate is only 6.8s — still long, but TEMPEST's haste-focused playstyle doesn't pair naturally with long setup CCs.
+  3. **Erupting Thorns** — Targeted ground AoE 6-radius, 22s CD, Green 20 mana. After 1s delay, thorns erupt from the ground: deals 30 damage + launches targets `airborne` (strength 3.0 = medium launch) + applies `bleed` (6s DoT). **Twist**: the thorns persist for 4s as terrain — enemies that walk over them are `slow`ed (30%, 2s). Zone-control ability. **Stance synergy**: In MOMENTUM, the AoE launch hitting 3+ targets grants double stacks AND launch force scales with existing stacks. In WARDEN, casting while stationary gives +10% AoE radius (6.6 units) — wider thorn zone for area denial.
+
+- ✅ **5g. Necromancer CC Abilities** — `necromancer_abilities.dart`
+  1. **Soul Shackle** — Ranged 10-range, 35s CD, Black 30 mana, 1.5s cast (channeled). Applies `suppress` (3.5s) — the necromancer and target are both locked in dark chains. **Twist**: while suppressed, the necromancer drains 5% of the target's current HP/s as shadow damage, healing themselves for the amount drained. Allies must protect the necromancer or enemies must break them free. **Stance synergy**: In PRESSURE, suppress is timed CC that builds +50% bonus pressure — 3.5s of free pressure accumulation while the target can't fight back. During the subsequent Break window (stun + damage amp), follow up with burst. **Stance drawback**: Suppress locks YOU down too — in MOMENTUM, your stacks decay at 3x during the 3.5s (you're CC'd as well). In CRUCIBLE, your Heat decay pauses. Choose carefully.
+  2. **Hex of the Toad** — Ranged 18-range, 28s CD, Black 25 + Green 10 mana, 1.2s cast. Applies `polymorph` (5s) — target is turned into a frog (nature/shadow fusion). **Twist**: unlike Mage polymorph, the frog hops erratically (random direction changes every 0.8s) making the target unpredictable. On polymorph break, target is `slow`ed (40%, 3s) ("slug slime" lingering effect). **Stance synergy**: In CADENCE, on-beat Hex lasts 6.25s. In FLUX, cast during transition window for 6.5s polymorph — plenty of time to reposition or set up on other targets. The lingering slow after break is useful in PRESSURE (safe timed CC for building gauge).
+  3. **Grave Grasp** — Targeted ground AoE 5-radius, 20s CD, Black 20 mana. Skeletal hands erupt: `grounded` (4s) + 2s `slow` (50%) to all enemies in area. **Twist**: grounded enemies in the zone also cannot be healed by allies (the grave's grip seals off life energy). Powerful anti-healer zone control. **Stance synergy**: In WARDEN, casting while stationary gives +10% AoE radius (5.5 units). The grounded effect directly counters enemy WARDEN players (disables their directional bonuses). In PRESSURE, grounded + slow keeps the target in place for sustained pressure building without the gauge-reset risk of displacement.
+
+- ✅ **5h. Elemental CC Abilities** — `elemental_abilities.dart`
+  1. **Petrify** — Ranged 12-range, 22s CD, Red 20 + Green 15 mana, 1.0s cast. Applies custom `freeze` variant (3s) — target turns to stone. **Twist**: petrified targets take +50% damage from the next single physical damage source (shatter mechanic — one big hit shatters the stone for massive bonus damage, then the petrify breaks). Uses `vulnerablePhysical` stacking with the freeze. **Stance synergy**: In PRESSURE, Petrify is timed CC that safely builds pressure, and the +50% physical vulnerability amplifies the Break damage when you finally pop it. Petrify → build pressure → Break → shatter the stone with the Break's +60% damage. In TEMPEST, follow Petrify immediately with a physical cancel-chain hit for the shatter bonus.
+  2. **Magma Geyser** — Targeted ground AoE 4-radius, 18s CD, Red 25 mana. After 0.8s delay, erupts: deals 35 fire damage + launches targets `airborne` (strength 4.0) + applies `burn` (4s DoT). **Twist**: the geyser leaves a lava pool for 5s — enemies landing in or walking through it take burn damage and are `daze`d (2s). Creates a dangerous landing zone for juggled targets. **Stance synergy**: In MOMENTUM, launch force scales with stacks (+40% at max), and the AoE hitting 3+ targets grants double stacks. The lava pool daze on landing is a free soft CC reset. In PRESSURE, the burn DoT ticks build pressure at 5% per tick — sustained gauge build. **Stance drawback**: Launch is displacement, so PRESSURE resets to 50% if used on your pressure target.
+  3. **Glacial Prison** — Ranged 15-range, 30s CD, Blue 25 + Red 10 mana, 1.5s cast. Applies `banish` (3s) — target is encased in a crystal of fire and ice, immune but unable to act. **Twist**: on expiry, the prison explodes in a 4-unit AoE dealing 20 damage (split fire + frost) and applying `slow` (30%, 3s) to nearby enemies. The banished target takes no explosion damage. Used offensively (remove a threat then AoE their allies) or defensively (banish a friend to save them, then the explosion pushes enemies back). **Stance synergy**: In CRUCIBLE at 0 Heat, banish lasts 4.5s — the target comes back with cooldowns at 13.5x ticked (3x rate × 4.5s). In CADENCE, on-beat banish is 3.75s. Both let you remove a key threat while setting up on others. **Stance drawback**: In PRESSURE, banish makes the target untargetable — pressure decays completely. Only use this on a SECONDARY target, not your pressure target.
+
+- ✅ **5i. Spiritkin CC Abilities** — `spiritkin_abilities.dart`
+  1. **Primal Roar** — Self-centered AoE 8-radius, 24s CD, Green 25 mana. No damage. Applies `fear` (3s) + `daze` (4s) to all enemies in radius. **Twist**: feared enemies run AWAY at 130% speed (instead of normal fear 100%), but the 4s daze outlasts the fear, so when fear ends they're slowed and vulnerable to follow-up. The burst of terrified fleeing creates distance, then the daze lets you close in. **Stance synergy**: In WARDEN, casting while stationary gives +10% AoE radius (8.8 units — huge fear zone). In FLUX, fear+daze applied during transition window both get +30% duration (3.9s fear + 5.2s daze). If caught in your own AoE (self-centered), FLUX can cleanse the daze from yourself with a stance switch. **Stance drawback**: In CRUCIBLE, costs 2 Heat per CC effect (fear + daze = 4 Heat in one cast) — extremely hot.
+  2. **Spirit Sever** — Ranged 12-range, 22s CD, Green 20 + Black 10 mana. Deals 15 shadow damage + applies `nearsight` (5s) + `silence` (2s). **Twist**: the severed target's spirit is briefly visible to the caster as a ghost outline — the caster can see the target through obstacles/walls for the nearsight duration (vision swap — you blind them but gain truesight on them). **Stance synergy**: In CADENCE, on-beat nearsight lasts 6.25s and silence 2.5s. In WARDEN with Predator's Eye, silence is 2.8s and nearsight 7s — long enough to reposition into another Predator's Eye ambush while they're blind. The truesight-through-walls synergizes perfectly with Warden's stalker fantasy.
+  3. **Feral Pounce** — Dash 10-range, 16s CD, Green 15 mana. Leaps to target, deals 25 damage + applies `knockdown` (1.5s). If target was already affected by any CC (slow, root, daze, etc.), the knockdown is extended to 2.5s. **Twist**: "predator instinct" — bonus duration on already-CC'd targets rewards chaining effects. Combo follow-up after Primal Roar's daze. **Stance synergy**: In TEMPEST, Feral Pounce → cancel-chain into another ability while they're knocked down. The predator instinct bonus (2.5s on CC'd targets) gives the cancel chain a generous window. In MOMENTUM, the dash → knockdown → melee follow-up builds stacks rapidly. **Stance drawback**: PRESSURE users note: knockdown is timed CC (safe for pressure gauge) but the dash displacement is not — the POUNCE itself is fine since you're going TO the target.
+
+- ✅ **5j. Starbreaker CC Abilities** — `starbreaker_abilities.dart`
+  1. **Void Collapse** — Ranged AoE targeted ground, 25s CD, Black 30 mana, 1.0s cast. Creates a `gravityWell` (6-unit radius, 5s duration) at target location. **Twist**: after the well expires, it implodes — all units still within 4 units are launched `airborne` (strength 4.5) and take 25 void damage. Two-phase ability: pull them in, then blow them up. **Stance synergy**: In MOMENTUM, the implosion launch at max stacks sends targets 40% higher (strength 6.3) AND the AoE hitting 3+ targets during the pull phase grants double stacks — the well itself IS a stack engine. In PRESSURE, tension: the gravity well pull doesn't displace your target (it's positional pull, not knockback), so pressure gauge is safe during the 5s pull phase. But the implosion launch IS displacement — you get 5s of free pressure building, then the launch resets to 50%. Time your Break BEFORE the implosion.
+  2. **Dimensional Rift** — Ranged 20-range, 30s CD, Black 25 + Blue 15 mana, 0.8s cast. Applies `banish` (3s) to target. **Twist**: while the target is banished, a shadow clone of the target appears at the banish location (purely visual + takes damage). All damage dealt to the shadow clone is stored and applied to the real target when banish expires as `DamageSchool.shadow` burst. Players can "pre-load" burst damage during the banish window. **Stance synergy**: In CRUCIBLE at 0 Heat, banish lasts 4.5s — more time to load damage onto the shadow clone. In TEMPEST, use the 3s banish window to rapid-fire cancel-chain abilities into the shadow clone for massive stored burst. In MOMENTUM, each hit on the shadow clone builds stacks, so the real target reappears into a max-stack damage monster.
+  3. **Singularity Crush** — Melee 3-range, 20s CD, Black 25 mana. Deals 30 damage + applies `suppress` (2.5s). **Twist**: unlike Necromancer's Soul Shackle (which is ranged+channeled+drain), this is a melee instant suppress — the Starbreaker grabs the target in a void field. The caster IS locked down (suppress is mutual), but since it's melee range both units are in the kill zone for allies. Shorter duration but no cast time. **Stance synergy**: In PRESSURE, suppress builds +50% bonus pressure — 2.5s of guaranteed pressure accumulation. In CRUCIBLE, this is instant cast so it doesn't consume the 0-Heat payoff (use a CC AFTER the payoff ability). **Stance drawback**: In MOMENTUM, your stacks decay at 3x during suppress (you're locked down too). In CADENCE, suppress resets Groove (you're CC'd). Use this when you have little to lose.
+
+- ✅ **5k. Greenseer CC Abilities** — `greenseer_abilities.dart`
+  1. **Dreamweave** — Ranged 18-range, 28s CD, Green 30 mana, 1.5s cast. Applies `charm` (3.5s). **Twist**: the charmed target's movement leaves behind a trail of blooming flowers (cosmetic + minor green mana regen zone for allies who walk through it, 2/s for 3s). Weaponized CC that also benefits allies positionally. **Stance synergy**: In CADENCE, on-beat charm lasts 4.4s — long enough for the flower trail to cover significant ground for ally mana benefit. In FLUX, charm during transition window lasts 4.55s. In WARDEN with Predator's Eye, 4.9s charm with guaranteed first-strike setup. **Stance drawback**: In TEMPEST without cancel chain, only 3.0s charm — barely enough to reposition.
+  2. **Verdant Entangle** — Targeted ground AoE 7-radius, 20s CD, Green 20 mana. Creates a growth zone for 6s. Enemies entering are `root`ed (2s, once per enemy per cast) + `grounded` (full 6s). **Twist**: allies standing in the zone gain +15% healing received. Dual-purpose zone: CC enemies and buff ally healing. Synergizes with Nature's `Hibernate` — sleep an enemy in the zone, they regen HP but so does the Greenseer's healing target. **Stance synergy**: In WARDEN, stationary cast gives +10% AoE radius (7.7 units). The grounded effect directly counters enemy WARDEN players. In PRESSURE, root + grounded keeps the target in place for sustained pressure without displacement risk — a pressure player's dream zone.
+  3. **Thornwall** — Targeted ground line 12-range, 30s CD, Green 25 + Red 10 mana, 1.0s cast. Creates a wall of thorns (4 units wide, 2 units tall, lasts 5s). Enemies crossing the wall are `knockback`ed (3 units backward) + take 20 nature damage + 3s `bleed`. **Twist**: functions as terrain — projectiles are blocked, pathfinding must go around. First true terrain-creation CC ability. **Stance synergy**: In MOMENTUM, the wall's knockback on enemies who cross it scales with your Momentum stacks. In WARDEN, the wall creates line-of-sight breaks for re-entering Predator's Eye in the middle of combat. **Stance drawback**: In PRESSURE, enemies knockbacked by the wall counts as displacement — if your pressure target runs through the wall, their pressure gauge resets to 50%. Position the wall to TRAP them, not between you and them.
+
+- ✅ **5l. Leyweaver CC Abilities** — `leyweaver_abilities.dart`
+  1. **Binding Light** — Ranged 18-range, 22s CD, Blue 25 mana, 1.0s cast. Applies `root` (3s) + `silence` (2s) to target. **Twist**: while rooted, the target is also tethered to the ground point — if an ally knockbacks/displaces the target, the tether snaps them back to the root point at the end of displacement (anti-synergy protection — root means ROOTED, no one moves them, not even your allies). Helps healers lock down a target predictably. **Stance synergy**: In PRESSURE, root + silence is pure timed CC — no displacement, safe for pressure gauge. The tether prevents allies' knockbacks from resetting your pressure (Binding Light protects YOUR pressure build from friendly displacement). In CADENCE, on-beat root lasts 3.75s, silence 2.5s.
+  2. **Purifying Radiance** — Self-centered AoE 10-radius, 35s CD, Blue 30 mana. Cleanses ALL CC effects from ALL allies within radius. Also applies `daze` (3s) to all enemies in radius. **Twist**: for each unique CC type cleansed, the AoE damage component increases by 10 (base 0 damage). Cleansing 3 different CC types from allies turns this into a 30-damage AoE punish. Reactive "the more you CC my friends, the harder I hit back." **Stance synergy**: In CADENCE, on-beat Purifying Radiance extends the daze to 3.75s AND the cleanse on beat removes one additional CC type. In FLUX, the mass cleanse also triggers for yourself (stance switching cleanses one soft CC — this cleanses ALL on allies), making FLUX Leyweaver the ultimate anti-CC support. **Stance drawback**: In CRUCIBLE, the cleanse function generates 2 Heat (it's a CC ability that applies daze) — don't spam it at high Heat.
+  3. **Sanctuary** — Targeted ground AoE 6-radius, 40s CD, Blue 40 mana, 2.0s cast. Creates a holy zone (6s duration). Allies inside are immune to new CC applications (existing CC is NOT removed). Enemies inside are `slow`ed (20%). **Twist**: any CC that would be applied to an ally inside the sanctuary is instead reflected to the nearest enemy within the zone at 50% duration. CC reflection zone — enemies trying to CC inside the sanctuary get a taste of their own medicine. **Stance synergy**: In WARDEN, stationary cast gives +10% AoE radius (6.6 units). Allies in the Sanctuary can freely use CADENCE (no Groove reset from incoming CC) or MOMENTUM (no accelerated decay from CC). The zone removes the primary defensive weakness of those stances. In FLUX, the CC reflection applies stance duration bonuses to the reflected CC — reflected CC during your transition window gets +30% duration on the enemy.
+
+- ✅ **5m. Aethermancer CC Abilities** — `aethermancer_abilities.dart`
+  1. **Aether Lock** — Ranged 15-range, 20s CD, White 20 + Blue 15 mana, 0.8s cast. Applies `grounded` (5s) + `silence` (3s). **Twist**: the ultimate anti-caster CC combo — can't cast, can't escape. While locked, the target's mana regeneration is reversed (they LOSE mana at their normal regen rate). Drains resources on top of denying actions. **Stance synergy**: In CRUCIBLE at 0 Heat, silence lasts 4.5s and grounded 7.5s — the target is shut down for an enormous window. In CADENCE, on-beat silence is 3.75s. The mana drain is especially devastating against enemy CRUCIBLE players (they can't cast to shed Heat, and Heat decay pauses because silence counts as CC). **Stance drawback**: Against enemy FLUX players, the grounded is immediately cleansable with a stance switch (soft CC). The silence persists though, which prevents them from capitalizing on the switch.
+  2. **Zephyr Banishment** — Ranged 18-range, 30s CD, White 30 mana, 1.0s cast. Applies `banish` (2.5s) to target, but the banished target is visually swept upward by wind (cosmetic Y-offset, not real airborne). **Twist**: when banish ends, the target reappears 8 units in a random direction from their original position (spatial displacement on return). The uncertainty of where they'll land disrupts enemy formations. **Stance synergy**: In FLUX, banish during transition window lasts 3.25s — more repositioning uncertainty. In CADENCE, on-beat banish is 3.1s. The random displacement on return is especially punishing for enemy PRESSURE players — they lose all built-up pressure when their target vanishes and they reappear far away.
+  3. **Ley Surge Overload** — Self-centered AoE 6-radius, 25s CD, Blue 25 + White 10 mana. Deals 20 arcane damage + applies `disorient` (3s) to all enemies in radius. **Twist**: disoriented enemies near ley lines or ley power nodes take continuous arcane damage (5/s) for the disorient duration — the chaotic ley energy surges into their scrambled minds. Positional CC that's stronger near ley lines. **Stance synergy**: In WARDEN, stationary cast gives +10% AoE radius (6.6 units) and fighting near ley lines (where the Aethermancer wants to be for blue mana) maximizes the bonus damage. In MOMENTUM, the AoE disorient hitting 3+ targets grants double stacks. **Stance drawback**: In TEMPEST without a cancel chain, disorient is only 2.55s — still useful but the ley-line bonus damage has less time to tick.
+
+---
+
+#### Phase 6: CC Configuration, Tuning & Polish
+
+- ✅ **6a. CC Tuning Tab** — `cc_tuning_tab.dart` (new, 345 lines) + `settings_panel.dart`
+  Add a "Crowd Control" section to the Tuning tab in Settings. Fields for all CC config values: DR window/reductions, airborne physics, per-effect tuning values. Uses the standard ConfigEditorPanel pattern.
+
+- ✅ **6b. Ability Editor CC fields** — `ability_editor_panel.dart` + `ability_editor_panel_sections.dart`
+  Add CC-related fields to the ability editor: multi-effect `statusEffects` list editor (add/remove effects, set type/duration/strength per entry), `cleansesCC` toggle, `cleansesTypes` multi-select, scatter radius, gravity well duration/radius.
+
+- ✅ **6c. Duel AI CC awareness** — `duel_ai_helpers.dart` + `duel_system.dart`
+  Update duel AI to understand new CC types:
+  - Don't attack sleeping targets unless going for burst kill
+  - Prioritize attacking suppression casters to free allies
+  - Use CC-break abilities when available and CC'd
+  - Avoid gravity well zones and thorn walls
+  - Target charmed enemies with burst (they can't defend)
+  - Use movement abilities to escape grounded zones
+  - Stance-aware CC usage: AI should consider its own stance when deciding CC timing (e.g., CRUCIBLE AI saves CC for 0-Heat payoff, MOMENTUM AI prefers displacement CC at high stacks, PRESSURE AI avoids displacement CC on its pressure target, CADENCE AI attempts to time CC on beat)
+  - Stance-aware CC defense: AI in FLUX should stance-switch to cleanse soft CC, AI in TEMPEST should rely on reduced CC duration for aggressive play during CC recovery
+  Priority scoring for CC abilities in `_abilityPriority()`.
+
+- ✅ **6d. Combat log CC entries** — `ability_system_interactions.dart` + `cc_behavior_system.dart`
+  Log all CC application, expiry, break, cleanse, and DR reduction events to combat log with appropriate formatting:
+  - "Arcane Polymorph → Target [polymorphed] (6.0s)"
+  - "Sleep broke on Target (damage from Fireball)"
+  - "Diminishing Returns: Stun reduced 3.0s → 1.5s (2nd application)"
+  - "Purifying Radiance cleansed [root, silence, slow] from Ally"
+
+- ✅ **6e. CC visual effects pass** — `effects/cc_visual_effects.dart` (new, 456 lines)
+  Create lightweight visual indicators for each new CC type:
+  - Sleep: floating Z particles + blue tint
+  - Charm: pink heart trail + screen vignette (player only)
+  - Polymorph: mesh swap + poof particles
+  - Taunt: red chain tether between units
+  - Disorient: screen distortion + swirl particles
+  - Grounded: vine wrap at feet + ground cracks
+  - Suppress: dark chain links connecting units
+  - Nearsight: dark vignette + fog overlay (player only)
+  - Banish: translucent mesh + phase shimmer
+  - Gravity Well: swirling vortex particles at anchor
+  - Daze: circling amber stars above head
+  - Airborne: upward wind streak trail during flight
+
+- ✅ **6f. CC interaction matrix documentation** — `docs/CC_SYSTEM_GUIDE.md`
+  Document all CC interactions, DR categories, per-class ability lists with twists, and combo synergies. Include a matrix of which effects stack, overwrite, or are mutually exclusive. Reference for future ability design.
+
+- ✅ **6g. Stance-CC interaction documentation** — `docs/CC_SYSTEM_GUIDE.md` (section)
+  Add a "Stance Interactions" section to the CC guide documenting:
+  - Per-stance CC offense/defense/drawback summary table (7 stances × 3 columns)
+  - Stance matchup chart: which stances counter or are countered by which CC strategies (e.g., "WARDEN is countered by grounded effects", "FLUX counters soft CC but is vulnerable to hard CC during stagnation", "CADENCE has the highest CC durations but is devastated by receiving CC")
+  - Recommended stance picks per role: CC-focused player → CADENCE or CRUCIBLE for duration, displacement-focused → MOMENTUM, anti-CC support → FLUX or Leyweaver in any stance, pressure assassin → PRESSURE (avoid displacement CC)
+  - Cross-reference each class ability's stance synergy notes from Phase 5
+
+---
+
 ### ✅ Completed - 2026-03-15
 
 #### Fighting Game Combo Redesign — All Melee/Ranged Classes
@@ -617,7 +1157,7 @@
 #### Performance Optimizations
 - ✅ Cached `AbilityRegistry.findByName` — results stored in `Map<String, AbilityData?>` so repeated lookups (every frame in buff/debuff icons) are O(1) instead of linear scans
 - ✅ Fixed ley line mesh cache hash — now hashes segment endpoint coordinates instead of just count, preventing stale mesh when segments shift but count stays the same
-- ⬜ Cooldown list refactor — replace 10 individual `abilityNCooldown` fields with a `List<double>` (147 references across 7 files, deferred to next session)
+- ✅ Cooldown list refactor — already completed: `abilityCooldowns` is `List<double>.filled(15, 0.0)` with all consumers using indexed list access
 - ✅ Added `_minionIndex` map to `GameState` for O(1) minion lookup by `instanceId` — used by `currentTargetActiveEffects` instead of linear scan
 - ✅ Added terrain color cache to `MinimapTerrainPainter` — static `List<Color>` grid only recomputed when player position/rotation/zoom changes, eliminating redundant height sampling and color interpolation on unchanged frames
 - ✅ Build verified clean (`flutter build web`)

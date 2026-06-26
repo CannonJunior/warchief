@@ -369,7 +369,7 @@ class DuelSystem {
         if (gcdActive && !abilities[i].enablesComboChain && !inComboWindow) continue;
         if (interrupted && _isSpellAbility(abilities[i])) continue;
         final score = _abilityPriority(abilities[i], effectiveStrategy, self,
-            primedNames: primedAbilities);
+            primedNames: primedAbilities, target: target);
         if (score > bestScore) {
           bestScore = score;
           chosenIdx = i;
@@ -536,6 +536,18 @@ class DuelSystem {
           case StatusEffect.fear:
           case StatusEffect.silence:
           case StatusEffect.blind:
+          case StatusEffect.sleep:
+          case StatusEffect.charm:
+          case StatusEffect.polymorph:
+          case StatusEffect.suppress:
+          case StatusEffect.banish:
+          case StatusEffect.airborne:
+          case StatusEffect.knockdown:
+          case StatusEffect.taunt:
+          case StatusEffect.disorient:
+          case StatusEffect.grounded:
+          case StatusEffect.nearsight:
+          case StatusEffect.daze:
             manager.applyCc(flatIdx, ability.statusDuration);
             break;
           case StatusEffect.slow:

@@ -261,22 +261,82 @@ class RogueAbilities {
     category: 'rogue',
   );
 
+  /// Blackout Strike — Precise melee hit that puts the target to sleep
+  static final blackoutStrike = AbilityData(
+    name: 'Blackout Strike',
+    description: 'A precise nerve strike that puts the target to sleep.',
+    type: AbilityType.melee,
+    damage: 25.0,
+    cooldown: 20.0,
+    range: 3.0,
+    color: Vector3(0.15, 0.1, 0.2),
+    impactColor: Vector3(0.3, 0.2, 0.35),
+    impactSize: 0.5,
+    manaColor: ManaColor.red,
+    manaCost: 15.0,
+    statusEffect: StatusEffect.sleep,
+    statusDuration: 5.0,
+    category: 'rogue',
+  );
+
+  /// Hallucinogenic Blade — Poison-coated strike that disorients the target
+  static final hallucinogenicBlade = AbilityData(
+    name: 'Hallucinogenic Blade',
+    description: 'A toxin-laced slash that warps the target\'s senses.',
+    type: AbilityType.melee,
+    damage: 20.0,
+    cooldown: 24.0,
+    range: 3.0,
+    color: Vector3(0.3, 0.6, 0.3),
+    impactColor: Vector3(0.4, 0.8, 0.4),
+    impactSize: 0.5,
+    manaColor: ManaColor.red,
+    manaCost: 15.0,
+    secondaryManaColor: ManaColor.green,
+    secondaryManaCost: 10.0,
+    statusEffect: StatusEffect.disorient,
+    statusDuration: 4.0,
+    category: 'rogue',
+  );
+
+  /// Smoke Shroud — Self-centered AoE that nearsights all enemies
+  static final smokeShroud = AbilityData(
+    name: 'Smoke Shroud',
+    description: 'Releases thick smoke that blinds nearby enemies\' vision.',
+    type: AbilityType.aoe,
+    damage: 0.0,
+    cooldown: 35.0,
+    range: 1.0,
+    color: Vector3(0.35, 0.35, 0.35),
+    impactColor: Vector3(0.5, 0.5, 0.5),
+    impactSize: 1.2,
+    aoeRadius: 6.0,
+    manaColor: ManaColor.red,
+    manaCost: 20.0,
+    statusEffect: StatusEffect.nearsight,
+    statusDuration: 5.0,
+    category: 'rogue',
+  );
+
   /// All rogue abilities as a list
-  /// Ordered short→long cooldown; slots 11-14 hold the longest cooldowns.
+  /// Ordered short→long cooldown; slots 11-17 hold the longest cooldowns.
   static List<AbilityData> get all => [
-    shiv,           //  1  1.0s  combo starter free
-    shadowfangRake, //  2  1.0s  combo 2 bleed
-    shadowForm,     //  3  5.0s  buff haste
-    shadowSpike,    //  4  5.0s  combo 3 piercing
-    backstab,       //  5  6.0s  high dmg from behind
-    umbralLunge,    //  6  6.0s  combo 4 gap closer
-    poisonBlade,    //  7  8.0s  DoT poison
-    deathMark,      //  8  8.0s  combo finisher weakness
-    shadowChain,    //  9 10.0s  chain combo primer
-    gouge,          // 10 10.0s  interrupt
-    fanOfKnives,    // 11 10.0s  AoE
-    exposeWeakness, // 12 12.0s  permanent vulnerability
-    smokeBomb,      // 13 18.0s  CC blind AoE
-    shadowStep,     // 14 20.0s  teleport behind target
+    shiv,               //  1  1.0s  combo starter free
+    shadowfangRake,     //  2  1.0s  combo 2 bleed
+    shadowForm,         //  3  5.0s  buff haste
+    shadowSpike,        //  4  5.0s  combo 3 piercing
+    backstab,           //  5  6.0s  high dmg from behind
+    umbralLunge,        //  6  6.0s  combo 4 gap closer
+    poisonBlade,        //  7  8.0s  DoT poison
+    deathMark,          //  8  8.0s  combo finisher weakness
+    shadowChain,        //  9 10.0s  chain combo primer
+    gouge,              // 10 10.0s  interrupt
+    fanOfKnives,        // 11 10.0s  AoE
+    exposeWeakness,     // 12 12.0s  permanent vulnerability
+    smokeBomb,          // 13 18.0s  CC blind AoE
+    blackoutStrike,     // 14 20.0s  CC sleep
+    shadowStep,         // 15 20.0s  teleport behind target
+    hallucinogenicBlade,// 16 24.0s  CC disorient
+    smokeShroud,        // 17 35.0s  AoE nearsight
   ];
 }

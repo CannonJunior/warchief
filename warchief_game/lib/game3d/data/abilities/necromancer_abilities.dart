@@ -235,8 +235,73 @@ class NecromancerAbilities {
     damageSchool: DamageSchool.shadow,
   );
 
+  // ==================== CC ABILITIES ====================
+
+  /// Grave Grasp — Skeletal hands erupt, grounding and slowing enemies.
+  static final graveGrasp = AbilityData(
+    name: 'Grave Grasp',
+    description: 'Skeletal hands erupt from the ground, grounding and slowing enemies in the area.',
+    type: AbilityType.aoe,
+    cooldown: 20.0,
+    range: 12.0,
+    aoeRadius: 5.0,
+    color: Vector3(0.3, 0.05, 0.2),
+    impactColor: Vector3(0.4, 0.1, 0.3),
+    impactSize: 1.0,
+    manaColor: ManaColor.black,
+    manaCost: 20.0,
+    category: 'necromancer',
+    damageSchool: DamageSchool.shadow,
+    statusEffects: [
+      AbilityStatusEffect(type: StatusEffect.grounded, duration: 4.0),
+      AbilityStatusEffect(type: StatusEffect.slow, duration: 2.0, strength: 0.5),
+    ],
+  );
+
+  /// Hex of the Toad — Polymorphs the target into a helpless critter.
+  static final hexOfTheToad = AbilityData(
+    name: 'Hex of the Toad',
+    description: 'Transforms the enemy into a toad, rendering them helpless.',
+    type: AbilityType.ranged,
+    cooldown: 28.0,
+    range: 18.0,
+    castTime: 1.2,
+    color: Vector3(0.25, 0.15, 0.1),
+    impactColor: Vector3(0.35, 0.25, 0.2),
+    impactSize: 0.6,
+    statusEffect: StatusEffect.polymorph,
+    statusDuration: 5.0,
+    manaColor: ManaColor.black,
+    manaCost: 25.0,
+    secondaryManaColor: ManaColor.green,
+    secondaryManaCost: 10.0,
+    damageSchool: DamageSchool.shadow,
+    category: 'necromancer',
+  );
+
+  /// Soul Shackle — Channels dark energy, suppressing both caster and target.
+  static final soulShackle = AbilityData(
+    name: 'Soul Shackle',
+    description: 'Channels dark energy that shackles both caster and target in place.',
+    type: AbilityType.channeled,
+    cooldown: 35.0,
+    duration: 3.5,
+    range: 10.0,
+    castTime: 1.5,
+    color: Vector3(0.2, 0.0, 0.15),
+    impactColor: Vector3(0.3, 0.05, 0.25),
+    impactSize: 0.7,
+    channelEffect: ChannelEffect.lifeDrain,
+    statusEffect: StatusEffect.suppress,
+    statusDuration: 3.5,
+    manaColor: ManaColor.black,
+    manaCost: 30.0,
+    category: 'necromancer',
+    damageSchool: DamageSchool.shadow,
+  );
+
   /// All necromancer abilities as a list.
-  /// Ordered short→long cooldown; slots 11-12 hold the longest cooldowns.
+  /// Ordered short→long cooldown; slots 11-15 hold the longest cooldowns.
   static List<AbilityData> get all => [
     graveTouch,          //  1  1.0s  melee weakness debuff
     deathShroud,         //  2  5.0s  shield aura
@@ -247,8 +312,11 @@ class NecromancerAbilities {
     soulFracture,        //  7 12.0s  permanent vulnerability
     curseOfWeakness,     //  8 16.0s  CC damage reduction
     fear,                //  9 20.0s  CC flee
-    nullBolt,            // 10 24.0s  interrupt ranged
-    summonSkeleton,      // 11 25.0s  summon melee ally
-    summonSkeletonMage,  // 12 30.0s  summon caster ally
+    graveGrasp,          // 10 20.0s  AoE ground + slow
+    nullBolt,            // 11 24.0s  interrupt ranged
+    summonSkeleton,      // 12 25.0s  summon melee ally
+    hexOfTheToad,        // 13 28.0s  polymorph CC
+    summonSkeletonMage,  // 14 30.0s  summon caster ally
+    soulShackle,         // 15 35.0s  channeled suppress
   ];
 }

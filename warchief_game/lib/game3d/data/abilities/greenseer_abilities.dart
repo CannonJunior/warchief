@@ -335,6 +335,70 @@ class GreenseerAbilities {
     auraRange: 10.0,
   );
 
+  // ==================== CC ABILITIES ====================
+
+  /// Dreamweave — Ranged charm that forces target to walk toward the caster.
+  static final dreamweave = AbilityData(
+    name: 'Dreamweave',
+    description: 'Weave a dream into the target\'s mind, charming them to walk toward you for 3.5 seconds',
+    type: AbilityType.debuff,
+    cooldown: 28.0,
+    range: 18.0,
+    color: Vector3(0.4, 0.9, 0.5),
+    impactColor: Vector3(0.5, 1.0, 0.6),
+    impactSize: 0.9,
+    castTime: 1.5,
+    statusEffect: StatusEffect.charm,
+    statusDuration: 3.5,
+    manaColor: ManaColor.green,
+    manaCost: 30.0,
+    category: 'greenseer',
+  );
+
+  /// Verdant Entangle — AoE targeted ground root + grounded zone.
+  static final verdantEntangle = AbilityData(
+    name: 'Verdant Entangle',
+    description: 'Erupt vines at a location, rooting enemies for 2 seconds and grounding them for 6 seconds',
+    type: AbilityType.aoe,
+    cooldown: 20.0,
+    range: 12.0,
+    duration: 6.0,
+    color: Vector3(0.3, 0.8, 0.3),
+    impactColor: Vector3(0.4, 0.9, 0.4),
+    impactSize: 1.2,
+    aoeRadius: 7.0,
+    statusEffects: [
+      AbilityStatusEffect(type: StatusEffect.root, duration: 2.0),
+      AbilityStatusEffect(type: StatusEffect.grounded, duration: 6.0),
+    ],
+    manaColor: ManaColor.green,
+    manaCost: 20.0,
+    category: 'greenseer',
+  );
+
+  /// Thornwall — Ranged thorn barrage with knockback and bleed.
+  static final thornwall = AbilityData(
+    name: 'Thornwall',
+    description: 'Launch a wall of thorns that deals 20 damage, knocks enemies back, and causes bleeding for 3 seconds',
+    type: AbilityType.ranged,
+    damage: 20.0,
+    cooldown: 30.0,
+    range: 12.0,
+    color: Vector3(0.3, 0.7, 0.2),
+    impactColor: Vector3(0.4, 0.8, 0.3),
+    impactSize: 1.0,
+    castTime: 1.0,
+    knockbackForce: 3.0,
+    statusEffect: StatusEffect.bleed,
+    statusDuration: 3.0,
+    manaColor: ManaColor.green,
+    manaCost: 25.0,
+    secondaryManaColor: ManaColor.red,
+    secondaryManaCost: 10.0,
+    category: 'greenseer',
+    damageSchool: DamageSchool.nature,
+  );
+
   /// All greenseer abilities as a list.
   /// Ordered short→long cooldown; slots 11-15 hold the longest cooldowns.
   /// Cut: barkFist (redundant basic), verdantCurse (perm vuln not core to healer).
@@ -350,9 +414,12 @@ class GreenseerAbilities {
     earthBond,         //  9 10.0s  chain combo primer
     spiritBloom,       // 10 12.0s  AoE heal
     cleansingRain,     // 11 15.0s  AoE debuff cleanse
-    harmony,           // 12 20.0s  damage-split link
-    awakening,         // 13 25.0s  big single-target heal
-    soulShield,        // 14 30.0s  large absorb shield
-    etherealForm,      // 15 120.0s ultimate transform
+    verdantEntangle,   // 12 20.0s  AoE root + grounded
+    harmony,           // 13 20.0s  damage-split link
+    awakening,         // 14 25.0s  big single-target heal
+    dreamweave,        // 15 28.0s  ranged charm CC
+    soulShield,        // 16 30.0s  large absorb shield
+    thornwall,         // 17 30.0s  ranged knockback + bleed
+    etherealForm,      // 18 120.0s ultimate transform
   ];
 }

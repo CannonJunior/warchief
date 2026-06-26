@@ -318,6 +318,52 @@ class AethermancerAbilities {
     isPartyBuff: true,
   );
 
+  // ==================== CC ABILITIES ====================
+
+  /// Aether Banish — Ranged banish that phases the target out of existence.
+  static final aetherBanish = AbilityData(
+    name: 'Aether Banish',
+    description: 'Banish the target to the aether, making them invulnerable but unable to act for 2.5 seconds',
+    type: AbilityType.debuff,
+    cooldown: 30.0,
+    range: 18.0,
+    color: Vector3(0.85, 0.9, 1.0),
+    impactColor: Vector3(0.95, 0.95, 1.0),
+    impactSize: 1.0,
+    castTime: 1.0,
+    statusEffect: StatusEffect.banish,
+    statusDuration: 2.5,
+    manaColor: ManaColor.white,
+    manaCost: 25.0,
+    secondaryManaColor: ManaColor.blue,
+    secondaryManaCost: 20.0,
+    category: 'aethermancer',
+    damageSchool: DamageSchool.arcane,
+  );
+
+  /// Zephyr Chains — Ranged AoE grounded + slow.
+  static final zephyrChains = AbilityData(
+    name: 'Zephyr Chains',
+    description: 'Bind enemies in chains of wind, grounding them for 4 seconds and slowing them for 3 seconds',
+    type: AbilityType.aoe,
+    damage: 10.0,
+    cooldown: 22.0,
+    range: 15.0,
+    color: Vector3(0.8, 0.92, 1.0),
+    impactColor: Vector3(0.9, 0.96, 1.0),
+    impactSize: 1.2,
+    aoeRadius: 6.0,
+    statusEffects: [
+      AbilityStatusEffect(type: StatusEffect.grounded, duration: 4.0),
+      AbilityStatusEffect(type: StatusEffect.slow, duration: 3.0, strength: 0.3),
+    ],
+    manaColor: ManaColor.white,
+    manaCost: 20.0,
+    secondaryManaColor: ManaColor.blue,
+    secondaryManaCost: 10.0,
+    category: 'aethermancer',
+  );
+
   /// All Aethermancer abilities as a list.
   /// Ordered short→long cooldown; slots 11-14 hold the longest cooldowns.
   static List<AbilityData> get all => [
@@ -335,5 +381,7 @@ class AethermancerAbilities {
     aetherChill,     // 12 16.0s  ranged freeze CC
     aetherAegis,     // 13 18.0s  heal + shield
     zephyrWard,      // 14 20.0s  buff haste
+    zephyrChains,    // 15 22.0s  AoE grounded + slow
+    aetherBanish,    // 16 30.0s  ranged banish CC
   ];
 }

@@ -127,6 +127,18 @@ double _statusEffectValue(StatusEffect effect) => switch (effect) {
   StatusEffect.knockback             => 0.1,
   StatusEffect.grip                  => 0.1,
   StatusEffect.knockdown             => 0.3,  // stun + interrupt composite
+  StatusEffect.daze                  => 0.15,
+  StatusEffect.airborne              => 0.3,
+  StatusEffect.sleep                 => 0.3,
+  StatusEffect.charm                 => 0.3,
+  StatusEffect.polymorph             => 0.3,
+  StatusEffect.taunt                 => 0.2,
+  StatusEffect.disorient             => 0.15,
+  StatusEffect.grounded              => 0.15,
+  StatusEffect.suppress              => 0.3,
+  StatusEffect.nearsight             => 0.1,
+  StatusEffect.banish                => 0.25,
+  StatusEffect.gravityWell           => 0.15,
 };
 
 /// Returns a color for the given balance score.

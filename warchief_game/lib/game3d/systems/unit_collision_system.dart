@@ -4,29 +4,34 @@ import '../state/game_config.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../models/target_dummy.dart';
 
-/// Soft spring-force separation that prevents units from overlapping.
+/// Unit separation system that prevents overlapping.
 ///
 /// After all movement each frame (input, AI, wind drift, wall collisions),
-/// this system checks every pair of units and pushes overlapping pairs apart
-/// proportionally to their overlap depth. The result is a gentle springy
-/// separation rather than a hard snap, so units briefly overlap during fast
-/// movement but smoothly resolve.
+/// this system checks every pair of units and pushes overlapping pairs apart.
 ///
-/// During dash abilities the player is excluded ("phased") so movement
-/// abilities punch through crowds.
+/// Cross-faction pairs (friendly vs enemy): only the friendly unit is pushed.
+/// Enemies act as solid obstacles that cannot be displaced by walking into
+/// them. Movement abilities bypass this by setting the player as "phased."
+///
+/// Same-faction pairs use a softer spring with multiple iterations so that
+/// crowds of enemies (or allies) spread out naturally without bunching.
 class UnitCollisionSystem {
   UnitCollisionSystem._();
 
-  /// How aggressively overlapping units are pushed apart each frame.
-  /// 0.0 = no push, 1.0 = instant snap apart. 0.4 gives a soft springy feel.
-  static const double _separationStrength = 0.4;
+  /// Same-faction spring strength per iteration. At 0.8 with 4 iterations,
+  /// remaining overlap is 0.2^4 ≈ 0.2% — effectively fully resolved.
+  static const double _sameFactionStrength = 0.8;
+
+  /// Number of pairwise iterations. Multiple passes resolve multi-body
+  /// clumps that a single pass cannot (e.g. 5 minions converging on one spot).
+  static const int _iterations = 4;
 
   /// Reusable list to avoid per-frame allocation.
   static final List<_CollisionUnit> _units = [];
 
   static final math.Random _rng = math.Random();
 
-  /// Run pairwise soft separation on all active units.
+  /// Run pairwise separation on all active units.
   static void resolve(GameState gameState) {
     _units.clear();
 
@@ -37,13 +42,14 @@ class UnitCollisionSystem {
       _units.add(_CollisionUnit(
         gameState.playerTransform!,
         GameConfig.playerSize * 0.5,
+        _Faction.friendly,
       ));
     }
 
     // Allies
     for (final ally in gameState.allies) {
       if (ally.health <= 0) continue;
-      _units.add(_CollisionUnit(ally.transform, GameConfig.allySize * 0.5));
+      _units.add(_CollisionUnit(ally.transform, GameConfig.allySize * 0.5, _Faction.friendly));
     }
 
     // Boss monster
@@ -51,6 +57,7 @@ class UnitCollisionSystem {
       _units.add(_CollisionUnit(
         gameState.monsterTransform!,
         GameConfig.monsterSize * 0.5,
+        _Faction.enemy,
       ));
     }
 
@@ -59,28 +66,30 @@ class UnitCollisionSystem {
       _units.add(_CollisionUnit(
         minion.transform,
         minion.definition.effectiveScale * 0.5,
+        _Faction.enemy,
       ));
     }
 
     // Duel combatants
     for (final combatant in gameState.duelCombatants) {
       if (combatant.health <= 0) continue;
-      _units.add(_CollisionUnit(combatant.transform, GameConfig.allySize * 0.5));
+      _units.add(_CollisionUnit(combatant.transform, GameConfig.allySize * 0.5, _Faction.neutral));
     }
 
     // Target dummy
     final dummy = gameState.targetDummy;
     if (dummy != null && dummy.isSpawned) {
-      _units.add(_CollisionUnit(dummy.transform, TargetDummy.size * 0.5));
+      _units.add(_CollisionUnit(dummy.transform, TargetDummy.size * 0.5, _Faction.neutral));
     }
 
-    // Pairwise separation
+    // Multiple iterations resolve multi-body clumps
     final n = _units.length;
-    for (int i = 0; i < n; i++) {
-      final a = _units[i];
-      for (int j = i + 1; j < n; j++) {
-        final b = _units[j];
-        _separate(a, b);
+    for (int iter = 0; iter < _iterations; iter++) {
+      for (int i = 0; i < n; i++) {
+        final a = _units[i];
+        for (int j = i + 1; j < n; j++) {
+          _separate(a, _units[j]);
+        }
       }
     }
   }
@@ -97,7 +106,6 @@ class UnitCollisionSystem {
 
     double nx, nz;
     if (dist < 0.001) {
-      // Nearly identical positions — random nudge to break symmetry
       final angle = _rng.nextDouble() * math.pi * 2;
       nx = math.cos(angle);
       nz = math.sin(angle);
@@ -107,17 +115,38 @@ class UnitCollisionSystem {
     }
 
     final overlap = minDist - dist;
-    final push = overlap * 0.5 * _separationStrength;
 
-    a.t.position.x += nx * push;
-    a.t.position.z += nz * push;
-    b.t.position.x -= nx * push;
-    b.t.position.z -= nz * push;
+    final crossFaction = a.faction != b.faction &&
+        a.faction != _Faction.neutral &&
+        b.faction != _Faction.neutral;
+
+    if (crossFaction) {
+      // Only the friendly unit gets pushed — enemies are solid obstacles.
+      // Push by full overlap so the friendly unit can't make net progress
+      // even if it keeps walking/pathing into the enemy each frame.
+      if (a.faction == _Faction.friendly) {
+        a.t.position.x += nx * overlap;
+        a.t.position.z += nz * overlap;
+      } else {
+        b.t.position.x -= nx * overlap;
+        b.t.position.z -= nz * overlap;
+      }
+    } else {
+      // Same-faction or neutral: soft spring, push both equally
+      final push = overlap * 0.5 * _sameFactionStrength;
+      a.t.position.x += nx * push;
+      a.t.position.z += nz * push;
+      b.t.position.x -= nx * push;
+      b.t.position.z -= nz * push;
+    }
   }
 }
+
+enum _Faction { friendly, enemy, neutral }
 
 class _CollisionUnit {
   final Transform3d t;
   final double radius;
-  _CollisionUnit(this.t, this.radius);
+  final _Faction faction;
+  _CollisionUnit(this.t, this.radius, this.faction);
 }

@@ -5,6 +5,9 @@ part of 'ability_system.dart';
 /// Accumulated time for channel tick damage/heal (1 tick per second).
 double _channelTickAccum = 0.0;
 
+/// Last fired ability data for stance hit notification.
+AbilityData? _lastFiredAbilityData;
+
 /// Accumulated time for spirit animal bond tick (1 tick per second).
 double _spiritChannelTickAccum = 0.0;
 
@@ -122,8 +125,11 @@ void _updateWindupState(double dt, GameState gameState) {
 void _updateChannelingState(double dt, GameState gameState) {
   if (!gameState.isChanneling) return;
 
-  gameState.channelProgress += dt;
-  _channelTickAccum += dt;
+  // Tempest: channels tick faster
+  final channelSpeedBonus = gameState.activeStance.mechanics?.channelTickSpeedBonus ?? 0.0;
+  final effectiveDt = dt * (1.0 + channelSpeedBonus);
+  gameState.channelProgress += effectiveDt;
+  _channelTickAccum += effectiveDt;
 
   // Reason: Tick damage/heal once per second during the channel
   const tickInterval = 1.0;
@@ -315,13 +321,15 @@ void _finishWindupAbility(int slotIndex, GameState gameState) {
 
 // ==================== CAST / WINDUP START ====================
 
-/// Begin a cast-time ability (applies Haste and stance cast time multiplier).
+/// Begin a cast-time ability (applies Haste, stance cast time multiplier, and Tempest reduction).
 void _startCastTimeAbility(AbilityData abilityData, int slotIndex, GameState gameState) {
   final haste = gameState.activeHaste;
   double castTime = haste > 0
       ? abilityData.castTime / (1 + haste / 100.0)
       : abilityData.castTime;
   castTime *= gameState.activeStance.castTimeMultiplier;
+  final tempestReduction = gameState.activeStance.mechanics?.castTimeReduction ?? 0.0;
+  if (tempestReduction > 0) castTime *= (1.0 - tempestReduction);
 
   gameState.isCasting = true;
   gameState.castProgress = 0.0;
@@ -333,13 +341,15 @@ void _startCastTimeAbility(AbilityData abilityData, int slotIndex, GameState gam
   devLog(() => '[CAST] Starting ${abilityData.name} (${castTime.toStringAsFixed(2)}s cast time${haste > 0 ? ', $haste% haste' : ''})');
 }
 
-/// Begin a windup melee ability (applies Haste and stance cast time multiplier).
+/// Begin a windup melee ability (applies Haste, stance cast time multiplier, and Tempest reduction).
 void _startWindupAbility(AbilityData abilityData, int slotIndex, GameState gameState) {
   final haste = gameState.activeHaste;
   double windupTime = haste > 0
       ? abilityData.windupTime / (1 + haste / 100.0)
       : abilityData.windupTime;
   windupTime *= gameState.activeStance.castTimeMultiplier;
+  final tempestReduction = gameState.activeStance.mechanics?.windupReduction ?? 0.0;
+  if (tempestReduction > 0) windupTime *= (1.0 - tempestReduction);
 
   gameState.isWindingUp = true;
   gameState.windupProgress = 0.0;

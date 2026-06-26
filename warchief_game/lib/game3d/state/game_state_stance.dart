@@ -11,6 +11,7 @@ extension GameStateStanceExt on GameState {
       return;
     }
 
+    final oldStance = isWarchiefActive ? playerStance : (activeAlly?.currentStance ?? StanceId.none);
     final oldMaxHealth = activeMaxHealth;
     if (isWarchiefActive) {
       playerStance = newStance;
@@ -18,6 +19,41 @@ extension GameStateStanceExt on GameState {
       activeAlly!.currentStance = newStance;
     }
     invalidateActiveStanceCache();
+
+    // Notify stance runtime of the switch
+    stanceRuntime.onStanceLeave(oldStance);
+    stanceRuntime.onStanceEnter(newStance);
+
+    // Flux Memory: returning to Flux within the window resets the remembered ability's CD
+    if (newStance == StanceId.flux && stanceRuntime.fluxMemoryAbilityName != null) {
+      final m = activeStance.mechanics;
+      if (m != null && stanceRuntime.fluxMemoryTimer <= m.fluxMemoryDuration) {
+        final memName = stanceRuntime.fluxMemoryAbilityName!;
+        final barConfig = globalActionBarConfigManager?.activeConfig;
+        if (barConfig != null) {
+          final slots = barConfig.slotAssignments;
+          for (int i = 0; i < slots.length; i++) {
+            if (slots[i] == memName) {
+              activeAbilityCooldowns[i] = 0.0;
+              addConsoleLog('Flux Memory: $memName cooldown reset!');
+              break;
+            }
+          }
+        }
+        stanceRuntime.fluxMemoryAbilityName = null;
+      }
+    }
+
+    // Flux: Weave State heal-per-switch
+    if (stanceRuntime.fluxWeaveActive) {
+      final weaveHeal = activeStance.mechanics?.weaveHealPerSwitch ?? 0.0;
+      if (weaveHeal > 0) {
+        final maxHp = activeMaxHealth;
+        final heal = maxHp * weaveHeal;
+        activeHealth = (activeHealth + heal).clamp(0.0, maxHp);
+      }
+    }
+
     final newMaxHealth = activeMaxHealth;
 
     // Proportionally scale current HP so switching doesn't instakill or overheal

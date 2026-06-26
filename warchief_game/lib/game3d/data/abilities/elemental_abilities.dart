@@ -191,8 +191,72 @@ class ElementalAbilities {
     category: 'elemental',
   );
 
+  // ==================== CC ABILITIES ====================
+
+  /// Magma Geyser — Erupts magma, launching enemies airborne.
+  static final magmaGeyser = AbilityData(
+    name: 'Magma Geyser',
+    description: 'Erupts a geyser of magma at the target location, launching enemies airborne.',
+    type: AbilityType.aoe,
+    damage: 35.0,
+    cooldown: 18.0,
+    range: 12.0,
+    aoeRadius: 4.0,
+    color: Vector3(1.0, 0.4, 0.0),
+    impactColor: Vector3(1.0, 0.55, 0.15),
+    impactSize: 1.1,
+    statusEffect: StatusEffect.airborne,
+    statusStrength: 4.0,
+    statusDuration: 1.2,
+    manaColor: ManaColor.red,
+    manaCost: 25.0,
+    damageSchool: DamageSchool.fire,
+    category: 'elemental',
+  );
+
+  /// Petrify — Encases the target in stone, freezing them in place.
+  static final petrify = AbilityData(
+    name: 'Petrify',
+    description: 'Encases the target in living stone, freezing them in place.',
+    type: AbilityType.ranged,
+    cooldown: 22.0,
+    range: 12.0,
+    castTime: 1.0,
+    color: Vector3(0.5, 0.4, 0.25),
+    impactColor: Vector3(0.6, 0.5, 0.35),
+    impactSize: 0.7,
+    statusEffect: StatusEffect.freeze,
+    statusDuration: 3.0,
+    manaColor: ManaColor.red,
+    manaCost: 20.0,
+    secondaryManaColor: ManaColor.green,
+    secondaryManaCost: 15.0,
+    damageSchool: DamageSchool.nature,
+    category: 'elemental',
+  );
+
+  /// Glacial Prison — Banishes the target in a prison of ice.
+  static final glacialPrison = AbilityData(
+    name: 'Glacial Prison',
+    description: 'Encases the target in a glacial prison, phasing them out of existence.',
+    type: AbilityType.ranged,
+    cooldown: 30.0,
+    range: 15.0,
+    castTime: 1.5,
+    color: Vector3(0.6, 0.85, 1.0),
+    impactColor: Vector3(0.7, 0.95, 1.0),
+    impactSize: 0.9,
+    statusEffect: StatusEffect.banish,
+    statusDuration: 3.0,
+    manaColor: ManaColor.blue,
+    manaCost: 25.0,
+    secondaryManaColor: ManaColor.red,
+    secondaryManaCost: 10.0,
+    category: 'elemental',
+  );
+
   /// All elemental abilities as a list.
-  /// Ordered short→long cooldown; slots 7-9 hold the longest cooldowns.
+  /// Ordered short→long cooldown; slots 7-12 hold the longest cooldowns.
   static List<AbilityData> get all => [
     frostbiteSlash,      //  1  1.0s  combo opener chill
     iceLance,            //  2  3.0s  ranged piercing
@@ -201,7 +265,10 @@ class ElementalAbilities {
     magmaStrike,         //  5  7.0s  melee fire reaction
     elementalChain,      //  6 10.0s  chain combo primer
     elementalRend,       //  7 12.0s  permanent vulnerability
-    magneticDisrupt,     //  8 22.0s  interrupt ranged
-    earthquake,          //  9 25.0s  channeled AoE stun CC
+    magmaGeyser,         //  8 18.0s  AoE airborne launch
+    petrify,             //  9 22.0s  ranged freeze CC
+    magneticDisrupt,     // 10 22.0s  interrupt ranged
+    earthquake,          // 11 25.0s  channeled AoE stun CC
+    glacialPrison,       // 12 30.0s  banish CC
   ];
 }

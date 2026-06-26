@@ -10,6 +10,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math.dart' hide Colors;
+import 'item.dart' show ArmorCategory;
 
 /// Monster archetype - the combat role a monster fulfills
 enum MonsterArchetype {
@@ -122,6 +123,9 @@ class MonsterDefinition {
   final bool canFlee;           // Whether monster will flee at low health
   final double fleeHealthThreshold; // Health % to trigger flee
 
+  // Armor category for weapon effectiveness matrix
+  final ArmorCategory? armorCategory;
+
   const MonsterDefinition({
     required this.id,
     required this.name,
@@ -145,6 +149,7 @@ class MonsterDefinition {
     this.groupTendency = 0.5,
     this.canFlee = true,
     this.fleeHealthThreshold = 0.2,
+    this.armorCategory,
   });
 
   /// Calculate effective stats based on Monster Power

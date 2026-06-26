@@ -1,0 +1,75 @@
+{
+  "diminishingReturns": {
+    "enabled": true,
+    "window": 18.0,
+    "reductions": [1.0, 0.5, 0.25, 0.0],
+    "categories": {
+      "stun": ["stun", "knockdown", "airborne"],
+      "incapacitate": ["sleep", "polymorph", "banish", "charm"],
+      "root": ["root", "grounded"],
+      "silence": ["silence", "suppress"],
+      "disorient": ["fear", "disorient", "daze"]
+    }
+  },
+  "airborne": {
+    "launchHeightBase": 4.0,
+    "gravityAccel": 12.0,
+    "windDurationBonus": 0.3,
+    "fallDamagePerUnit": 5.0,
+    "juggleWindowAfterLand": 0.5
+  },
+  "sleep": {
+    "regenPerSecondPercent": 1.0,
+    "casterManaRegenBonus": 0.5
+  },
+  "charm": {
+    "walkSpeedPercent": 0.6,
+    "allySlowRadius": 3.0,
+    "allySlowDuration": 1.0,
+    "allySlowStrength": 0.3
+  },
+  "polymorph": {
+    "moveSpeedPercent": 0.7,
+    "trailDuration": 3.0,
+    "trailVisibilityRadius": 15.0
+  },
+  "taunt": {
+    "damageReduction": 0.25,
+    "indignationDuration": 2.0,
+    "indignationHaste": 0.3
+  },
+  "disorient": {
+    "remapRotateInterval": 1.5,
+    "cameraSway": 15.0,
+    "inputDelay": 0.3
+  },
+  "grounded": {
+    "natureDamageBonus": 0.2
+  },
+  "suppress": {
+    "casterBreakOnDamage": true
+  },
+  "nearsight": {
+    "fogRadius": 8.0,
+    "nameplateRadius": 10.0,
+    "hidesCcOverlay": true
+  },
+  "banish": {
+    "cooldownTickRate": 3.0
+  },
+  "gravityWell": {
+    "pullSpeed": 2.0,
+    "moveSpeedReduction": 0.4,
+    "projectileBendRadius": 8.0,
+    "projectileBendStrength": 0.5
+  },
+  "stanceInteractions": {
+    "cadence": { "onBeatCcDurationBonus": 0.25, "ccResetsGroove": true },
+    "tempest": { "nonChainCcDurationPenalty": 0.15, "incomingHardCcReduction": 0.20 },
+    "warden": { "predatorCcDurationBonus": 0.40, "strafeCcResistChance": 0.15, "groundedDisablesDirectional": true },
+    "crucible": { "ccHeatCost": 2, "zeroheatCcDurationBonus": 0.50, "ccPausesHeatDecay": true },
+    "momentum": { "displacementForcePerStack": 0.05, "maxStackAirborneExtension": 0.5, "ccMomentumDecayMultiplier": 3.0 },
+    "pressure": { "ccPressureBuildBonus": 0.50, "breakIgnoresDR": true, "ccPressureDecayMultiplier": 3.0, "displacementPressureReset": 0.50 },
+    "flux": { "transitionCcDurationBonus": 0.30, "switchCleansesSoftCc": true, "stagnationCcDurationPenalty": 0.25 }
+  }
+}

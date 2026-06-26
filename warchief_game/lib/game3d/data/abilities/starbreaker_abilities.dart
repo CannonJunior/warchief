@@ -386,24 +386,63 @@ class StarbreakerAbilities {
     auraRange: 10.0,
   );
 
+  // ==================== CC ABILITIES ====================
+
+  /// Singularity Crush — Melee void crush that suppresses the target.
+  static final singularityCrush = AbilityData(
+    name: 'Singularity Crush',
+    description: 'Crushes the target with collapsed void, suppressing all action.',
+    type: AbilityType.melee, damage: 30.0, cooldown: 20.0, range: 3.0,
+    color: _mel, impactColor: _imp, impactSize: 0.7,
+    statusEffect: StatusEffect.suppress, statusDuration: 2.5,
+    manaColor: ManaColor.black, manaCost: 25.0,
+    damageSchool: DamageSchool.shadow, category: 'starbreaker',
+  );
+
+  /// Void Collapse — Ranged AoE gravity well that pins enemies in place.
+  static final voidCollapse = AbilityData(
+    name: 'Void Collapse',
+    description: 'Collapses a region of space, trapping enemies in a gravity well.',
+    type: AbilityType.aoe, damage: 25.0, cooldown: 25.0, range: 15.0,
+    castTime: 1.0, aoeRadius: 6.0,
+    color: _col, impactColor: _imp, impactSize: 1.3,
+    statusEffect: StatusEffect.gravityWell, statusDuration: 5.0,
+    manaColor: ManaColor.black, manaCost: 30.0,
+    damageSchool: DamageSchool.shadow, category: 'starbreaker',
+  );
+
+  /// Dimensional Rift — Banishes the target to another dimension.
+  static final dimensionalRift = AbilityData(
+    name: 'Dimensional Rift',
+    description: 'Tears open a rift that banishes the target from this dimension.',
+    type: AbilityType.ranged, cooldown: 30.0, range: 20.0, castTime: 0.8,
+    color: _col, impactColor: _cor, impactSize: 0.8,
+    statusEffect: StatusEffect.banish, statusDuration: 3.0,
+    manaColor: ManaColor.black, manaCost: 25.0,
+    secondaryManaColor: ManaColor.blue, secondaryManaCost: 15.0,
+    category: 'starbreaker', damageSchool: DamageSchool.shadow,
+  );
+
   /// All Starbreaker abilities as a list.
-  /// Ordered short→long cooldown; slots 11-15 hold the longest cooldowns.
-  /// Cut: cometShard (overlaps with Stellar Collapse as massive nuke).
+  /// Ordered short→long cooldown; slots 11-18 hold the longest cooldowns.
   static List<AbilityData> get all => [
-    voidStrike,    //  1  3.5s  melee perm vuln, combo opener
-    soulRend,      //  2  5.0s  melee weakness debuff, combo 2
-    voidResonance, //  3  5.0s  void shield aura
-    voidBolt,      //  4  5.5s  ranged piercing lifesteal
-    entropySmash,  //  5  9.0s  melee AoE stun, combo 3
-    voidCascade,   //  6 10.0s  chain combo primer
-    entropyCascade,//  7 11.0s  AoE chain damage
-    soulDrain,     //  8 13.0s  channeled lifesteal beam
-    singularity,   //  9 14.0s  gravity pull AoE
-    deathMark,     // 10 16.0s  DoT burn brand
-    voidFracture,  // 11 16.0s  interrupt
-    voidRift,      // 12 17.0s  CC root zone
-    entropicField, // 13 20.0s  channeled AoE zone
-    oblivion,      // 14 28.0s  channeled resist strip
-    stellarCollapse,// 15 65.0s ultimate void implosion
+    voidStrike,      //  1  3.5s  melee perm vuln, combo opener
+    soulRend,        //  2  5.0s  melee weakness debuff, combo 2
+    voidResonance,   //  3  5.0s  void shield aura
+    voidBolt,        //  4  5.5s  ranged piercing lifesteal
+    entropySmash,    //  5  9.0s  melee AoE stun, combo 3
+    voidCascade,     //  6 10.0s  chain combo primer
+    entropyCascade,  //  7 11.0s  AoE chain damage
+    soulDrain,       //  8 13.0s  channeled lifesteal beam
+    singularity,     //  9 14.0s  gravity pull AoE
+    deathMark,       // 10 16.0s  DoT burn brand
+    voidFracture,    // 11 16.0s  interrupt
+    voidRift,        // 12 17.0s  CC root zone
+    entropicField,   // 13 20.0s  channeled AoE zone
+    singularityCrush,// 14 20.0s  melee suppress CC
+    voidCollapse,    // 15 25.0s  AoE gravity well CC
+    oblivion,        // 16 28.0s  channeled resist strip
+    dimensionalRift, // 17 30.0s  banish CC
+    stellarCollapse, // 18 65.0s  ultimate void implosion
   ];
 }

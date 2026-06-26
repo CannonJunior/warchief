@@ -114,6 +114,30 @@ class ActiveEffect {
         return Icons.compress;
       case StatusEffect.knockdown:
         return Icons.accessibility_new;
+      case StatusEffect.daze:
+        return Icons.blur_on;
+      case StatusEffect.airborne:
+        return Icons.flight;
+      case StatusEffect.sleep:
+        return Icons.bedtime;
+      case StatusEffect.charm:
+        return Icons.favorite_border;
+      case StatusEffect.polymorph:
+        return Icons.pets;
+      case StatusEffect.taunt:
+        return Icons.record_voice_over;
+      case StatusEffect.disorient:
+        return Icons.explore_off;
+      case StatusEffect.grounded:
+        return Icons.downloading;
+      case StatusEffect.suppress:
+        return Icons.lock;
+      case StatusEffect.nearsight:
+        return Icons.visibility_off;
+      case StatusEffect.banish:
+        return Icons.remove_circle_outline;
+      case StatusEffect.gravityWell:
+        return Icons.trip_origin;
       case StatusEffect.none:
         return Icons.circle;
     }
@@ -176,6 +200,30 @@ class ActiveEffect {
         return const Color(0xFF44AACC);
       case StatusEffect.knockdown:
         return const Color(0xFFBB6622);
+      case StatusEffect.daze:
+        return const Color(0xFFDDAA33);
+      case StatusEffect.airborne:
+        return const Color(0xFFAADDFF);
+      case StatusEffect.sleep:
+        return const Color(0xFF9966CC);
+      case StatusEffect.charm:
+        return const Color(0xFFFF66AA);
+      case StatusEffect.polymorph:
+        return const Color(0xFF77CC44);
+      case StatusEffect.taunt:
+        return const Color(0xFFFF4444);
+      case StatusEffect.disorient:
+        return const Color(0xFFCCAA00);
+      case StatusEffect.grounded:
+        return const Color(0xFF886633);
+      case StatusEffect.suppress:
+        return const Color(0xFF660066);
+      case StatusEffect.nearsight:
+        return const Color(0xFF444466);
+      case StatusEffect.banish:
+        return const Color(0xFF333366);
+      case StatusEffect.gravityWell:
+        return const Color(0xFF6600CC);
       case StatusEffect.none:
         return const Color(0xFF666666);
     }

@@ -38,6 +38,7 @@
       "type": "armor",
       "rarity": "common",
       "slot": "armor",
+      "armorCategory": "mail",
       "stats": {
         "armor": 35,
         "health": 5
@@ -53,6 +54,7 @@
       "type": "armor",
       "rarity": "rare",
       "slot": "armor",
+      "armorCategory": "plate",
       "stats": {
         "armor": 65,
         "health": 10,
@@ -195,6 +197,8 @@
       "type": "weapon",
       "rarity": "common",
       "slot": "mainHand",
+      "weaponCategory": "sword",
+      "weaponType": "armingSword",
       "stats": {
         "damage": 12,
         "brawn": 2
@@ -210,6 +214,8 @@
       "type": "weapon",
       "rarity": "uncommon",
       "slot": "mainHand",
+      "weaponCategory": "axe",
+      "weaponType": "daneAxe",
       "stats": {
         "damage": 22,
         "brawn": 5,
@@ -226,6 +232,8 @@
       "type": "weapon",
       "rarity": "epic",
       "slot": "mainHand",
+      "weaponCategory": "sword",
+      "weaponType": "longsword",
       "stats": {
         "damage": 45,
         "brawn": 12,
@@ -513,6 +521,144 @@
       "iconName": "scale_dragon",
       "sellValue": 100,
       "levelRequirement": 1
+    },
+    {
+      "id": "arming_sword",
+      "name": "Arming Sword",
+      "description": "A versatile single-handed sword of the high medieval period. Balanced for cut and thrust.",
+      "type": "weapon", "rarity": "common", "slot": "mainHand",
+      "weaponCategory": "sword", "weaponType": "armingSword",
+      "stats": { "damage": 14, "brawn": 2, "yar": 1 },
+      "iconName": "sword_arming", "sellValue": 40, "levelRequirement": 1
+    },
+    {
+      "id": "longsword",
+      "name": "Longsword",
+      "description": "A hand-and-a-half sword with half-swording technique for piercing armor gaps.",
+      "type": "weapon", "rarity": "uncommon", "slot": "mainHand",
+      "weaponCategory": "sword", "weaponType": "longsword",
+      "stats": { "damage": 20, "brawn": 4, "yar": 2 },
+      "iconName": "sword_long", "sellValue": 90, "levelRequirement": 4
+    },
+    {
+      "id": "falchion",
+      "name": "Falchion",
+      "description": "A heavy single-edged chopping sword. Devastating against unarmored targets.",
+      "type": "weapon", "rarity": "uncommon", "slot": "mainHand",
+      "weaponCategory": "sword", "weaponType": "falchion",
+      "stats": { "damage": 24, "brawn": 6, "critChance": 2 },
+      "iconName": "sword_falchion", "sellValue": 100, "levelRequirement": 5
+    },
+    {
+      "id": "bearded_axe",
+      "name": "Bearded Axe",
+      "description": "Viking-era axe with an extended lower blade that hooks shields and limbs.",
+      "type": "weapon", "rarity": "common", "slot": "mainHand",
+      "weaponCategory": "axe", "weaponType": "beardedAxe",
+      "stats": { "damage": 15, "brawn": 3 },
+      "iconName": "axe_bearded", "sellValue": 45, "levelRequirement": 1
+    },
+    {
+      "id": "dane_axe",
+      "name": "Dane Axe",
+      "description": "A long-hafted two-handed battle axe with exceptional reach and cleaving power.",
+      "type": "weapon", "rarity": "uncommon", "slot": "mainHand",
+      "weaponCategory": "axe", "weaponType": "daneAxe",
+      "stats": { "damage": 28, "brawn": 7 },
+      "iconName": "axe_dane", "sellValue": 110, "levelRequirement": 5
+    },
+    {
+      "id": "pollaxe",
+      "name": "Pollaxe",
+      "description": "A tournament weapon combining axe blade, hammer head, and spike. The premier anti-armor hafted weapon.",
+      "type": "weapon", "rarity": "rare", "slot": "mainHand",
+      "weaponCategory": "axe", "weaponType": "pollaxe",
+      "stats": { "damage": 35, "brawn": 8, "valor": 3 },
+      "iconName": "axe_pollaxe", "sellValue": 200, "levelRequirement": 7
+    },
+    {
+      "id": "flanged_mace",
+      "name": "Flanged Mace",
+      "description": "Raised flanges concentrate impact force to dent armor and transfer concussive shock.",
+      "type": "weapon", "rarity": "common", "slot": "mainHand",
+      "weaponCategory": "hammer", "weaponType": "flangedMace",
+      "stats": { "damage": 13, "brawn": 3, "valor": 1 },
+      "iconName": "mace_flanged", "sellValue": 40, "levelRequirement": 1,
+      "visualShape": "cube"
+    },
+    {
+      "id": "warhammer_weapon",
+      "name": "Warhammer",
+      "description": "Hammer face for concussive blows, back-spike for punching through plate.",
+      "type": "weapon", "rarity": "uncommon", "slot": "mainHand",
+      "weaponCategory": "hammer", "weaponType": "warhammer",
+      "stats": { "damage": 22, "brawn": 5, "valor": 2 },
+      "iconName": "hammer_war", "sellValue": 95, "levelRequirement": 4,
+      "visualShape": "cube"
+    },
+    {
+      "id": "great_maul",
+      "name": "Great Maul",
+      "description": "A massive two-handed hammer. Slow but can collapse plate armor and shatter shields.",
+      "type": "weapon", "rarity": "rare", "slot": "mainHand",
+      "weaponCategory": "hammer", "weaponType": "maul",
+      "stats": { "damage": 40, "brawn": 10, "valor": 4 },
+      "iconName": "hammer_maul", "sellValue": 220, "levelRequirement": 8,
+      "visualShape": "cube"
+    },
+    {
+      "id": "military_flail",
+      "name": "Military Flail",
+      "description": "A chain-linked striking head that arcs around shields and parries from impossible angles.",
+      "type": "weapon", "rarity": "uncommon", "slot": "mainHand",
+      "weaponCategory": "chain", "weaponType": "militaryFlail",
+      "stats": { "damage": 18, "brawn": 3, "x": 3 },
+      "iconName": "chain_flail", "sellValue": 80, "levelRequirement": 3
+    },
+    {
+      "id": "kettenkugel",
+      "name": "Kettenkugel",
+      "description": "A heavy spiked ball on a long chain. Wraps around defenses with terrifying force.",
+      "type": "weapon", "rarity": "rare", "slot": "mainHand",
+      "weaponCategory": "chain", "weaponType": "kettenkugel",
+      "stats": { "damage": 26, "brawn": 5, "x": 4 },
+      "iconName": "chain_ketten", "sellValue": 150, "levelRequirement": 6
+    },
+    {
+      "id": "meteor_hammer",
+      "name": "Meteor Hammer",
+      "description": "Weighted ends on an extended chain. Extreme reach with wildly unpredictable damage.",
+      "type": "weapon", "rarity": "epic", "slot": "mainHand",
+      "weaponCategory": "chain", "weaponType": "meteorHammer",
+      "stats": { "damage": 32, "brawn": 7, "x": 6, "critChance": 3 },
+      "iconName": "chain_meteor", "sellValue": 350, "levelRequirement": 9
+    },
+    {
+      "id": "halberd",
+      "name": "Halberd",
+      "description": "Axe blade, hook, and spike on a pole. Can cut, thrust, and pull enemies off balance.",
+      "type": "weapon", "rarity": "uncommon", "slot": "mainHand",
+      "weaponCategory": "polearm", "weaponType": "halberd",
+      "stats": { "damage": 23, "brawn": 4, "yar": 3 },
+      "iconName": "pole_halberd", "sellValue": 100, "levelRequirement": 4
+    },
+    {
+      "id": "glaive_weapon",
+      "name": "Glaive",
+      "description": "A curved blade on a pole. Sweeping cuts that excel against groups of enemies.",
+      "type": "weapon", "rarity": "uncommon", "slot": "mainHand",
+      "weaponCategory": "polearm", "weaponType": "glaive",
+      "stats": { "damage": 19, "brawn": 3, "yar": 4 },
+      "iconName": "pole_glaive", "sellValue": 85, "levelRequirement": 3
+    },
+    {
+      "id": "pike",
+      "name": "Pike",
+      "description": "Maximum reach. Fast thrusts devastate from range but vulnerable up close.",
+      "type": "weapon", "rarity": "rare", "slot": "mainHand",
+      "weaponCategory": "polearm", "weaponType": "pike",
+      "stats": { "damage": 17, "yar": 8, "brawn": 2 },
+      "iconName": "pole_pike", "sellValue": 130, "levelRequirement": 5
     }
   ]
 }

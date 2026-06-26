@@ -34,6 +34,20 @@ bool _autoHitCurrentTarget(
   if (targetId == null) return false;
   if (targetId.startsWith('ally_')) return false; // Never damage friendlies
 
+  // Apply stance damage modifier (Cadence on-beat, Tempest chain, Momentum stacks, etc.)
+  if (_activeStanceDamageMod != 1.0) damage *= _activeStanceDamageMod;
+
+  // Apply weapon damage modifier and armor effectiveness (physical only)
+  if (isMelee) {
+    final weaponMods = WeaponSystem.getActiveModifiers(gameState);
+    damage *= weaponMods.damageMultiplier;
+    final targetArmor = _getTargetArmorCategory(gameState);
+    damage *= WeaponSystem.getArmorEffectiveness(weaponMods.category, targetArmor);
+    damage = WeaponSystem.applySpecialMechanicDamage(
+      weaponMods, damage, targetArmor, gameState,
+    );
+  }
+
   bool hit = false;
 
   if (gameState.isTargetingDummy && gameState.targetDummy != null) {
@@ -104,6 +118,27 @@ bool _autoHitCurrentTarget(
   }
 
   if (hit) _applyLifesteal(gameState, damage);
+
+  // Notify stance system of the hit (Momentum stacks, Pressure gauge, Tempest chain, etc.)
+  if (hit) {
+    final hitAbility = _lastFiredAbilityData;
+    if (hitAbility != null) {
+      final entityId = targetId.hashCode;
+      _notifyStanceOnHit(gameState, hitAbility, entityId, isDot: false, targetsHit: 1);
+
+      // Momentum splash damage at max stacks
+      final sm = gameState.activeStance.mechanics;
+      if (gameState.playerStance == StanceId.momentum && sm != null) {
+        final s = gameState.stanceRuntime;
+        if (s.momentumStacks >= sm.momentumMaxStacks && sm.momentumSplashAtMax) {
+          _applyMomentumSplash(
+            gameState, damage, sm.momentumSplashRatio,
+            sm.momentumSplashRadius, impactColor,
+          );
+        }
+      }
+    }
+  }
 
   return hit;
 }
@@ -346,12 +381,141 @@ void _executeGenericAbility(int slotIndex, GameState gameState, AbilityData abil
 
 /// Displace [targetId] by [displacement] in world space (instant, no ActiveEffect).
 void _displaceTarget(GameState gameState, String targetId, Vector3 displacement) {
+  Vector3? pos;
   if (targetId == 'boss' && gameState.monsterTransform != null) {
-    gameState.monsterTransform!.position += displacement;
+    pos = gameState.monsterTransform!.position;
   } else {
     final minion = gameState.minionById(targetId);
-    if (minion != null && minion.isAlive) minion.transform.position += displacement;
+    if (minion != null && minion.isAlive) pos = minion.transform.position;
   }
+  if (pos == null) return;
+
+  // Reason: step along displacement path checking terrain height.
+  // A steep rise = wall slam (bonus damage + stun).
+  // A steep drop = cliff launch (convert to airborne).
+  final terrain = gameState.infiniteTerrainManager;
+  if (terrain != null) {
+    final dispLen = displacement.length;
+    if (dispLen > 0.1) {
+      final steps = (dispLen / 1.0).ceil().clamp(1, 20);
+      final stepDx = displacement.x / steps;
+      final stepDz = displacement.z / steps;
+      var prevH = terrain.getTerrainHeight(pos.x, pos.z);
+      for (int i = 1; i <= steps; i++) {
+        final nx = pos.x + stepDx * i;
+        final nz = pos.z + stepDz * i;
+        final h = terrain.getTerrainHeight(nx, nz);
+        final dh = h - prevH;
+
+        if (dh > 2.0) {
+          // Wall slam: stop displacement, deal bonus damage, apply 1s stun
+          final force = dispLen;
+          final bonusDmg = force * 0.5;
+          _applyDirectDamage(gameState, targetId, bonusDmg);
+          _applyStunToTarget(gameState, targetId, 1.0, 'Wall Slam');
+          return;
+        }
+
+        if (dh < -3.0) {
+          // Cliff edge: convert to airborne with horizontal momentum
+          pos.x = nx;
+          pos.z = nz;
+          _launchTargetAirborne(gameState, targetId, 2.0);
+          return;
+        }
+
+        prevH = h;
+      }
+    }
+  }
+
+  pos.x += displacement.x;
+  pos.z += displacement.z;
+}
+
+/// Apply direct damage to a target by ID (bypasses collision checks).
+void _applyDirectDamage(GameState gameState, String targetId, double damage) {
+  if (targetId == 'boss') {
+    gameState.monsterHealth = (gameState.monsterHealth - damage).clamp(0.0, gameState.monsterMaxHealth);
+  } else {
+    final minion = gameState.minionById(targetId);
+    if (minion != null && minion.isAlive) {
+      minion.health = (minion.health - damage).clamp(0.0, minion.maxHealth);
+    }
+  }
+}
+
+/// Apply a stun ActiveEffect to a target by ID.
+void _applyStunToTarget(GameState gameState, String targetId, double duration, String source) {
+  final effect = ActiveEffect(
+    type: StatusEffect.stun, remainingDuration: duration,
+    totalDuration: duration, strength: 1.0, sourceName: source,
+  );
+  if (targetId == 'boss') {
+    gameState.monsterActiveEffects.add(effect);
+  } else {
+    final minion = gameState.minionById(targetId);
+    if (minion != null && minion.isAlive) minion.activeEffects.add(effect);
+  }
+}
+
+/// Launch a target into airborne state with the given peak height.
+void _launchTargetAirborne(GameState gameState, String targetId, double height) {
+  final grav = globalCcConfig?.airborneGravityAccel ?? 12.0;
+  final vel = math.sqrt(2.0 * grav * height);
+
+  final minion = gameState.minionById(targetId);
+  if (minion != null && minion.isAlive) {
+    minion.airborneVelocityY = vel;
+    minion.airborneHeight = math.max(minion.airborneHeight, 0.01);
+  }
+  // Boss doesn't go airborne
+}
+
+/// AoE knockback: push all enemies within [radius] of [centerX, centerZ]
+/// radially outward. Strength falls off with distance from center.
+void _executeScatter(
+  GameState gameState,
+  double centerX,
+  double centerZ,
+  double radius,
+  double maxForce,
+) {
+  final r2 = radius * radius;
+
+  void pushIfInRange(dynamic transform, String targetId) {
+    final dx = transform.position.x - centerX;
+    final dz = transform.position.z - centerZ;
+    final distSq = dx * dx + dz * dz;
+    if (distSq >= r2 || distSq < 0.01) return;
+    final dist = math.sqrt(distSq);
+    final falloff = 1.0 - (dist / radius);
+    final force = maxForce * falloff;
+    final nx = dx / dist;
+    final nz = dz / dist;
+    transform.position.x += nx * force;
+    transform.position.z += nz * force;
+  }
+
+  // Push boss
+  if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
+    pushIfInRange(gameState.monsterTransform!, 'boss');
+  }
+
+  // Push minions
+  for (final minion in gameState.aliveMinions) {
+    pushIfInRange(minion.transform, minion.instanceId);
+  }
+}
+
+/// Returns the juggle window timer for the given target (0 = no juggle window).
+double _getJuggleTimer(GameState gameState, String targetId) {
+  if (targetId == 'player') return gameState.juggleWindowTimer;
+  final ally = gameState.allies.where((a) => a.name == targetId).firstOrNull;
+  if (ally != null) return ally.juggleWindowTimer;
+  final minion = gameState.minionById(targetId);
+  if (minion != null) return minion.juggleWindowTimer;
+  return 0.0;
 }
 
 /// Unit vector in the caster's current facing direction.
@@ -398,11 +562,62 @@ void _applySingleStatusEffect(
       _displaceTarget(gameState, targetId, toTarget * (-pullFraction));
       return;
 
+    case StatusEffect.airborne:
+      // Reason: launch target upward; strength = desired peak height.
+      // v₀ = sqrt(2·g·h) gives the initial velocity for a ballistic arc.
+      final ccCfg = globalCcConfig;
+      final grav = ccCfg?.airborneGravityAccel ?? 12.0;
+      var launchHeight = fx.strength;
+
+      // Juggle bonus: if target just landed, grant +30% height
+      final juggle = _getJuggleTimer(gameState, targetId);
+      if (juggle > 0) launchHeight *= 1.3;
+
+      final launchVel = math.sqrt(2.0 * grav * launchHeight);
+
+      if (targetId == 'player') {
+        if (gameState.isAirborne) {
+          gameState.airborneVelocityY += launchVel;
+        } else {
+          gameState.airborneVelocityY = launchVel;
+        }
+        gameState.airborneHeight = math.max(gameState.airborneHeight, 0.01);
+        gameState.juggleWindowTimer = 0.0;
+      } else if (targetId == 'boss') {
+        // Boss is too heavy to launch
+      } else {
+        // Ally or minion
+        final ally = gameState.allies.where((a) => a.name == targetId).firstOrNull;
+        if (ally != null) {
+          if (ally.isAirborne) {
+            ally.airborneVelocityY += launchVel;
+          } else {
+            ally.airborneVelocityY = launchVel;
+          }
+          ally.airborneHeight = math.max(ally.airborneHeight, 0.01);
+          ally.juggleWindowTimer = 0.0;
+        }
+        final minion = gameState.minionById(targetId);
+        if (minion != null && minion.isAlive) {
+          if (minion.isAirborne) {
+            minion.airborneVelocityY += launchVel;
+          } else {
+            minion.airborneVelocityY = launchVel;
+          }
+          minion.airborneHeight = math.max(minion.airborneHeight, 0.01);
+          minion.juggleWindowTimer = 0.0;
+        }
+      }
+      return;
+
     // ── Composite effect ───────────────────────────────────────────────
     case StatusEffect.knockdown:
       // Reason: knockdown = stun + spell-lockout; both re-use existing CC checks
       // in the AI and duel systems with zero additional changes there.
-      final dur = (fx.duration * gameState.activeStance.ccDurationInflicted).clamp(0.1, 30.0);
+      var knockdownDur = fx.duration * gameState.activeStance.ccDurationInflicted;
+      knockdownDur = _applyStanceCcModifier(gameState, knockdownDur, fx.type);
+      knockdownDur = _applyDefensiveStanceCcModifier(gameState, targetId, knockdownDur, fx.type);
+      final dur = knockdownDur.clamp(0.1, 30.0);
       for (final ccType in [StatusEffect.stun, StatusEffect.interrupt]) {
         final effect = ActiveEffect(
           type: ccType, remainingDuration: dur, totalDuration: dur,
@@ -416,15 +631,20 @@ void _applySingleStatusEffect(
         }
       }
       gameState.combatLogMessages.add(CombatLogEntry(
-        source: sourceName, action: '$sourceName applied knockdown',
-        type: CombatLogType.ability,
+        source: sourceName, action: '$sourceName applied knockdown (${dur.toStringAsFixed(1)}s)',
+        type: CombatLogType.debuff,
+        target: targetId,
       ));
       return;
 
     // ── Standard timed effects ─────────────────────────────────────────
     default:
       if (fx.duration <= 0) return;
-      final effectiveDuration = fx.duration * gameState.activeStance.ccDurationInflicted;
+      var effectiveDuration = fx.duration * gameState.activeStance.ccDurationInflicted;
+      // Reason: stance-specific offensive and defensive CC modifiers layer on top
+      // of the base ccDurationInflicted multiplier from stance data.
+      effectiveDuration = _applyStanceCcModifier(gameState, effectiveDuration, fx.type);
+      effectiveDuration = _applyDefensiveStanceCcModifier(gameState, targetId, effectiveDuration, fx.type);
       double damagePerTick = 0;
       double tickInterval = 0;
       if (dotTicks > 0 && dotDamage > 0) {
@@ -446,10 +666,16 @@ void _applySingleStatusEffect(
         final minion = gameState.minionById(targetId);
         if (minion != null && minion.isAlive) minion.activeEffects.add(effect);
       }
+      // Reason: CC effects get a detailed log entry with target and duration
+      // so players can track CC application in the combat log.
+      final isCcEffect = _isCcStatusEffect(fx.type);
       gameState.combatLogMessages.add(CombatLogEntry(
         source: sourceName,
-        action: '$sourceName applied ${fx.type.name}',
-        type: CombatLogType.ability,
+        action: isCcEffect
+            ? '$sourceName applied ${fx.type.name} (${effectiveDuration.toStringAsFixed(1)}s)'
+            : '$sourceName applied ${fx.type.name}',
+        type: isCcEffect ? CombatLogType.debuff : CombatLogType.ability,
+        target: targetId,
       ));
   }
 }
@@ -581,4 +807,137 @@ void _applyDoTFromProjectile(GameState gameState, String targetId, Projectile pr
       dotDamage: projectile.damage,
     );
   }
+}
+
+/// Whether a [StatusEffect] is a crowd-control type for combat log categorization.
+/// Reason: CC effects are logged as debuffs with duration info so players can
+/// track CC application, whereas non-CC effects (DoTs, buffs) use generic logging.
+bool _isCcStatusEffect(StatusEffect type) {
+  switch (type) {
+    case StatusEffect.stun:
+    case StatusEffect.root:
+    case StatusEffect.slow:
+    case StatusEffect.blind:
+    case StatusEffect.fear:
+    case StatusEffect.silence:
+    case StatusEffect.interrupt:
+    case StatusEffect.sleep:
+    case StatusEffect.charm:
+    case StatusEffect.polymorph:
+    case StatusEffect.taunt:
+    case StatusEffect.disorient:
+    case StatusEffect.grounded:
+    case StatusEffect.suppress:
+    case StatusEffect.nearsight:
+    case StatusEffect.banish:
+    case StatusEffect.daze:
+    case StatusEffect.freeze:
+    case StatusEffect.knockdown:
+      return true;
+    default:
+      return false;
+  }
+}
+
+/// Whether a [StatusEffect] is a hard CC type (full loss of control).
+/// Reason: Tempest defensive modifier only reduces hard CC, not soft CC
+/// like slow/blind/nearsight/weakness.
+bool _isHardCc(StatusEffect type) {
+  switch (type) {
+    case StatusEffect.stun:
+    case StatusEffect.sleep:
+    case StatusEffect.charm:
+    case StatusEffect.polymorph:
+    case StatusEffect.suppress:
+    case StatusEffect.banish:
+    case StatusEffect.airborne:
+    case StatusEffect.freeze:
+    case StatusEffect.knockdown:
+    case StatusEffect.fear:
+      return true;
+    default:
+      return false;
+  }
+}
+
+/// Apply the caster's stance-specific CC duration modifier (offensive).
+/// Reason: Each stance rewards different playstyle conditions with CC bonus/penalty.
+double _applyStanceCcModifier(GameState gameState, double baseDuration, StatusEffect type) {
+  final ccCfg = globalCcConfig;
+  final stance = gameState.activeStance;
+  final rt = gameState.stanceRuntime;
+  var dur = baseDuration;
+
+  switch (stance.id) {
+    case StanceId.cadence:
+      // Reason: on-beat casts reward timing skill with longer CC
+      if (rt.cadenceLastCastOnBeat) {
+        dur *= 1.0 + (ccCfg?.cadenceOnBeatCcDurationBonus ?? 0.25);
+      }
+    case StanceId.tempest:
+      // Reason: Tempest rewards cancel chains; solo casts get a penalty
+      if (rt.tempestChainDepth < 1) {
+        dur *= 1.0 - (ccCfg?.tempestNonChainCcDurationPenalty ?? 0.15);
+      }
+    case StanceId.warden:
+      // Reason: Predator's Eye rewards patient setup with stronger CC
+      final activationTime = stance.mechanics?.predatorActivationTime ?? 0.0;
+      if (activationTime > 0 && rt.wardenPredatorTimer >= activationTime) {
+        dur *= 1.0 + (ccCfg?.wardenPredatorCcDurationBonus ?? 0.40);
+      }
+    case StanceId.crucible:
+      // Reason: 0-heat payoff rewards disciplined heat management
+      if (rt.crucibleHeatStacks == 0) {
+        dur *= 1.0 + (ccCfg?.crucibleZeroheatCcDurationBonus ?? 0.50);
+      }
+    case StanceId.flux:
+      // Reason: transition bonus rewards active stance-switching
+      if (rt.fluxTransitionBonusAvailable) {
+        dur *= 1.0 + (ccCfg?.fluxTransitionCcDurationBonus ?? 0.30);
+      }
+    default:
+      break;
+  }
+  return dur;
+}
+
+/// Apply the target's stance-specific defensive CC modifier.
+/// Reason: Certain stances reduce (or increase) incoming CC on the player.
+/// Only applies when the target is the player (boss/minions have no stance).
+double _applyDefensiveStanceCcModifier(
+    GameState gameState, String targetId, double baseDuration, StatusEffect type) {
+  // Reason: Only the player has stance state; boss/minions skip this.
+  if (targetId != 'player') return baseDuration;
+
+  final ccCfg = globalCcConfig;
+  final stance = gameState.activeStance;
+  final rt = gameState.stanceRuntime;
+  var dur = baseDuration;
+
+  // Tempest defender: reduce incoming hard CC
+  if (stance.id == StanceId.tempest && _isHardCc(type)) {
+    dur *= 1.0 - (ccCfg?.tempestIncomingHardCcReduction ?? 0.20);
+  }
+
+  // Flux stagnation: increased incoming CC when stagnant
+  if (stance.id == StanceId.flux && rt.fluxStagnationTimer > 5.0) {
+    dur *= 1.0 + (ccCfg?.fluxStagnationCcDurationPenalty ?? 0.25);
+  }
+
+  return dur;
+}
+
+/// Resolve the current target's armor category for weapon effectiveness.
+ArmorCategory _getTargetArmorCategory(GameState gameState) {
+  final targetId = gameState.currentTargetId;
+  if (targetId == null) return ArmorCategory.unarmored;
+  if (targetId == 'boss') {
+    return gameState.monsterArmorCategory;
+  }
+  for (final minion in gameState.aliveMinions) {
+    if (minion.instanceId == targetId) {
+      return minion.definition.armorCategory ?? ArmorCategory.unarmored;
+    }
+  }
+  return ArmorCategory.unarmored;
 }

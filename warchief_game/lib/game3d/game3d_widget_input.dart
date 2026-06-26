@@ -208,8 +208,8 @@ mixin _WidgetInputMixin on _GameStateBase {
           wind.forceDerecho();
           gameState.addConsoleLog('[GM] Zephyr triggered');
         }
+        return;
       }
-      return;
     }
 
     // Handle Tab/Shift+Tab for target cycling (WoW-style)

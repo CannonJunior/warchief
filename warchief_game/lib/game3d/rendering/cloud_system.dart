@@ -4,6 +4,7 @@ import '../../rendering3d/mesh.dart';
 import '../../rendering3d/math/transform3d.dart';
 import '../../rendering3d/webgl_renderer.dart';
 import '../../rendering3d/camera3d.dart';
+import '../state/cloud_config.dart';
 
 /// Individual cloud puff within a cloud cluster.
 class _CloudPuff {
@@ -34,22 +35,17 @@ class _CloudCluster {
 /// vertex-colored mesh pipeline. Generates cumulus-style cloud clusters at
 /// fixed altitudes and drifts them with the wind.
 class CloudSystem {
-  static const int _cloudCount = 18;
-  static const double _spawnRadius = 300.0;
-  static const double _altitudeMin = 55.0;
-  static const double _altitudeMax = 90.0;
-  static const int _puffsPerCloudMin = 5;
-  static const int _puffsPerCloudMax = 12;
-  static const double _puffSizeMin = 8.0;
-  static const double _puffSizeMax = 22.0;
-  static const double _driftSpeed = 0.4;
-
   final math.Random _rng = math.Random(0xC10D);
   final List<_CloudCluster> _clusters = [];
   bool _generated = false;
 
   Mesh? _mesh;
   final Transform3d _transform = Transform3d(position: Vector3(0, 0, 0));
+
+  /// Accumulated wind drift applied via transform offset instead of
+  /// per-puff position mutation, avoiding a full mesh rebuild each frame.
+  double _driftX = 0.0;
+  double _driftZ = 0.0;
 
   /// Reusable vertex/index buffers
   final List<double> _vertices = [];
@@ -59,12 +55,22 @@ class CloudSystem {
 
   void generate() {
     _clusters.clear();
-    for (int i = 0; i < _cloudCount; i++) {
-      final cx = (_rng.nextDouble() - 0.5) * _spawnRadius * 2;
-      final cz = (_rng.nextDouble() - 0.5) * _spawnRadius * 2;
-      final alt = _altitudeMin + _rng.nextDouble() * (_altitudeMax - _altitudeMin);
-      final puffCount = _puffsPerCloudMin +
-          _rng.nextInt(_puffsPerCloudMax - _puffsPerCloudMin + 1);
+    _driftX = 0.0;
+    _driftZ = 0.0;
+    final cfg = globalCloudConfig;
+    final cloudCount = cfg?.cloudCount ?? 18;
+    final spawnRadius = cfg?.spawnRadius ?? 300.0;
+    final altMin = cfg?.altitudeMin ?? 55.0;
+    final altMax = cfg?.altitudeMax ?? 90.0;
+    final puffsMin = cfg?.puffsPerCloudMin ?? 5;
+    final puffsMax = cfg?.puffsPerCloudMax ?? 12;
+    final pSizeMin = cfg?.puffSizeMin ?? 8.0;
+    final pSizeMax = cfg?.puffSizeMax ?? 22.0;
+    for (int i = 0; i < cloudCount; i++) {
+      final cx = (_rng.nextDouble() - 0.5) * spawnRadius * 2;
+      final cz = (_rng.nextDouble() - 0.5) * spawnRadius * 2;
+      final alt = altMin + _rng.nextDouble() * (altMax - altMin);
+      final puffCount = puffsMin + _rng.nextInt(puffsMax - puffsMin + 1);
 
       final puffs = <_CloudPuff>[];
       final clusterRadius = 10.0 + _rng.nextDouble() * 15.0;
@@ -74,7 +80,7 @@ class CloudSystem {
         final ox = math.cos(angle) * dist;
         final oz = math.sin(angle) * dist;
         final oy = (_rng.nextDouble() - 0.3) * clusterRadius * 0.4;
-        final size = _puffSizeMin + _rng.nextDouble() * (_puffSizeMax - _puffSizeMin);
+        final size = pSizeMin + _rng.nextDouble() * (pSizeMax - pSizeMin);
 
         // Reason: top puffs are bright white (sunlit), bottom puffs are darker
         // blue-grey (shadowed underside), matching real cumulus shading.
@@ -94,21 +100,16 @@ class CloudSystem {
       _clusters.add(_CloudCluster(cx: cx, cz: cz, altitude: alt, puffs: puffs));
     }
     _generated = true;
+    _rebuildMesh();
   }
 
   void update(double dt, double windAngle, double windStrength) {
     if (!_generated) return;
-    final dx = math.cos(windAngle) * windStrength * _driftSpeed * dt;
-    final dz = math.sin(windAngle) * windStrength * _driftSpeed * dt;
-    for (final cluster in _clusters) {
-      cluster.cx += dx;
-      cluster.cz += dz;
-      for (final p in cluster.puffs) {
-        p.x += dx;
-        p.z += dz;
-      }
-    }
-    _rebuildMesh();
+    final driftSpeed = globalCloudConfig?.driftSpeed ?? 0.4;
+    _driftX += math.cos(windAngle) * windStrength * driftSpeed * dt;
+    _driftZ += math.sin(windAngle) * windStrength * driftSpeed * dt;
+    _transform.position.x = _driftX;
+    _transform.position.z = _driftZ;
   }
 
   void render(WebGLRenderer renderer, Camera3D camera) {

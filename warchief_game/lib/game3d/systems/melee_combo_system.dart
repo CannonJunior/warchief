@@ -7,6 +7,7 @@ import '../../models/combat_log_entry.dart';
 import '../data/abilities/ability_types.dart' show StatusEffect;
 import '../data/abilities/abilities.dart' show AbilityRegistry;
 import '../ui/damage_indicators.dart' show DamageIndicator;
+import 'weapon_system.dart';
 
 /// Melee Combo System — tracks consecutive same-class hits and fires
 /// per-class reward effects when the threshold is reached.
@@ -34,7 +35,9 @@ class MeleeComboSystem {
     // Regular combo timer
     if (gameState.meleeComboCategory != null) {
       gameState.meleeComboTimer += dt;
-      final window = globalComboConfig?.comboWindow ?? 4.0;
+      final weaponCat = WeaponSystem.getEquippedCategory(gameState);
+      final window = (globalComboConfig?.comboWindow ?? 4.0) +
+          WeaponSystem.getComboWindowMod(weaponCat);
       if (gameState.meleeComboTimer > window) {
         gameState.meleeComboCount = 0;
         gameState.meleeComboCategory = null;
@@ -115,7 +118,10 @@ class MeleeComboSystem {
     }
 
     // --- Regular combo tracking ---
-    final threshold = cfg['threshold'] as int? ?? 3;
+    final weaponThresholdMod = WeaponSystem.getComboThresholdMod(
+      WeaponSystem.getEquippedCategory(gameState),
+    );
+    final threshold = (cfg['threshold'] as int? ?? 3) + weaponThresholdMod;
 
     if (gameState.meleeComboCategory == category) {
       // Continuing an existing combo — increment and reset inactivity timer.
@@ -238,6 +244,8 @@ class MeleeComboSystem {
         gs.redMana = (gs.redMana + redAmt).clamp(0.0, gs.maxRedMana);
         _applyAoe(gs, chain);
     }
+    // Apply weapon-specific chain combo bonuses
+    _applyWeaponChainBonus(gs);
     _logChainTrigger(gs, category);
   }
 
@@ -410,6 +418,45 @@ class MeleeComboSystem {
       tickInterval: 1.0,
       sourceName: 'Melee Combo Chain',
     ));
+  }
+
+  // ==================== WEAPON CHAIN BONUSES ====================
+
+  /// Apply weapon-category-specific bonuses on chain combo finisher.
+  static void _applyWeaponChainBonus(GameState gs) {
+    final chainBonuses = WeaponSystem.getComboChainBonuses(
+      WeaponSystem.getEquippedCategory(gs),
+    );
+    if (chainBonuses == null) return;
+
+    // Hammers: bonus stun on chain finisher
+    final stunDur = (chainBonuses['chainBonusStunDuration'] as num?)?.toDouble();
+    if (stunDur != null && stunDur > 0 && gs.monsterHealth > 0) {
+      gs.monsterActiveEffects.add(ActiveEffect(
+        type: StatusEffect.stun,
+        remainingDuration: stunDur,
+        totalDuration: stunDur,
+        sourceName: 'Weapon Chain',
+      ));
+    }
+
+    // Axes: bonus knockback on chain finisher
+    final kbForce = (chainBonuses['chainBonusKnockback'] as num?)?.toDouble();
+    if (kbForce != null && kbForce > 0) {
+      _applyKnockback(gs, {'knockbackForce': kbForce});
+    }
+
+    // Polearms: grip pull on chain finisher
+    if (chainBonuses['chainBonusGrip'] == true) {
+      if (gs.monsterTransform != null && gs.playerTransform != null && gs.monsterHealth > 0) {
+        final dir = gs.playerTransform!.position - gs.monsterTransform!.position;
+        if (dir.length > 1.0) {
+          dir.normalize();
+          gs.monsterTransform!.position += dir * 3.0;
+          gs.monsterCurrentPath = null;
+        }
+      }
+    }
   }
 
   // ==================== HELPERS ====================

@@ -109,6 +109,13 @@ class Ally {
   double gcdRemaining = 0.0;
   double gcdMax = 0.0;
 
+  // Airborne displacement state
+  double airborneHeight = 0.0;
+  double airborneVelocityY = 0.0;
+  double airborneSourceHeight = 0.0;
+  double juggleWindowTimer = 0.0;
+  bool get isAirborne => airborneHeight > 0.1;
+
   // Active status effects (buff/debuff tracking)
   List<ActiveEffect> activeEffects = [];
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math.dart' hide Colors;
+import 'stance_mechanics.dart';
 
 /// Unique identifier for each stance.
 enum StanceId {
@@ -10,6 +11,13 @@ enum StanceId {
   phantomDance,
   furyOfTheAncestors,
   starbreaker,
+  cadence,
+  tempest,
+  warden,
+  crucible,
+  momentum,
+  pressure,
+  flux,
 }
 
 /// Immutable data class holding all modifier values and passive mechanics
@@ -60,6 +68,10 @@ class StanceData {
   // Switching constraints
   final double switchCooldown;
 
+  /// Advanced mechanics for playstyle-altering stances (Cadence, Tempest, etc.).
+  /// Null for legacy stat-multiplier stances.
+  final StanceMechanics? mechanics;
+
   StanceData({
     required this.id,
     required this.name,
@@ -95,6 +107,7 @@ class StanceData {
     this.dodgeChance = 0.0,
     this.manaCostDisruption = 0.0,
     this.switchCooldown = 1.5,
+    this.mechanics,
   });
 
   /// The "no stance" neutral default — all modifiers at 1.0.
@@ -142,6 +155,7 @@ class StanceData {
     double? dodgeChance,
     double? manaCostDisruption,
     double? switchCooldown,
+    StanceMechanics? mechanics,
   }) {
     return StanceData(
       id: id ?? this.id,
@@ -178,6 +192,7 @@ class StanceData {
       dodgeChance: dodgeChance ?? this.dodgeChance,
       manaCostDisruption: manaCostDisruption ?? this.manaCostDisruption,
       switchCooldown: switchCooldown ?? this.switchCooldown,
+      mechanics: mechanics ?? this.mechanics,
     );
   }
 
@@ -241,6 +256,9 @@ class StanceData {
       dodgeChance: ov<double>('dodgeChance', dodgeChance),
       manaCostDisruption: ov<double>('manaCostDisruption', manaCostDisruption),
       switchCooldown: ov<double>('switchCooldown', switchCooldown),
+      mechanics: overrides.containsKey('mechanics') && mechanics != null
+          ? StanceMechanics.merge(mechanics!, overrides['mechanics'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -290,6 +308,8 @@ class StanceData {
     if (dodgeChance > 0) lines.add('${(dodgeChance * 100).round()}% dodge chance');
     if (manaCostDisruption > 0) lines.add('${(manaCostDisruption * 100).round()}% mana disruption');
     if (switchCooldown > 2.0) lines.add('${switchCooldown.toStringAsFixed(0)}s lock-in on activation');
+
+    if (mechanics != null) lines.addAll(mechanics!.mechanicsSummary);
 
     return lines;
   }

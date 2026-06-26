@@ -411,25 +411,65 @@ class SpiritkinAbilities {
     auraRange: 10.0,
   );
 
+  // ==================== CC ABILITIES ====================
+
+  /// Feral Pounce — Dashes to target, knocking them down.
+  static final feralPounce = AbilityData(
+    name: 'Feral Pounce',
+    description: 'Dash forward with primal fury, knocking the target down.',
+    type: AbilityType.melee, damage: 25.0, cooldown: 16.0, range: 10.0,
+    color: Vector3(0.60, 0.75, 0.20), impactColor: Vector3(0.70, 0.85, 0.30), impactSize: 0.65,
+    statusEffect: StatusEffect.knockdown, statusDuration: 1.5,
+    manaColor: ManaColor.green, manaCost: 15.0,
+    category: 'spiritkin', damageSchool: DamageSchool.nature,
+  );
+
+  /// Spirit Severance — Severs spiritual sight, blinding and silencing.
+  static final spiritSeverance = AbilityData(
+    name: 'Spirit Severance',
+    description: 'Severs the target\'s spiritual connection, clouding their vision and silencing them.',
+    type: AbilityType.ranged, damage: 15.0, cooldown: 22.0, range: 12.0,
+    color: Vector3(0.35, 0.55, 0.15), impactColor: Vector3(0.45, 0.65, 0.25), impactSize: 0.6,
+    manaColor: ManaColor.green, manaCost: 20.0,
+    secondaryManaColor: ManaColor.black, secondaryManaCost: 10.0,
+    damageSchool: DamageSchool.shadow, category: 'spiritkin',
+    statusEffects: [
+      AbilityStatusEffect(type: StatusEffect.nearsight, duration: 5.0),
+      AbilityStatusEffect(type: StatusEffect.silence, duration: 2.0),
+    ],
+  );
+
+  /// Primal Roar — Terrifying roar that fears all nearby enemies.
+  static final primalRoar = AbilityData(
+    name: 'Primal Roar',
+    description: 'Unleashes a terrifying primal roar that sends nearby enemies fleeing.',
+    type: AbilityType.aoe, cooldown: 24.0, aoeRadius: 8.0,
+    color: Vector3(0.55, 0.70, 0.18), impactColor: Vector3(0.65, 0.80, 0.28), impactSize: 1.3,
+    statusEffect: StatusEffect.fear, statusDuration: 3.0,
+    manaColor: ManaColor.green, manaCost: 25.0,
+    category: 'spiritkin', damageSchool: DamageSchool.nature,
+  );
+
   /// All Spiritkin abilities as a flat list.
-  /// Ordered short→long cooldown; slots 11-15 hold the longest cooldowns.
-  /// Cut: naturesGrace, thornbind, verdantStride, ironbarkShell, spiritBloom
-  ///      (minor HoT/buffs that overlap with stance identity or verdantWard).
+  /// Ordered short→long cooldown; slots 11-18 hold the longest cooldowns.
   static List<AbilityData> get all => [
-    spiritSkin,      //  1  0.0s  stance: +20% damage
-    bloodAspect,     //  2  0.0s  stance: +30% speed
-    spiritAwakening, //  3  0.0s  stance: +35% damage
-    swipe,           //  4  1.5s  free basic melee
-    spiritBite,      //  5  2.5s  poison DoT
-    feralStrike,     //  6  3.0s  free body slam slow
-    spiritBond,      //  7  5.0s  damage aura
-    natureMend,      //  8  8.0s  direct heal
-    savageTear,      //  9  9.0s  combo finisher bleed
-    pounce,          // 10 10.0s  gap closer + slow CC
-    spiritRush,      // 11 10.0s  chain combo primer
-    spiritSever,     // 12 14.0s  interrupt
-    spiritSurge,     // 13 20.0s  burst haste
-    verdantWard,     // 14 25.0s  shield absorb
-    animalSpirit,    // 15 120.0s summon spirit wolf
+    spiritSkin,        //  1  0.0s  stance: +20% damage
+    bloodAspect,       //  2  0.0s  stance: +30% speed
+    spiritAwakening,   //  3  0.0s  stance: +35% damage
+    swipe,             //  4  1.5s  free basic melee
+    spiritBite,        //  5  2.5s  poison DoT
+    feralStrike,       //  6  3.0s  free body slam slow
+    spiritBond,        //  7  5.0s  damage aura
+    natureMend,        //  8  8.0s  direct heal
+    savageTear,        //  9  9.0s  combo finisher bleed
+    pounce,            // 10 10.0s  gap closer + slow CC
+    spiritRush,        // 11 10.0s  chain combo primer
+    spiritSever,       // 12 14.0s  interrupt
+    feralPounce,       // 13 16.0s  dash knockdown CC
+    spiritSurge,       // 14 20.0s  burst haste
+    spiritSeverance,   // 15 22.0s  nearsight + silence CC
+    primalRoar,        // 16 24.0s  AoE fear CC
+    verdantWard,       // 17 25.0s  shield absorb
+    animalSpirit,      // 18 120.0s summon spirit wolf
   ];
 }

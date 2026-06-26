@@ -3,11 +3,20 @@ import 'package:vector_math/vector_math.dart';
 import 'dart:math' as math;
 
 import '../state/game_state.dart';
+import '../state/game_config.dart';
 import '../state/wind_state.dart';
 import '../state/wind_config.dart';
 import '../../game/controllers/input_manager.dart';
 import '../../rendering3d/camera3d.dart';
 import '../../models/game_action.dart';
+import '../../models/target_dummy.dart';
+import '../../models/active_effect.dart';
+import '../data/abilities/ability_types.dart' show StatusEffect;
+import '../state/cc_config.dart';
+import 'cc_behavior_system.dart';
+import '../data/stances/stance_types.dart';
+import '../state/stance_runtime_state.dart';
+import 'stance_runtime_system.dart';
 
 /// Input System - Handles player input processing
 ///
@@ -22,6 +31,11 @@ class InputSystem {
 
   /// Track previous camera toggle state to detect single press
   static bool _previousCameraToggleState = false;
+
+  // ==================== DISORIENT STATE ====================
+  static final List<int> _disorientMap = [0, 1, 2, 3]; // fwd, back, left, right
+  static double _disorientRemapTimer = 0.0;
+  static final math.Random _disorientRng = math.Random();
 
   // ==================== DOUBLE-TAP DETECTION FOR Q/E ====================
 
@@ -123,17 +137,43 @@ class InputSystem {
   ) {
     if (gameState.activeTransform == null) return;
 
+    // Grounded blocks flight launch
+    if (gameState.isFlying &&
+        CcBehaviorSystem.isGrounded(gameState.playerActiveEffects)) {
+      // Reason: grounded forces landing — can't stay airborne
+      gameState.isFlying = false;
+    }
+
     // Flight mode — different control scheme (Warchief only)
     if (gameState.isFlying) {
       _handleFlightMovement(dt, inputManager, gameState);
       return;
     }
 
-    // Check if any movement key is pressed
-    final isMoving = inputManager.isActionPressed(GameAction.moveForward) ||
-        inputManager.isActionPressed(GameAction.moveBackward) ||
-        inputManager.isActionPressed(GameAction.strafeLeft) ||
-        inputManager.isActionPressed(GameAction.strafeRight);
+    // Read raw movement inputs
+    bool wantFwd = inputManager.isActionPressed(GameAction.moveForward);
+    bool wantBack = inputManager.isActionPressed(GameAction.moveBackward);
+    bool wantLeft = inputManager.isActionPressed(GameAction.strafeLeft);
+    bool wantRight = inputManager.isActionPressed(GameAction.strafeRight);
+
+    // Disorient: remap movement directions
+    if (CcBehaviorSystem.isDisoriented(gameState.playerActiveEffects)) {
+      final interval = globalCcConfig?.disorientRemapInterval ?? 1.5;
+      _disorientRemapTimer += dt;
+      if (_disorientRemapTimer >= interval) {
+        _disorientRemapTimer = 0.0;
+        _disorientMap.shuffle(_disorientRng);
+      }
+      final raw = [wantFwd, wantBack, wantLeft, wantRight];
+      wantFwd = raw[_disorientMap[0]];
+      wantBack = raw[_disorientMap[1]];
+      wantLeft = raw[_disorientMap[2]];
+      wantRight = raw[_disorientMap[3]];
+    } else {
+      _disorientRemapTimer = 0.0;
+    }
+
+    final isMoving = wantFwd || wantBack || wantLeft || wantRight;
 
     // Cancel cast/channel if moving during a stationary cast
     if (isMoving && gameState.isCasting) {
@@ -161,21 +201,36 @@ class InputSystem {
       -math.sin(radians(gameState.activeRotation)),
     );
 
-    if (inputManager.isActionPressed(GameAction.moveForward)) {
-      moveDx += fwd.x;
-      moveDz += fwd.z;
-    }
-    if (inputManager.isActionPressed(GameAction.moveBackward)) {
-      moveDx -= fwd.x;
-      moveDz -= fwd.z;
-    }
-    if (inputManager.isActionPressed(GameAction.strafeLeft)) {
-      moveDx -= right.x;
-      moveDz -= right.z;
-    }
-    if (inputManager.isActionPressed(GameAction.strafeRight)) {
-      moveDx += right.x;
-      moveDz += right.z;
+    if (wantFwd) { moveDx += fwd.x; moveDz += fwd.z; }
+    if (wantBack) { moveDx -= fwd.x; moveDz -= fwd.z; }
+    if (wantLeft) { moveDx -= right.x; moveDz -= right.z; }
+    if (wantRight) { moveDx += right.x; moveDz += right.z; }
+
+    // Warden stance: record directional input for ability modifiers
+    if (gameState.playerStance == StanceId.warden) {
+      final m = gameState.activeStance.mechanics;
+      if (m != null) {
+        WardenDirection dir;
+        if (!isMoving) {
+          dir = WardenDirection.stationary;
+        } else if (inputManager.isActionPressed(GameAction.sprint) &&
+            inputManager.isActionPressed(GameAction.moveForward)) {
+          dir = WardenDirection.sprint;
+        } else if (inputManager.isActionPressed(GameAction.moveForward) &&
+            !inputManager.isActionPressed(GameAction.moveBackward)) {
+          dir = WardenDirection.forward;
+        } else if (inputManager.isActionPressed(GameAction.moveBackward) &&
+            !inputManager.isActionPressed(GameAction.moveForward)) {
+          dir = WardenDirection.backward;
+        } else if (inputManager.isActionPressed(GameAction.strafeLeft)) {
+          dir = WardenDirection.strafeLeft;
+        } else if (inputManager.isActionPressed(GameAction.strafeRight)) {
+          dir = WardenDirection.strafeRight;
+        } else {
+          dir = WardenDirection.forward;
+        }
+        StanceRuntimeSystem.recordWardenInput(m, gameState.stanceRuntime, dir);
+      }
     }
 
     // Reason: headwind slows player, tailwind speeds up; resistance from active stance reduces penalty
@@ -184,16 +239,6 @@ class InputSystem {
       resistance: gameState.activeStance.windResistance,
     ) ?? 1.0;
     effectiveSpeed *= windMod;
-
-    // W = Forward
-    if (inputManager.isActionPressed(GameAction.moveForward)) {
-      gameState.activeTransform!.position += fwd * effectiveSpeed * dt;
-    }
-
-    // S = Backward
-    if (inputManager.isActionPressed(GameAction.moveBackward)) {
-      gameState.activeTransform!.position -= fwd * effectiveSpeed * dt;
-    }
 
     // A = Rotate Right (rotation not affected by windup)
     if (inputManager.isActionPressed(GameAction.rotateLeft)) {
@@ -207,28 +252,112 @@ class InputSystem {
       gameState.activeTransform!.rotation.y = gameState.activeRotation;
     }
 
-    // Q = Strafe Left
-    if (inputManager.isActionPressed(GameAction.strafeLeft)) {
-      gameState.activeTransform!.position -= right * effectiveSpeed * dt;
+    // Accumulate movement delta from WASD/QE + wind drift
+    double deltaX = 0.0;
+    double deltaZ = 0.0;
+
+    if (wantFwd) { deltaX += fwd.x * effectiveSpeed * dt; deltaZ += fwd.z * effectiveSpeed * dt; }
+    if (wantBack) { deltaX -= fwd.x * effectiveSpeed * dt; deltaZ -= fwd.z * effectiveSpeed * dt; }
+    if (wantLeft) { deltaX -= right.x * effectiveSpeed * dt; deltaZ -= right.z * effectiveSpeed * dt; }
+    if (wantRight) { deltaX += right.x * effectiveSpeed * dt;
+      deltaZ += right.z * effectiveSpeed * dt;
     }
 
-    // E = Strafe Right
-    if (inputManager.isActionPressed(GameAction.strafeRight)) {
-      gameState.activeTransform!.position += right * effectiveSpeed * dt;
-    }
-
-    // Passive wind drift — pushes all ground units along wind direction.
-    // Reason: movement abilities (dash, charge) override wind so players
-    // can use them to push through strong gusts.
     if (!gameState.ability4Active) {
       final drift = globalWindState?.getWindDrift(
         dt, resistance: gameState.activeStance.windResistance,
       ) ?? const [0.0, 0.0];
-      if (drift[0] != 0.0 || drift[1] != 0.0) {
-        gameState.activeTransform!.position.x += drift[0];
-        gameState.activeTransform!.position.z += drift[1];
+      deltaX += drift[0];
+      deltaZ += drift[1];
+    }
+
+    // Apply movement then constrain against enemy collision
+    if (deltaX != 0.0 || deltaZ != 0.0) {
+      final pos = gameState.activeTransform!.position;
+      pos.x += deltaX;
+      pos.z += deltaZ;
+
+      // Push player out of any enemy they overlap — movement abilities
+      // (ability4Active / phased) skip this so dashes punch through.
+      if (!gameState.ability4Active) {
+        final radius = gameState.isWarchiefActive
+            ? GameConfig.playerSize * 0.5
+            : GameConfig.allySize * 0.5;
+        _constrainAgainstEnemies(pos, radius, gameState);
       }
     }
+  }
+
+  /// Iteratively push position out of all overlapping enemy collision circles.
+  /// Runs multiple passes so being pushed out of one enemy and into another
+  /// is resolved within the same frame.
+  static void _constrainAgainstEnemies(
+    Vector3 pos,
+    double radius,
+    GameState gameState,
+  ) {
+    for (int iter = 0; iter < 4; iter++) {
+      bool anyOverlap = false;
+
+      // Boss monster
+      if (gameState.monsterTransform != null && gameState.monsterHealth > 0) {
+        final mt = gameState.monsterTransform!;
+        final minDist = radius + GameConfig.monsterSize * 0.5;
+        if (_pushOut(pos, mt.position.x, mt.position.z, minDist)) {
+          anyOverlap = true;
+        }
+      }
+
+      // Alive minions
+      for (final minion in gameState.aliveMinions) {
+        final minDist = radius + minion.definition.effectiveScale * 0.5;
+        final mp = minion.transform.position;
+        if (_pushOut(pos, mp.x, mp.z, minDist)) {
+          anyOverlap = true;
+        }
+      }
+
+      // Duel combatants
+      for (final combatant in gameState.duelCombatants) {
+        if (combatant.health <= 0) continue;
+        final minDist = radius + GameConfig.allySize * 0.5;
+        if (_pushOut(pos, combatant.transform.position.x, combatant.transform.position.z, minDist)) {
+          anyOverlap = true;
+        }
+      }
+
+      // Target dummy
+      final dummy = gameState.targetDummy;
+      if (dummy != null && dummy.isSpawned) {
+        final minDist = radius + TargetDummy.size * 0.5;
+        if (_pushOut(pos, dummy.transform.position.x, dummy.transform.position.z, minDist)) {
+          anyOverlap = true;
+        }
+      }
+
+      if (!anyOverlap) break;
+    }
+  }
+
+  /// Push pos out of the circle centred at (cx, cz) with combined radius
+  /// minDist.  Returns true if an overlap was resolved.
+  static bool _pushOut(Vector3 pos, double cx, double cz, double minDist) {
+    final dx = pos.x - cx;
+    final dz = pos.z - cz;
+    final distSq = dx * dx + dz * dz;
+    if (distSq >= minDist * minDist) return false;
+
+    final dist = math.sqrt(distSq);
+    if (dist < 0.001) {
+      // Exactly on top — nudge in an arbitrary direction
+      pos.x += minDist;
+      return true;
+    }
+    final nx = dx / dist;
+    final nz = dz / dist;
+    pos.x = cx + nx * minDist;
+    pos.z = cz + nz * minDist;
+    return true;
   }
 
   /// Handles flight movement controls.

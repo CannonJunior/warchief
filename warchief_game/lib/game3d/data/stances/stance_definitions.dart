@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:vector_math/vector_math.dart' hide Colors;
 import 'stance_types.dart';
+import 'stance_mechanics.dart';
 
 /// Registry of all available stances, loaded from `assets/data/stance_config.json`.
 ///
@@ -70,6 +71,13 @@ class StanceRegistry {
       case 'phantom_dance': return StanceId.phantomDance;
       case 'fury_of_the_ancestors': return StanceId.furyOfTheAncestors;
       case 'starbreaker': return StanceId.starbreaker;
+      case 'cadence': return StanceId.cadence;
+      case 'tempest': return StanceId.tempest;
+      case 'warden': return StanceId.warden;
+      case 'crucible': return StanceId.crucible;
+      case 'momentum': return StanceId.momentum;
+      case 'pressure': return StanceId.pressure;
+      case 'flux': return StanceId.flux;
       default: return null;
     }
   }
@@ -83,6 +91,13 @@ class StanceRegistry {
       case 'blur_on': return Icons.blur_on;
       case 'bolt': return Icons.bolt;
       case 'dark_mode': return Icons.dark_mode;
+      case 'music_note': return Icons.music_note;
+      case 'speed': return Icons.speed;
+      case 'shield': return Icons.shield;
+      case 'local_fire_department': return Icons.local_fire_department;
+      case 'trending_up': return Icons.trending_up;
+      case 'compress': return Icons.compress;
+      case 'swap_horiz': return Icons.swap_horiz;
       default: return Icons.help_outline;
     }
   }
@@ -129,6 +144,9 @@ class StanceRegistry {
       dodgeChance: (data['dodgeChance'] as num?)?.toDouble() ?? 0.0,
       manaCostDisruption: (data['manaCostDisruption'] as num?)?.toDouble() ?? 0.0,
       switchCooldown: (data['switchCooldown'] as num?)?.toDouble() ?? 1.5,
+      mechanics: data.containsKey('mechanics')
+          ? StanceMechanics.fromJson(data['mechanics'] as Map<String, dynamic>)
+          : null,
     );
   }
 }

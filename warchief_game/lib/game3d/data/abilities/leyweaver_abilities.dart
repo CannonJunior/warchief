@@ -182,6 +182,70 @@ class LeyweaverAbilities {
     isPartyBuff: true,
   );
 
+  // ==================== CC ABILITIES ====================
+
+  /// Binding Light — Ranged root + silence combination.
+  static final bindingLight = AbilityData(
+    name: 'Binding Light',
+    description: 'Bind the target in holy light, rooting them for 3 seconds and silencing them for 2 seconds',
+    type: AbilityType.debuff,
+    cooldown: 22.0,
+    range: 18.0,
+    color: Vector3(1.0, 1.0, 0.7),
+    impactColor: Vector3(1.0, 1.0, 0.85),
+    impactSize: 0.9,
+    castTime: 1.0,
+    statusEffects: [
+      AbilityStatusEffect(type: StatusEffect.root, duration: 3.0),
+      AbilityStatusEffect(type: StatusEffect.silence, duration: 2.0),
+    ],
+    manaColor: ManaColor.blue,
+    manaCost: 25.0,
+    category: 'leyweaver',
+    damageSchool: DamageSchool.holy,
+  );
+
+  /// Purifying Radiance — AoE self-centered daze + CC cleanse.
+  static final purifyingRadiance = AbilityData(
+    name: 'Purifying Radiance',
+    description: 'Emit a burst of purifying light, dazing enemies for 3 seconds and cleansing CC from allies',
+    type: AbilityType.aoe,
+    cooldown: 35.0,
+    color: Vector3(1.0, 1.0, 0.8),
+    impactColor: Vector3(1.0, 1.0, 0.9),
+    impactSize: 1.6,
+    aoeRadius: 10.0,
+    statusEffect: StatusEffect.daze,
+    statusDuration: 3.0,
+    cleansesCC: true,
+    manaColor: ManaColor.blue,
+    manaCost: 30.0,
+    category: 'leyweaver',
+    damageSchool: DamageSchool.holy,
+  );
+
+  /// Sanctuary — AoE targeted ground slow zone.
+  static final sanctuary = AbilityData(
+    name: 'Sanctuary',
+    description: 'Consecrate the ground at a location, slowing enemies by 80% for 6 seconds',
+    type: AbilityType.aoe,
+    cooldown: 40.0,
+    range: 12.0,
+    duration: 6.0,
+    color: Vector3(1.0, 0.95, 0.6),
+    impactColor: Vector3(1.0, 1.0, 0.7),
+    impactSize: 1.4,
+    castTime: 2.0,
+    aoeRadius: 6.0,
+    statusEffect: StatusEffect.slow,
+    statusDuration: 6.0,
+    statusStrength: 0.2,
+    manaColor: ManaColor.blue,
+    manaCost: 40.0,
+    category: 'leyweaver',
+    damageSchool: DamageSchool.holy,
+  );
+
   /// All Leyweaver abilities as a list.
   /// Ordered short→long cooldown; slots 8-10 hold the longest cooldowns.
   static List<AbilityData> get all => [
@@ -195,5 +259,8 @@ class LeyweaverAbilities {
     judgmentMark,       //  8 12.0s  permanent vulnerability
     circleOfHealing,    //  9 15.0s  AoE heal
     blessingOfStrength, // 10 20.0s  buff damage
+    bindingLight,       // 11 22.0s  ranged root + silence
+    purifyingRadiance,  // 12 35.0s  AoE daze + CC cleanse
+    sanctuary,          // 13 40.0s  AoE ground slow zone
   ];
 }

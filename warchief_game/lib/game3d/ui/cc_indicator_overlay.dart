@@ -6,6 +6,8 @@ import '../../../models/active_effect.dart';
 import '../../../rendering3d/camera3d.dart';
 import '../../game3d/data/abilities/ability_types.dart';
 import '../../game3d/state/game_state.dart';
+import '../../game3d/state/cc_config.dart';
+import '../../game3d/systems/cc_behavior_system.dart';
 import '../../game3d/utils/screen_projection.dart';
 
 // CC types that warrant world-space badges.
@@ -19,6 +21,19 @@ const _ccTypes = {
   StatusEffect.blind,
   StatusEffect.slow,
   StatusEffect.interrupt,
+  StatusEffect.knockdown,
+  StatusEffect.daze,
+  StatusEffect.airborne,
+  StatusEffect.sleep,
+  StatusEffect.charm,
+  StatusEffect.polymorph,
+  StatusEffect.taunt,
+  StatusEffect.disorient,
+  StatusEffect.grounded,
+  StatusEffect.suppress,
+  StatusEffect.nearsight,
+  StatusEffect.banish,
+  StatusEffect.gravityWell,
 };
 
 /// Container for a unit's position and its active CC effects.
@@ -46,6 +61,12 @@ class CcIndicatorOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (camera == null) return const SizedBox.shrink();
+
+    // Nearsight hides the CC overlay entirely (information denial)
+    if ((globalCcConfig?.nearsightHidesCcOverlay ?? true) &&
+        CcBehaviorSystem.isNearsighted(gameState.playerActiveEffects)) {
+      return const SizedBox.shrink();
+    }
 
     final viewMatrix = camera!.getViewMatrix();
     final projMatrix = camera!.getProjectionMatrix();

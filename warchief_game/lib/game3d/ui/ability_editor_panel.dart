@@ -151,6 +151,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
   late String _selectedCategory;
   late bool _piercing;
   late bool _requiresStationary;
+  late bool _cleansesCC;
   late String _selectedChannelEffect;
   late List<String> _comboPrimes;
   // Multi-status-effect list (replaces single _selectedStatusEffect/_statusDurationCtrl/_statusStrengthCtrl)
@@ -228,6 +229,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
     )).toList();
     _piercing = effective.piercing;
     _requiresStationary = effective.requiresStationary;
+    _cleansesCC = effective.cleansesCC;
     _selectedChannelEffect = effective.channelEffect.name;
     _comboPrimes = List<String>.from(effective.comboPrimes);
     // Reason: only show abilities from the same class so combo primes stay coherent.
@@ -393,6 +395,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
     if (_requiresStationary != original.requiresStationary) {
       overrides['requiresStationary'] = _requiresStationary;
     }
+    if (_cleansesCC != original.cleansesCC) overrides['cleansesCC'] = _cleansesCC;
 
     final chEnum = ChannelEffect.values.where((c) => c.name == _selectedChannelEffect);
     if (chEnum.isNotEmpty && chEnum.first != original.channelEffect) {
@@ -471,6 +474,7 @@ class _AbilityEditorPanelState extends State<AbilityEditorPanel> {
       hitRadius: double.tryParse(_hitRadiusCtrl.text),
       requiresStationary: _requiresStationary,
       piercing: _piercing,
+      cleansesCC: _cleansesCC,
       channelEffect: ChannelEffect.values.firstWhere((c) => c.name == _selectedChannelEffect, orElse: () => ChannelEffect.none),
       comboPrimes: List<String>.from(_comboPrimes),
     );

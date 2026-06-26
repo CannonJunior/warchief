@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-06-22T11:05:03.671739",
+  "generated_at": "2026-06-23T23:51:48.849854",
   "project_name": "warchief_game",
   "root": "/Users/cannoncj/src/warchief/warchief_game",
   "totals": {
-    "files": 337,
+    "files": 338,
     "directories": 42,
-    "lines": 92123,
-    "size": 3372909
+    "lines": 92424,
+    "size": 3383240
   },
   "tree": {
     "name": "warchief_game",
@@ -153,10 +153,10 @@
                 "name": "source-tree.json",
                 "type": "file",
                 "path": "warchief_game/assets/data/source-tree.json",
-                "size": 124748,
+                "size": 125500,
                 "extension": ".json",
                 "icon": "📋",
-                "lines": 3321
+                "lines": 3339
               },
               {
                 "name": "stance_config.json",
@@ -1088,7 +1088,7 @@
                     "name": "sky_renderer.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/rendering/sky_renderer.dart",
-                    "size": 9528,
+                    "size": 9560,
                     "extension": ".dart",
                     "icon": "🎯",
                     "lines": 251
@@ -1302,10 +1302,10 @@
                     "name": "gameplay_settings.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/gameplay_settings.dart",
-                    "size": 13192,
+                    "size": 14005,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 261
+                    "lines": 276
                   },
                   {
                     "name": "goals_config.dart",
@@ -1419,10 +1419,10 @@
                     "name": "wind_state.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/state/wind_state.dart",
-                    "size": 13275,
+                    "size": 13440,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 324
+                    "lines": 328
                   },
                   {
                     "name": "wind_swirl_state.dart",
@@ -1669,10 +1669,19 @@
                     "name": "render_system.dart",
                     "type": "file",
                     "path": "warchief_game/lib/game3d/systems/render_system.dart",
-                    "size": 30173,
+                    "size": 30238,
                     "extension": ".dart",
                     "icon": "🎯",
-                    "lines": 772
+                    "lines": 773
+                  },
+                  {
+                    "name": "unit_collision_system.dart",
+                    "type": "file",
+                    "path": "warchief_game/lib/game3d/systems/unit_collision_system.dart",
+                    "size": 4748,
+                    "extension": ".dart",
+                    "icon": "🎯",
+                    "lines": 151
                   }
                 ]
               },
@@ -1936,10 +1945,10 @@
                         "name": "settings_panel.dart",
                         "type": "file",
                         "path": "warchief_game/lib/game3d/ui/settings/settings_panel.dart",
-                        "size": 17684,
+                        "size": 21225,
                         "extension": ".dart",
                         "icon": "🎯",
-                        "lines": 589
+                        "lines": 695
                       },
                       {
                         "name": "source_code_tab.dart",
@@ -2647,10 +2656,10 @@
                 "name": "game3d_widget.dart",
                 "type": "file",
                 "path": "warchief_game/lib/game3d/game3d_widget.dart",
-                "size": 15041,
+                "size": 15086,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 419
+                "lines": 420
               },
               {
                 "name": "game3d_widget_commands.dart",
@@ -2710,10 +2719,10 @@
                 "name": "game3d_widget_update.dart",
                 "type": "file",
                 "path": "warchief_game/lib/game3d/game3d_widget_update.dart",
-                "size": 15434,
+                "size": 15604,
                 "extension": ".dart",
                 "icon": "🎯",
-                "lines": 377
+                "lines": 382
               }
             ]
           },

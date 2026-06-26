@@ -31,6 +31,9 @@ import 'systems/ai_system.dart';
 import 'systems/input_system.dart';
 import 'systems/render_system.dart';
 import 'systems/unit_collision_system.dart';
+import 'systems/airborne_system.dart';
+import 'systems/gravity_well_system.dart';
+import 'systems/cc_behavior_system.dart';
 import 'ui/instructions_overlay.dart';
 import 'ui/ai_chat_panel.dart';
 import 'ui/ally_commands_panel.dart';
@@ -45,6 +48,7 @@ import 'ui/dps_panel.dart';
 import 'ui/cast_bar.dart';
 import 'ui/damage_indicators.dart';
 import 'ui/cc_indicator_overlay.dart';
+import 'effects/cc_visual_effects.dart';
 import 'ui/unit_frames/unit_frames.dart';
 import '../models/target_dummy.dart';
 import '../main.dart' show globalInterfaceConfig;
@@ -61,6 +65,8 @@ import 'state/wind_swirl_state.dart';
 import 'state/comet_config.dart';
 import 'state/comet_state.dart';
 import 'rendering/cloud_system.dart';
+import 'state/cloud_config.dart';
+import 'state/cc_config.dart';
 import 'state/minimap_config.dart';
 import 'state/minimap_state.dart';
 import 'state/building_config.dart';
@@ -76,6 +82,7 @@ import 'systems/gameplay_aura_system.dart';
 import 'systems/duel_system.dart';
 import 'state/duel_config.dart';
 import 'state/duel_manager.dart';
+import 'state/weapon_config.dart';
 import 'state/duel_banner_state.dart';
 import 'data/duel/duel_definitions.dart';
 import 'ui/duel/duel_panel.dart';
@@ -89,11 +96,13 @@ import 'ui/warrior_spirit_panel.dart';
 import 'ui/chat_panel.dart';
 import 'ui/stance_selector.dart';
 import 'ui/stance_effects_overlay.dart';
+import 'ui/stance_mechanic_hud.dart';
 import 'ui/channel_effects_overlay.dart';
 import 'ui/range_circle_overlay.dart';
 import 'utils/screen_projection.dart';
 import 'ui/macro_builder_panel.dart';
 import 'systems/entity_picking_system.dart';
+import 'systems/stance_runtime_system.dart';
 import 'systems/building_system.dart';
 import 'systems/goal_system.dart';
 import 'systems/macro_system.dart';
@@ -287,6 +296,9 @@ class _Game3DState extends _GameStateBase
     // Initialize cloud system (cumulus billboard clusters)
     _initializeCloudSystem();
 
+    // Initialize crowd-control config (diminishing returns, CC tuning)
+    _initializeCcConfig();
+
     // Initialize minimap config (JSON defaults for minimap display)
     _initializeMinimapConfig();
 
@@ -316,6 +328,9 @@ class _Game3DState extends _GameStateBase
 
     // Initialize melee combo configuration (per-class thresholds and effects)
     _initializeComboConfig();
+
+    // Initialize weapon system configuration (types, effectiveness, synergies)
+    _initializeWeaponConfig();
 
     // Initialize stance registry (JSON definitions for exotic stances)
     _initializeStanceRegistry();

@@ -61,6 +61,115 @@ extension ItemSentienceExtension on ItemSentience {
   }
 }
 
+/// Five weapon categories based on historical melee combat doctrine
+enum WeaponCategory {
+  none,
+  sword,
+  axe,
+  hammer,
+  chain,
+  polearm,
+}
+
+/// Fifteen specific weapon types (3 per category)
+enum WeaponType {
+  none,
+  // Swords
+  armingSword,
+  longsword,
+  falchion,
+  // Axes
+  beardedAxe,
+  daneAxe,
+  pollaxe,
+  // Hammers/Maces
+  flangedMace,
+  warhammer,
+  maul,
+  // Chain
+  militaryFlail,
+  kettenkugel,
+  meteorHammer,
+  // Polearms
+  halberd,
+  glaive,
+  pike,
+}
+
+/// Armor categories for the weapon-vs-armor effectiveness matrix
+enum ArmorCategory {
+  unarmored,
+  leather,
+  mail,
+  plate,
+}
+
+/// Extension for WeaponCategory display properties
+extension WeaponCategoryExtension on WeaponCategory {
+  String get displayName {
+    switch (this) {
+      case WeaponCategory.none: return 'None';
+      case WeaponCategory.sword: return 'Sword';
+      case WeaponCategory.axe: return 'Axe';
+      case WeaponCategory.hammer: return 'Hammer';
+      case WeaponCategory.chain: return 'Chain';
+      case WeaponCategory.polearm: return 'Polearm';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case WeaponCategory.none: return Icons.block;
+      case WeaponCategory.sword: return Icons.content_cut;
+      case WeaponCategory.axe: return Icons.carpenter;
+      case WeaponCategory.hammer: return Icons.gavel;
+      case WeaponCategory.chain: return Icons.link;
+      case WeaponCategory.polearm: return Icons.straighten;
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case WeaponCategory.none: return const Color(0xFF666666);
+      case WeaponCategory.sword: return const Color(0xFFC0C0C0);
+      case WeaponCategory.axe: return const Color(0xFF8B4513);
+      case WeaponCategory.hammer: return const Color(0xFF708090);
+      case WeaponCategory.chain: return const Color(0xFFB87333);
+      case WeaponCategory.polearm: return const Color(0xFF228B22);
+    }
+  }
+}
+
+/// Extension for ArmorCategory display properties
+extension ArmorCategoryExtension on ArmorCategory {
+  String get displayName {
+    switch (this) {
+      case ArmorCategory.unarmored: return 'Unarmored';
+      case ArmorCategory.leather: return 'Leather';
+      case ArmorCategory.mail: return 'Mail';
+      case ArmorCategory.plate: return 'Plate';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case ArmorCategory.unarmored: return Icons.person;
+      case ArmorCategory.leather: return Icons.layers;
+      case ArmorCategory.mail: return Icons.grid_on;
+      case ArmorCategory.plate: return Icons.shield;
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case ArmorCategory.unarmored: return const Color(0xFF9D9D9D);
+      case ArmorCategory.leather: return const Color(0xFF8B4513);
+      case ArmorCategory.mail: return const Color(0xFF808080);
+      case ArmorCategory.plate: return const Color(0xFFC0C0C0);
+    }
+  }
+}
+
 /// Extension for ItemRarity to get display properties
 extension ItemRarityExtension on ItemRarity {
   String get displayName {
@@ -296,6 +405,9 @@ class Item {
   final List<double>? visualColor;
   /// Optional shape hint: "cube" or "plane". Overrides slot config meshType.
   final String? visualShape;
+  final WeaponCategory? weaponCategory;
+  final WeaponType? weaponType;
+  final ArmorCategory? armorCategory;
 
   const Item({
     required this.id,
@@ -314,6 +426,9 @@ class Item {
     this.manaAttunement = const [],
     this.visualColor,
     this.visualShape,
+    this.weaponCategory,
+    this.weaponType,
+    this.armorCategory,
   });
 
   /// Whether this item can be equipped
@@ -368,6 +483,24 @@ class Item {
           ? (json['visualColor'] as List).map((v) => (v as num).toDouble()).toList()
           : null,
       visualShape: json['visualShape'] as String?,
+      weaponCategory: json['weaponCategory'] != null
+          ? WeaponCategory.values.firstWhere(
+              (w) => w.name == json['weaponCategory'],
+              orElse: () => WeaponCategory.none,
+            )
+          : null,
+      weaponType: json['weaponType'] != null
+          ? WeaponType.values.firstWhere(
+              (w) => w.name == json['weaponType'],
+              orElse: () => WeaponType.none,
+            )
+          : null,
+      armorCategory: json['armorCategory'] != null
+          ? ArmorCategory.values.firstWhere(
+              (a) => a.name == json['armorCategory'],
+              orElse: () => ArmorCategory.unarmored,
+            )
+          : null,
     );
   }
 
@@ -388,6 +521,9 @@ class Item {
     if (manaAttunement.isNotEmpty) 'manaAttunement': manaAttunement.map((c) => c.name).toList(),
     if (visualColor != null) 'visualColor': visualColor,
     if (visualShape != null) 'visualShape': visualShape,
+    if (weaponCategory != null) 'weaponCategory': weaponCategory!.name,
+    if (weaponType != null) 'weaponType': weaponType!.name,
+    if (armorCategory != null) 'armorCategory': armorCategory!.name,
   };
 
   /// Create a copy with modified stack size
@@ -409,6 +545,9 @@ class Item {
       manaAttunement: manaAttunement,
       visualColor: visualColor,
       visualShape: visualShape,
+      weaponCategory: weaponCategory,
+      weaponType: weaponType,
+      armorCategory: armorCategory,
     );
   }
 }

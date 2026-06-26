@@ -69,6 +69,18 @@ bool _isCcAbility(AbilityData a) {
     case StatusEffect.fear:
     case StatusEffect.silence:
     case StatusEffect.interrupt:
+    case StatusEffect.sleep:
+    case StatusEffect.charm:
+    case StatusEffect.polymorph:
+    case StatusEffect.taunt:
+    case StatusEffect.disorient:
+    case StatusEffect.grounded:
+    case StatusEffect.suppress:
+    case StatusEffect.nearsight:
+    case StatusEffect.banish:
+    case StatusEffect.daze:
+    case StatusEffect.freeze:
+    case StatusEffect.knockdown:
       return a.statusDuration > 0 || a.statusStrength > 0;
     default:
       return false;
@@ -81,12 +93,24 @@ bool _isCcAbility(AbilityData a) {
 int _ccPriority(AbilityData a) {
   switch (a.statusEffect) {
     case StatusEffect.stun:      return 100;
+    case StatusEffect.suppress:  return 98;
+    case StatusEffect.banish:    return 97;
     case StatusEffect.silence:   return 95;
+    case StatusEffect.polymorph: return 93;
+    case StatusEffect.sleep:     return 92;
     case StatusEffect.root:      return 90;
+    case StatusEffect.knockdown: return 88;
+    case StatusEffect.charm:     return 85;
     case StatusEffect.fear:      return 80;
+    case StatusEffect.freeze:    return 78;
     case StatusEffect.interrupt: return 75;
     case StatusEffect.blind:     return 70;
-    case StatusEffect.slow:      return 60;
+    case StatusEffect.disorient: return 68;
+    case StatusEffect.taunt:     return 65;
+    case StatusEffect.grounded:  return 62;
+    case StatusEffect.daze:      return 60;
+    case StatusEffect.slow:      return 55;
+    case StatusEffect.nearsight: return 50;
     default:                     return 0;
   }
 }
@@ -250,33 +274,102 @@ double _preferredDistance(DuelStrategy strategy) {
 ///
 /// [primedNames]: ability names primed by the last comboPrimes ability; primed
 /// abilities receive a large bonus so the AI chains combos like a skilled player.
+/// [target]: the current damage target; used for CC-awareness scoring.
 ///
 /// Reason: strategy priority shapes decision-making without expensive tree evaluation.
 int _abilityPriority(AbilityData ability, DuelStrategy strategy, Ally self,
-    {Set<String> primedNames = const {}}) {
+    {Set<String> primedNames = const {}, Ally? target}) {
   // Reason: primed bonus overrides all strategy logic — a combo follow-up
   // should fire as soon as the window opens regardless of strategy posture.
   if (primedNames.contains(ability.name)) return 200;
   final hpFraction = self.maxHealth > 0 ? self.health / self.maxHealth : 1.0;
+  int base;
   switch (strategy) {
     case DuelStrategy.aggressive:
       // Heals only when critical; otherwise maximum damage output
-      if (ability.type == AbilityType.heal) return hpFraction < 0.2 ? 60 : -1;
-      return ability.damage.round();
+      if (ability.type == AbilityType.heal) { base = hpFraction < 0.2 ? 60 : -1; break; }
+      base = ability.damage.round();
     case DuelStrategy.berserker:
       // Never heal; pure damage at all costs
-      if (ability.type == AbilityType.heal) return -1;
-      return ability.damage.round() + 100;
+      if (ability.type == AbilityType.heal) { base = -1; break; }
+      base = ability.damage.round() + 100;
     case DuelStrategy.defensive:
       // Heal aggressively when below 50 %; otherwise use any damage ability
-      if (ability.type == AbilityType.heal) return hpFraction < 0.5 ? 120 : 20;
-      return 30;
+      if (ability.type == AbilityType.heal) { base = hpFraction < 0.5 ? 120 : 20; break; }
+      base = 30;
     case DuelStrategy.support:
       // Heal very early; low damage priority
-      if (ability.type == AbilityType.heal) return hpFraction < 0.75 ? 120 : 50;
-      return 10;
+      if (ability.type == AbilityType.heal) { base = hpFraction < 0.75 ? 120 : 50; break; }
+      base = 10;
     case DuelStrategy.balanced:
-      return 50; // Unused: balanced uses greedy order selection
+      base = 50; // Unused: balanced uses greedy order selection
+  }
+
+  // ── CC awareness: adjust priority based on target's active CC state ────
+  if (target != null && _isCcAbility(ability)) {
+    // Reason: bonus for CC abilities when target has no active CC — applying
+    // fresh CC is high-value. Reduced priority when target already has the
+    // same CC type active to avoid wasteful DR stacking.
+    final targetEffects = target.activeEffects;
+    final hasAnyCc = targetEffects.any((e) =>
+        !e.isExpired && _isStatusEffectCc(e.type));
+    final hasSameType = targetEffects.any((e) =>
+        !e.isExpired && e.type == ability.statusEffect);
+
+    if (!hasAnyCc) {
+      // Reason: target is CC-free — applying CC is very valuable.
+      base += 40;
+    } else if (hasSameType) {
+      // Reason: same CC type already active — diminishing returns, deprioritize.
+      base -= 50;
+    }
+  }
+
+  // ── Sleep-target awareness: reduce damage priority to maintain the CC ──
+  // Reason: sleep breaks on ANY damage, so the AI should avoid damaging a
+  // sleeping target unless the ability would kill (finishing > maintaining CC).
+  if (target != null && ability.damage > 0 && ability.type != AbilityType.heal) {
+    final isSleeping = target.activeEffects.any((e) =>
+        !e.isExpired && e.type == StatusEffect.sleep);
+    if (isSleeping) {
+      final wouldKill = ability.damage >= target.health;
+      if (!wouldKill) {
+        // Reason: breaking sleep wastes valuable CC — heavily deprioritize damage.
+        base -= 80;
+      }
+    }
+  }
+
+  return base;
+}
+
+/// Whether a [StatusEffect] type counts as crowd control for AI awareness.
+/// Reason: mirrors the CC types recognized by _isCcAbility but operates on
+/// the StatusEffect enum directly for checking active effects on targets.
+bool _isStatusEffectCc(StatusEffect type) {
+  switch (type) {
+    case StatusEffect.stun:
+    case StatusEffect.root:
+    case StatusEffect.slow:
+    case StatusEffect.blind:
+    case StatusEffect.fear:
+    case StatusEffect.silence:
+    case StatusEffect.interrupt:
+    case StatusEffect.sleep:
+    case StatusEffect.charm:
+    case StatusEffect.polymorph:
+    case StatusEffect.taunt:
+    case StatusEffect.disorient:
+    case StatusEffect.grounded:
+    case StatusEffect.suppress:
+    case StatusEffect.nearsight:
+    case StatusEffect.banish:
+    case StatusEffect.daze:
+    case StatusEffect.freeze:
+    case StatusEffect.knockdown:
+      return true;
+    default:
+      return false;
   }
 }
 

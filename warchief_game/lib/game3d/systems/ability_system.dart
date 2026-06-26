@@ -16,12 +16,19 @@ import '../../rendering3d/math/transform3d.dart';
 import '../../models/projectile.dart';
 import '../../models/impact_effect.dart';
 import 'combat_system.dart';
+import 'stance_runtime_system.dart';
+import '../data/stances/stance_types.dart';
+import '../data/stances/stance_mechanics.dart';
+import '../state/stance_runtime_state.dart';
 import 'goal_system.dart';
 import '../../models/combat_log_entry.dart';
 import '../../models/console_log_entry.dart';
 import '../ui/damage_indicators.dart';
 import '../../models/active_effect.dart';
 import '../utils/bezier_path.dart';
+import '../state/cc_config.dart';
+import 'weapon_system.dart';
+import '../../models/item.dart' show ArmorCategory;
 
 part 'ability_system_core.dart';
 part 'ability_system_mana.dart';
@@ -31,6 +38,7 @@ part 'ability_system_implementations.dart';
 part 'ability_system_windwalker.dart';
 part 'ability_system_interactions.dart';
 part 'ability_system_updates.dart';
+part 'ability_system_stance_hooks.dart';
 
 /// Internal mana type enumeration used only within the ability system.
 enum _ManaType { none, blue, red, white, green, black }

@@ -60,6 +60,13 @@ class Monster {
   double combatTimer;         // Time in combat
   double lastDamageTime;      // Time since last took damage
 
+  // Airborne displacement state
+  double airborneHeight = 0.0;
+  double airborneVelocityY = 0.0;
+  double airborneSourceHeight = 0.0;
+  double juggleWindowTimer = 0.0;
+  bool get isAirborne => airborneHeight > 0.1;
+
   /// Buff/debuff state
   double damageMultiplier;    // 1.0 = normal, >1 = buffed, <1 = debuffed
   double damageReduction;     // 0.0 = none, 0.5 = 50% reduction

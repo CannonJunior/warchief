@@ -291,23 +291,82 @@ class WarriorAbilities {
     auraRange: 10.0,
   );
 
+  /// Concussive Slam — Melee AoE that dazes all nearby enemies
+  static final concussiveSlam = AbilityData(
+    name: 'Concussive Slam',
+    description: 'Slams weapon into the ground, dazing nearby enemies.',
+    type: AbilityType.aoe,
+    damage: 30.0,
+    cooldown: 14.0,
+    range: 2.0,
+    color: Vector3(0.75, 0.55, 0.3),
+    impactColor: Vector3(0.9, 0.7, 0.4),
+    impactSize: 0.8,
+    aoeRadius: 4.0,
+    manaColor: ManaColor.red,
+    manaCost: 20.0,
+    statusEffect: StatusEffect.daze,
+    statusDuration: 4.0,
+    category: 'warrior',
+    // Reason: dazed targets can't combo-break, so Shield Bash stun lands free.
+    comboPrimes: ['Shield Bash'],
+  );
+
+  /// Thunderous Charge — Dash forward with massive knockback
+  static final thunderousCharge = AbilityData(
+    name: 'Thunderous Charge',
+    description: 'Charges forward with thunderous force, knocking the target back.',
+    type: AbilityType.melee,
+    damage: 35.0,
+    cooldown: 18.0,
+    range: 12.0,
+    color: Vector3(0.9, 0.75, 0.25),
+    impactColor: Vector3(1.0, 0.85, 0.35),
+    impactSize: 0.9,
+    knockbackForce: 6.0,
+    manaColor: ManaColor.red,
+    manaCost: 25.0,
+    category: 'warrior',
+  );
+
+  /// Iron Maiden — Forces a single target to attack you
+  static final ironMaiden = AbilityData(
+    name: 'Iron Maiden',
+    description: 'Locks a single enemy into attacking only you.',
+    type: AbilityType.melee,
+    damage: 0.0,
+    cooldown: 30.0,
+    range: 3.0,
+    color: Vector3(0.7, 0.3, 0.3),
+    impactColor: Vector3(0.9, 0.2, 0.2),
+    impactSize: 0.7,
+    manaColor: ManaColor.red,
+    manaCost: 30.0,
+    statusEffect: StatusEffect.taunt,
+    statusDuration: 4.0,
+    category: 'warrior',
+  );
+
   /// All warrior abilities as a list
-  /// Ordered short→long cooldown; slots 13-15 hold the long cooldowns.
+  /// Ordered short→long cooldown; slots 13-18 hold the long cooldowns.
   static List<AbilityData> get all => [
-    gauntletJab,      //  1   1.0s  combo starter
-    ironSweep,        //  2   1.0s  combo 2 slow
-    battlePresence,   //  3   5.0s  damage aura
-    shieldBash,       //  4   6.0s  CC stun
-    rendingChains,    //  5   6.0s  combo 3 bleed
-    warcryUppercut,   //  6   7.0s  combo 4 stun + knockback
-    whirlwind,        //  7   8.0s  AoE
-    executionStrike,  //  8  10.0s  combo finisher
-    ironMomentum,     //  9  10.0s  chain combo primer
-    charge,           // 10  10.0s  gap closer knockback
-    taunt,            // 11  12.0s  CC aggro debuff
-    fortify,          // 12  15.0s  buff shield
-    shockwave,        // 13  30.0s  AoE stun ground slam
-    avatarOfWar,      // 14  60.0s  damage + CC immunity buff
-    thunderclap,      // 15 120.0s  cataclysmic AoE windup
+    gauntletJab,       //  1   1.0s  combo starter
+    ironSweep,         //  2   1.0s  combo 2 slow
+    battlePresence,    //  3   5.0s  damage aura
+    shieldBash,        //  4   6.0s  CC stun
+    rendingChains,     //  5   6.0s  combo 3 bleed
+    warcryUppercut,    //  6   7.0s  combo 4 stun + knockback
+    whirlwind,         //  7   8.0s  AoE
+    executionStrike,   //  8  10.0s  combo finisher
+    ironMomentum,      //  9  10.0s  chain combo primer
+    charge,            // 10  10.0s  gap closer knockback
+    taunt,             // 11  12.0s  CC aggro debuff
+    concussiveSlam,    // 12  14.0s  AoE daze
+    fortify,           // 13  15.0s  buff shield
+    thunderousCharge,  // 14  18.0s  dash knockback
+    shockwave,         // 15  30.0s  AoE stun ground slam
+    ironMaiden,        // 16  30.0s  single-target taunt
+    avatarOfWar,       // 17  60.0s  damage + CC immunity buff
+    thunderclap,       // 18 120.0s  cataclysmic AoE windup
   ];
 }

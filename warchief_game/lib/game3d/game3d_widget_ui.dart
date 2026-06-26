@@ -87,6 +87,12 @@ mixin _WidgetUIMixin on _GameStateBase {
               camera: camera,
             ),
 
+            // Lightweight visual effects for active CC (floating Zs, hearts, etc.)
+            CcVisualEffects(
+              gameState: gameState,
+              camera: camera,
+            ),
+
             // World-space ping indicators (from minimap pings)
             if (gameState.minimapState.pings.isNotEmpty && camera != null)
               MinimapPingWorldOverlay(
@@ -155,6 +161,14 @@ mixin _WidgetUIMixin on _GameStateBase {
               ),
 
             // ========== NEW WOW-STYLE UNIT FRAMES (All Draggable) ==========
+
+            // Stance mechanic HUD (above action bar, centered)
+            if (gameState.activeStance.mechanics != null)
+              Positioned(
+                bottom: 115,
+                left: 0, right: 0,
+                child: Center(child: StanceMechanicHud(gameState: gameState)),
+              ),
 
             // Combat HUD (draggable) - Row with fixed-width side panels
             if (_isVisible('combat_hud'))
